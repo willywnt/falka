@@ -6,6 +6,14 @@ const config = {
   trailingComma: 'all',
   printWidth: 100,
   plugins: ['prettier-plugin-tailwindcss'],
+  overrides: [
+    {
+      files: ['*.md', '*.json', '*.yml', '*.yaml'],
+      options: {
+        plugins: [],
+      },
+    },
+  ],
 };
 
 export default config;

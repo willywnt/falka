@@ -1,7 +1,9 @@
 /**
  * Apply R2 bucket CORS rules required for browser presigned PUT uploads.
  *
- * Usage: node scripts/apply-r2-cors.mjs
+ * Usage:
+ *   node scripts/apply-r2-cors.mjs
+ *   node scripts/apply-r2-cors.mjs --file scripts/r2-cors.production.example.json
  */
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -10,6 +12,12 @@ import { PutBucketCorsCommand, S3Client } from '@aws-sdk/client-s3';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = join(root, '.env');
+
+const corsFileArgIndex = process.argv.indexOf('--file');
+const corsFile = join(
+  root,
+  corsFileArgIndex >= 0 ? process.argv[corsFileArgIndex + 1] : 'scripts/r2-cors.json',
+);
 
 function loadEnv() {
   const env = {};
@@ -41,7 +49,7 @@ const client = new S3Client({
   },
 });
 
-const corsRules = JSON.parse(readFileSync(join(root, 'scripts', 'r2-cors.json'), 'utf8'));
+const corsRules = JSON.parse(readFileSync(corsFile, 'utf8'));
 
 await client.send(
   new PutBucketCorsCommand({
@@ -50,4 +58,4 @@ await client.send(
   }),
 );
 
-console.log(`Applied CORS to R2 bucket "${bucket}".`);
+console.log(`Applied CORS to R2 bucket "${bucket}" from ${corsFile}.`);

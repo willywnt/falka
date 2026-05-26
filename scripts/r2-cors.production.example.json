@@ -1,7 +1,11 @@
 {
   "CORSRules": [
     {
-      "AllowedOrigins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+      "AllowedOrigins": [
+        "https://your-domain.com",
+        "https://www.your-domain.com",
+        "https://your-app.vercel.app"
+      ],
       "AllowedMethods": ["GET", "PUT", "HEAD"],
       "AllowedHeaders": ["*"],
       "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],

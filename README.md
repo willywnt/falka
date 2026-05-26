@@ -1,18 +1,20 @@
 # Olshop Monorepo
 
-Production-ready Turborepo foundation for a browser-based operational recording and marketplace integration SaaS platform.
+Production-ready Turborepo for a browser-based operational recording and marketplace integration SaaS platform.
 
 ## Stack
 
-| Layer | Technology |
-| --- | --- |
-| Monorepo | Turborepo + pnpm workspaces |
-| App | Next.js 15 (App Router) + TypeScript |
-| Styling | Tailwind CSS v4 |
-| Database | Prisma + PostgreSQL |
-| State | Zustand (UI) + TanStack Query (server) |
-| Validation | Zod |
-| Tooling | ESLint, Prettier, Husky, lint-staged |
+| Layer                | Technology                           |
+| -------------------- | ------------------------------------ |
+| Monorepo             | Turborepo + pnpm workspaces          |
+| App                  | Next.js 15 (App Router) + TypeScript |
+| Styling              | Tailwind CSS v4 + shadcn/ui          |
+| Database             | Prisma + PostgreSQL                  |
+| Cache/Queue (future) | Redis                                |
+| Storage              | Cloudflare R2                        |
+| Auth                 | Auth.js v5                           |
+| Logging              | Pino (structured JSON)               |
+| Deployment           | Vercel + Neon + R2                   |
 
 ## Structure
 
@@ -20,156 +22,91 @@ Production-ready Turborepo foundation for a browser-based operational recording 
 apps/
   web/                  # Next.js fullstack application
 packages/
-  ui/                   # Shared React components
-  db/                   # Prisma schema + client
+  db/                   # Prisma schema + client + migrations
+  config/               # Zod env validation, constants, limits
+  utils/                # Pure utilities + Pino logger
   types/                # Domain TypeScript types
-  utils/                # Pure utility functions
-  config/               # Env validation, constants, limits
-  eslint-config/        # Shared ESLint config
-  typescript-config/    # Shared TypeScript config
+  ui/                   # Shared React components
+docs/
+  onboarding.md         # Local setup guide
+  environment.md        # Env variable reference
+  deployment/           # Production deployment guides
+docker-compose.yml      # Local PostgreSQL + Redis
 ```
 
-## Prerequisites
-
-- **Node.js** >= 20
-- **pnpm** >= 9 (via Corepack)
-- **PostgreSQL** — one of:
-  - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (recommended), or
-  - Local PostgreSQL 17: `winget install -e --id PostgreSQL.PostgreSQL.17`
-
-## Installation
+## Quick start
 
 ```bash
-# Enable Corepack and activate pnpm
-corepack enable
-corepack prepare pnpm@9.15.9 --activate
-
-# Install dependencies
+corepack enable && corepack prepare pnpm@9.15.9 --activate
 pnpm install
-
-# Copy environment variables (required for Prisma CLI)
 cp .env.example .env
 cp apps/web/.env.example apps/web/.env.local
-
-# Start PostgreSQL and set up the database (auto-detects Docker or local install)
-pnpm db:setup
-```
-
-If `db:setup` cannot start a database automatically, install PostgreSQL and update `DATABASE_URL` in `.env`, then run:
-
-```bash
-pnpm db:migrate:dev
-pnpm db:seed
-```
-
-## Development
-
-```bash
-# Start all packages in dev mode (Next.js + package watchers)
+# Sync server vars from .env → apps/web/.env.local (see docs/environment.md)
+pnpm setup
 pnpm dev
-
-# Open http://localhost:3000
 ```
 
-The web app runs at `http://localhost:3000`. API health check: `GET /api/v1/health`.
+Full guide: [docs/onboarding.md](docs/onboarding.md)
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm dev` | Start development servers |
-| `pnpm build` | Build all packages and apps |
-| `pnpm lint` | Lint all packages |
-| `pnpm typecheck` | Type-check all packages |
-| `pnpm format` | Format with Prettier |
-| `pnpm db:up` | Start PostgreSQL via Docker Compose |
-| `pnpm db:down` | Stop PostgreSQL container |
-| `pnpm db:wait` | Wait until PostgreSQL is reachable |
-| `pnpm db:setup` | Start DB + migrate + seed (one command) |
-| `pnpm db:generate` | Generate Prisma client |
-| `pnpm db:push` | Push schema to database (prototyping) |
-| `pnpm db:migrate:dev` | Create/apply dev migrations |
-| `pnpm db:migrate:deploy` | Apply migrations in production |
-| `pnpm db:migrate:reset` | Reset database and re-run migrations |
-| `pnpm db:seed` | Seed sample data |
-| `pnpm db:studio` | Open Prisma Studio |
+| Command                     | Description                       |
+| --------------------------- | --------------------------------- |
+| `pnpm dev`                  | Start development servers         |
+| `pnpm build`                | Build all packages and apps       |
+| `pnpm setup`                | Start infra + migrate + seed      |
+| `pnpm infra:up`             | Start PostgreSQL + Redis (Docker) |
+| `pnpm infra:down`           | Stop infrastructure containers    |
+| `pnpm infra:reset -- --yes` | Reset volumes + migrate + seed    |
+| `pnpm db:migrate:dev`       | Create/apply dev migrations       |
+| `pnpm db:migrate:deploy`    | Apply migrations (production)     |
+| `pnpm db:seed`              | Seed sample data                  |
+| `pnpm db:studio`            | Open Prisma Studio                |
+
+## Deployment
+
+| Environment | Hosting       | Database             | Storage       |
+| ----------- | ------------- | -------------------- | ------------- |
+| Local       | `pnpm dev`    | Docker Postgres      | Cloudflare R2 |
+| Production  | Vercel        | Neon PostgreSQL      | Cloudflare R2 |
+| Future      | VPS / Coolify | Self-hosted Postgres | MinIO         |
+
+- **Vercel root directory:** `apps/web`
+- **Production migrations:** `pnpm db:migrate:deploy` (never `db push`)
+- **Deploy guide:** [docs/deployment/README.md](docs/deployment/README.md)
+
+## Environment variables
+
+| File                      | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `.env.example`            | Local development template      |
+| `.env.production.example` | Production reference for Vercel |
+| `apps/web/.env.example`   | Public client variables         |
+
+See [docs/environment.md](docs/environment.md).
 
 ## Architecture
-
-### Modules (not features)
 
 Business logic lives in `apps/web/src/modules/`:
 
 ```
 modules/
-  auth/         components, services, validators, hooks, actions, types
-  recording/
-  dashboard/
-  marketplace/
-  inventory/
-  audit/
+  auth/         Authentication + sessions
+  recordings/   Webcam recording lifecycle + dashboard
+  marketplace/  Encrypted marketplace connections
+  storage/      Cloudflare R2 presigned uploads
+  audit/        Audit logging
 ```
 
-### API Routes
+API routes: `/api/v1/{resource}`
 
-Versioned REST API under `/api/v1/`:
+## Git workflow
 
-```
-/api/v1/health
-/api/v1/recordings   (future)
-/api/v1/inventory    (future)
-/api/v1/marketplace  (future)
-```
-
-### Shared Packages
-
-| Package | Responsibility |
-| --- | --- |
-| `@olshop/types` | Domain types only — no Prisma coupling |
-| `@olshop/utils` | Pure functions (crypto, date, logger, storage) |
-| `@olshop/config` | Zod env validation, constants, limits |
-| `@olshop/db` | Prisma schema, client singleton, DB utilities |
-| `@olshop/ui` | Reusable UI components |
-
-### State Management
-
-- **Zustand** — UI/runtime state (`src/store/`)
-- **TanStack Query** — Server state (`src/hooks/`)
-
-### Future-Ready
-
-Architecture supports adding:
-
-- Marketplace integrations (Shopee/Tokopedia)
-- Background jobs and queue workers
-- AI processing pipelines
-- Storage quota enforcement
-- Subscriptions and billing
-- RBAC and audit logging
-
-## Environment Variables
-
-See [`.env.example`](.env.example) for all required variables.
-
-**Required for server:**
-
-- `DATABASE_URL`
-- `AUTH_SECRET` (min 32 characters)
-- `R2_*` credentials
-
-**Required for client:**
-
-- `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_APP_NAME`
-
-## Coding Standards
-
-| Context | Convention |
-| --- | --- |
-| Database columns | snake_case |
-| TypeScript | camelCase |
-| React components | PascalCase |
-| API paths | `/api/v1/{resource}` |
+| Branch      | Vercel     | Database        |
+| ----------- | ---------- | --------------- |
+| `main`      | Production | Neon production |
+| `develop`   | Preview    | Neon dev        |
+| `feature/*` | Preview    | Neon dev        |
 
 ## License
 

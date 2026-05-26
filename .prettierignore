@@ -1,0 +1,4 @@
+# Env files are not Prettier targets
+.env
+.env.*
+!.env.example

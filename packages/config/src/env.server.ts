@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(1),
 
   AUTH_SECRET: z.string().min(32),
   AUTH_URL: z.string().url().optional(),
@@ -15,12 +17,16 @@ const serverEnvSchema = z.object({
   R2_BUCKET_NAME: z.string().min(1),
   R2_PUBLIC_URL: z.string().url().optional(),
 
+  REDIS_URL: z.string().url().optional(),
+
   SHOPEE_PARTNER_ID: z.string().optional(),
   SHOPEE_PARTNER_KEY: z.string().optional(),
   TOKOPEDIA_CLIENT_ID: z.string().optional(),
   TOKOPEDIA_CLIENT_SECRET: z.string().optional(),
 
   MARKETPLACE_ENCRYPTION_SECRET: z.string().min(32),
+
+  LOG_LEVEL: logLevelSchema.optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -48,3 +54,5 @@ export const serverEnv = new Proxy({} as ServerEnv, {
     return getServerEnv()[prop as keyof ServerEnv];
   },
 });
+
+export { logLevelSchema };
