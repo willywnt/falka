@@ -67,6 +67,8 @@ Vercel auto-deploys on push. Run `db:migrate:deploy` when schema changes — bef
 
 These are configured in `apps/web/vercel.json`.
 
+Install sets `HUSKY=0` so the Husky git hook installer is skipped (devDependencies are not installed on Vercel). Prisma Client is generated during `@olshop/db` build via `prisma generate`.
+
 ### Include monorepo files
 
 In Vercel project settings, ensure **Root Directory** is `apps/web` and **Include source files outside of the Root Directory** is enabled (default for Turborepo).

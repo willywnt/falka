@@ -25,7 +25,7 @@
     "db:migrate:reset": "pnpm --filter @olshop/db db:migrate:reset",
     "db:seed": "pnpm --filter @olshop/db db:seed",
     "db:studio": "pnpm --filter @olshop/db db:studio",
-    "prepare": "husky"
+    "prepare": "node scripts/prepare.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7",
