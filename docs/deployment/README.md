@@ -67,7 +67,7 @@ Vercel auto-deploys on push. Run `db:migrate:deploy` when schema changes — bef
 
 These are configured in `apps/web/vercel.json`.
 
-Install sets `HUSKY=0` so the Husky git hook installer is skipped (devDependencies are not installed on Vercel). Prisma Client is generated during `@olshop/db` build via `prisma generate`.
+Install sets `HUSKY=0` and `--prod=false` so git hooks are skipped and **devDependencies** (TypeScript, ESLint, shared tsconfig) are installed for monorepo package builds.
 
 ### Include monorepo files
 
