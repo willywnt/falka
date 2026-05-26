@@ -1,0 +1,36 @@
+{
+  "name": "olshop",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md,css}\"",
+    "typecheck": "turbo typecheck",
+    "db:generate": "pnpm --filter @olshop/db db:generate",
+    "db:up": "pnpm --filter @olshop/db db:up",
+    "db:down": "pnpm --filter @olshop/db db:down",
+    "db:wait": "pnpm --filter @olshop/db db:wait",
+    "db:setup": "pnpm --filter @olshop/db db:setup",
+    "db:push": "pnpm --filter @olshop/db db:push",
+    "db:migrate:dev": "pnpm --filter @olshop/db db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @olshop/db db:migrate:deploy",
+    "db:migrate:reset": "pnpm --filter @olshop/db db:migrate:reset",
+    "db:seed": "pnpm --filter @olshop/db db:seed",
+    "db:studio": "pnpm --filter @olshop/db db:studio",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "turbo": "^2.9.14",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "@olshop/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./env.server": {
+      "types": "./dist/env.server.d.ts",
+      "default": "./dist/env.server.js"
+    },
+    "./env.client": {
+      "types": "./dist/env.client.d.ts",
+      "default": "./dist/env.client.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./limits": {
+      "types": "./dist/limits.d.ts",
+      "default": "./dist/limits.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@olshop/eslint-config": "workspace:*",
+    "@olshop/typescript-config": "workspace:*",
+    "eslint": "^9.24.0",
+    "typescript": "^5.8.3"
+  }
+}

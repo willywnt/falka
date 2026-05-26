@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum RecordingStatus {
+  RECORDING
+  UPLOADING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+enum MarketplaceProvider {
+  SHOPEE
+  TOKOPEDIA
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  displayName       String?
+  role              UserRole  @default(USER)
+  storageQuotaBytes BigInt    @default(2147483648)
+  storageUsedBytes  BigInt    @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  recordings             Recording[]
+  marketplaceConnections MarketplaceConnection[]
+  auditLogs              AuditLog[]
+
+  @@map("users")
+}
+
+model Recording {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  noResi            String
+  generatedFilename String
+  storageProvider   String
+  storageBucket     String
+  storageKey        String          @unique
+  publicUrl         String
+  mimeType          String
+  fileSizeBytes     BigInt
+  durationSeconds   Int
+  status            RecordingStatus
+  startedAt         DateTime
+  stoppedAt         DateTime?
+  uploadedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime?
+
+  @@index([userId])
+  @@index([noResi])
+  @@index([status])
+  @@map("recordings")
+}
+
+model MarketplaceConnection {
+  id                    String              @id @default(cuid())
+  userId                String
+  user                  User                @relation(fields: [userId], references: [id])
+  provider              MarketplaceProvider
+  shopId                String
+  shopName              String
+  encryptedAccessToken  String
+  encryptedRefreshToken String?
+  tokenExpiresAt        DateTime?
+  isActive              Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+
+  @@index([userId])
+  @@index([provider])
+  @@map("marketplace_connections")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  resource  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}

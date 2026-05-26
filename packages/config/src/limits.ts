@@ -1,0 +1,57 @@
+/** Maximum recording duration in seconds (30 minutes). */
+export const MAX_RECORDING_DURATION_SECONDS = 30 * 60;
+
+/** Target webcam recording width in pixels. */
+export const RECORDING_WIDTH = 1280;
+
+/** Target webcam recording height in pixels. */
+export const RECORDING_HEIGHT = 720;
+
+/** Target webcam recording frame rate. */
+export const RECORDING_FPS = 24;
+
+/** Target video bitrate minimum in bits per second (800 kbps). */
+export const RECORDING_BITRATE_MIN_BPS = 800_000;
+
+/** Target video bitrate maximum in bits per second (1200 kbps). */
+export const RECORDING_BITRATE_MAX_BPS = 1_200_000;
+
+/** Target video bitrate in bits per second (1 Mbps). */
+export const RECORDING_BITRATE_BPS = 1_000_000;
+
+/** Supported recording MIME type. */
+export const RECORDING_MIME_TYPE = 'video/webm' as const;
+
+/** Maximum upload file size in bytes (500 MB). */
+export const MAX_UPLOAD_SIZE_BYTES = 500 * 1024 * 1024;
+
+/** Presigned upload URL expiry in seconds (5 minutes). */
+export const PRESIGNED_UPLOAD_EXPIRY_SECONDS = 5 * 60;
+
+/** Presigned read URL expiry in seconds (1 hour — playback & download). */
+export const PRESIGNED_ACCESS_EXPIRY_SECONDS = 60 * 60;
+
+/** Allowed direct-upload MIME types. */
+export const ALLOWED_UPLOAD_MIME_TYPES = ['video/webm'] as const;
+
+/** Allowed direct-upload file extensions. */
+export const ALLOWED_UPLOAD_EXTENSIONS = ['.webm'] as const;
+
+/** Default storage quota per organization in bytes (10 GB). */
+export const DEFAULT_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
+
+/** Maximum concurrent uploads per user. */
+export const MAX_CONCURRENT_UPLOADS = 3;
+
+/** API rate limit: requests per minute per user. */
+export const API_RATE_LIMIT_PER_MINUTE = 120;
+
+/** Inventory sync batch size. */
+export const INVENTORY_SYNC_BATCH_SIZE = 100;
+
+/** Audit log retention in days. */
+export const AUDIT_LOG_RETENTION_DAYS = 90;
+
+/** Pagination defaults. */
+export const DEFAULT_PAGE_SIZE = 20;
+export const MAX_PAGE_SIZE = 100;

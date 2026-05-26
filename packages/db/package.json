@@ -1,0 +1,57 @@
+{
+  "name": "@olshop/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./validators": {
+      "types": "./dist/validators/index.d.ts",
+      "default": "./dist/validators/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "with-env": "node scripts/with-env.mjs",
+    "db:up": "node scripts/db-docker.mjs up",
+    "db:down": "node scripts/db-docker.mjs down",
+    "db:wait": "node scripts/with-env.mjs node scripts/ensure-database.mjs",
+    "db:setup": "node scripts/db-setup.mjs",
+    "db:generate": "prisma generate",
+    "db:push": "node scripts/with-env.mjs prisma db push",
+    "db:migrate:dev": "node scripts/with-env.mjs prisma migrate dev",
+    "db:migrate:deploy": "node scripts/with-env.mjs prisma migrate deploy",
+    "db:migrate:reset": "node scripts/with-env.mjs prisma migrate reset",
+    "db:seed": "node scripts/with-env.mjs prisma db seed",
+    "db:studio": "node scripts/with-env.mjs prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "node scripts/with-env.mjs tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@olshop/config": "workspace:*",
+    "@prisma/client": "^6.8.2",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@olshop/eslint-config": "workspace:*",
+    "@olshop/typescript-config": "workspace:*",
+    "argon2": "^0.44.0",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.24.0",
+    "prisma": "^6.8.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
