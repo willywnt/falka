@@ -5,9 +5,10 @@ import {
   formatRecordingDate,
   formatRecordingDuration,
   formatRecordingFileSize,
-  getStorageProviderLabel,
 } from '../utils/recording-display';
-import { RecordingStatusBadge } from './recording-status-badge';
+import { getRecordingFailureDetail } from '../utils/recording-failure';
+import { OperationalStatusBadge } from './operational-status-badge';
+import { mapServerStatusToOperational } from '../types/operational-recording-status';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="max-w-[60%] text-right font-medium">{value}</span>
     </div>
   );
 }
@@ -38,12 +39,16 @@ export function RecordingDetailModal({
   onOpenChange: (open: boolean) => void;
   isLoading?: boolean;
 }) {
+  const failureDetail = recording
+    ? getRecordingFailureDetail(recording.failureCode, recording.failureReason)
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{recording?.noResi ?? 'Recording details'}</DialogTitle>
-          <DialogDescription>Operational recording metadata</DialogDescription>
+          <DialogDescription>Operational recording information</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -57,25 +62,41 @@ export function RecordingDetailModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-sm">Status</span>
-              <RecordingStatusBadge status={recording.status} />
+              <OperationalStatusBadge status={mapServerStatusToOperational(recording.status)} />
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-              <DetailRow label="Resi number" value={recording.noResi} />
-              <DetailRow label="Duration" value={formatRecordingDuration(recording.durationSeconds)} />
-              <DetailRow label="File size" value={formatRecordingFileSize(recording.fileSizeBytes)} />
+              <DetailRow label="Tracking number" value={recording.noResi} />
+              <DetailRow
+                label="Duration"
+                value={formatRecordingDuration(recording.durationSeconds)}
+              />
+              <DetailRow
+                label="File size"
+                value={formatRecordingFileSize(recording.fileSizeBytes)}
+              />
               <DetailRow label="Created" value={formatRecordingDate(recording.createdAt)} />
               <DetailRow
                 label="Uploaded"
-                value={recording.uploadedAt ? formatRecordingDate(recording.uploadedAt) : '—'}
+                value={
+                  recording.uploadedAt
+                    ? formatRecordingDate(recording.uploadedAt)
+                    : 'Not uploaded yet'
+                }
               />
               <DetailRow
-                label="Storage"
-                value={getStorageProviderLabel(recording.storageProvider)}
+                label="Upload status"
+                value={
+                  recording.uploadedAt
+                    ? 'Uploaded to storage'
+                    : recording.status === 'FAILED'
+                      ? 'Failed'
+                      : 'In progress'
+                }
               />
-              <DetailRow label="Filename" value={recording.generatedFilename} />
+              {failureDetail ? <DetailRow label="Failure reason" value={failureDetail} /> : null}
             </div>
           </div>
         ) : null}

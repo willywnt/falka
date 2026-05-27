@@ -11,6 +11,7 @@ type RecordingReliabilityState = {
   temporaryRecordings: TemporaryRecording[];
   recoveryModalOpen: boolean;
   selectedRecoveryId: string | null;
+  uploadCenterOpen: boolean;
   retryUploadProgress: number;
   isRetryingUpload: boolean;
   indexedDbAvailable: boolean;
@@ -24,8 +25,10 @@ type RecordingReliabilityActions = {
   setStaleLockCleared: (cleared: boolean) => void;
   setWebcamDisconnected: (disconnected: boolean) => void;
   setTemporaryRecordings: (recordings: TemporaryRecording[]) => void;
+  setSelectedRecoveryId: (selectedId: string | null) => void;
   openRecoveryModal: (selectedId?: string | null) => void;
   closeRecoveryModal: () => void;
+  setUploadCenterOpen: (open: boolean) => void;
   setRetryUploadProgress: (progress: number) => void;
   setIsRetryingUpload: (isRetrying: boolean) => void;
   setIndexedDbAvailable: (available: boolean) => void;
@@ -45,6 +48,7 @@ export const useRecordingReliabilityStore = create<RecordingReliabilityStore>((s
   temporaryRecordings: [],
   recoveryModalOpen: false,
   selectedRecoveryId: null,
+  uploadCenterOpen: false,
   retryUploadProgress: 0,
   isRetryingUpload: false,
   indexedDbAvailable: true,
@@ -61,12 +65,14 @@ export const useRecordingReliabilityStore = create<RecordingReliabilityStore>((s
   setStaleLockCleared: (cleared) => set({ staleLockCleared: cleared }),
   setWebcamDisconnected: (disconnected) => set({ webcamDisconnected: disconnected }),
   setTemporaryRecordings: (recordings) => set({ temporaryRecordings: recordings }),
+  setSelectedRecoveryId: (selectedId) => set({ selectedRecoveryId: selectedId }),
   openRecoveryModal: (selectedId = null) =>
     set({
       recoveryModalOpen: true,
       selectedRecoveryId: selectedId,
     }),
-  closeRecoveryModal: () => set({ recoveryModalOpen: false, selectedRecoveryId: null }),
+  closeRecoveryModal: () => set({ recoveryModalOpen: false }),
+  setUploadCenterOpen: (open) => set({ uploadCenterOpen: open }),
   setRetryUploadProgress: (progress) => set({ retryUploadProgress: progress }),
   setIsRetryingUpload: (isRetrying) => set({ isRetryingUpload: isRetrying }),
   setIndexedDbAvailable: (available) => set({ indexedDbAvailable: available }),

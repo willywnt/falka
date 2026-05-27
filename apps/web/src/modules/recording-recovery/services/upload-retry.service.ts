@@ -3,6 +3,12 @@ import { uploadFile } from '@/modules/storage/utils/upload-file';
 import { ReliabilityError } from '../errors/reliability-errors';
 import { recordingRecoveryService } from './recording-recovery.service';
 import { isBrowserOnline } from '../utils/network';
+import { createTimelineEvent, RECORDING_TIMELINE_EVENT_TYPES } from '../types/recording-timeline';
+import {
+  RECORDING_FAILURE_CODES,
+  resolveFailureFromCode,
+  resolveFailureFromError,
+} from '../types/failure-codes';
 
 export type UploadRetryCallbacks = {
   markUploading?: (recordingId: string) => Promise<unknown>;
@@ -34,7 +40,21 @@ export async function retryTemporaryRecordingUpload(
     throw ReliabilityError.failedRecovery('Temporary recording not found.');
   }
 
-  await recordingRecoveryService.updateUploadStatus(temporaryId, 'UPLOADING');
+  const preservedCameraDisconnect =
+    record.failureCode === RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED ||
+    record.timeline.some(
+      (event) => event.type === RECORDING_TIMELINE_EVENT_TYPES.CAMERA_DISCONNECTED,
+    );
+
+  await recordingRecoveryService.updateUploadStatus(temporaryId, 'UPLOADING', {
+    failureCode: preservedCameraDisconnect ? record.failureCode : null,
+    failureMessage: preservedCameraDisconnect ? record.failureMessage : null,
+    failureReason: preservedCameraDisconnect ? record.failureReason : null,
+    timelineEvent: createTimelineEvent(
+      RECORDING_TIMELINE_EVENT_TYPES.UPLOAD_RESUMED,
+      'Upload retry started.',
+    ),
+  });
 
   try {
     const file = new File([record.blob], `recording-${Date.now()}.webm`, { type: record.mimeType });
@@ -48,11 +68,7 @@ export async function retryTemporaryRecordingUpload(
     }
 
     if (callbacks.markUploading) {
-      try {
-        await callbacks.markUploading(recordingId);
-      } catch {
-        // Server may already be UPLOADING — continue with fresh presigned URL.
-      }
+      await callbacks.markUploading(recordingId);
     }
 
     const uploadResult = await uploadFile({
@@ -70,11 +86,41 @@ export async function retryTemporaryRecordingUpload(
       mimeType: record.mimeType,
     });
 
+    await recordingRecoveryService.appendTimelineEvent(
+      temporaryId,
+      createTimelineEvent(
+        RECORDING_TIMELINE_EVENT_TYPES.UPLOAD_COMPLETED,
+        'Upload completed successfully.',
+      ),
+    );
+
     await recordingRecoveryService.updateUploadStatus(temporaryId, 'COMPLETED');
     await recordingRecoveryService.deleteTemporaryRecording(temporaryId);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Upload retry failed';
-    await recordingRecoveryService.updateUploadStatus(temporaryId, 'FAILED', message);
-    throw ReliabilityError.uploadRetryFailed(message);
+    const preservedCameraDisconnect =
+      record.failureCode === RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED ||
+      record.timeline.some(
+        (event) => event.type === RECORDING_TIMELINE_EVENT_TYPES.CAMERA_DISCONNECTED,
+      );
+
+    const failure = preservedCameraDisconnect
+      ? {
+          failureCode: RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED,
+          failureMessage: resolveFailureFromCode(RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED),
+          debugMessage: record.failureReason ?? 'Camera disconnected during recording',
+        }
+      : resolveFailureFromError(error);
+
+    await recordingRecoveryService.updateUploadStatus(temporaryId, 'FAILED', {
+      failureCode: failure.failureCode,
+      failureMessage: failure.failureMessage,
+      failureReason: failure.debugMessage,
+      incrementRetryCount: true,
+      timelineEvent: createTimelineEvent(
+        RECORDING_TIMELINE_EVENT_TYPES.UPLOAD_FAILED,
+        failure.failureMessage,
+      ),
+    });
+    throw ReliabilityError.uploadRetryFailed(failure.failureMessage);
   }
 }

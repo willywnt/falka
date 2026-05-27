@@ -1,17 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
   Download,
   Eye,
+  Loader2,
   MoreHorizontal,
   Play,
   Search,
   Trash2,
+  UploadCloud,
   Video,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,7 +29,7 @@ import {
   useRecordingsListQuery,
 } from '../hooks/use-recordings-management';
 import {
-  formatRecordingDateShort,
+  formatRecordingDate,
   formatRecordingDuration,
   formatRecordingFileSize,
   isPlayableRecording,
@@ -38,9 +42,10 @@ import {
 import { RecordingDeleteDialog } from './recording-delete-dialog';
 import { RecordingDetailModal } from './recording-detail-modal';
 import { RecordingPlayerModal } from './recording-player-modal';
-import { RecordingStatusBadge } from './recording-status-badge';
+import { OperationalStatusBadge } from './operational-status-badge';
 import { RecordingsEmptyState } from './recordings-empty-state';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +62,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useRecordingReliabilityStore } from '@/modules/recording-recovery/store/recording-reliability.store';
+import { useUploadRetry } from '@/modules/recording-recovery/hooks/use-upload-retry';
+import { PendingLocalPlayerModal } from '@/modules/recording-recovery/components/pending-local-player-modal';
+import { PendingRecordingDetailSheet } from '@/modules/recording-recovery/components/pending-recording-detail-sheet';
+import { PendingDiscardDialog } from '@/modules/recording-recovery/components/pending-discard-dialog';
+import type { TemporaryRecording } from '@/modules/recording-recovery/types';
+import { EllipsisTooltip } from '@/components/ui/action-tooltip';
+import {
+  mapRecoveryUploadToOperational,
+  mapServerStatusToOperational,
+} from '../types/operational-recording-status';
+import {
+  formatRecoveryDate,
+  formatRecoveryDuration,
+  formatRecoveryFileSize,
+} from '@/modules/recording-recovery/utils/format';
+import { resolvePendingRecordingFailureMessage } from '@/modules/recording-recovery/types/failure-codes';
+import { usePersistedToggle } from '../hooks/use-persisted-toggle';
+
+const PENDING_SECTION_STORAGE_KEY = 'olshop-pending-uploads-expanded';
 
 const DEFAULT_QUERY: ListRecordingsQuery = {
   page: 1,
@@ -98,6 +123,34 @@ export function RecordingsDashboard() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RecordingListItem | null>(null);
+  const [pendingPlayerTarget, setPendingPlayerTarget] = useState<TemporaryRecording | null>(null);
+  const [pendingDetailTarget, setPendingDetailTarget] = useState<TemporaryRecording | null>(null);
+  const [pendingDiscardTarget, setPendingDiscardTarget] = useState<TemporaryRecording | null>(null);
+  const [isDiscardingPending, setIsDiscardingPending] = useState(false);
+
+  const temporaryRecordings = useRecordingReliabilityStore((state) => state.temporaryRecordings);
+  const isOnline = useRecordingReliabilityStore((state) => state.isOnline);
+  const isRetryingUpload = useRecordingReliabilityStore((state) => state.isRetryingUpload);
+  const selectedRecoveryId = useRecordingReliabilityStore((state) => state.selectedRecoveryId);
+  const retryUploadProgress = useRecordingReliabilityStore((state) => state.retryUploadProgress);
+  const setUploadCenterOpen = useRecordingReliabilityStore((state) => state.setUploadCenterOpen);
+  const setSelectedRecoveryId = useRecordingReliabilityStore(
+    (state) => state.setSelectedRecoveryId,
+  );
+  const { retryUpload, discardRecording } = useUploadRetry();
+  const { value: pendingSectionExpanded, toggle: togglePendingSection } = usePersistedToggle(
+    PENDING_SECTION_STORAGE_KEY,
+    true,
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const search = params.get('search')?.trim();
+    if (!search) return;
+
+    setSearchInput(search.toUpperCase());
+    setQuery((current) => ({ ...current, page: 1 }));
+  }, []);
 
   const listQuery = useMemo(
     () => ({
@@ -155,8 +208,46 @@ export function RecordingsDashboard() {
     }
   }
 
+  async function handlePendingDiscardConfirm() {
+    if (!pendingDiscardTarget) return;
+
+    setIsDiscardingPending(true);
+    try {
+      await discardRecording(pendingDiscardTarget.id);
+      if (pendingDetailTarget?.id === pendingDiscardTarget.id) {
+        setPendingDetailTarget(null);
+      }
+      setPendingDiscardTarget(null);
+    } finally {
+      setIsDiscardingPending(false);
+    }
+  }
+
   const hasSearch = Boolean(searchInput.trim());
-  const isEmpty = !isLoading && (data?.items.length ?? 0) === 0;
+
+  const hiddenServerRecordingIds = useMemo(
+    () =>
+      new Set(
+        temporaryRecordings
+          .map((recording) => recording.recordingId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    [temporaryRecordings],
+  );
+
+  const visibleServerRecordings = useMemo(
+    () => (data?.items ?? []).filter((recording) => !hiddenServerRecordingIds.has(recording.id)),
+    [data?.items, hiddenServerRecordingIds],
+  );
+
+  const isEmpty =
+    !isLoading && visibleServerRecordings.length === 0 && temporaryRecordings.length === 0;
+
+  const filteredPending = useMemo(() => {
+    const term = searchInput.trim().toUpperCase();
+    if (!term) return temporaryRecordings;
+    return temporaryRecordings.filter((recording) => recording.noResi.toUpperCase().includes(term));
+  }, [searchInput, temporaryRecordings]);
 
   return (
     <div className="space-y-6">
@@ -220,129 +311,269 @@ export function RecordingsDashboard() {
         />
       ) : (
         <>
-          <div className="rounded-xl border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <SortButton
-                      label="Resi"
-                      field="noResi"
-                      sortBy={query.sortBy}
-                      sortOrder={query.sortOrder}
-                      onSort={handleSort}
-                    />
-                  </TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>
-                    <SortButton
-                      label="Duration"
-                      field="durationSeconds"
-                      sortBy={query.sortBy}
-                      sortOrder={query.sortOrder}
-                      onSort={handleSort}
-                    />
-                  </TableHead>
-                  <TableHead>
-                    <SortButton
-                      label="File size"
-                      field="fileSizeBytes"
-                      sortBy={query.sortBy}
-                      sortOrder={query.sortOrder}
-                      onSort={handleSort}
-                    />
-                  </TableHead>
-                  <TableHead>
-                    <SortButton
-                      label="Created"
-                      field="createdAt"
-                      sortBy={query.sortBy}
-                      sortOrder={query.sortOrder}
-                      onSort={handleSort}
-                    />
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data?.items.map((recording) => {
-                  const canPlay = isPlayableRecording(recording.status, recording.publicUrl);
+          {filteredPending.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border">
+              <button
+                type="button"
+                className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
+                onClick={togglePendingSection}
+              >
+                <div>
+                  <p className="text-sm font-medium">Pending uploads</p>
+                  <p className="text-muted-foreground text-xs">
+                    {filteredPending.length} saved on this device — not yet in cloud storage
+                  </p>
+                </div>
+                <div className="text-muted-foreground flex items-center gap-2">
+                  <Badge variant="secondary">{filteredPending.length}</Badge>
+                  {pendingSectionExpanded ? (
+                    <ChevronDown className="size-4" />
+                  ) : (
+                    <ChevronRight className="size-4" />
+                  )}
+                </div>
+              </button>
 
-                  return (
-                    <TableRow key={recording.id}>
-                      <TableCell className="font-medium">{recording.noResi}</TableCell>
-                      <TableCell>
-                        <RecordingStatusBadge status={recording.status} />
-                      </TableCell>
-                      <TableCell>{formatRecordingDuration(recording.durationSeconds)}</TableCell>
-                      <TableCell>{formatRecordingFileSize(recording.fileSizeBytes)}</TableCell>
-                      <TableCell>{formatRecordingDateShort(recording.createdAt)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="size-4" />
-                              <span className="sr-only">Open actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem disabled={!canPlay} onClick={() => openPlayer(recording)}>
-                              <Play className="size-4" />
-                              Play
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDetail(recording)}>
-                              <Eye className="size-4" />
-                              View details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={!canPlay || downloadMutation.isPending}
-                              onClick={() => void handleDownload(recording)}
-                            >
-                              <Download className="size-4" />
-                              Download
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeleteTarget(recording)}
-                            >
-                              <Trash2 className="size-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              {pendingSectionExpanded ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Resi</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Failure reason</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>File size</TableHead>
+                      <TableHead>Recorded</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPending.map((recording) => {
+                      const failureMessage = resolvePendingRecordingFailureMessage(recording);
+                      const isUploadingThis =
+                        isRetryingUpload && selectedRecoveryId === recording.id;
+                      const status = isUploadingThis
+                        ? 'UPLOADING'
+                        : mapRecoveryUploadToOperational(recording.uploadStatus);
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-muted-foreground text-sm">
-              Page {data?.meta.page ?? 1} of {data?.meta.totalPages ?? 1} · {data?.meta.total ?? 0}{' '}
-              recordings
-              {isFetching ? ' · Updating...' : ''}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!data?.meta.hasPreviousPage}
-                onClick={() => setQuery((current) => ({ ...current, page: current.page - 1 }))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!data?.meta.hasNextPage}
-                onClick={() => setQuery((current) => ({ ...current, page: current.page + 1 }))}
-              >
-                Next
-              </Button>
+                      return (
+                        <TableRow key={recording.id} className="bg-muted/20">
+                          <TableCell className="font-medium">{recording.noResi}</TableCell>
+                          <TableCell>
+                            <OperationalStatusBadge status={status} />
+                          </TableCell>
+                          <TableCell className="max-w-[220px]">
+                            {failureMessage ? (
+                              <EllipsisTooltip
+                                text={failureMessage}
+                                className="text-destructive text-sm leading-snug"
+                                contentClassName="max-w-sm"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{formatRecoveryDuration(recording.durationSeconds)}</TableCell>
+                          <TableCell>
+                            {formatRecoveryFileSize(recording.estimatedSizeBytes)}
+                          </TableCell>
+                          <TableCell>{formatRecoveryDate(recording.createdAt)}</TableCell>
+                          <TableCell className="text-right">
+                            {isUploadingThis ? (
+                              <div
+                                className="inline-flex items-center gap-2"
+                                role="status"
+                                aria-label={`Uploading ${retryUploadProgress}%`}
+                              >
+                                <Loader2 className="text-primary size-4 animate-spin" />
+                                <span className="text-muted-foreground text-xs tabular-nums">
+                                  {retryUploadProgress}%
+                                </span>
+                              </div>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="size-4" />
+                                    <span className="sr-only">Open actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => setPendingPlayerTarget(recording)}
+                                  >
+                                    <Play className="size-4" />
+                                    Preview
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    disabled={!isOnline || isRetryingUpload}
+                                    onClick={() => {
+                                      setSelectedRecoveryId(recording.id);
+                                      void retryUpload(recording.id);
+                                    }}
+                                  >
+                                    <UploadCloud className="size-4" />
+                                    Upload
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => setPendingDetailTarget(recording)}
+                                  >
+                                    <Eye className="size-4" />
+                                    View timeline
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    disabled={isRetryingUpload}
+                                    onClick={() => setPendingDiscardTarget(recording)}
+                                  >
+                                    <Trash2 className="size-4" />
+                                    Discard
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : null}
             </div>
-          </div>
+          ) : null}
+
+          {visibleServerRecordings.length > 0 ? (
+            <div className="rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <SortButton
+                        label="Resi"
+                        field="noResi"
+                        sortBy={query.sortBy}
+                        sortOrder={query.sortOrder}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>
+                      <SortButton
+                        label="Duration"
+                        field="durationSeconds"
+                        sortBy={query.sortBy}
+                        sortOrder={query.sortOrder}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <SortButton
+                        label="File size"
+                        field="fileSizeBytes"
+                        sortBy={query.sortBy}
+                        sortOrder={query.sortOrder}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <SortButton
+                        label="Created"
+                        field="createdAt"
+                        sortBy={query.sortBy}
+                        sortOrder={query.sortOrder}
+                        onSort={handleSort}
+                      />
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleServerRecordings.map((recording) => {
+                    const canPlay = isPlayableRecording(recording.status, recording.publicUrl);
+
+                    return (
+                      <TableRow key={recording.id}>
+                        <TableCell className="font-medium">{recording.noResi}</TableCell>
+                        <TableCell>
+                          <OperationalStatusBadge
+                            status={mapServerStatusToOperational(recording.status)}
+                          />
+                        </TableCell>
+                        <TableCell>{formatRecordingDuration(recording.durationSeconds)}</TableCell>
+                        <TableCell>{formatRecordingFileSize(recording.fileSizeBytes)}</TableCell>
+                        <TableCell>{formatRecordingDate(recording.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="size-4" />
+                                <span className="sr-only">Open actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                disabled={!canPlay}
+                                onClick={() => openPlayer(recording)}
+                              >
+                                <Play className="size-4" />
+                                Preview
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDetail(recording)}>
+                                <Eye className="size-4" />
+                                View details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={!canPlay || downloadMutation.isPending}
+                                onClick={() => void handleDownload(recording)}
+                              >
+                                <Download className="size-4" />
+                                Download
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteTarget(recording)}
+                              >
+                                <Trash2 className="size-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : null}
+
+          {visibleServerRecordings.length > 0 ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-muted-foreground text-sm">
+                Page {data?.meta.page ?? 1} of {data?.meta.totalPages ?? 1} ·{' '}
+                {data?.meta.total ?? 0} recordings
+                {isFetching ? ' · Updating...' : ''}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!data?.meta.hasPreviousPage}
+                  onClick={() => setQuery((current) => ({ ...current, page: current.page - 1 }))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!data?.meta.hasNextPage}
+                  onClick={() => setQuery((current) => ({ ...current, page: current.page + 1 }))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -367,6 +598,31 @@ export function RecordingsDashboard() {
         }}
         onConfirm={() => void handleDeleteConfirm()}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <PendingLocalPlayerModal
+        recording={pendingPlayerTarget}
+        open={Boolean(pendingPlayerTarget)}
+        onOpenChange={(open) => !open && setPendingPlayerTarget(null)}
+      />
+
+      <PendingRecordingDetailSheet
+        recording={pendingDetailTarget}
+        open={Boolean(pendingDetailTarget)}
+        onOpenChange={(open) => !open && setPendingDetailTarget(null)}
+        showBack
+        onBack={() => {
+          setPendingDetailTarget(null);
+          setUploadCenterOpen(true);
+        }}
+      />
+
+      <PendingDiscardDialog
+        noResi={pendingDiscardTarget?.noResi ?? null}
+        open={Boolean(pendingDiscardTarget)}
+        onOpenChange={(open) => !open && setPendingDiscardTarget(null)}
+        onConfirm={() => void handlePendingDiscardConfirm()}
+        isDiscarding={isDiscardingPending}
       />
     </div>
   );

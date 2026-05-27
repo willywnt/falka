@@ -38,11 +38,10 @@ export function createRecoveryDevSimulator(): DevSimulator {
     async simulateFailedUpload(temporaryId: string) {
       assertDevEnvironment();
       const { recordingRecoveryService } = await import('../services/recording-recovery.service');
-      await recordingRecoveryService.updateUploadStatus(
-        temporaryId,
-        'FAILED',
-        'Simulated upload failure (dev)',
-      );
+      await recordingRecoveryService.updateUploadStatus(temporaryId, 'FAILED', {
+        failureReason: 'Simulated upload failure (dev)',
+        failureMessage: 'Upload interrupted. You can safely retry upload.',
+      });
     },
   };
 }

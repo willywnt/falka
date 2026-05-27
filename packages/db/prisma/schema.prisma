@@ -59,6 +59,8 @@ model Recording {
   fileSizeBytes     BigInt
   durationSeconds   Int
   status            RecordingStatus
+  failureCode       String?
+  failureReason     String?
   startedAt         DateTime
   stoppedAt         DateTime?
   uploadedAt        DateTime?

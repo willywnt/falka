@@ -1,9 +1,17 @@
 import {
   RECORDING_RECOVERY_CONFIG,
+  RECOVERY_METADATA_KEYS,
   type RecoveryUploadStatus,
   type SaveTemporaryRecordingInput,
   type TemporaryRecording,
 } from '../types';
+import type { RecordingFailureCode } from '../types/failure-codes';
+import {
+  createTimelineEvent,
+  RECORDING_TIMELINE_EVENT_TYPES,
+  type RecordingTimelineEvent,
+} from '../types/recording-timeline';
+import { resolvePendingRecordingFailureMessage } from '../types/failure-codes';
 import { ReliabilityError } from '../errors/reliability-errors';
 import {
   idbRequest,
@@ -20,11 +28,15 @@ function createId(): string {
   return crypto.randomUUID();
 }
 
-function ensureStore(db: IDBDatabase): void {
+function upgradeDatabase(db: IDBDatabase): void {
   if (!db.objectStoreNames.contains(RECORDING_RECOVERY_CONFIG.storeName)) {
     const store = db.createObjectStore(RECORDING_RECOVERY_CONFIG.storeName, { keyPath: 'id' });
     store.createIndex('uploadStatus', 'uploadStatus', { unique: false });
     store.createIndex('createdAt', 'createdAt', { unique: false });
+  }
+
+  if (!db.objectStoreNames.contains(RECORDING_RECOVERY_CONFIG.metadataStoreName)) {
+    db.createObjectStore(RECORDING_RECOVERY_CONFIG.metadataStoreName, { keyPath: 'key' });
   }
 }
 
@@ -35,7 +47,7 @@ async function withStore<T>(
   const db = await openDatabase(
     RECORDING_RECOVERY_CONFIG.dbName,
     RECORDING_RECOVERY_CONFIG.dbVersion,
-    ensureStore,
+    upgradeDatabase,
   );
 
   try {
@@ -49,17 +61,54 @@ async function withStore<T>(
   }
 }
 
-function toTemporaryRecording(record: StoredTemporaryRecording): TemporaryRecording {
+async function withMetadataStore<T>(
+  mode: IDBTransactionMode,
+  handler: (store: IDBObjectStore) => Promise<T> | T,
+): Promise<T> {
+  const db = await openDatabase(
+    RECORDING_RECOVERY_CONFIG.dbName,
+    RECORDING_RECOVERY_CONFIG.dbVersion,
+    upgradeDatabase,
+  );
+
+  try {
+    const transaction = db.transaction(RECORDING_RECOVERY_CONFIG.metadataStoreName, mode);
+    const store = transaction.objectStore(RECORDING_RECOVERY_CONFIG.metadataStoreName);
+    const result = await handler(store);
+    await idbTransactionComplete(transaction);
+    return result;
+  } finally {
+    db.close();
+  }
+}
+
+function normalizeRecord(record: StoredTemporaryRecording): StoredTemporaryRecording {
   return {
-    id: record.id,
-    recordingId: record.recordingId,
-    noResi: record.noResi,
-    mimeType: record.mimeType,
-    durationSeconds: record.durationSeconds,
-    estimatedSizeBytes: record.estimatedSizeBytes,
-    createdAt: record.createdAt,
-    uploadStatus: record.uploadStatus,
-    failureReason: record.failureReason,
+    ...record,
+    failureCode: record.failureCode ?? null,
+    failureMessage: resolvePendingRecordingFailureMessage(record),
+    failureReason: record.failureReason ?? null,
+    retryCount: record.retryCount ?? 0,
+    timeline: record.timeline ?? [],
+  };
+}
+
+function toTemporaryRecording(record: StoredTemporaryRecording): TemporaryRecording {
+  const normalized = normalizeRecord(record);
+  return {
+    id: normalized.id,
+    recordingId: normalized.recordingId,
+    noResi: normalized.noResi,
+    mimeType: normalized.mimeType,
+    durationSeconds: normalized.durationSeconds,
+    estimatedSizeBytes: normalized.estimatedSizeBytes,
+    createdAt: normalized.createdAt,
+    uploadStatus: normalized.uploadStatus,
+    failureCode: normalized.failureCode,
+    failureMessage: normalized.failureMessage,
+    failureReason: normalized.failureReason,
+    retryCount: normalized.retryCount,
+    timeline: normalized.timeline,
   };
 }
 
@@ -68,7 +117,41 @@ export class RecordingRecoveryService {
     return isIndexedDbSupported();
   }
 
+  async getMetadataValue<T>(key: string): Promise<T | null> {
+    if (!this.isAvailable()) return null;
+
+    const entry = await withMetadataStore('readonly', async (store) => {
+      return idbRequest(store.get(key)) as Promise<{ key: string; value: T } | undefined>;
+    });
+
+    return entry?.value ?? null;
+  }
+
+  async setMetadataValue<T>(key: string, value: T): Promise<void> {
+    await withMetadataStore('readwrite', async (store) => {
+      await idbRequest(store.put({ key, value }));
+    });
+  }
+
+  async isRecoveryModalDismissed(): Promise<boolean> {
+    const value = await this.getMetadataValue<boolean>(
+      RECOVERY_METADATA_KEYS.recoveryModalDismissed,
+    );
+    return value === true;
+  }
+
+  async setRecoveryModalDismissed(dismissed: boolean): Promise<void> {
+    await this.setMetadataValue(RECOVERY_METADATA_KEYS.recoveryModalDismissed, dismissed);
+  }
+
   async saveTemporaryRecording(input: SaveTemporaryRecordingInput): Promise<TemporaryRecording> {
+    const timeline: RecordingTimelineEvent[] = input.timeline ?? [
+      createTimelineEvent(
+        RECORDING_TIMELINE_EVENT_TYPES.RECORDING_PRESERVED,
+        'Recording saved on this device for upload recovery.',
+      ),
+    ];
+
     const record: StoredTemporaryRecording = {
       id: createId(),
       recordingId: input.recordingId ?? null,
@@ -79,12 +162,18 @@ export class RecordingRecoveryService {
       estimatedSizeBytes: input.blob.size,
       createdAt: new Date().toISOString(),
       uploadStatus: input.uploadStatus ?? 'PENDING',
+      failureCode: input.failureCode ?? null,
+      failureMessage: input.failureMessage ?? null,
       failureReason: input.failureReason ?? null,
+      retryCount: 0,
+      timeline,
     };
 
     await withStore('readwrite', async (store) => {
       await idbRequest(store.put(record));
     });
+
+    await this.setRecoveryModalDismissed(false);
 
     return toTemporaryRecording(record);
   }
@@ -98,8 +187,13 @@ export class RecordingRecoveryService {
 
     return records
       .filter((record) => record.uploadStatus !== 'COMPLETED')
-      .map(toTemporaryRecording)
+      .map((record) => toTemporaryRecording(normalizeRecord(record)))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async getTotalPendingBytes(): Promise<number> {
+    const recordings = await this.getTemporaryRecordings();
+    return recordings.reduce((sum, recording) => sum + recording.estimatedSizeBytes, 0);
   }
 
   async getTemporaryRecordingBlob(id: string): Promise<Blob | null> {
@@ -115,13 +209,30 @@ export class RecordingRecoveryService {
       return idbRequest(store.get(id)) as Promise<StoredTemporaryRecording | undefined>;
     });
 
-    return record ?? null;
+    return record ? normalizeRecord(record) : null;
+  }
+
+  async appendTimelineEvent(id: string, event: RecordingTimelineEvent): Promise<void> {
+    await withStore('readwrite', async (store) => {
+      const record = (await idbRequest(store.get(id))) as StoredTemporaryRecording | undefined;
+      if (!record) return;
+
+      const normalized = normalizeRecord(record);
+      normalized.timeline = [...normalized.timeline, event];
+      await idbRequest(store.put(normalized));
+    });
   }
 
   async updateUploadStatus(
     id: string,
     uploadStatus: RecoveryUploadStatus,
-    failureReason?: string | null,
+    options?: {
+      failureCode?: RecordingFailureCode | null;
+      failureMessage?: string | null;
+      failureReason?: string | null;
+      timelineEvent?: RecordingTimelineEvent;
+      incrementRetryCount?: boolean;
+    },
   ): Promise<void> {
     await withStore('readwrite', async (store) => {
       const record = (await idbRequest(store.get(id))) as StoredTemporaryRecording | undefined;
@@ -129,9 +240,21 @@ export class RecordingRecoveryService {
         throw ReliabilityError.failedRecovery('Temporary recording not found.');
       }
 
-      record.uploadStatus = uploadStatus;
-      record.failureReason = failureReason ?? null;
-      await idbRequest(store.put(record));
+      const normalized = normalizeRecord(record);
+      normalized.uploadStatus = uploadStatus;
+      normalized.failureCode = options?.failureCode ?? null;
+      normalized.failureMessage = options?.failureMessage ?? null;
+      normalized.failureReason = options?.failureReason ?? null;
+
+      if (options?.incrementRetryCount) {
+        normalized.retryCount += 1;
+      }
+
+      if (options?.timelineEvent) {
+        normalized.timeline = [...normalized.timeline, options.timelineEvent];
+      }
+
+      await idbRequest(store.put(normalized));
     });
   }
 

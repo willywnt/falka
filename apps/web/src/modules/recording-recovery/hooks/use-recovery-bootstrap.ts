@@ -14,6 +14,8 @@ import { clearRecordingSession } from '@/modules/recordings/utils/recording-sess
 import { recordingRecoveryService } from '../services/recording-recovery.service';
 import { useRecordingReliabilityStore } from '../store/recording-reliability.store';
 import { isIndexedDbSupported } from '../utils/idb-client';
+import { RECORDING_FAILURE_CODES } from '@/modules/recording-recovery/types/failure-codes';
+
 import { ReliabilityError } from '../errors/reliability-errors';
 
 const ACTIVE_LOCAL_STATUSES = new Set([
@@ -103,7 +105,11 @@ export function useRecoveryBootstrap() {
       }
 
       const clearedOrphan = await reconcileOrphanedServerSession((recordingId) =>
-        cancelRecordingMutation.mutateAsync(recordingId),
+        cancelRecordingMutation.mutateAsync({
+          recordingId,
+          failureCode: RECORDING_FAILURE_CODES.UNKNOWN_ERROR,
+          failureReason: 'Recording session was interrupted before upload completed.',
+        }),
       );
 
       if (clearedOrphan) {
@@ -122,7 +128,14 @@ export function useRecoveryBootstrap() {
         setTemporaryRecordings(recordings);
 
         if (recordings.length > 0) {
-          openRecoveryModal(recordings[0]?.id ?? null);
+          const dismissed = await recordingRecoveryService.isRecoveryModalDismissed();
+          if (!dismissed) {
+            openRecoveryModal(recordings[0]?.id ?? null);
+          } else {
+            toast.info('Pending uploads found', {
+              description: 'Open the pending upload center to retry or discard local recordings.',
+            });
+          }
         }
       } catch {
         setIndexedDbAvailable(false);

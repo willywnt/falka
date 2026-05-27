@@ -1,27 +1,16 @@
 import type { RecordingStatus } from '@prisma/client';
 
+import { formatOperationalDateShort, formatOperationalDateTime } from './datetime';
 import { formatEstimatedFileSize, formatRecordingDuration } from './format';
 
 export { formatRecordingDuration, formatEstimatedFileSize as formatRecordingFileSize };
 
 export function formatRecordingDate(value: string | Date): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
+  return formatOperationalDateTime(value);
 }
 
 export function formatRecordingDateShort(value: string | Date): string {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
+  return formatOperationalDateShort(value);
 }
 
 export function getRecordingStatusVariant(

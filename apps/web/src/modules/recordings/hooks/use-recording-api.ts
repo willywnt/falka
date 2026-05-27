@@ -12,6 +12,7 @@ import type {
   SaveRecordingMetadataResponse,
   StartRecordingResponse,
 } from '../types';
+import type { CancelRecordingInput } from '../validators/cancel-recording';
 import { recordingsManagementKeys } from './use-recordings-management';
 
 export const recordingQueryKeys = {
@@ -87,10 +88,12 @@ export function useCancelRecordingMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (recordingId: string) => {
+    mutationFn: async (input: CancelRecordingInput | string) => {
+      const payload = typeof input === 'string' ? { recordingId: input } : input;
+
       const result = await apiFetch<{ success: true }>(`${apiRoutes.recordings}/cancel`, {
         method: 'POST',
-        body: { recordingId },
+        body: payload,
       });
 
       if (!result.success) {

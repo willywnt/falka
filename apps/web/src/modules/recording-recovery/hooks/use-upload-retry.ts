@@ -9,6 +9,11 @@ import {
   useSaveRecordingMetadataMutation,
 } from '@/modules/recordings/hooks/use-recording-api';
 import { useRecordingStore } from '@/modules/recordings/store/recording.store';
+import {
+  RECORDING_FAILURE_CODES,
+  resolveFailureFromCode,
+} from '@/modules/recording-recovery/types/failure-codes';
+import { RECORDING_TIMELINE_EVENT_TYPES } from '../types/recording-timeline';
 
 import { retryTemporaryRecordingUpload } from '../services/upload-retry.service';
 import { recordingRecoveryService } from '../services/recording-recovery.service';
@@ -54,14 +59,15 @@ export function useUploadRetry() {
           closeRecoveryModal();
         }
 
+        await recordingRecoveryService.setRecoveryModalDismissed(true);
         resetReconnectPrompt();
         useRecordingStore.getState().reset();
         useRecordingReliabilityStore.getState().setWebcamDisconnected(false);
         await recoverDefaultCameraPreview();
         toast.success('Recording uploaded successfully');
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Upload retry failed';
-        toast.error('Upload retry failed', { description: message });
+        const message = error instanceof Error ? error.message : 'Upload failed';
+        toast.error('Upload failed', { description: message });
         await refreshTemporaryRecordings();
         useRecordingReliabilityStore.getState().setWebcamDisconnected(false);
         await recoverDefaultCameraPreview();
@@ -89,8 +95,22 @@ export function useUploadRetry() {
       await recordingRecoveryService.deleteTemporaryRecording(temporaryId);
 
       if (record?.recordingId) {
+        const hadCameraDisconnect =
+          record.failureCode === RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED ||
+          record.timeline.some(
+            (event) => event.type === RECORDING_TIMELINE_EVENT_TYPES.CAMERA_DISCONNECTED,
+          );
+
         try {
-          await cancelRecordingMutation.mutateAsync(record.recordingId);
+          await cancelRecordingMutation.mutateAsync({
+            recordingId: record.recordingId,
+            failureCode: hadCameraDisconnect
+              ? RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED
+              : RECORDING_FAILURE_CODES.UPLOAD_CANCELLED,
+            failureReason: hadCameraDisconnect
+              ? resolveFailureFromCode(RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED)
+              : 'Recording discarded by operator.',
+          });
         } catch {
           // Server session may already be terminal.
         }
@@ -102,6 +122,7 @@ export function useUploadRetry() {
         closeRecoveryModal();
       }
 
+      await recordingRecoveryService.setRecoveryModalDismissed(true);
       useRecordingStore.getState().reset();
       useRecordingReliabilityStore.getState().setWebcamDisconnected(false);
       await recoverDefaultCameraPreview();

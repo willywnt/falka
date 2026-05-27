@@ -31,7 +31,7 @@ export function ReconnectBanner() {
         <Wifi className="text-primary mt-0.5 size-4 shrink-0" />
         <div>
           <p className="font-medium">Connection restored.</p>
-          <p className="text-muted-foreground mt-1">Retry upload?</p>
+          <p className="text-muted-foreground mt-1">Upload pending recording?</p>
         </div>
       </div>
       <div className="flex gap-2">
@@ -44,7 +44,7 @@ export function ReconnectBanner() {
             disabled={isRetryingUpload}
             onClick={() => void retryUpload(firstPending.id)}
           >
-            Retry upload
+            Upload
           </Button>
         ) : (
           <Button size="sm" variant="secondary" onClick={() => openRecoveryModal()}>

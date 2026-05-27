@@ -36,6 +36,8 @@ export type RecordingDetail = {
   publicUrl: string;
   storageProvider: string;
   generatedFilename: string;
+  failureCode: string | null;
+  failureReason: string | null;
   startedAt: string;
   stoppedAt: string | null;
   uploadedAt: string | null;

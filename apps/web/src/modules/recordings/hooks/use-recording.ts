@@ -14,9 +14,18 @@ import {
 import { useRecordingReliabilityStore } from '@/modules/recording-recovery/store/recording-reliability.store';
 import { isRecoverableUploadError } from '@/modules/recording-recovery/utils/network';
 import type { SaveTemporaryRecordingInput } from '@/modules/recording-recovery/types';
+import {
+  createTimelineEvent,
+  RECORDING_TIMELINE_EVENT_TYPES,
+} from '@/modules/recording-recovery/types/recording-timeline';
+import {
+  RECORDING_FAILURE_CODES,
+  resolveFailureFromError,
+} from '@/modules/recording-recovery/types/failure-codes';
 
 import { RecordingError } from '../errors/recording-errors';
 import type { ActiveRecordingSession } from '../types';
+import { useUploadProgressMetrics } from './use-upload-progress-metrics';
 import {
   useCancelRecordingMutation,
   useMarkUploadingMutation,
@@ -32,9 +41,10 @@ import {
 import { recordingService } from '../services/recording.service';
 import { useRecordingStore } from '../store/recording.store';
 import { estimateRecordingFileSizeBytes } from '../utils/media-recorder';
-import { setRecordingSession } from '../utils/recording-session';
+import { clearRecordingSession, setRecordingSession } from '../utils/recording-session';
 import { isAnotherTabRecording } from '../utils/tab-lock';
 import { noResiSchema } from '../validators/no-resi';
+import { mapRecordingErrorToFailureMetadata } from '../utils/recording-failure';
 
 async function persistRecoverableRecording(input: SaveTemporaryRecordingInput): Promise<boolean> {
   if (!recordingRecoveryService.isAvailable()) {
@@ -50,7 +60,7 @@ async function persistRecoverableRecording(input: SaveTemporaryRecordingInput): 
     const store = useRecordingReliabilityStore.getState();
     const recordings = await recordingRecoveryService.getTemporaryRecordings();
     store.setTemporaryRecordings(recordings);
-    store.openRecoveryModal(saved.id);
+    store.setUploadCenterOpen(true);
     return true;
   } catch {
     return false;
@@ -92,6 +102,8 @@ export function useRecording() {
   const saveMetadataMutation = useSaveRecordingMetadataMutation();
   const cancelRecordingMutation = useCancelRecordingMutation();
 
+  const { metrics: uploadMetrics, handleProgress, resetMetrics } = useUploadProgressMetrics();
+
   useBeforeUnloadProtection();
   useTabLockProtection();
 
@@ -101,6 +113,36 @@ export function useRecording() {
       timerRef.current = null;
     }
   }, []);
+
+  /** Clears the form for the next recording while keeping optional success/error summary visible. */
+  const resetSessionForNextRecording = useCallback(
+    async (options?: { preserveError?: { message: string; code: string } }) => {
+      setNoResi('');
+      setActiveRecording(null);
+      setDurationSeconds(0);
+      setUploadProgress(0);
+      setEstimatedFileSizeBytes(0);
+      setStatus('IDLE');
+      if (options?.preserveError) {
+        setError(options.preserveError.message, options.preserveError.code);
+      } else {
+        setError(null);
+      }
+      resetMetrics();
+      clearRecordingSession();
+      await recoverDefaultCameraPreview();
+    },
+    [
+      resetMetrics,
+      setActiveRecording,
+      setDurationSeconds,
+      setError,
+      setEstimatedFileSizeBytes,
+      setNoResi,
+      setStatus,
+      setUploadProgress,
+    ],
+  );
 
   const handleFailure = useCallback(
     async (recordingError: RecordingError, recordingId?: string) => {
@@ -112,8 +154,14 @@ export function useRecording() {
       releaseRecordingLock();
 
       if (recordingId) {
+        const failureMetadata = mapRecordingErrorToFailureMetadata(recordingError);
+
         try {
-          await cancelRecordingMutation.mutateAsync(recordingId);
+          await cancelRecordingMutation.mutateAsync({
+            recordingId,
+            failureCode: failureMetadata.failureCode,
+            failureReason: failureMetadata.failureReason,
+          });
         } catch {
           // Ignore cleanup failures.
         }
@@ -133,6 +181,7 @@ export function useRecording() {
       durationSeconds: number;
       message: string;
       errorCode: string;
+      failureCode?: string;
       failureReason: string;
       notifyWebcamDisconnect?: boolean;
     }) => {
@@ -141,6 +190,15 @@ export function useRecording() {
       setMediaStream(null);
       releaseRecordingLock();
 
+      const failure = params.failureCode
+        ? {
+            failureCode:
+              params.failureCode as (typeof RECORDING_FAILURE_CODES)[keyof typeof RECORDING_FAILURE_CODES],
+            failureMessage: params.message,
+            debugMessage: params.failureReason,
+          }
+        : resolveFailureFromError(new Error(params.failureReason));
+
       const persisted = await persistRecoverableRecording({
         blob: params.blob,
         mimeType: params.mimeType,
@@ -148,15 +206,39 @@ export function useRecording() {
         noResi: params.noResi,
         durationSeconds: params.durationSeconds,
         uploadStatus: 'PENDING',
-        failureReason: params.failureReason,
+        failureCode: failure.failureCode,
+        failureMessage: failure.failureMessage,
+        failureReason: failure.debugMessage,
+        timeline: [
+          createTimelineEvent(
+            RECORDING_TIMELINE_EVENT_TYPES.RECORDING_PRESERVED,
+            'Recording saved on this device for upload recovery.',
+          ),
+          ...(failure.failureCode === RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED
+            ? [
+                createTimelineEvent(
+                  RECORDING_TIMELINE_EVENT_TYPES.CAMERA_DISCONNECTED,
+                  failure.failureMessage,
+                ),
+              ]
+            : [
+                createTimelineEvent(
+                  RECORDING_TIMELINE_EVENT_TYPES.UPLOAD_INTERRUPTED,
+                  failure.failureMessage,
+                ),
+              ]),
+        ],
       });
 
       if (params.notifyWebcamDisconnect) {
         setWebcamDisconnected(true);
+        await resetSessionForNextRecording({
+          preserveError: { message: params.message, code: params.errorCode },
+        });
+      } else {
+        setStatus('FAILED');
+        setError(params.message, params.errorCode);
       }
-
-      setStatus('FAILED');
-      setError(params.message, params.errorCode);
 
       if (persisted) {
         toast.warning('Recording preserved locally', { description: params.message });
@@ -165,8 +247,26 @@ export function useRecording() {
           description: `${params.message} Local storage is unavailable — the recording could not be saved.`,
         });
       }
+
+      try {
+        await cancelRecordingMutation.mutateAsync({
+          recordingId: params.recordingId,
+          failureCode: failure.failureCode,
+          failureReason: failure.failureMessage,
+        });
+      } catch {
+        // Ignore cleanup failures.
+      }
     },
-    [clearTimer, setError, setMediaStream, setStatus, setWebcamDisconnected],
+    [
+      cancelRecordingMutation,
+      clearTimer,
+      resetSessionForNextRecording,
+      setError,
+      setMediaStream,
+      setStatus,
+      setWebcamDisconnected,
+    ],
   );
 
   const handleWebcamDisconnect = useCallback(async () => {
@@ -190,8 +290,9 @@ export function useRecording() {
         recordingId: currentActive.id,
         noResi: currentActive.noResi,
         durationSeconds: useRecordingStore.getState().durationSeconds,
-        message: 'Camera disconnected. Your recording was safely preserved locally.',
+        message: 'Camera disconnected',
         errorCode: 'CAMERA_DISCONNECTED',
+        failureCode: RECORDING_FAILURE_CODES.CAMERA_DISCONNECTED,
         failureReason: 'Camera disconnected during recording',
         notifyWebcamDisconnect: true,
       });
@@ -237,10 +338,22 @@ export function useRecording() {
   );
 
   const startRecording = useCallback(async () => {
-    const parsedNoResi = noResiSchema.safeParse(noResi);
+    const trimmedNoResi = noResi.trim();
+
+    if (!trimmedNoResi) {
+      setError('Enter a tracking number (resi) before starting.', 'VALIDATION_ERROR');
+      toast.warning('Tracking number required', {
+        description: 'Enter a resi number to start recording.',
+      });
+      return;
+    }
+
+    const parsedNoResi = noResiSchema.safeParse(trimmedNoResi);
 
     if (!parsedNoResi.success) {
-      setError(parsedNoResi.error.errors[0]?.message ?? 'Invalid resi number', 'VALIDATION_ERROR');
+      const message = parsedNoResi.error.errors[0]?.message ?? 'Invalid resi number';
+      setError(message, 'VALIDATION_ERROR');
+      toast.warning('Invalid tracking number', { description: message });
       return;
     }
 
@@ -326,6 +439,7 @@ export function useRecording() {
 
       setStatus('UPLOADING');
       setUploadProgress(0);
+      resetMetrics();
 
       await markUploadingMutation.mutateAsync(recordingId);
 
@@ -334,7 +448,10 @@ export function useRecording() {
       const uploadResult = await uploadFile({
         file,
         signal: abortUploadRef.current.signal,
-        onProgress: ({ percent }) => setUploadProgress(percent),
+        onProgress: (event) => {
+          setUploadProgress(event.percent);
+          handleProgress(event);
+        },
       });
 
       const saved = await saveMetadataMutation.mutateAsync({
@@ -355,9 +472,9 @@ export function useRecording() {
         fileSizeBytes: saved.fileSizeBytes,
         durationSeconds: saved.durationSeconds,
       });
-      setStatus('COMPLETED');
       releaseRecordingLock();
       toast.success('Recording uploaded successfully');
+      await resetSessionForNextRecording();
     } catch (unknownError) {
       if (unknownError instanceof DOMException && unknownError.name === 'AbortError') {
         await handleFailure(RecordingError.uploadFailed('Upload cancelled.'), recordingId);
@@ -372,16 +489,17 @@ export function useRecording() {
       }
 
       if (capturedBlob && capturedBlob.size > 0 && isRecoverableUploadError(unknownError)) {
+        const failure = resolveFailureFromError(unknownError);
         await handleRecoverableFailure({
           blob: capturedBlob,
           mimeType: capturedMimeType,
           recordingId,
           noResi: activeRecording.noResi,
           durationSeconds: useRecordingStore.getState().durationSeconds,
-          message:
-            'Upload failed. Your recording is safely stored locally. Retry when you are back online.',
+          message: failure.failureMessage,
           errorCode: 'UPLOAD_RECOVERABLE',
-          failureReason: message,
+          failureCode: failure.failureCode,
+          failureReason: failure.debugMessage,
         });
         return;
       }
@@ -395,7 +513,10 @@ export function useRecording() {
     clearTimer,
     handleFailure,
     handleRecoverableFailure,
+    handleProgress,
     markUploadingMutation,
+    resetMetrics,
+    resetSessionForNextRecording,
     saveMetadataMutation,
     setCompletedRecording,
     setMediaStream,
@@ -426,12 +547,14 @@ export function useRecording() {
     }
 
     resetStore();
+    resetMetrics();
     useRecordingReliabilityStore.getState().setWebcamDisconnected(false);
     await recoverDefaultCameraPreview();
   }, [
     cancelRecordingMutation,
     cancelUpload,
     clearTimer,
+    resetMetrics,
     resetStore,
     setMediaStream,
     setWebcamDisconnected,
@@ -468,6 +591,7 @@ export function useRecording() {
     mediaStream,
     error,
     completedRecording,
+    uploadMetrics,
     isBusy:
       status === 'REQUESTING_PERMISSION' ||
       status === 'RECORDING' ||

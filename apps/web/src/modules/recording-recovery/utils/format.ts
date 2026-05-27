@@ -10,11 +10,10 @@ export function formatRecoveryDuration(seconds: number): string {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-export function formatRecoveryDate(iso: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso));
-}
+export {
+  formatOperationalDateTime,
+  formatTimelineDateTime,
+  formatOperationalDateShort,
+} from '@/modules/recordings/utils/datetime';
+export { formatOperationalDateTime as formatRecoveryDate } from '@/modules/recordings/utils/datetime';
+export { formatTimelineDateTime as formatRecoveryTimelineDate } from '@/modules/recordings/utils/datetime';

@@ -18,6 +18,19 @@ import { appLogger } from '@/lib/logger';
 
 const ACTIVE_STATUSES: RecordingStatus[] = [RecordingStatus.RECORDING, RecordingStatus.UPLOADING];
 
+/** Server sessions that can receive a retried upload after local recovery. */
+const UPLOAD_RESUMABLE_STATUSES: RecordingStatus[] = [
+  RecordingStatus.RECORDING,
+  RecordingStatus.UPLOADING,
+  RecordingStatus.FAILED,
+];
+
+const CANCELLABLE_STATUSES: RecordingStatus[] = [
+  RecordingStatus.RECORDING,
+  RecordingStatus.UPLOADING,
+  RecordingStatus.FAILED,
+];
+
 function mapListItem(recording: {
   id: string;
   noResi: string;
@@ -52,6 +65,8 @@ function mapDetail(recording: {
   publicUrl: string;
   storageProvider: string;
   generatedFilename: string;
+  failureCode?: string | null;
+  failureReason?: string | null;
   startedAt: Date;
   stoppedAt: Date | null;
   uploadedAt: Date | null;
@@ -68,6 +83,8 @@ function mapDetail(recording: {
     publicUrl: recording.publicUrl,
     storageProvider: recording.storageProvider,
     generatedFilename: recording.generatedFilename,
+    failureCode: recording.failureCode ?? null,
+    failureReason: recording.failureReason ?? null,
     startedAt: recording.startedAt.toISOString(),
     stoppedAt: recording.stoppedAt?.toISOString() ?? null,
     uploadedAt: recording.uploadedAt?.toISOString() ?? null,
@@ -129,13 +146,21 @@ export class RecordingServerService {
   async markUploading(recordingId: string, userId: string): Promise<void> {
     const recording = await this.getOwnedRecording(recordingId, userId);
 
-    if (recording.status !== RecordingStatus.RECORDING) {
+    if (recording.status === RecordingStatus.UPLOADING) {
+      return;
+    }
+
+    if (!UPLOAD_RESUMABLE_STATUSES.includes(recording.status)) {
       throw RecordingError.validation('Recording is not in a valid state.');
     }
 
     await prisma.recording.update({
       where: { id: recordingId },
-      data: { status: RecordingStatus.UPLOADING },
+      data: {
+        status: RecordingStatus.UPLOADING,
+        failureCode: null,
+        failureReason: null,
+      } as Prisma.RecordingUpdateInput,
     });
   }
 
@@ -156,7 +181,7 @@ export class RecordingServerService {
 
     const recording = await this.getOwnedRecording(input.recordingId, userId);
 
-    if (!(ACTIVE_STATUSES as RecordingStatus[]).includes(recording.status)) {
+    if (!UPLOAD_RESUMABLE_STATUSES.includes(recording.status)) {
       throw RecordingError.validation('Recording is not in a valid state.');
     }
 
@@ -190,7 +215,9 @@ export class RecordingServerService {
           status: RecordingStatus.COMPLETED,
           stoppedAt: now,
           uploadedAt: now,
-        },
+          failureCode: null,
+          failureReason: null,
+        } as Prisma.RecordingUpdateInput,
       });
 
       await tx.user.update({
@@ -216,16 +243,25 @@ export class RecordingServerService {
     };
   }
 
-  async markFailed(recordingId: string, userId: string): Promise<void> {
+  async markFailed(
+    recordingId: string,
+    userId: string,
+    options?: { failureCode?: string; failureReason?: string },
+  ): Promise<void> {
     const recording = await this.getOwnedRecording(recordingId, userId);
 
-    if (!ACTIVE_STATUSES.includes(recording.status)) {
+    if (!CANCELLABLE_STATUSES.includes(recording.status)) {
       return;
     }
 
     await prisma.recording.update({
       where: { id: recordingId },
-      data: { status: RecordingStatus.FAILED, stoppedAt: new Date() },
+      data: {
+        status: RecordingStatus.FAILED,
+        stoppedAt: recording.stoppedAt ?? new Date(),
+        failureCode: options?.failureCode ?? null,
+        failureReason: options?.failureReason ?? null,
+      } as Prisma.RecordingUpdateInput,
     });
   }
 
@@ -241,7 +277,13 @@ export class RecordingServerService {
     if (query.status !== 'ALL') {
       where.status = query.status;
     } else {
-      where.status = { not: RecordingStatus.PENDING_DELETE };
+      where.status = {
+        notIn: [
+          RecordingStatus.PENDING_DELETE,
+          RecordingStatus.RECORDING,
+          RecordingStatus.UPLOADING,
+        ],
+      };
     }
 
     if (query.search) {
