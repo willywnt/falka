@@ -1,9 +1,7 @@
-import {
-  ALLOWED_UPLOAD_EXTENSIONS,
-  MAX_UPLOAD_SIZE_BYTES,
-} from '@olshop/config/limits';
+import { ALLOWED_UPLOAD_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES } from '@olshop/config/limits';
 import { z } from 'zod';
 
+import { detectDangerousFilename, validateUploadFilename } from '../utils/file-validation';
 import { hasAllowedExtension } from '../utils/mime';
 import { webmMimeTypeSchema } from './mime-type';
 
@@ -22,6 +20,22 @@ export const presignUploadSchema = z
       .max(MAX_UPLOAD_SIZE_BYTES, 'File exceeds the 500 MB upload limit'),
   })
   .superRefine((data, ctx) => {
+    if (detectDangerousFilename(data.filename)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'File type is not allowed',
+        path: ['filename'],
+      });
+    }
+
+    if (!validateUploadFilename(data.filename)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid recording filename',
+        path: ['filename'],
+      });
+    }
+
     if (!hasAllowedExtension(data.filename, ALLOWED_UPLOAD_EXTENSIONS)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

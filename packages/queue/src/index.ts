@@ -17,6 +17,9 @@ export type WorkerHealthSnapshot = {
   database: boolean;
   workers: number;
   timestamp: string;
+  queues?: Awaited<
+    ReturnType<typeof import('./observability/queue-metrics.js').getQueueObservabilitySnapshot>
+  >;
 };
 
 export async function startWorkerInfrastructure(
@@ -36,6 +39,8 @@ export async function startWorkerInfrastructure(
 
 export async function getWorkerHealthSnapshot(): Promise<WorkerHealthSnapshot> {
   const [redis, database] = await Promise.all([pingRedis(), healthCheckDb()]);
+  const { getQueueObservabilitySnapshot } = await import('./observability/queue-metrics.js');
+  const queues = redis ? await getQueueObservabilitySnapshot().catch(() => undefined) : undefined;
 
   const status = redis && database ? 'ok' : redis || database ? 'degraded' : 'error';
 
@@ -45,6 +50,7 @@ export async function getWorkerHealthSnapshot(): Promise<WorkerHealthSnapshot> {
     database,
     workers: getRegisteredWorkers().length,
     timestamp: new Date().toISOString(),
+    queues,
   };
 }
 
@@ -68,3 +74,4 @@ export * from './workers/create-worker.js';
 export * from './workers/register-workers.js';
 export * from './utils/index.js';
 export * from './utils/job-logger.js';
+export * from './observability/queue-metrics.js';

@@ -14,6 +14,10 @@ import {
   getDefaultRecalculateStoragePayload,
   processRecalculateStorageJob,
 } from './recalculate-storage.job.js';
+import {
+  getDefaultVerifyStorageConsistencyPayload,
+  processVerifyStorageConsistencyJob,
+} from './verify-storage-consistency.job.js';
 
 export {
   processCleanupRecordingsJob,
@@ -24,4 +28,6 @@ export {
   getDefaultCleanupFailedUploadsPayload,
   processCleanupAuditLogsJob,
   getDefaultCleanupAuditLogsPayload,
+  processVerifyStorageConsistencyJob,
+  getDefaultVerifyStorageConsistencyPayload,
 };

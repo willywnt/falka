@@ -1,6 +1,12 @@
 import type { Job } from 'bullmq';
-
-import { logger } from '@olshop/utils/logger';
+import { METRIC_KEYS, incrementMetric } from '@olshop/metrics';
+import {
+  extendCorrelationContext,
+  logEvents,
+  logger,
+  runWithRequestId,
+} from '@olshop/logger/server';
+import { sanitizeForLogging } from '@olshop/logger/sanitize';
 
 import type { JobResultMetadata } from '../types/index.js';
 
@@ -9,14 +15,18 @@ type JobLogContext = {
   jobName: string;
   jobId: string | undefined;
   attemptsMade: number;
+  requestId?: string;
 };
 
 function getJobContext(job: Job): JobLogContext {
+  const payload = job.data as { requestId?: string } | undefined;
+
   return {
     queueName: job.queueName,
     jobName: job.name,
     jobId: job.id,
     attemptsMade: job.attemptsMade,
+    requestId: payload?.requestId,
   };
 }
 
@@ -26,36 +36,51 @@ export async function runJobWithLogging<TPayload, TResult extends JobResultMetad
 ): Promise<TResult> {
   const context = getJobContext(job);
   const startedAt = Date.now();
+  const requestId = context.requestId ?? `job-${job.id ?? 'unknown'}`;
 
-  logger.info('job.started', {
-    ...context,
-    payload: job.data,
+  return runWithRequestId(requestId, async () => {
+    extendCorrelationContext({
+      requestId,
+      jobId: context.jobId,
+      queueName: context.queueName,
+    });
+
+    logEvents.jobStarted({
+      ...context,
+      payload: sanitizeForLogging(job.data),
+    });
+
+    try {
+      const result = await handler(job.data);
+      const durationMs = Date.now() - startedAt;
+
+      logEvents.jobCompleted({
+        ...context,
+        durationMs,
+        result: sanitizeForLogging(result),
+      });
+
+      return result;
+    } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      const message = error instanceof Error ? error.message : String(error);
+      const willRetry = job.attemptsMade < (job.opts.attempts ?? 1);
+
+      logEvents.jobFailed({
+        ...context,
+        durationMs,
+        error: message,
+        willRetry,
+      });
+
+      await incrementMetric(METRIC_KEYS.JOBS_FAILED, 1);
+      if (willRetry) {
+        await incrementMetric(METRIC_KEYS.JOBS_RETRIED, 1);
+      }
+
+      throw error;
+    }
   });
-
-  try {
-    const result = await handler(job.data);
-    const durationMs = Date.now() - startedAt;
-
-    logger.info('job.completed', {
-      ...context,
-      durationMs,
-      result,
-    });
-
-    return result;
-  } catch (error) {
-    const durationMs = Date.now() - startedAt;
-    const message = error instanceof Error ? error.message : String(error);
-
-    logger.error('job.failed', {
-      ...context,
-      durationMs,
-      error: message,
-      willRetry: job.attemptsMade < (job.opts.attempts ?? 1),
-    });
-
-    throw error;
-  }
 }
 
 export function logPermanentJobFailure(job: Job, error: Error): void {
@@ -65,7 +90,7 @@ export function logPermanentJobFailure(job: Job, error: Error): void {
     jobId: job.id,
     attemptsMade: job.attemptsMade,
     failedReason: error.message,
-    payload: job.data,
+    payload: sanitizeForLogging(job.data),
     failedAt: new Date().toISOString(),
   });
 }

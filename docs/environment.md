@@ -33,7 +33,12 @@ Olshop separates **public** (client) and **server-only** environment variables w
 | `R2_SECRET_ACCESS_KEY`          | Yes      | R2 API token secret                         |
 | `R2_BUCKET_NAME`                | Yes      | R2 bucket name                              |
 | `R2_PUBLIC_URL`                 | No       | Public bucket URL (r2.dev or custom domain) |
-| `REDIS_URL`                     | No       | Redis URL for BullMQ workers                |
+| `REDIS_URL`                     | Prod     | Redis URL for BullMQ, rate limits, metrics  |
+| `SENTRY_DSN`                    | Prod     | Server/worker Sentry DSN                    |
+| `NEXT_PUBLIC_SENTRY_DSN`        | Prod     | Client Sentry DSN                           |
+| `WORKER_HEALTH_URL`             | No       | Worker health URL for web healthcheck       |
+| `LOG_PRETTY`                    | No       | Pretty logs in dev (`true` / `false`)       |
+| `APP_VERSION`                   | No       | Version shown in health responses           |
 | `MARKETPLACE_ENCRYPTION_SECRET` | Yes      | AES-256-GCM key for marketplace tokens      |
 | `LOG_LEVEL`                     | No       | `debug` \| `info` \| `warn` \| `error`      |
 | `NODE_ENV`                      | Auto     | Set by runtime                              |

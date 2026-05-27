@@ -1,4 +1,9 @@
-import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getServerEnv } from '@olshop/config/env.server';
 
 import type { ObjectStorageConfig, ObjectStorageProvider } from './types.js';
@@ -51,6 +56,34 @@ export class R2ObjectStorageProvider implements ObjectStorageProvider {
         new HeadObjectCommand({
           Bucket: this.bucketName,
           Key: storageKey,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async listObjectKeys(prefix: string, maxKeys = 500): Promise<string[]> {
+    const response = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        Prefix: prefix,
+        MaxKeys: maxKeys,
+      }),
+    );
+
+    return (response.Contents ?? [])
+      .map((item) => item.Key)
+      .filter((key): key is string => Boolean(key));
+  }
+
+  async checkAvailability(): Promise<boolean> {
+    try {
+      await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          MaxKeys: 1,
         }),
       );
       return true;

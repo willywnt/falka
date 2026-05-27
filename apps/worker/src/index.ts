@@ -1,17 +1,20 @@
 import { connectDb } from '@olshop/db';
-import { getServerEnv } from '@olshop/config/env.server';
+import { validateServerEnvOnStartup } from '@olshop/config/env.server';
 import { shutdownWorkerInfrastructure, startWorkerInfrastructure } from '@olshop/queue';
-import { logger } from '@olshop/utils/logger';
+import { logger } from '@olshop/logger/server';
 
 import { startHealthServer } from './health-server.js';
+import { captureWorkerException, flushWorkerSentry, initWorkerSentry } from './sentry.js';
 
 const HEALTH_PORT = Number(process.env.WORKER_HEALTH_PORT ?? 3001);
 const ENABLE_SCHEDULERS = process.env.WORKER_ENABLE_SCHEDULERS !== 'false';
+const SHUTDOWN_TIMEOUT_MS = Number(process.env.WORKER_SHUTDOWN_TIMEOUT_MS ?? 30_000);
 
 let isShuttingDown = false;
 
 async function bootstrap(): Promise<void> {
-  getServerEnv();
+  validateServerEnvOnStartup();
+  initWorkerSentry();
 
   await connectDb();
   await startWorkerInfrastructure({ registerSchedulers: ENABLE_SCHEDULERS });
@@ -23,6 +26,11 @@ async function bootstrap(): Promise<void> {
     isShuttingDown = true;
 
     logger.info('worker.signal.received', { signal });
+
+    const forceExitTimer = setTimeout(() => {
+      logger.error('worker.shutdown.timeout', { timeoutMs: SHUTDOWN_TIMEOUT_MS });
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
 
     await new Promise<void>((resolve, reject) => {
       healthServer.close((error) => {
@@ -36,6 +44,8 @@ async function bootstrap(): Promise<void> {
     });
 
     await shutdownWorkerInfrastructure();
+    await flushWorkerSentry();
+    clearTimeout(forceExitTimer);
     process.exit(0);
   };
 
@@ -54,6 +64,7 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error) => {
+  captureWorkerException(error, { phase: 'bootstrap' });
   logger.error('worker.bootstrap.failed', {
     error: error instanceof Error ? error.message : String(error),
   });

@@ -7,6 +7,7 @@ import {
   getDefaultCleanupFailedUploadsPayload,
   getDefaultCleanupRecordingsPayload,
   getDefaultRecalculateStoragePayload,
+  getDefaultVerifyStorageConsistencyPayload,
 } from '../jobs/index.js';
 import { JOB_NAMES, QUEUE_NAMES } from '../types/index.js';
 
@@ -37,6 +38,19 @@ export async function registerScheduledJobs(): Promise<void> {
     ),
     repeat: { pattern: '0 3 * * *' },
   });
+
+  await storageQueue.add(
+    JOB_NAMES.VERIFY_STORAGE_CONSISTENCY,
+    getDefaultVerifyStorageConsistencyPayload(),
+    {
+      jobId: buildScheduledJobId(
+        QUEUE_NAMES.STORAGE_RECALCULATION,
+        JOB_NAMES.VERIFY_STORAGE_CONSISTENCY,
+        'daily',
+      ),
+      repeat: { pattern: '0 5 * * *' },
+    },
+  );
 
   await uploadRecoveryQueue.add(
     JOB_NAMES.CLEANUP_FAILED_UPLOADS,

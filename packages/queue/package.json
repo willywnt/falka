@@ -18,6 +18,8 @@
   "dependencies": {
     "@olshop/config": "workspace:*",
     "@olshop/db": "workspace:*",
+    "@olshop/logger": "workspace:*",
+    "@olshop/metrics": "workspace:*",
     "@olshop/storage": "workspace:*",
     "@olshop/utils": "workspace:*",
     "bullmq": "^5.49.1",

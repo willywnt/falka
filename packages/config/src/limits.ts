@@ -46,6 +46,19 @@ export const MAX_CONCURRENT_UPLOADS = 3;
 /** API rate limit: requests per minute per user. */
 export const API_RATE_LIMIT_PER_MINUTE = 120;
 
+/** Login attempts per IP per 15 minutes. */
+export const LOGIN_RATE_LIMIT_PER_WINDOW = 10;
+export const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
+
+/** Upload presign requests per user per minute. */
+export const UPLOAD_RATE_LIMIT_PER_MINUTE = 30;
+
+/** Recording start/create requests per user per minute. */
+export const RECORDING_RATE_LIMIT_PER_MINUTE = 20;
+
+/** Auth API requests per IP per minute. */
+export const AUTH_RATE_LIMIT_PER_MINUTE = 60;
+
 /** Inventory sync batch size. */
 export const INVENTORY_SYNC_BATCH_SIZE = 100;
 

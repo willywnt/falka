@@ -1,14 +1,9 @@
-import { healthCheckDb } from '@olshop/db';
+import { getPlatformHealthSnapshot } from '@olshop/health';
+
 import { apiSuccess } from '@/lib/api-response';
 
 export async function GET() {
-  const dbHealthy = await healthCheckDb();
+  const health = await getPlatformHealthSnapshot();
 
-  return apiSuccess({
-    status: dbHealthy ? 'ok' : 'degraded',
-    timestamp: new Date().toISOString(),
-    services: {
-      database: dbHealthy ? 'ok' : 'unavailable',
-    },
-  });
+  return apiSuccess(health, health.status === 'error' ? 503 : 200);
 }

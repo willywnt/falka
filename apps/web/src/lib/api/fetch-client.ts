@@ -1,7 +1,6 @@
 import type { ApiError, ApiResponse } from '@olshop/types';
 
 import { AppError } from '@/lib/errors';
-import { appLogger } from '@/lib/logger';
 
 export type ApiResult<T> =
   | { success: true; data: T; meta?: ApiResponse<T>['meta'] }
@@ -62,7 +61,9 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
 
     return parseResponse<T>(response);
   } catch (error) {
-    appLogger.error('API fetch failed', { path, error: String(error) });
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API fetch failed', { path, error: String(error) });
+    }
     throw AppError.fromUnknown(error);
   }
 }

@@ -23,6 +23,10 @@
     "./limits": {
       "types": "./dist/limits.d.ts",
       "default": "./dist/limits.js"
+    },
+    "./sentry": {
+      "types": "./dist/sentry.d.ts",
+      "default": "./dist/sentry.js"
     }
   },
   "scripts": {

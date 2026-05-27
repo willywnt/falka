@@ -14,8 +14,10 @@
   "dependencies": {
     "@olshop/config": "workspace:*",
     "@olshop/db": "workspace:*",
+    "@olshop/logger": "workspace:*",
     "@olshop/queue": "workspace:*",
     "@olshop/utils": "workspace:*",
+    "@sentry/node": "^9.30.0",
     "dotenv": "^16.5.0"
   },
   "devDependencies": {

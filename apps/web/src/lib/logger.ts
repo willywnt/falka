@@ -1,8 +1,13 @@
-import { logger } from '@olshop/utils/logger';
+import 'server-only';
 
-import type { LogContext, Logger } from '@olshop/utils/logger';
+import { createLogger } from '@olshop/logger/server';
 
-/** Application logger — structured JSON via Pino. Ready for Sentry/APM integration. */
-export const appLogger: Logger = logger;
+export {
+  createLogger,
+  logEvents,
+  logger,
+  type LogContext,
+  type Logger,
+} from '@olshop/logger/server';
 
-export type { Logger, LogContext };
+export const appLogger = createLogger({ component: 'web' });

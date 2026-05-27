@@ -2,32 +2,60 @@ import { z } from 'zod';
 
 const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 
-const serverEnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+function emptyToUndefined(value: unknown): unknown {
+  return value === '' ? undefined : value;
+}
 
-  DATABASE_URL: z.string().min(1),
+const optionalUrl = z.preprocess(emptyToUndefined, z.string().url().optional());
 
-  AUTH_SECRET: z.string().min(32),
-  AUTH_URL: z.string().url().optional(),
-  NEXTAUTH_URL: z.string().url().optional(),
+const serverEnvSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
-  R2_ACCOUNT_ID: z.string().min(1),
-  R2_ACCESS_KEY_ID: z.string().min(1),
-  R2_SECRET_ACCESS_KEY: z.string().min(1),
-  R2_BUCKET_NAME: z.string().min(1),
-  R2_PUBLIC_URL: z.string().url().optional(),
+    DATABASE_URL: z.string().min(1),
 
-  REDIS_URL: z.string().url().optional(),
+    AUTH_SECRET: z.string().min(32),
+    AUTH_URL: optionalUrl,
+    NEXTAUTH_URL: optionalUrl,
 
-  SHOPEE_PARTNER_ID: z.string().optional(),
-  SHOPEE_PARTNER_KEY: z.string().optional(),
-  TOKOPEDIA_CLIENT_ID: z.string().optional(),
-  TOKOPEDIA_CLIENT_SECRET: z.string().optional(),
+    R2_ACCOUNT_ID: z.string().min(1),
+    R2_ACCESS_KEY_ID: z.string().min(1),
+    R2_SECRET_ACCESS_KEY: z.string().min(1),
+    R2_BUCKET_NAME: z.string().min(1),
+    R2_PUBLIC_URL: optionalUrl,
 
-  MARKETPLACE_ENCRYPTION_SECRET: z.string().min(32),
+    REDIS_URL: optionalUrl,
 
-  LOG_LEVEL: logLevelSchema.optional(),
-});
+    SHOPEE_PARTNER_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+    SHOPEE_PARTNER_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+    TOKOPEDIA_CLIENT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+    TOKOPEDIA_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+
+    MARKETPLACE_ENCRYPTION_SECRET: z.string().min(32),
+
+    LOG_LEVEL: logLevelSchema.optional(),
+    LOG_PRETTY: z.enum(['true', 'false']).optional(),
+
+    SENTRY_DSN: optionalUrl,
+    SENTRY_ENVIRONMENT: z.preprocess(emptyToUndefined, z.string().optional()),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional(),
+
+    APP_VERSION: z.preprocess(emptyToUndefined, z.string().optional()),
+    WORKER_HEALTH_PORT: z.coerce.number().int().positive().optional(),
+    WORKER_HEALTH_URL: optionalUrl,
+    WORKER_ENABLE_SCHEDULERS: z.enum(['true', 'false']).optional(),
+
+    ADMIN_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
+  })
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && !env.REDIS_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'REDIS_URL is required in production for rate limiting, metrics, and BullMQ.',
+        path: ['REDIS_URL'],
+      });
+    }
+  });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
@@ -46,6 +74,11 @@ export function getServerEnv(): ServerEnv {
 
   cached = parsed.data;
   return cached;
+}
+
+/** Fail fast during process boot (web instrumentation / worker bootstrap). */
+export function validateServerEnvOnStartup(): ServerEnv {
+  return getServerEnv();
 }
 
 /** Validated server environment. Access at runtime only. */

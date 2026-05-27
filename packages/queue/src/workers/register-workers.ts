@@ -7,6 +7,7 @@ import {
   processCleanupFailedUploadsJob,
   processCleanupRecordingsJob,
   processRecalculateStorageJob,
+  processVerifyStorageConsistencyJob,
 } from '../jobs/index.js';
 import { JOB_NAMES, QUEUE_NAMES } from '../types/index.js';
 
@@ -18,7 +19,13 @@ export function registerAllWorkers() {
 
   createWorker(QUEUE_NAMES.STORAGE_RECALCULATION, {
     concurrency: 1,
-    processor: async (job: Job) => runJobWithLogging(job, processRecalculateStorageJob),
+    processor: async (job: Job) => {
+      if (job.name === JOB_NAMES.VERIFY_STORAGE_CONSISTENCY) {
+        return runJobWithLogging(job, processVerifyStorageConsistencyJob);
+      }
+
+      return runJobWithLogging(job, processRecalculateStorageJob);
+    },
   });
 
   createWorker(QUEUE_NAMES.UPLOAD_RECOVERY, {

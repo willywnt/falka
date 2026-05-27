@@ -14,6 +14,7 @@ export const JOB_NAMES = {
   RECALCULATE_STORAGE: 'recalculate-storage',
   CLEANUP_FAILED_UPLOADS: 'cleanup-failed-uploads',
   CLEANUP_AUDIT_LOGS: 'cleanup-audit-logs',
+  VERIFY_STORAGE_CONSISTENCY: 'verify-storage-consistency',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -51,11 +52,20 @@ export const cleanupAuditLogsJobSchema = z.object({
 
 export type CleanupAuditLogsJobPayload = z.infer<typeof cleanupAuditLogsJobSchema>;
 
+export const verifyStorageConsistencyJobSchema = z.object({
+  batchSize: z.number().int().positive().max(500).default(100),
+  dryRun: z.boolean().default(true),
+  requestId: z.string().optional(),
+});
+
+export type VerifyStorageConsistencyJobPayload = z.infer<typeof verifyStorageConsistencyJobSchema>;
+
 export type JobPayloadMap = {
   [JOB_NAMES.CLEANUP_RECORDINGS]: CleanupRecordingsJobPayload;
   [JOB_NAMES.RECALCULATE_STORAGE]: RecalculateStorageJobPayload;
   [JOB_NAMES.CLEANUP_FAILED_UPLOADS]: CleanupFailedUploadsJobPayload;
   [JOB_NAMES.CLEANUP_AUDIT_LOGS]: CleanupAuditLogsJobPayload;
+  [JOB_NAMES.VERIFY_STORAGE_CONSISTENCY]: VerifyStorageConsistencyJobPayload;
 };
 
 export type JobResultMetadata = {
