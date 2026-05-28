@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@olshop/config/limits';
 import type { AuditAction } from '@olshop/types';
 
 export interface AuditLogListItem {
@@ -14,5 +15,5 @@ export interface AuditModuleConfig {
 }
 
 export const auditModuleConfig: AuditModuleConfig = {
-  defaultPageSize: 20,
+  defaultPageSize: DEFAULT_PAGE_SIZE,
 };

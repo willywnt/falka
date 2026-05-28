@@ -87,5 +87,5 @@ export const JOB_DEFAULT_ATTEMPTS = 5;
 export const JOB_DEFAULT_BACKOFF_MS = 5_000;
 
 /** Pagination defaults. */
-export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;

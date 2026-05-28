@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowDown,
@@ -34,11 +34,8 @@ import {
   formatRecordingFileSize,
   isPlayableRecording,
 } from '../utils/recording-display';
-import {
-  RECORDING_STATUS_FILTERS,
-  type ListRecordingsQuery,
-  type RecordingSortField,
-} from '../validators/list-recordings';
+import { useRecordingLibraryFilters } from '../hooks/use-recording-library-filters';
+import { RECORDING_STATUS_FILTERS, type RecordingSortField } from '../validators/list-recordings';
 import { RecordingDeleteDialog } from './recording-delete-dialog';
 import { RecordingDetailModal } from './recording-detail-modal';
 import { RecordingPlayerModal } from './recording-player-modal';
@@ -83,14 +80,6 @@ import { usePersistedToggle } from '../hooks/use-persisted-toggle';
 
 const PENDING_SECTION_STORAGE_KEY = 'olshop-pending-uploads-expanded';
 
-const DEFAULT_QUERY: ListRecordingsQuery = {
-  page: 1,
-  pageSize: 10,
-  status: 'ALL',
-  sortBy: 'createdAt',
-  sortOrder: 'desc',
-};
-
 function SortButton({
   label,
   field,
@@ -116,8 +105,7 @@ function SortButton({
 }
 
 export function RecordingsDashboard() {
-  const [query, setQuery] = useState<ListRecordingsQuery>(DEFAULT_QUERY);
-  const [searchInput, setSearchInput] = useState('');
+  const { query, setQuery, searchInput, setSearchInput, listQuery } = useRecordingLibraryFilters();
   const [selectedRecording, setSelectedRecording] = useState<RecordingListItem | null>(null);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -141,23 +129,6 @@ export function RecordingsDashboard() {
   const { value: pendingSectionExpanded, toggle: togglePendingSection } = usePersistedToggle(
     PENDING_SECTION_STORAGE_KEY,
     true,
-  );
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const search = params.get('search')?.trim();
-    if (!search) return;
-
-    setSearchInput(search.toUpperCase());
-    setQuery((current) => ({ ...current, page: 1 }));
-  }, []);
-
-  const listQuery = useMemo(
-    () => ({
-      ...query,
-      search: searchInput.trim() || undefined,
-    }),
-    [query, searchInput],
   );
 
   const { data, isLoading, isFetching, error } = useRecordingsListQuery(listQuery);
@@ -257,10 +228,7 @@ export function RecordingsDashboard() {
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               value={searchInput}
-              onChange={(event) => {
-                setSearchInput(event.target.value);
-                setQuery((current) => ({ ...current, page: 1 }));
-              }}
+              onChange={(event) => setSearchInput(event.target.value.toUpperCase())}
               placeholder="Search by resi number..."
               className="pl-9"
             />
