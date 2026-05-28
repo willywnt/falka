@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StorageSettingsCard } from '@/modules/storage/components/storage-settings-card';
 
 export const metadata: Metadata = {
   title: 'Settings',
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export default function SettingsPage() {
   return (
     <div>
-      <PageHeader title="Settings" description="Manage your account and organization preferences." />
+      <PageHeader
+        title="Settings"
+        description="Manage your account and organization preferences."
+      />
 
       <Tabs defaultValue="general" className="max-w-2xl">
         <TabsList>
@@ -26,20 +30,14 @@ export default function SettingsPage() {
               <CardDescription>Organization and profile settings</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-sm">Settings will be available after auth is implemented.</p>
+              <p className="text-muted-foreground text-sm">
+                Settings will be available after auth is implemented.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="storage">
-          <Card>
-            <CardHeader>
-              <CardTitle>Storage</CardTitle>
-              <CardDescription>Cloudflare R2 quota and usage</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">Storage quota tracking coming soon.</p>
-            </CardContent>
-          </Card>
+          <StorageSettingsCard />
         </TabsContent>
         <TabsContent value="team">
           <Card>

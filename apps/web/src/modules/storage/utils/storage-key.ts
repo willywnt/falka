@@ -27,3 +27,7 @@ export function generateStorageKey(
 
   return `recordings/${userId}/${year}/${month}/${generatedFilename}`;
 }
+
+export function isPendingStorageKey(storageKey: string): boolean {
+  return storageKey.startsWith('pending/');
+}

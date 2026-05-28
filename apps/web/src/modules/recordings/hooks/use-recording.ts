@@ -27,6 +27,8 @@ import {
 import { RecordingError } from '../errors/recording-errors';
 import type { ActiveRecordingSession } from '../types';
 import { useUploadProgressMetrics } from './use-upload-progress-metrics';
+import { useStorageQuotaQuery } from '@/modules/storage/hooks/use-storage-quota';
+import { isStorageQuotaExceeded } from '@/modules/storage/utils/quota-status';
 import {
   useCancelRecordingMutation,
   useMarkUploadingMutation,
@@ -104,6 +106,8 @@ export function useRecording() {
   const cancelRecordingMutation = useCancelRecordingMutation();
 
   const { metrics: uploadMetrics, handleProgress, resetMetrics } = useUploadProgressMetrics();
+  const { data: storageQuota } = useStorageQuotaQuery();
+  const isQuotaExceeded = storageQuota ? isStorageQuotaExceeded(storageQuota) : false;
 
   useBeforeUnloadProtection();
   useTabLockProtection();
@@ -361,6 +365,15 @@ export function useRecording() {
       return;
     }
 
+    if (isQuotaExceeded) {
+      const message = resolveFailureFromCode(RECORDING_FAILURE_CODES.QUOTA_EXCEEDED);
+      setError(message, 'QUOTA_EXCEEDED');
+      toast.error('Storage quota exceeded', {
+        description: 'Delete recordings or free up space before starting a new one.',
+      });
+      return;
+    }
+
     if (!tryAcquireRecordingLock()) {
       await handleFailure(RecordingError.tabLockConflict());
       return;
@@ -406,6 +419,7 @@ export function useRecording() {
     beginRecordingSession,
     cancelRecordingMutation,
     handleFailure,
+    isQuotaExceeded,
     noResi,
     setCompletedRecording,
     setDurationSeconds,
@@ -637,7 +651,8 @@ export function useRecording() {
       status === 'RECORDING' ||
       status === 'STOPPING' ||
       status === 'UPLOADING',
-    canStart: status === 'IDLE' || status === 'FAILED' || status === 'COMPLETED',
+    canStart:
+      (status === 'IDLE' || status === 'FAILED' || status === 'COMPLETED') && !isQuotaExceeded,
     canStop: status === 'RECORDING',
     startRecording,
     stopRecording,

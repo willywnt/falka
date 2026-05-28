@@ -75,6 +75,13 @@ export interface StorageQuotaSnapshot {
   usagePercent: number;
 }
 
+export interface StorageQuotaResponse {
+  usedBytes: number;
+  quotaBytes: number;
+  remainingBytes: number;
+  usagePercent: number;
+}
+
 export interface UploadProgressEvent {
   loadedBytes: number;
   totalBytes: number;

@@ -40,6 +40,12 @@ export const ALLOWED_UPLOAD_EXTENSIONS = ['.webm'] as const;
 /** Default storage quota per organization in bytes (10 GB). */
 export const DEFAULT_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
 
+/** Usage percent at which to show a storage warning. */
+export const STORAGE_QUOTA_WARNING_PERCENT = 80;
+
+/** Usage percent at which to show a critical storage warning. */
+export const STORAGE_QUOTA_CRITICAL_PERCENT = 95;
+
 /** Maximum concurrent uploads per user. */
 export const MAX_CONCURRENT_UPLOADS = 3;
 

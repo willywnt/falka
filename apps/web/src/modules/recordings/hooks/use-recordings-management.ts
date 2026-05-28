@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import { storageQueryKeys } from '@/modules/storage/hooks/use-storage-quota';
 
 import type {
   PaginatedRecordingsResponse,
@@ -112,6 +113,7 @@ export function useDeleteRecordingMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: recordingsManagementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: storageQueryKeys.quota });
     },
   });
 }

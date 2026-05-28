@@ -17,6 +17,7 @@ import { EstimatedFileSize, UploadProgressBar } from './upload-progress';
 import { WebcamPreview } from './webcam-preview';
 import { CameraHealthIndicator } from './camera-health-indicator';
 import { LocalStorageUsageIndicator } from './local-storage-usage-indicator';
+import { StorageQuotaIndicator } from '@/modules/storage/components/storage-quota-indicator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +85,7 @@ export function RecordingPanel() {
   return (
     <RecordingReliabilityShell>
       <div className="space-y-4">
+        <StorageQuotaIndicator variant="warning-only" />
         <LocalStorageUsageIndicator />
 
         <Card>

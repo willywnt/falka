@@ -12,6 +12,7 @@ import type { PaginatedRecordingsResponse, RecordingDetail, RecordingListItem } 
 import type { ListRecordingsQuery } from '../validators/list-recordings';
 import type { SaveRecordingMetadataInput } from '../validators/create-recording';
 import { extractGeneratedFilename, isUserStorageKey } from '../utils/media-recorder';
+import { isPendingStorageKey } from '@/modules/storage/utils/storage-key';
 import { quotaService } from '@/modules/storage/services/quota.service';
 import { storageService } from '@/modules/storage/services/storage.service';
 import { appLogger } from '@/lib/logger';
@@ -115,6 +116,11 @@ export class RecordingServerService {
 
   async startRecording(userId: string, noResi: string) {
     await this.assertNoActiveRecording(userId);
+
+    const snapshot = await quotaService.getQuotaSnapshot(userId);
+    if (Number(snapshot.remainingBytes) <= 0) {
+      throw RecordingError.quotaExceeded();
+    }
 
     const env = getServerEnv();
     const pendingKey = `pending/${userId}/${generateId(12)}`;
@@ -410,6 +416,25 @@ export class RecordingServerService {
       return;
     }
 
+    const shouldDeleteObject = !isPendingStorageKey(recording.storageKey);
+    const shouldDecrementQuota =
+      recording.status === RecordingStatus.COMPLETED &&
+      recording.fileSizeBytes > 0n &&
+      isUserStorageKey(recording.storageKey, userId);
+
+    if (shouldDeleteObject) {
+      try {
+        await storageService.deleteObject(recording.storageKey);
+      } catch (error) {
+        appLogger.warn('recording.delete.storage_object_failed', {
+          userId,
+          recordingId,
+          storageKey: recording.storageKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.recording.update({
         where: { id: recordingId },
@@ -419,6 +444,17 @@ export class RecordingServerService {
         },
       });
 
+      if (shouldDecrementQuota) {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            storageUsedBytes: {
+              decrement: recording.fileSizeBytes,
+            },
+          },
+        });
+      }
+
       await tx.auditLog.create({
         data: {
           userId,
@@ -427,12 +463,22 @@ export class RecordingServerService {
           metadata: {
             recordingId,
             noResi: recording.noResi,
+            storageKey: recording.storageKey,
+            fileSizeBytes: Number(recording.fileSizeBytes),
+            storageObjectDeleted: shouldDeleteObject,
+            quotaDecremented: shouldDecrementQuota,
           },
         },
       });
     });
 
-    appLogger.info('recording.deleted', { userId, recordingId });
+    appLogger.info('recording.deleted', {
+      userId,
+      recordingId,
+      storageKey: recording.storageKey,
+      storageObjectDeleted: shouldDeleteObject,
+      quotaDecremented: shouldDecrementQuota,
+    });
   }
 
   private async logRecordingAccess(userId: string, recordingId: string, action: string) {
