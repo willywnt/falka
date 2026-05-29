@@ -11,6 +11,7 @@ import { StorageError } from '@/modules/storage/errors/storage-errors';
 import { RecordingError } from '@/modules/recordings/errors/recording-errors';
 import { MarketplaceError } from '@/modules/marketplace/errors/marketplace-errors';
 import { ReliabilityError } from '@/modules/recording-recovery/errors/reliability-errors';
+import { InventoryError } from '@/modules/inventory/errors/inventory-errors';
 
 import { REQUEST_ID_HEADER } from '@olshop/logger';
 
@@ -87,6 +88,9 @@ export function handleApiError(error: unknown, requestId = getRequestId()) {
     return apiError({ code: error.code, message: error.message }, 400, requestId);
   }
   if (error instanceof MarketplaceError) {
+    return apiError({ code: error.code, message: error.message }, error.statusCode, requestId);
+  }
+  if (error instanceof InventoryError) {
     return apiError({ code: error.code, message: error.message }, error.statusCode, requestId);
   }
   if (error instanceof AppError) {

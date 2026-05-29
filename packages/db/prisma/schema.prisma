@@ -26,6 +26,23 @@ enum MarketplaceProvider {
   TOKOPEDIA
 }
 
+enum InventoryEventType {
+  INCREASE
+  DECREASE
+  ADJUSTMENT
+  RESERVE
+  RELEASE
+  SYNC
+}
+
+enum MarketplaceSyncStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  CONFLICT
+}
+
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
@@ -41,6 +58,10 @@ model User {
   recordings             Recording[]
   marketplaceConnections MarketplaceConnection[]
   auditLogs              AuditLog[]
+  products               Product[]
+  productVariants        ProductVariant[]
+  inventoryEvents        InventoryEvent[]        @relation("InventoryEventOwner")
+  inventoryEventsActed   InventoryEvent[]        @relation("InventoryEventActor")
 
   @@map("users")
 }
@@ -89,9 +110,150 @@ model MarketplaceConnection {
   updatedAt             DateTime            @updatedAt
   deletedAt             DateTime?
 
+  variantMappings MarketplaceVariantMapping[]
+
   @@index([userId])
   @@index([provider])
   @@map("marketplace_connections")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  name        String
+  slug        String
+  brand       String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  variants ProductVariant[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+  @@index([slug])
+  @@index([isActive])
+  @@map("products")
+}
+
+model ProductVariant {
+  id         String    @id @default(cuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  sku        String
+  barcode    String?
+  name       String
+  price      Decimal   @db.Decimal(12, 2)
+  cost       Decimal?  @db.Decimal(12, 2)
+  weight     Decimal?  @db.Decimal(10, 3)
+  dimensions Json?
+  isActive   Boolean   @default(true)
+  lowStockThreshold Int      @default(5)
+  alertEnabled      Boolean  @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  inventory           Inventory?
+  inventoryEvents     InventoryEvent[]
+  marketplaceMappings MarketplaceVariantMapping[]
+
+  @@unique([userId, sku])
+  @@index([productId])
+  @@index([userId])
+  @@index([sku])
+  @@index([barcode])
+  @@index([isActive])
+  @@map("product_variants")
+}
+
+model Inventory {
+  id             String         @id @default(cuid())
+  variantId      String         @unique
+  variant        ProductVariant @relation(fields: [variantId], references: [id])
+  availableStock Int            @default(0)
+  reservedStock  Int            @default(0)
+  damagedStock   Int            @default(0)
+  incomingStock  Int            @default(0)
+  lastAdjustedAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([variantId])
+  @@index([availableStock])
+  @@map("inventory")
+}
+
+model InventoryEvent {
+  id            String             @id @default(cuid())
+  variantId     String
+  variant       ProductVariant     @relation(fields: [variantId], references: [id])
+  userId        String
+  user          User               @relation("InventoryEventOwner", fields: [userId], references: [id])
+  type          InventoryEventType
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  reason        String?
+  metadata      Json?
+  actorId       String?
+  actor         User?              @relation("InventoryEventActor", fields: [actorId], references: [id])
+  createdAt     DateTime           @default(now())
+
+  @@index([variantId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([actorId])
+  @@map("inventory_events")
+}
+
+/// Future marketplace sync: maps internal variants to external marketplace listings.
+/// Internal inventory remains the source of truth; marketplaces consume state.
+model MarketplaceVariantMapping {
+  id                      String                  @id @default(cuid())
+  variantId               String
+  variant                 ProductVariant          @relation(fields: [variantId], references: [id])
+  marketplaceConnectionId String
+  marketplaceConnection   MarketplaceConnection   @relation(fields: [marketplaceConnectionId], references: [id])
+  externalProductId       String?
+  externalVariantId       String?
+  externalSku             String?
+  syncStatus              MarketplaceSyncStatus   @default(PENDING)
+  lastSyncedAt            DateTime?
+  lastSyncError           String?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  syncLogs MarketplaceSyncLog[]
+
+  @@unique([marketplaceConnectionId, variantId])
+  @@index([variantId])
+  @@index([syncStatus])
+  @@index([externalSku])
+  @@map("marketplace_variant_mappings")
+}
+
+/// Future sync audit trail for marketplace reconciliation jobs.
+model MarketplaceSyncLog {
+  id        String                    @id @default(cuid())
+  mappingId String
+  mapping   MarketplaceVariantMapping @relation(fields: [mappingId], references: [id])
+  status    MarketplaceSyncStatus
+  direction String
+  message   String?
+  metadata  Json?
+  createdAt DateTime                  @default(now())
+
+  @@index([mappingId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("marketplace_sync_logs")
 }
 
 model AuditLog {

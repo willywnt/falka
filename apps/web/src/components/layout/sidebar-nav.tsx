@@ -1,13 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  Settings,
-  ShoppingBag,
-  Video,
-} from 'lucide-react';
+import { Boxes, LayoutDashboard, Settings, ShoppingBag, Video } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -28,6 +24,11 @@ export const sidebarNavItems = [
     icon: ShoppingBag,
   },
   {
+    title: 'Inventory',
+    href: '/dashboard/inventory',
+    icon: Boxes,
+  },
+  {
     title: 'Settings',
     href: '/settings',
     icon: Settings,
@@ -46,7 +47,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={item.href as Route}
             onClick={onNavigate}
             className={cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',

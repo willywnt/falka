@@ -68,6 +68,9 @@ export const AUTH_RATE_LIMIT_PER_MINUTE = 60;
 /** Inventory sync batch size. */
 export const INVENTORY_SYNC_BATCH_SIZE = 100;
 
+/** Default low-stock threshold when variant has no override. */
+export const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+
 /** Audit log retention in days. */
 export const AUDIT_LOG_RETENTION_DAYS = 90;
 

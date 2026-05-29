@@ -5,6 +5,7 @@ export const QUEUE_NAMES = {
   STORAGE_RECALCULATION: 'storage-recalculation',
   UPLOAD_RECOVERY: 'upload-recovery',
   AUDIT_CLEANUP: 'audit-cleanup',
+  INVENTORY_SYNC: 'inventory-sync',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -15,6 +16,7 @@ export const JOB_NAMES = {
   CLEANUP_FAILED_UPLOADS: 'cleanup-failed-uploads',
   CLEANUP_AUDIT_LOGS: 'cleanup-audit-logs',
   VERIFY_STORAGE_CONSISTENCY: 'verify-storage-consistency',
+  PROPAGATE_INVENTORY_STOCK: 'propagate-inventory-stock',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -60,12 +62,25 @@ export const verifyStorageConsistencyJobSchema = z.object({
 
 export type VerifyStorageConsistencyJobPayload = z.infer<typeof verifyStorageConsistencyJobSchema>;
 
+export const propagateInventoryStockJobSchema = z.object({
+  userId: z.string().cuid(),
+  variantId: z.string().cuid(),
+  sku: z.string().min(1).max(100),
+  eventId: z.string().cuid(),
+  eventType: z.enum(['INCREASE', 'DECREASE', 'ADJUSTMENT', 'RESERVE', 'RELEASE', 'SYNC']),
+  availableStock: z.number().int().nonnegative(),
+  enqueuedAt: z.string().datetime(),
+});
+
+export type PropagateInventoryStockJobPayload = z.infer<typeof propagateInventoryStockJobSchema>;
+
 export type JobPayloadMap = {
   [JOB_NAMES.CLEANUP_RECORDINGS]: CleanupRecordingsJobPayload;
   [JOB_NAMES.RECALCULATE_STORAGE]: RecalculateStorageJobPayload;
   [JOB_NAMES.CLEANUP_FAILED_UPLOADS]: CleanupFailedUploadsJobPayload;
   [JOB_NAMES.CLEANUP_AUDIT_LOGS]: CleanupAuditLogsJobPayload;
   [JOB_NAMES.VERIFY_STORAGE_CONSISTENCY]: VerifyStorageConsistencyJobPayload;
+  [JOB_NAMES.PROPAGATE_INVENTORY_STOCK]: PropagateInventoryStockJobPayload;
 };
 
 export type JobResultMetadata = {
