@@ -1,0 +1,257 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
+import { Loader2, Smartphone } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+import {
+  useActivePairingQuery,
+  useCreatePairingMutation,
+  useDisconnectPairingMutation,
+} from '../hooks/use-pairing-api';
+import { useScannerPairingStore } from '../store/scanner-pairing.store';
+
+type ConnectScannerDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialogProps) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const { status: authStatus } = useSession();
+  const isAuthenticated = authStatus === 'authenticated';
+
+  const session = useScannerPairingStore((s) => s.session);
+  const connectionState = useScannerPairingStore((s) => s.connectionState);
+  const setSession = useScannerPairingStore((s) => s.setSession);
+  const setConnectUrl = useScannerPairingStore((s) => s.setConnectUrl);
+  const setConnectionState = useScannerPairingStore((s) => s.setConnectionState);
+
+  const { data: activePairing, isFetched: isActivePairingFetched } = useActivePairingQuery(
+    open && isAuthenticated,
+  );
+  const createPairing = useCreatePairingMutation();
+  const createPairingRef = useRef(createPairing.mutateAsync);
+  createPairingRef.current = createPairing.mutateAsync;
+  const createStartedRef = useRef(false);
+  const disconnectPairing = useDisconnectPairingMutation();
+
+  const displaySession = session ?? activePairing?.session ?? null;
+  const isConnected = connectionState === 'connected' || displaySession?.status === 'CONNECTED';
+
+  const isReusableSession =
+    displaySession?.status === 'PENDING' ||
+    displaySession?.status === 'CONNECTED' ||
+    displaySession?.status === 'DISCONNECTED';
+
+  const runCreatePairing = () => {
+    createStartedRef.current = true;
+    setCreateError(null);
+
+    void createPairingRef
+      .current()
+      .then((result) => {
+        setSession(result.session);
+        setConnectUrl(result.connectUrl);
+        setConnectionState('pending');
+        return QRCode.toDataURL(result.qrPayload, { width: 240, margin: 2 });
+      })
+      .then(setQrDataUrl)
+      .catch((error: Error & { code?: string }) => {
+        createStartedRef.current = false;
+        const message =
+          error.code === 'UNAUTHORIZED'
+            ? 'You are not signed in. Log in at https://localhost:3000 (same account), then try again.'
+            : error.message;
+        setCreateError(message);
+        toast.error('Failed to create pairing session', { description: message });
+      });
+  };
+
+  useEffect(() => {
+    if (!open) {
+      setQrDataUrl(null);
+      setCreateError(null);
+      createStartedRef.current = false;
+      return;
+    }
+
+    if (authStatus === 'loading') {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      return;
+    }
+
+    if (!isActivePairingFetched) {
+      return;
+    }
+
+    const loadQr = async (connectUrl: string) => {
+      setConnectUrl(connectUrl);
+      const dataUrl = await QRCode.toDataURL(connectUrl, { width: 240, margin: 2 });
+      setQrDataUrl(dataUrl);
+    };
+
+    if (isReusableSession && displaySession) {
+      setSession(displaySession);
+      setConnectionState(displaySession.status === 'CONNECTED' ? 'connected' : 'pending');
+      if (activePairing?.connectUrl) {
+        void loadQr(activePairing.connectUrl);
+      }
+      return;
+    }
+
+    if (createStartedRef.current || createPairing.isPending) {
+      return;
+    }
+
+    runCreatePairing();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gated by auth + createStartedRef
+  }, [
+    open,
+    authStatus,
+    isAuthenticated,
+    isActivePairingFetched,
+    isReusableSession,
+    displaySession?.id,
+    activePairing?.connectUrl,
+  ]);
+
+  useEffect(() => {
+    if (displaySession?.status === 'CONNECTED') {
+      setConnectionState('connected');
+    }
+  }, [displaySession?.status, setConnectionState]);
+
+  const handleDisconnect = async () => {
+    if (!displaySession?.id) return;
+    try {
+      await disconnectPairing.mutateAsync(displaySession.id);
+      setSession(null);
+      setConnectUrl(null);
+      setConnectionState('idle');
+      setQrDataUrl(null);
+      createStartedRef.current = false;
+      onOpenChange(false);
+      toast.success('Mobile scanner disconnected');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Disconnect failed');
+    }
+  };
+
+  const statusLabel = isConnected
+    ? 'Connected'
+    : displaySession?.status === 'PENDING'
+      ? 'Scan QR with your phone'
+      : displaySession?.status === 'DISCONNECTED'
+        ? 'Reconnect your phone'
+        : 'Waiting…';
+
+  const isQrLoading =
+    authStatus === 'loading' ||
+    (isAuthenticated && !qrDataUrl && (createPairing.isPending || !isActivePairingFetched));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-[min(100%-2rem,22rem)] max-w-[22rem] flex-col gap-0 overflow-hidden p-0 sm:max-w-[22rem]">
+        <div className="space-y-1.5 px-5 pt-5 pr-12">
+          <DialogHeader className="gap-1.5 text-left">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Smartphone className="size-4 shrink-0" />
+              Mobile scanner
+            </DialogTitle>
+            <DialogDescription className="text-left text-xs">
+              Scan with your phone camera. Same account as this PC.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="flex flex-col items-center px-5 py-4">
+          {authStatus === 'loading' ? (
+            <div className="flex aspect-square w-full max-w-[240px] items-center justify-center">
+              <Loader2 className="text-muted-foreground size-8 animate-spin" />
+            </div>
+          ) : !isAuthenticated ? (
+            <div className="space-y-3 py-6 text-center">
+              <p className="text-muted-foreground text-sm">
+                Sign in on this PC first (https://localhost:3000), then open this dialog again.
+              </p>
+              <Button asChild size="sm">
+                <a href="/login?callbackUrl=/recordings">Sign in</a>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="bg-muted/30 flex aspect-square w-full max-w-[240px] items-center justify-center overflow-hidden rounded-lg border">
+                {isQrLoading ? (
+                  <Loader2 className="text-muted-foreground size-8 animate-spin" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- dynamic QR data URL
+                  <img
+                    src={qrDataUrl ?? ''}
+                    alt="QR code for mobile scanner"
+                    className="size-full object-contain p-2"
+                  />
+                )}
+              </div>
+              {createError ? (
+                <div className="mt-3 space-y-2 text-center">
+                  <p className="text-destructive text-xs">{createError}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      createStartedRef.current = false;
+                      runCreatePairing();
+                    }}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-muted-foreground mt-3 text-center text-xs">
+                  <span className="text-foreground font-medium">{statusLabel}</span>
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        <DialogFooter className="flex-row gap-2 border-t px-5 py-4 sm:justify-between">
+          {isConnected ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleDisconnect()}
+            >
+              Disconnect
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

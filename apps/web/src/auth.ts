@@ -12,12 +12,20 @@ import {
   recordSuccessfulLogin,
 } from '@/modules/auth/services/auth-security.service';
 import { loginSchema } from '@/modules/auth/validators/login';
+import { PairingError } from '@/modules/scanner-pairing/errors/pairing-errors';
+import { pairingService } from '@/modules/scanner-pairing/services/pairing.service';
+import { pairingCodeSchema, pairingIdSchema } from '@/modules/scanner-pairing/validators/pairing';
 import { getRequestIp } from '@/lib/api/request-context';
 import { logger } from '@olshop/logger/server';
 
 const credentialsSchema = loginSchema.extend({
   email: z.string().email(),
   password: z.string().min(1),
+});
+
+const pairingQrCredentialsSchema = z.object({
+  pairingId: pairingIdSchema,
+  pairingCode: pairingCodeSchema,
 });
 
 export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
@@ -29,8 +37,38 @@ export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        pairingId: { label: 'Pairing session', type: 'text' },
+        pairingCode: { label: 'Pairing code', type: 'text' },
       },
       async authorize(rawCredentials) {
+        const pairingParsed = pairingQrCredentialsSchema.safeParse(rawCredentials);
+        if (!pairingParsed.success && (rawCredentials?.pairingId || rawCredentials?.pairingCode)) {
+          logger.warn('auth.pairing_qr.invalid_payload', {
+            pairingSessionId: String(rawCredentials?.pairingId ?? ''),
+          });
+        }
+
+        if (pairingParsed.success) {
+          const headerStore = await headers();
+          const ip = getRequestIp(new Request('http://local', { headers: headerStore }));
+
+          try {
+            return await pairingService.authorizeUserByPairingCode(
+              pairingParsed.data.pairingId,
+              pairingParsed.data.pairingCode,
+            );
+          } catch (error) {
+            if (error instanceof PairingError) {
+              logger.warn('auth.pairing_qr.failed', {
+                ip,
+                code: error.code,
+                pairingSessionId: pairingParsed.data.pairingId,
+              });
+            }
+            return null;
+          }
+        }
+
         const parsed = credentialsSchema.safeParse(rawCredentials);
 
         if (!parsed.success) {

@@ -24,6 +24,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/recordings/:path*',
+    '/mobile/:path*',
     '/marketplace/:path*',
     '/settings/:path*',
     '/login',

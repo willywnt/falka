@@ -1,6 +1,8 @@
 import type { UserRole } from '@prisma/client';
 import type { NextAuthConfig } from 'next-auth';
 
+import { getAuthSessionCookieName, usesSecureAuthCookies } from '@/lib/auth-cookies';
+
 export const AUTH_PAGES = {
   signIn: '/login',
   newUser: '/register',
@@ -9,6 +11,7 @@ export const AUTH_PAGES = {
 export const PROTECTED_ROUTE_PREFIXES = [
   '/dashboard',
   '/recordings',
+  '/mobile',
   '/marketplace',
   '/settings',
 ] as const;
@@ -16,6 +19,11 @@ export const PROTECTED_ROUTE_PREFIXES = [
 export const AUTH_ROUTE_PREFIXES = ['/login', '/register'] as const;
 
 function isProtectedPath(pathname: string): boolean {
+  // QR landing: auto sign-in via pairing code before connecting the scanner
+  if (pathname === '/mobile/connect') {
+    return false;
+  }
+
   return PROTECTED_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -36,15 +44,12 @@ export const authConfig = {
   },
   cookies: {
     sessionToken: {
-      name:
-        process.env.NODE_ENV === 'production'
-          ? '__Secure-authjs.session-token'
-          : 'authjs.session-token',
+      name: getAuthSessionCookieName(),
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: usesSecureAuthCookies(),
       },
     },
   },

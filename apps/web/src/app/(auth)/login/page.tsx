@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 import { LoginForm } from '@/modules/auth/components/login-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,10 +17,15 @@ export default function LoginPage() {
         <CardDescription>Sign in to your Olshop account</CardDescription>
       </CardHeader>
       <CardContent>
-        <LoginForm />
+        <Suspense fallback={<p className="text-muted-foreground text-sm">Loading…</p>}>
+          <LoginForm />
+        </Suspense>
         <p className="text-muted-foreground mt-6 text-center text-sm">
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-foreground font-medium underline-offset-4 hover:underline">
+          <Link
+            href="/register"
+            className="text-foreground font-medium underline-offset-4 hover:underline"
+          >
             Create account
           </Link>
         </p>

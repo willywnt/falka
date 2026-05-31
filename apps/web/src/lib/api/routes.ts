@@ -4,6 +4,7 @@ export const apiRoutes = {
   health: `${API_BASE_PATH}/health`,
   uploadsPresign: `${API_BASE_PATH}/uploads/presign`,
   recordings: `${API_BASE_PATH}/recordings`,
+  scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
   users: `${API_BASE_PATH}/users`,
   auditLogs: `${API_BASE_PATH}/audit-logs`,

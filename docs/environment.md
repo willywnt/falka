@@ -45,10 +45,13 @@ Olshop separates **public** (client) and **server-only** environment variables w
 
 ### Public (embedded in client bundle)
 
-| Variable               | Required | Description    |
-| ---------------------- | -------- | -------------- |
-| `NEXT_PUBLIC_APP_URL`  | Yes      | Public app URL |
-| `NEXT_PUBLIC_APP_NAME` | Yes      | Display name   |
+| Variable                  | Required | Description                                               |
+| ------------------------- | -------- | --------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`     | Yes      | Public app URL (desktop in dev: `http://localhost:3000`)  |
+| `NEXT_PUBLIC_PAIRING_URL` | Dev      | Mobile scanner / QR URL only (`http://192.168.x.x:3000`)  |
+| `PAIRING_LAN_HOST`        | Dev      | PC LAN IPv4 if `NEXT_PUBLIC_PAIRING_URL` omitted          |
+| `DEV_HTTPS`               | Dev      | `false` for http; default enables https for mobile camera |
+| `NEXT_PUBLIC_APP_NAME`    | Yes      | Display name                                              |
 
 ### Optional marketplace OAuth (future)
 

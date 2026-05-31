@@ -61,8 +61,22 @@ export function getSharedRedisConnection(): Redis {
 }
 
 export function duplicateRedisConnection(label: string): ConnectionOptions {
-  logger.debug('Redis connection options prepared', { label });
-  return getBullMqConnectionOptions();
+  const shared = getSharedRedisConnection();
+  const duplicate = shared.duplicate({
+    maxRetriesPerRequest: null,
+    enableReadyCheck: true,
+    retryStrategy: (times) => (times >= 3 ? null : Math.min(times * 400, 2_000)),
+  });
+
+  duplicate.on('error', (error) => {
+    logger.error('Redis connection error', {
+      label,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
+  logger.debug('Redis duplicate connection prepared', { label });
+  return duplicate;
 }
 
 export async function pingRedis(connection: Redis = getSharedRedisConnection()): Promise<boolean> {

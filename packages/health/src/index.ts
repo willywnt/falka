@@ -37,7 +37,10 @@ async function checkRedis(): Promise<DependencyStatus> {
       maxRetriesPerRequest: 1,
       connectTimeout: 3_000,
       lazyConnect: true,
+      retryStrategy: () => null,
     });
+
+    client.on('error', () => {});
 
     await client.connect();
     const response = await client.ping();

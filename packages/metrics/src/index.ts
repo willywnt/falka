@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis';
+import { closeOptionalRedis, withOptionalRedis } from '@olshop/redis';
 
 export const METRIC_KEYS = {
   UPLOADS_TOTAL: 'metrics:uploads:total',
@@ -14,52 +14,19 @@ export const METRIC_KEYS = {
 
 export type MetricKey = (typeof METRIC_KEYS)[keyof typeof METRIC_KEYS];
 
-let redisClient: Redis | undefined;
-
-function getMetricsRedis(): Redis | null {
-  const url = process.env.REDIS_URL;
-  if (!url) return null;
-
-  if (!redisClient) {
-    redisClient = new Redis(url, {
-      maxRetriesPerRequest: 1,
-      enableReadyCheck: true,
-      lazyConnect: true,
-    });
-  }
-
-  return redisClient;
-}
+export { closeOptionalRedis as closeMetricsRedis };
 
 export async function incrementMetric(key: MetricKey, amount = 1): Promise<void> {
-  const redis = getMetricsRedis();
-  if (!redis) return;
-
-  try {
-    if (redis.status !== 'ready') {
-      await redis.connect();
-    }
-
+  await withOptionalRedis(async (redis) => {
     await redis.incrby(key, amount);
-  } catch {
-    // Metrics must never break request flow.
-  }
+  }, undefined);
 }
 
 export async function getMetric(key: MetricKey): Promise<number> {
-  const redis = getMetricsRedis();
-  if (!redis) return 0;
-
-  try {
-    if (redis.status !== 'ready') {
-      await redis.connect();
-    }
-
+  return withOptionalRedis(async (redis) => {
     const value = await redis.get(key);
     return value ? Number.parseInt(value, 10) : 0;
-  } catch {
-    return 0;
-  }
+  }, 0);
 }
 
 export async function getMetricsSnapshot(): Promise<Record<MetricKey, number>> {
@@ -68,10 +35,4 @@ export async function getMetricsSnapshot(): Promise<Record<MetricKey, number>> {
   );
 
   return Object.fromEntries(entries) as Record<MetricKey, number>;
-}
-
-export async function closeMetricsRedis(): Promise<void> {
-  if (!redisClient) return;
-  await redisClient.quit();
-  redisClient = undefined;
 }

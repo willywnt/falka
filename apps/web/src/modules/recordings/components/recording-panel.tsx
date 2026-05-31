@@ -2,9 +2,10 @@
 
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { RecordingReliabilityShell } from '@/modules/recording-recovery/components/recording-reliability-shell';
+import { recoverDefaultCameraPreview } from '@/modules/recording-recovery/utils/camera-stream';
 import { useAnotherTabRecording } from '@/modules/recording-recovery/hooks/use-another-tab-recording';
 import { useCameraDevices } from '@/modules/recording-recovery/hooks/use-camera-devices';
 
@@ -32,6 +33,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/connect-scanner-dialog';
+import { RecordingCountdownModal } from '@/modules/scanner-pairing/components/recording-countdown-modal';
+import { ScannerStatusWidget } from '@/modules/scanner-pairing/components/scanner-status-widget';
+import { useScannerAutoRecording } from '@/modules/scanner-pairing/hooks/use-scanner-auto-recording';
+import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-desktop-scanner-socket';
+import { useDesktopStationRecordingSync } from '@/modules/scanner-pairing/hooks/use-desktop-station-recording-sync';
+import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
+import { useScannerPairingStore } from '@/modules/scanner-pairing/store/scanner-pairing.store';
 
 export function RecordingPanel() {
   const {
@@ -61,6 +70,30 @@ export function RecordingPanel() {
   const { duplicateWarning, checkDuplicate, clearDuplicateWarning } = useDuplicateResiWarning();
 
   const pendingStartRef = useRef(false);
+  const [pairingDialogOpen, setPairingDialogOpen] = useState(false);
+
+  const { data: activePairing } = useActivePairingQuery();
+  const pairingSession = useScannerPairingStore((s) => s.session) ?? activePairing?.session ?? null;
+
+  const {
+    handleBarcodeScanned,
+    cancelCountdown,
+    startCountdownNow,
+    scannerDuplicateWarning,
+    clearScannerDuplicateWarning,
+    confirmScannerDuplicateAndCountdown,
+  } = useScannerAutoRecording({
+    setNoResi,
+    startRecording,
+    canStart: canStart && !anotherTabRecording,
+  });
+
+  useDesktopScannerSocket(pairingSession?.id ?? null, handleBarcodeScanned);
+  useDesktopStationRecordingSync(pairingSession?.id ?? null);
+
+  useEffect(() => {
+    void recoverDefaultCameraPreview();
+  }, []);
 
   const runStartRecording = useCallback(async () => {
     const trimmedNoResi = noResi.trim();
@@ -87,6 +120,8 @@ export function RecordingPanel() {
       <div className="space-y-4">
         <StorageQuotaIndicator variant="warning-only" />
         <LocalStorageUsageIndicator />
+
+        <ScannerStatusWidget onConnectClick={() => setPairingDialogOpen(true)} />
 
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
@@ -201,6 +236,31 @@ export function RecordingPanel() {
           </CardContent>
         </Card>
       </div>
+
+      <ConnectScannerDialog open={pairingDialogOpen} onOpenChange={setPairingDialogOpen} />
+      <RecordingCountdownModal onCancel={cancelCountdown} onStartNow={startCountdownNow} />
+
+      <AlertDialog
+        open={Boolean(scannerDuplicateWarning)}
+        onOpenChange={(open) => !open && clearScannerDuplicateWarning()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate tracking number</AlertDialogTitle>
+            <AlertDialogDescription>
+              {scannerDuplicateWarning
+                ? `${scannerDuplicateWarning.noResi} was recorded in the last 24 hours. Start recording anyway?`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={clearScannerDuplicateWarning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmScannerDuplicateAndCountdown}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(duplicateWarning)}

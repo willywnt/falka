@@ -13,6 +13,7 @@ import {
   isLoginBlocked,
   recordFailedLoginAttempt,
 } from '@/modules/auth/services/auth-security.service';
+import { resolveSafeCallbackUrl } from '@/modules/auth/utils/callback-url';
 import { loginSchema } from '@/modules/auth/validators/login';
 import type { AuthActionResult } from '@/modules/auth/types';
 import { getRequestIp } from '@/lib/api/request-context';
@@ -47,10 +48,15 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
       };
     }
 
+    const callbackField = formData.get('callbackUrl');
+    const redirectTo = resolveSafeCallbackUrl(
+      typeof callbackField === 'string' ? callbackField : null,
+    );
+
     await signIn('credentials', {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: '/dashboard',
+      redirectTo,
     });
   } catch (error) {
     if (error instanceof NextAuthError) {

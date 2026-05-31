@@ -42,11 +42,12 @@ const nextConfig: NextConfig = {
     '@olshop/logger',
     '@olshop/logger/server',
     '@olshop/health',
+    '@olshop/redis',
     '@olshop/rate-limit',
     '@olshop/metrics',
   ],
   typedRoutes: true,
-  serverExternalPackages: ['pino', 'pino-pretty', '@sentry/nextjs'],
+  serverExternalPackages: ['pino', 'pino-pretty', '@sentry/nextjs', 'socket.io'],
   async headers() {
     return [
       {

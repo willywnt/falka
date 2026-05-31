@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ioredis": "^5.6.1"
+    "@olshop/redis": "workspace:*"
   },
   "devDependencies": {
     "@olshop/eslint-config": "workspace:*",

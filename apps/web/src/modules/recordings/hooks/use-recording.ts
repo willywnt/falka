@@ -345,91 +345,98 @@ export function useRecording() {
     [setActiveRecording, setMediaStream, setStatus, startRecordingMutation, startTimer],
   );
 
-  const startRecording = useCallback(async () => {
-    const trimmedNoResi = noResi.trim();
-
-    if (!trimmedNoResi) {
-      setError('Enter a tracking number (resi) before starting.', 'VALIDATION_ERROR');
-      toast.warning('Tracking number required', {
-        description: 'Enter a resi number to start recording.',
-      });
-      return;
-    }
-
-    const parsedNoResi = noResiSchema.safeParse(trimmedNoResi);
-
-    if (!parsedNoResi.success) {
-      const message = parsedNoResi.error.errors[0]?.message ?? 'Invalid resi number';
-      setError(message, 'VALIDATION_ERROR');
-      toast.warning('Invalid tracking number', { description: message });
-      return;
-    }
-
-    if (isQuotaExceeded) {
-      const message = resolveFailureFromCode(RECORDING_FAILURE_CODES.QUOTA_EXCEEDED);
-      setError(message, 'QUOTA_EXCEEDED');
-      toast.error('Storage quota exceeded', {
-        description: 'Delete recordings or free up space before starting a new one.',
-      });
-      return;
-    }
-
-    if (!tryAcquireRecordingLock()) {
-      await handleFailure(RecordingError.tabLockConflict());
-      return;
-    }
-
-    setError(null);
-    setCompletedRecording(null);
-    setUploadProgress(0);
-    setDurationSeconds(0);
-    setEstimatedFileSizeBytes(0);
-    setWebcamDisconnected(false);
-    setStatus('REQUESTING_PERMISSION');
-
-    try {
-      await beginRecordingSession(parsedNoResi.data);
-    } catch (unknownError) {
-      const recordingError = RecordingError.fromUnknown(unknownError);
-
-      if (recordingError.code === 'ACTIVE_RECORDING_EXISTS' && !isAnotherTabRecording()) {
-        try {
-          const activeResult = await apiFetch<ActiveRecordingSession | null>(
-            `${apiRoutes.recordings}/active`,
-          );
-
-          if (activeResult.success && activeResult.data?.id) {
-            await cancelRecordingMutation.mutateAsync(activeResult.data.id);
-          }
-
-          await beginRecordingSession(parsedNoResi.data);
-          return;
-        } catch {
-          // Fall through to failure handling below.
-        }
+  const startRecording = useCallback(
+    async (noResiOverride?: string) => {
+      if (noResiOverride) {
+        setNoResi(noResiOverride);
       }
 
-      releaseRecordingLock();
-      recordingService.cleanup();
-      setMediaStream(null);
+      const trimmedNoResi = (noResiOverride ?? useRecordingStore.getState().noResi).trim();
 
-      await handleFailure(recordingError, useRecordingStore.getState().activeRecording?.id);
-    }
-  }, [
-    beginRecordingSession,
-    cancelRecordingMutation,
-    handleFailure,
-    isQuotaExceeded,
-    noResi,
-    setCompletedRecording,
-    setDurationSeconds,
-    setError,
-    setEstimatedFileSizeBytes,
-    setMediaStream,
-    setStatus,
-    setUploadProgress,
-    setWebcamDisconnected,
-  ]);
+      if (!trimmedNoResi) {
+        setError('Enter a tracking number (resi) before starting.', 'VALIDATION_ERROR');
+        toast.warning('Tracking number required', {
+          description: 'Enter a resi number to start recording.',
+        });
+        return;
+      }
+
+      const parsedNoResi = noResiSchema.safeParse(trimmedNoResi);
+
+      if (!parsedNoResi.success) {
+        const message = parsedNoResi.error.errors[0]?.message ?? 'Invalid resi number';
+        setError(message, 'VALIDATION_ERROR');
+        toast.warning('Invalid tracking number', { description: message });
+        return;
+      }
+
+      if (isQuotaExceeded) {
+        const message = resolveFailureFromCode(RECORDING_FAILURE_CODES.QUOTA_EXCEEDED);
+        setError(message, 'QUOTA_EXCEEDED');
+        toast.error('Storage quota exceeded', {
+          description: 'Delete recordings or free up space before starting a new one.',
+        });
+        return;
+      }
+
+      if (!tryAcquireRecordingLock()) {
+        await handleFailure(RecordingError.tabLockConflict());
+        return;
+      }
+
+      setError(null);
+      setCompletedRecording(null);
+      setUploadProgress(0);
+      setDurationSeconds(0);
+      setEstimatedFileSizeBytes(0);
+      setWebcamDisconnected(false);
+      setStatus('REQUESTING_PERMISSION');
+
+      try {
+        await beginRecordingSession(parsedNoResi.data);
+      } catch (unknownError) {
+        const recordingError = RecordingError.fromUnknown(unknownError);
+
+        if (recordingError.code === 'ACTIVE_RECORDING_EXISTS' && !isAnotherTabRecording()) {
+          try {
+            const activeResult = await apiFetch<ActiveRecordingSession | null>(
+              `${apiRoutes.recordings}/active`,
+            );
+
+            if (activeResult.success && activeResult.data?.id) {
+              await cancelRecordingMutation.mutateAsync(activeResult.data.id);
+            }
+
+            await beginRecordingSession(parsedNoResi.data);
+            return;
+          } catch {
+            // Fall through to failure handling below.
+          }
+        }
+
+        releaseRecordingLock();
+        recordingService.cleanup();
+        setMediaStream(null);
+
+        await handleFailure(recordingError, useRecordingStore.getState().activeRecording?.id);
+      }
+    },
+    [
+      beginRecordingSession,
+      cancelRecordingMutation,
+      handleFailure,
+      isQuotaExceeded,
+      setCompletedRecording,
+      setDurationSeconds,
+      setError,
+      setEstimatedFileSizeBytes,
+      setMediaStream,
+      setNoResi,
+      setStatus,
+      setUploadProgress,
+      setWebcamDisconnected,
+    ],
+  );
 
   const stopRecording = useCallback(async () => {
     if (status !== 'RECORDING' || !activeRecording) return;

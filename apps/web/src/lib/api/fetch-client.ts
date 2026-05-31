@@ -52,6 +52,7 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
   try {
     const response = await fetch(buildUrl(path, params), {
       ...rest,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...headers,

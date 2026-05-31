@@ -39,10 +39,39 @@ model User {
   deletedAt         DateTime?
 
   recordings             Recording[]
+  pairingSessions        PairingSession[]
   marketplaceConnections MarketplaceConnection[]
   auditLogs              AuditLog[]
 
   @@map("users")
+}
+
+enum PairingSessionStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+}
+
+model PairingSession {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id])
+  pairingCode String
+  status      PairingSessionStatus @default(PENDING)
+  connectedAt DateTime?
+  lastSeenAt  DateTime?
+  expiresAt   DateTime
+  deviceInfo  Json?
+  lastScanAt  DateTime?
+  lastBarcode String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("pairing_sessions")
 }
 
 model Recording {
