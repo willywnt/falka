@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/modules/auth/services/session';
 import { recordingServerService } from '@/modules/recordings/services/recording-server.service';
-import { apiSuccess, apiUnauthorized, handleApiError } from '@/lib/api-response';
+import { apiSuccess } from '@/lib/api-response';
+import { withApiRoute } from '@/lib/api/with-api-route';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return apiUnauthorized();
-
+export const GET = withApiRoute(
+  async (_request, { user }) => {
     const active = await recordingServerService.findActiveRecording(user.id);
 
     if (!active) {
@@ -20,10 +17,9 @@ export async function GET() {
       noResi: active.noResi,
       startedAt: active.startedAt.toISOString(),
     });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+  },
+  { requireAuth: true },
+);
 
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });

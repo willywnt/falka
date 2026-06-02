@@ -1,24 +1,14 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/modules/auth/services/session';
-import { RecordingError } from '@/modules/recordings/errors/recording-errors';
 import { recordingServerService } from '@/modules/recordings/services/recording-server.service';
 import { saveRecordingMetadataSchema } from '@/modules/recordings/validators/create-recording';
 import { listRecordingsQuerySchema } from '@/modules/recordings/validators/list-recordings';
-import {
-  apiError,
-  apiSuccess,
-  apiUnauthorized,
-  apiValidationError,
-  handleApiError,
-} from '@/lib/api-response';
+import { apiError, apiSuccess, apiValidationError } from '@/lib/api-response';
+import { withApiRoute } from '@/lib/api/with-api-route';
 import { appLogger } from '@/lib/logger';
 
-export async function GET(request: Request) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return apiUnauthorized();
-
+export const GET = withApiRoute(
+  async (request, { user }) => {
     const { searchParams } = new URL(request.url);
     const parsed = listRecordingsQuerySchema.safeParse({
       page: searchParams.get('page') ?? undefined,
@@ -29,29 +19,20 @@ export async function GET(request: Request) {
       sortOrder: searchParams.get('sortOrder') ?? undefined,
     });
 
-    if (!parsed.success) {
-      return apiValidationError(parsed.error);
-    }
+    if (!parsed.success) return apiValidationError(parsed.error);
 
     const result = await recordingServerService.listRecordings(user.id, parsed.data);
-
     return apiSuccess(result.items, 200, result.meta);
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+  },
+  { requireAuth: true },
+);
 
-export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return apiUnauthorized();
-
+export const POST = withApiRoute(
+  async (request, { user }) => {
     const body: unknown = await request.json();
     const parsed = saveRecordingMetadataSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return apiValidationError(parsed.error);
-    }
+    if (!parsed.success) return apiValidationError(parsed.error);
 
     if (!parsed.data.storageKey.startsWith(`recordings/${user.id}/`)) {
       return apiError(
@@ -70,14 +51,9 @@ export async function POST(request: Request) {
     });
 
     return apiSuccess(saved, 201);
-  } catch (error) {
-    if (error instanceof RecordingError) {
-      return apiError({ code: error.code, message: error.message }, 400);
-    }
-
-    return handleApiError(error);
-  }
-}
+  },
+  { requireAuth: true },
+);
 
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });

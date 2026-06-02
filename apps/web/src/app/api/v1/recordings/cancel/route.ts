@@ -1,26 +1,16 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/modules/auth/services/session';
 import { recordingServerService } from '@/modules/recordings/services/recording-server.service';
 import { cancelRecordingSchema } from '@/modules/recordings/validators/cancel-recording';
-import {
-  apiSuccess,
-  apiUnauthorized,
-  apiValidationError,
-  handleApiError,
-} from '@/lib/api-response';
+import { apiSuccess, apiValidationError } from '@/lib/api-response';
+import { withApiRoute } from '@/lib/api/with-api-route';
 
-export async function POST(request: Request) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return apiUnauthorized();
-
+export const POST = withApiRoute(
+  async (request, { user }) => {
     const body: unknown = await request.json();
     const parsed = cancelRecordingSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return apiValidationError(parsed.error);
-    }
+    if (!parsed.success) return apiValidationError(parsed.error);
 
     await recordingServerService.markFailed(parsed.data.recordingId, user.id, {
       failureCode: parsed.data.failureCode,
@@ -28,10 +18,9 @@ export async function POST(request: Request) {
     });
 
     return apiSuccess({ success: true });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+  },
+  { requireAuth: true },
+);
 
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });
