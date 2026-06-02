@@ -6,12 +6,7 @@ import type { ApiError } from '@olshop/types';
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
-import { AppError } from '@/lib/errors';
-import { StorageError } from '@/modules/storage/errors/storage-errors';
-import { RecordingError } from '@/modules/recordings/errors/recording-errors';
-import { MarketplaceError } from '@/modules/marketplace/errors/marketplace-errors';
-import { ReliabilityError } from '@/modules/recording-recovery/errors/reliability-errors';
-import { PairingError } from '@/modules/scanner-pairing/errors/pairing-errors';
+import { DomainError } from '@/lib/errors';
 
 import { REQUEST_ID_HEADER } from '@olshop/logger';
 
@@ -77,23 +72,12 @@ export function handleApiError(error: unknown, requestId = getRequestId()) {
   });
 
   if (error instanceof ZodError) return apiValidationError(error, requestId);
-  if (error instanceof StorageError) {
-    return apiError({ code: error.code, message: error.message }, error.statusCode, requestId);
-  }
-  if (error instanceof RecordingError) {
-    const status = error.code === 'ACTIVE_RECORDING_EXISTS' ? 409 : 400;
-    return apiError({ code: error.code, message: error.message }, status, requestId);
-  }
-  if (error instanceof ReliabilityError) {
-    return apiError({ code: error.code, message: error.message }, 400, requestId);
-  }
-  if (error instanceof MarketplaceError) {
-    return apiError({ code: error.code, message: error.message }, error.statusCode, requestId);
-  }
-  if (error instanceof PairingError) {
-    return apiError({ code: error.code, message: error.message }, error.statusCode, requestId);
-  }
-  if (error instanceof AppError) {
+
+  // Every feature-module error (RecordingError, PairingError, …) extends
+  // DomainError, so the shared layer maps them generically from code +
+  // statusCode without importing any module. Module errors carry no `details`,
+  // so the key is dropped from the JSON for them — identical to before.
+  if (error instanceof DomainError) {
     return apiError(
       { code: error.code, message: error.message, details: error.details },
       error.statusCode,

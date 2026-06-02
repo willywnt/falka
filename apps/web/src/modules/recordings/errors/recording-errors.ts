@@ -1,3 +1,5 @@
+import { DomainError } from '@/lib/errors';
+
 export const RECORDING_ERROR_CODES = {
   PERMISSION_DENIED: 'PERMISSION_DENIED',
   WEBCAM_UNAVAILABLE: 'WEBCAM_UNAVAILABLE',
@@ -26,13 +28,17 @@ export const RECORDING_ERROR_MESSAGES: Record<RecordingErrorCode, string> = {
   UNKNOWN: 'An unexpected recording error occurred.',
 };
 
-export class RecordingError extends Error {
-  readonly code: RecordingErrorCode;
+export class RecordingError extends DomainError {
+  declare readonly code: RecordingErrorCode;
 
   constructor(code: RecordingErrorCode, message?: string) {
-    super(message ?? RECORDING_ERROR_MESSAGES[code]);
+    super(code, message ?? RECORDING_ERROR_MESSAGES[code], RecordingError.defaultStatusCode(code));
     this.name = 'RecordingError';
-    this.code = code;
+  }
+
+  /** Preserves the legacy central mapping: only an in-progress conflict is 409. */
+  private static defaultStatusCode(code: RecordingErrorCode): number {
+    return code === RECORDING_ERROR_CODES.ACTIVE_RECORDING_EXISTS ? 409 : 400;
   }
 
   static permissionDenied() {

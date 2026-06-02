@@ -1,3 +1,5 @@
+import { DomainError } from '@/lib/errors';
+
 export const MARKETPLACE_ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   DUPLICATE_CONNECTION: 'DUPLICATE_CONNECTION',
@@ -12,15 +14,12 @@ export const MARKETPLACE_ERROR_CODES = {
 export type MarketplaceErrorCode =
   (typeof MARKETPLACE_ERROR_CODES)[keyof typeof MARKETPLACE_ERROR_CODES];
 
-export class MarketplaceError extends Error {
-  readonly code: MarketplaceErrorCode;
-  readonly statusCode: number;
+export class MarketplaceError extends DomainError {
+  declare readonly code: MarketplaceErrorCode;
 
   constructor(code: MarketplaceErrorCode, message: string, statusCode = 400) {
-    super(message);
+    super(code, message, statusCode);
     this.name = 'MarketplaceError';
-    this.code = code;
-    this.statusCode = statusCode;
   }
 
   static validation(message: string) {

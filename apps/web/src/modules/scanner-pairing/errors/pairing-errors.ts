@@ -1,3 +1,5 @@
+import { DomainError } from '@/lib/errors';
+
 export const PAIRING_ERROR_CODES = {
   PAIRING_EXPIRED: 'PAIRING_EXPIRED',
   PAIRING_NOT_FOUND: 'PAIRING_NOT_FOUND',
@@ -43,15 +45,12 @@ export const PAIRING_ERROR_MESSAGES: Record<PairingErrorCode, string> = {
   UNKNOWN: 'An unexpected scanner pairing error occurred.',
 };
 
-export class PairingError extends Error {
-  readonly code: PairingErrorCode;
-  readonly statusCode: number;
+export class PairingError extends DomainError {
+  declare readonly code: PairingErrorCode;
 
   constructor(code: PairingErrorCode, message?: string, statusCode = 400) {
-    super(message ?? PAIRING_ERROR_MESSAGES[code]);
+    super(code, message ?? PAIRING_ERROR_MESSAGES[code], statusCode);
     this.name = 'PairingError';
-    this.code = code;
-    this.statusCode = statusCode;
   }
 
   static expired() {

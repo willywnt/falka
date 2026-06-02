@@ -1,3 +1,5 @@
+import { DomainError } from './domain-error';
+
 export type AppErrorCode =
   | 'VALIDATION_ERROR'
   | 'UNAUTHORIZED'
@@ -9,10 +11,8 @@ export type AppErrorCode =
   | 'NETWORK_ERROR'
   | 'UNKNOWN';
 
-export class AppError extends Error {
-  readonly code: AppErrorCode;
-  readonly statusCode: number;
-  readonly details?: Record<string, unknown>;
+export class AppError extends DomainError {
+  declare readonly code: AppErrorCode;
 
   constructor(
     message: string,
@@ -20,11 +20,8 @@ export class AppError extends Error {
     statusCode = 500,
     details?: Record<string, unknown>,
   ) {
-    super(message);
+    super(code, message, statusCode, details);
     this.name = 'AppError';
-    this.code = code;
-    this.statusCode = statusCode;
-    this.details = details;
   }
 
   static validation(message: string, details?: Record<string, unknown>) {

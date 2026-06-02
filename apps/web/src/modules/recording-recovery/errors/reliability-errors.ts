@@ -1,3 +1,5 @@
+import { DomainError } from '@/lib/errors';
+
 export const RELIABILITY_ERROR_CODES = {
   STALE_SESSION: 'STALE_SESSION',
   FAILED_RECOVERY: 'FAILED_RECOVERY',
@@ -9,13 +11,12 @@ export const RELIABILITY_ERROR_CODES = {
 export type ReliabilityErrorCode =
   (typeof RELIABILITY_ERROR_CODES)[keyof typeof RELIABILITY_ERROR_CODES];
 
-export class ReliabilityError extends Error {
-  readonly code: ReliabilityErrorCode;
+export class ReliabilityError extends DomainError {
+  declare readonly code: ReliabilityErrorCode;
 
   constructor(code: ReliabilityErrorCode, message: string) {
-    super(message);
+    super(code, message, 400);
     this.name = 'ReliabilityError';
-    this.code = code;
   }
 
   static staleSession() {

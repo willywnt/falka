@@ -1,3 +1,4 @@
+export { DomainError } from './domain-error';
 export { AppError, type AppErrorCode } from './app-error';
 import { AppError } from './app-error';
 

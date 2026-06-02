@@ -1,3 +1,5 @@
+import { DomainError } from '@/lib/errors';
+
 export const STORAGE_ERROR_CODES = {
   INVALID_MIME_TYPE: 'INVALID_MIME_TYPE',
   INVALID_FILE: 'INVALID_FILE',
@@ -18,15 +20,16 @@ export const STORAGE_ERROR_MESSAGES: Record<StorageErrorCode, string> = {
   STORAGE_UNAVAILABLE: 'Storage is temporarily unavailable.',
 };
 
-export class StorageError extends Error {
-  readonly code: StorageErrorCode;
-  readonly statusCode: number;
+export class StorageError extends DomainError {
+  declare readonly code: StorageErrorCode;
 
   constructor(code: StorageErrorCode, message?: string, statusCode?: number) {
-    super(message ?? STORAGE_ERROR_MESSAGES[code]);
+    super(
+      code,
+      message ?? STORAGE_ERROR_MESSAGES[code],
+      statusCode ?? StorageError.defaultStatusCode(code),
+    );
     this.name = 'StorageError';
-    this.code = code;
-    this.statusCode = statusCode ?? StorageError.defaultStatusCode(code);
   }
 
   private static defaultStatusCode(code: StorageErrorCode): number {
