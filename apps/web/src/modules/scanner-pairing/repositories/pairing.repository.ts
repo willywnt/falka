@@ -110,10 +110,6 @@ export class PairingRepository {
       data: { status },
     });
   }
-
-  async markExpired(id: string): Promise<PairingSession> {
-    return this.disconnect(id, 'EXPIRED');
-  }
 }
 
 export const pairingRepository = new PairingRepository();

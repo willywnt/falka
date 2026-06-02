@@ -83,20 +83,3 @@ export function resolveDesktopDevOrigin(): string {
     process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? `http://localhost:${port}`;
   return normalizeOrigin(configured);
 }
-
-/** @deprecated Use resolveMobilePairingOrigin */
-export function resolvePublicOrigin(): string {
-  return resolveMobilePairingOrigin();
-}
-
-/** @deprecated No longer overrides AUTH_URL — desktop and mobile use separate origins */
-export function applyDevLanEnvironment(): string | null {
-  return null;
-}
-
-export function resolveDevLanOrigin(): string | null {
-  if (process.env.NODE_ENV === 'production') return null;
-  const lanHost = process.env.PAIRING_LAN_HOST ?? getLocalLanIPv4();
-  if (!lanHost) return null;
-  return buildLanOrigin(lanHost);
-}
