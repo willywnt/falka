@@ -66,6 +66,16 @@ export function resolveFailureFromError(error: unknown): {
     };
   }
 
+  // Match the specific "quota exceeded" message before the broader size check
+  // below — otherwise QUOTA_EXCEEDED would be unreachable.
+  if (lower.includes('quota exceeded')) {
+    return {
+      failureCode: RECORDING_FAILURE_CODES.QUOTA_EXCEEDED,
+      failureMessage: 'Storage quota exceeded. Free up space, then retry from pending uploads.',
+      debugMessage,
+    };
+  }
+
   if (lower.includes('quota') || lower.includes('too large') || lower.includes('file size')) {
     return {
       failureCode: RECORDING_FAILURE_CODES.FILE_TOO_LARGE,
@@ -86,14 +96,6 @@ export function resolveFailureFromError(error: unknown): {
     return {
       failureCode: RECORDING_FAILURE_CODES.UPLOAD_CANCELLED,
       failureMessage: 'Upload was cancelled.',
-      debugMessage,
-    };
-  }
-
-  if (lower.includes('quota exceeded')) {
-    return {
-      failureCode: RECORDING_FAILURE_CODES.QUOTA_EXCEEDED,
-      failureMessage: 'Storage quota exceeded. Free up space, then retry from pending uploads.',
       debugMessage,
     };
   }

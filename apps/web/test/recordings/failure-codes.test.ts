@@ -6,14 +6,10 @@ import {
 } from '@/modules/recording-recovery/types/failure-codes';
 
 /**
- * Characterization test for the upload-failure classifier used by the recovery flow.
- * It locks in CURRENT behavior so a refactor cannot silently change how operators
- * see failures.
- *
- * NOTE: the `quota exceeded -> QUOTA_EXCEEDED` branch is currently UNREACHABLE because
- * the earlier `includes('quota') -> FILE_TOO_LARGE` branch matches first. That is a
- * known bug reported separately; the assertion below documents the present (buggy)
- * behavior on purpose and must be updated deliberately when the bug is fixed.
+ * Behavior test for the upload-failure classifier used by the recovery flow.
+ * It locks in how operators see failures so a refactor cannot silently change it.
+ * The specific "quota exceeded" message now maps to QUOTA_EXCEEDED (it must be
+ * checked before the broader size match).
  */
 describe('resolveFailureFromError', () => {
   beforeEach(() => {
@@ -50,11 +46,17 @@ describe('resolveFailureFromError', () => {
     );
   });
 
-  it('classifies quota/size errors as FILE_TOO_LARGE (current behavior — see note)', () => {
+  it('classifies a specific "quota exceeded" error as QUOTA_EXCEEDED', () => {
     expect(resolveFailureFromError(new Error('storage quota exceeded')).failureCode).toBe(
+      RECORDING_FAILURE_CODES.QUOTA_EXCEEDED,
+    );
+  });
+
+  it('classifies generic size errors as FILE_TOO_LARGE', () => {
+    expect(resolveFailureFromError(new Error('file is too large')).failureCode).toBe(
       RECORDING_FAILURE_CODES.FILE_TOO_LARGE,
     );
-    expect(resolveFailureFromError(new Error('file is too large')).failureCode).toBe(
+    expect(resolveFailureFromError(new Error('disk quota warning')).failureCode).toBe(
       RECORDING_FAILURE_CODES.FILE_TOO_LARGE,
     );
   });
