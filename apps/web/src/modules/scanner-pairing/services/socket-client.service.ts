@@ -16,7 +16,16 @@ import {
 
 let socketInstance: Socket | null = null;
 
+/**
+ * Where the pairing Socket.IO server lives. In production the realtime server
+ * must run as a separate always-on host (a Vercel serverless function cannot
+ * hold the persistent Engine.IO connection), so point the client at
+ * NEXT_PUBLIC_SOCKET_URL when it is set; otherwise fall back to the same origin
+ * (the custom Node server used in local dev via `pnpm dev:web`).
+ */
 function resolveSocketUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
+  if (configured) return configured.replace(/\/$/, '');
   if (typeof window === 'undefined') return '';
   return window.location.origin;
 }
