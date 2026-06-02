@@ -9,9 +9,13 @@ import {
   type BarcodeScannedServerPayload,
   type PairingSessionEventPayload,
 } from './socket-client.service';
+import type { QueryClient } from '@tanstack/react-query';
+
 import { useScannerPairingStore } from '../store/scanner-pairing.store';
-import type { PairingSessionSummary } from '../types';
+import type { ActivePairingSessionResult, PairingSessionSummary } from '../types';
 import { toPairingSessionSummaryFromEvent } from '../utils/session-from-event';
+import { connectionStateFromSession } from '../utils/connection-state';
+import { pairingQueryKeys } from '../hooks/use-pairing-api';
 
 type BarcodeListener = (payload: BarcodeScannedServerPayload) => void;
 
@@ -22,16 +26,40 @@ const barcodeListeners = new Set<BarcodeListener>();
 
 const SOCKET_CONNECT_TIMEOUT_MS = 12_000;
 
+let pairingQueryClient: QueryClient | null = null;
+
+/** Lets the React layer hand its QueryClient to this non-React socket singleton. */
+export function setPairingQueryClient(queryClient: QueryClient): void {
+  pairingQueryClient = queryClient;
+}
+
+/**
+ * Socket-driven session updates flow into the TanStack Query cache (the single
+ * source of truth for the pairing session) and re-derive the UI connection state
+ * in the store — which keeps only client/UI state.
+ */
 function applySessionEvent(payload: PairingSessionEventPayload): void {
   const partial = toPairingSessionSummaryFromEvent(payload);
-  const current = useScannerPairingStore.getState().session;
-  useScannerPairingStore
-    .getState()
-    .setSession(
-      current
-        ? { ...current, ...partial, status: partial.status as PairingSessionSummary['status'] }
-        : partial,
-    );
+  const queryClient = pairingQueryClient;
+
+  const previousActive = queryClient?.getQueryData<ActivePairingSessionResult>(
+    pairingQueryKeys.active,
+  );
+  const previousSession = queryClient?.getQueryData<PairingSessionSummary>(
+    pairingQueryKeys.session(partial.id),
+  );
+  const current = previousActive?.session ?? previousSession ?? null;
+  const merged: PairingSessionSummary = current ? { ...current, ...partial } : partial;
+
+  if (queryClient) {
+    queryClient.setQueryData<ActivePairingSessionResult>(pairingQueryKeys.active, {
+      session: merged,
+      connectUrl: previousActive?.connectUrl ?? null,
+    });
+    queryClient.setQueryData<PairingSessionSummary>(pairingQueryKeys.session(merged.id), merged);
+  }
+
+  useScannerPairingStore.getState().setConnectionState(connectionStateFromSession(merged));
 }
 
 function waitForSocketConnect(socket: ReturnType<typeof getScannerSocket>): Promise<void> {

@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   connectScannerPairing,
+  setPairingQueryClient,
   subscribeScannerBarcode,
 } from '../services/scanner-socket-manager.service';
 import type { BarcodeScannedServerPayload } from '../services/socket-client.service';
@@ -18,6 +20,11 @@ export function useDesktopScannerSocket(
 ): void {
   const onBarcodeRef = useRef(onBarcodeScanned);
   onBarcodeRef.current = onBarcodeScanned;
+
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    setPairingQueryClient(queryClient);
+  }, [queryClient]);
 
   useEffect(() => {
     if (!pairingId) return;

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Smartphone, Wifi, WifiOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -15,27 +14,18 @@ type ScannerStatusWidgetProps = {
 
 export function ScannerStatusWidget({ onConnectClick }: ScannerStatusWidgetProps) {
   const { data: activeSession, refetch } = useActivePairingQuery();
-  const setSession = useScannerPairingStore((s) => s.setSession);
   const connectionState = useScannerPairingStore((s) => s.connectionState);
 
-  const storeSession = useScannerPairingStore((s) => s.session);
-  const session = storeSession ?? activeSession?.session ?? null;
+  const session = activeSession?.session ?? null;
   const disconnectMutation = useDisconnectPairingMutation();
 
   useDesktopScannerSocket(session?.id ?? null);
-
-  useEffect(() => {
-    if (activeSession?.session) {
-      setSession(activeSession.session);
-    }
-  }, [activeSession, setSession]);
 
   const isConnected = session?.status === 'CONNECTED' || connectionState === 'connected';
 
   const handleDisconnect = async () => {
     if (!session?.id) return;
     await disconnectMutation.mutateAsync(session.id);
-    setSession(null);
     void refetch();
   };
 

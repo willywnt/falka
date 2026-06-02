@@ -1,17 +1,10 @@
 import { create } from 'zustand';
 
 import type { StationRecordingPhase } from '../socket/events';
-import type {
-  BarcodeScannedPayload,
-  PairingSessionSummary,
-  ScannerConnectionState,
-} from '../types';
-import { connectionStateFromSession } from '../utils/connection-state';
+import type { BarcodeScannedPayload, ScannerConnectionState } from '../types';
 
 type ScannerPairingState = {
   connectionState: ScannerConnectionState;
-  session: PairingSessionSummary | null;
-  connectUrl: string | null;
   lastBarcode: string | null;
   lastScannedAt: string | null;
   socketConnected: boolean;
@@ -26,8 +19,6 @@ type ScannerPairingState = {
 
 type ScannerPairingActions = {
   setConnectionState: (state: ScannerConnectionState) => void;
-  setSession: (session: PairingSessionSummary | null) => void;
-  setConnectUrl: (url: string | null) => void;
   setLastScan: (payload: BarcodeScannedPayload | null) => void;
   setSocketConnected: (connected: boolean) => void;
   setPairingDialogOpen: (open: boolean) => void;
@@ -43,8 +34,6 @@ export type ScannerPairingStore = ScannerPairingState & ScannerPairingActions;
 
 const initialState: ScannerPairingState = {
   connectionState: 'idle',
-  session: null,
-  connectUrl: null,
   lastBarcode: null,
   lastScannedAt: null,
   socketConnected: false,
@@ -60,10 +49,6 @@ const initialState: ScannerPairingState = {
 export const useScannerPairingStore = create<ScannerPairingStore>((set) => ({
   ...initialState,
   setConnectionState: (connectionState) => set({ connectionState }),
-  setSession: (session) => {
-    set({ session, connectionState: connectionStateFromSession(session) });
-  },
-  setConnectUrl: (connectUrl) => set({ connectUrl }),
   setLastScan: (payload) =>
     set({
       lastBarcode: payload?.barcode ?? null,

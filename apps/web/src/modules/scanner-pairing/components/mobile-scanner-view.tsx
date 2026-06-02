@@ -53,18 +53,17 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
       pairingCode,
     });
 
-  const { phase, errorMessage, retry, isReconnecting } = useMobilePairingConnect({
+  const { phase, errorMessage, retry, isReconnecting, session } = useMobilePairingConnect({
     pairingId,
     isAuthenticated,
     isAuthLoading,
   });
 
-  const pairingSession = useScannerPairingStore((s) => s.session);
   const socketConnected = useScannerPairingStore((s) => s.socketConnected);
   const stationPhase = useScannerPairingStore((s) => s.stationPhase);
   const stationBarcode = useScannerPairingStore((s) => s.stationBarcode);
 
-  const isSessionConnected = phase === 'ready' && pairingSession?.status === 'CONNECTED';
+  const isSessionConnected = phase === 'ready' && session?.status === 'CONNECTED';
 
   const isReady = isSessionConnected && socketConnected && !isReconnecting;
   const stationBusy = stationPhase !== 'idle';

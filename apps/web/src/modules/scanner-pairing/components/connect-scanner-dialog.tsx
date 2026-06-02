@@ -35,10 +35,7 @@ export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialo
   const { status: authStatus } = useSession();
   const isAuthenticated = authStatus === 'authenticated';
 
-  const session = useScannerPairingStore((s) => s.session);
   const connectionState = useScannerPairingStore((s) => s.connectionState);
-  const setSession = useScannerPairingStore((s) => s.setSession);
-  const setConnectUrl = useScannerPairingStore((s) => s.setConnectUrl);
   const setConnectionState = useScannerPairingStore((s) => s.setConnectionState);
 
   const { data: activePairing, isFetched: isActivePairingFetched } = useActivePairingQuery(
@@ -50,7 +47,7 @@ export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialo
   const createStartedRef = useRef(false);
   const disconnectPairing = useDisconnectPairingMutation();
 
-  const displaySession = session ?? activePairing?.session ?? null;
+  const displaySession = activePairing?.session ?? null;
   const isConnected = connectionState === 'connected' || displaySession?.status === 'CONNECTED';
 
   const isReusableSession =
@@ -65,8 +62,8 @@ export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialo
     void createPairingRef
       .current()
       .then((result) => {
-        setSession(result.session);
-        setConnectUrl(result.connectUrl);
+        // The create mutation's onSuccess seeds the active-pairing query cache;
+        // here we only need the QR + the client-side connection state.
         setConnectionState('pending');
         return QRCode.toDataURL(result.qrPayload, { width: 240, margin: 2 });
       })
@@ -103,13 +100,11 @@ export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialo
     }
 
     const loadQr = async (connectUrl: string) => {
-      setConnectUrl(connectUrl);
       const dataUrl = await QRCode.toDataURL(connectUrl, { width: 240, margin: 2 });
       setQrDataUrl(dataUrl);
     };
 
     if (isReusableSession && displaySession) {
-      setSession(displaySession);
       setConnectionState(displaySession.status === 'CONNECTED' ? 'connected' : 'pending');
       if (activePairing?.connectUrl) {
         void loadQr(activePairing.connectUrl);
@@ -143,8 +138,6 @@ export function ConnectScannerDialog({ open, onOpenChange }: ConnectScannerDialo
     if (!displaySession?.id) return;
     try {
       await disconnectPairing.mutateAsync(displaySession.id);
-      setSession(null);
-      setConnectUrl(null);
       setConnectionState('idle');
       setQrDataUrl(null);
       createStartedRef.current = false;

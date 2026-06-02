@@ -52,8 +52,12 @@ export function useCreatePairingMutation() {
       }
       return result.data;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: pairingQueryKeys.active });
+    onSuccess: (data) => {
+      // Populate the cache immediately so the dialog renders without a refetch.
+      queryClient.setQueryData<ActivePairingSessionResult>(pairingQueryKeys.active, {
+        session: data.session,
+        connectUrl: data.connectUrl,
+      });
     },
   });
 }

@@ -1,14 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   connectScannerPairing,
   reconnectScannerPairingSocket,
+  setPairingQueryClient,
 } from '../services/scanner-socket-manager.service';
 import { getScannerSocket } from '../services/socket-client.service';
 import { useScannerPairingStore } from '../store/scanner-pairing.store';
-import { useConnectPairingMutation } from './use-pairing-api';
+import type { PairingSessionSummary } from '../types';
+import { pairingQueryKeys, useConnectPairingMutation } from './use-pairing-api';
 import { usePairingSessionQuery } from './use-pairing-session-query';
 
 export type MobileConnectPhase = 'auth' | 'invalid' | 'loading' | 'ready' | 'expired' | 'error';
@@ -38,9 +41,13 @@ export function useMobilePairingConnect({
   const connectingRef = useRef(false);
   const linkedPairingIdRef = useRef<string | null>(null);
 
-  const setSession = useScannerPairingStore((s) => s.setSession);
+  const queryClient = useQueryClient();
   const setConnectionState = useScannerPairingStore((s) => s.setConnectionState);
   const connectionState = useScannerPairingStore((s) => s.connectionState);
+
+  useEffect(() => {
+    setPairingQueryClient(queryClient);
+  }, [queryClient]);
 
   const connectMutation = useConnectPairingMutation();
   const connectApiRef = useRef(connectMutation.mutateAsync);
@@ -52,7 +59,9 @@ export function useMobilePairingConnect({
     async (options?: { silent?: boolean; socketOnly?: boolean }) => {
       if (!pairingId || !isAuthenticated || connectingRef.current) return;
 
-      const currentSession = useScannerPairingStore.getState().session;
+      const currentSession = queryClient.getQueryData<PairingSessionSummary>(
+        pairingQueryKeys.session(pairingId),
+      );
       const alreadyLinked =
         linkedPairingIdRef.current === pairingId &&
         currentSession?.id === pairingId &&
@@ -98,7 +107,7 @@ export function useMobilePairingConnect({
           deviceInfo: buildDeviceInfo(),
         });
 
-        setSession(connectedSession);
+        queryClient.setQueryData(pairingQueryKeys.session(pairingId), connectedSession);
         linkedPairingIdRef.current = pairingId;
 
         await connectScannerPairing(pairingId, 'mobile');
@@ -133,7 +142,7 @@ export function useMobilePairingConnect({
         connectingRef.current = false;
       }
     },
-    [isAuthenticated, pairingId, setConnectionState, setSession],
+    [isAuthenticated, pairingId, queryClient, setConnectionState],
   );
 
   useEffect(() => {
@@ -211,13 +220,11 @@ export function useMobilePairingConnect({
   }, [connectToStation, isAuthenticated, pairingId, phase, setConnectionState]);
 
   useEffect(() => {
-    if (!sessionQuery.data) return;
-    setSession(sessionQuery.data);
-    if (sessionQuery.data.status === 'EXPIRED') {
+    if (sessionQuery.data?.status === 'EXPIRED') {
       setPhase('expired');
       setErrorMessage('This QR session expired. Scan a new code on the desktop.');
     }
-  }, [sessionQuery.data, setSession]);
+  }, [sessionQuery.data]);
 
   const retry = useCallback(() => {
     connectingRef.current = false;
@@ -231,5 +238,6 @@ export function useMobilePairingConnect({
     connectionState,
     retry,
     isReconnecting: connectMutation.isPending,
+    session: sessionQuery.data ?? null,
   };
 }

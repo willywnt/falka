@@ -40,7 +40,6 @@ import { useScannerAutoRecording } from '@/modules/scanner-pairing/hooks/use-sca
 import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-desktop-scanner-socket';
 import { useDesktopStationRecordingSync } from '@/modules/scanner-pairing/hooks/use-desktop-station-recording-sync';
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
-import { useScannerPairingStore } from '@/modules/scanner-pairing/store/scanner-pairing.store';
 
 export function RecordingPanel() {
   const {
@@ -73,7 +72,7 @@ export function RecordingPanel() {
   const [pairingDialogOpen, setPairingDialogOpen] = useState(false);
 
   const { data: activePairing } = useActivePairingQuery();
-  const pairingSession = useScannerPairingStore((s) => s.session) ?? activePairing?.session ?? null;
+  const pairingSession = activePairing?.session ?? null;
 
   const {
     handleBarcodeScanned,
