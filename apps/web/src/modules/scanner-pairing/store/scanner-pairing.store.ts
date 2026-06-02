@@ -6,6 +6,7 @@ import type {
   PairingSessionSummary,
   ScannerConnectionState,
 } from '../types';
+import { connectionStateFromSession } from '../utils/connection-state';
 
 type ScannerPairingState = {
   connectionState: ScannerConnectionState;
@@ -60,18 +61,7 @@ export const useScannerPairingStore = create<ScannerPairingStore>((set) => ({
   ...initialState,
   setConnectionState: (connectionState) => set({ connectionState }),
   setSession: (session) => {
-    set({
-      session,
-      connectionState: session
-        ? session.status === 'CONNECTED'
-          ? 'connected'
-          : session.status === 'PENDING'
-            ? 'pending'
-            : session.status === 'EXPIRED'
-              ? 'expired'
-              : 'disconnected'
-        : 'idle',
-    });
+    set({ session, connectionState: connectionStateFromSession(session) });
   },
   setConnectUrl: (connectUrl) => set({ connectUrl }),
   setLastScan: (payload) =>
