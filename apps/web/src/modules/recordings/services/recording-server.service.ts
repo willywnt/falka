@@ -32,6 +32,22 @@ const CANCELLABLE_STATUSES: RecordingStatus[] = [
   RecordingStatus.FAILED,
 ];
 
+/** Window in which a same-resi recording counts as a duplicate worth warning about. */
+const DUPLICATE_RESI_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+
+/** Columns selected for a RecordingListItem (shared by list + duplicate lookup). */
+const RECORDING_LIST_ITEM_SELECT = {
+  id: true,
+  noResi: true,
+  status: true,
+  durationSeconds: true,
+  fileSizeBytes: true,
+  mimeType: true,
+  publicUrl: true,
+  createdAt: true,
+  uploadedAt: true,
+} as const satisfies Prisma.RecordingSelect;
+
 function mapListItem(recording: {
   id: string;
   noResi: string;
@@ -310,17 +326,7 @@ export class RecordingServerService {
         orderBy,
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
-        select: {
-          id: true,
-          noResi: true,
-          status: true,
-          durationSeconds: true,
-          fileSizeBytes: true,
-          mimeType: true,
-          publicUrl: true,
-          createdAt: true,
-          uploadedAt: true,
-        },
+        select: RECORDING_LIST_ITEM_SELECT,
       }),
     ]);
 
@@ -335,6 +341,29 @@ export class RecordingServerService {
       items: result.items,
       meta: result.meta,
     };
+  }
+
+  /**
+   * The most recent non-deleted recording with the EXACT same resi within the
+   * lookback window — including in-progress (RECORDING/UPLOADING) sessions, so a
+   * resi being recorded right now is still flagged as a duplicate.
+   */
+  async findRecentDuplicateResi(userId: string, noResi: string): Promise<RecordingListItem | null> {
+    const since = new Date(Date.now() - DUPLICATE_RESI_LOOKBACK_MS);
+
+    const recording = await prisma.recording.findFirst({
+      where: {
+        userId,
+        deletedAt: null,
+        status: { notIn: [RecordingStatus.PENDING_DELETE] },
+        noResi: { equals: noResi, mode: 'insensitive' },
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: RECORDING_LIST_ITEM_SELECT,
+    });
+
+    return recording ? mapListItem(recording) : null;
   }
 
   async getRecordingById(userId: string, recordingId: string): Promise<RecordingDetail> {

@@ -168,3 +168,44 @@ describe('completeRecording', () => {
     expect(userUpdateArgs.data.storageUsedBytes.increment).toBe(BigInt(1_000));
   });
 });
+
+describe('findRecentDuplicateResi', () => {
+  it('returns null when no recent same-resi recording exists', async () => {
+    prismaMock.recording.findFirst.mockResolvedValue(null);
+    expect(await service.findRecentDuplicateResi(USER, 'RESI123')).toBeNull();
+  });
+
+  it('matches the exact resi, includes in-progress, and excludes deleted/PENDING_DELETE', async () => {
+    prismaMock.recording.findFirst.mockResolvedValue({
+      id: 'rec-1',
+      noResi: 'RESI123',
+      status: 'RECORDING',
+      durationSeconds: 0,
+      fileSizeBytes: BigInt(0),
+      mimeType: 'video/webm',
+      publicUrl: 'pending',
+      createdAt: new Date('2026-06-03T00:00:00.000Z'),
+      uploadedAt: null,
+    });
+
+    const result = await service.findRecentDuplicateResi(USER, 'resi123');
+
+    expect(result?.id).toBe('rec-1');
+    expect(result?.status).toBe('RECORDING'); // an in-progress recording still counts
+
+    const where = prismaMock.recording.findFirst.mock.calls[0]?.[0] as {
+      where: {
+        userId: string;
+        deletedAt: null;
+        noResi: { equals: string; mode: string };
+        status: { notIn: string[] };
+        createdAt: { gte: Date };
+      };
+    };
+    expect(where.where.userId).toBe(USER);
+    expect(where.where.deletedAt).toBeNull();
+    expect(where.where.noResi).toEqual({ equals: 'resi123', mode: 'insensitive' });
+    expect(where.where.status).toEqual({ notIn: ['PENDING_DELETE'] });
+    expect(where.where.createdAt.gte).toBeInstanceOf(Date);
+  });
+});
