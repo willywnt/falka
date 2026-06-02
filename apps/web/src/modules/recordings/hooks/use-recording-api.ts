@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
@@ -8,7 +8,6 @@ import { apiRoutes } from '@/lib/api/routes';
 import { storageQueryKeys } from '@/modules/storage/hooks/use-storage-quota';
 
 import type {
-  ActiveRecordingSession,
   SaveRecordingMetadataPayload,
   SaveRecordingMetadataResponse,
   StartRecordingResponse,
@@ -20,24 +19,6 @@ export const recordingQueryKeys = {
   all: ['recordings'] as const,
   active: ['recordings', 'active'] as const,
 };
-
-export function useActiveRecordingQuery() {
-  return useQuery({
-    queryKey: recordingQueryKeys.active,
-    queryFn: async () => {
-      const result = await apiFetch<ActiveRecordingSession | null>(
-        `${apiRoutes.recordings}/active`,
-      );
-
-      if (!result.success) {
-        throw new Error(formatApiErrorMessage(result.error));
-      }
-
-      return result.data;
-    },
-    staleTime: 15_000,
-  });
-}
 
 export function useStartRecordingMutation() {
   const queryClient = useQueryClient();
