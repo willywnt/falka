@@ -6,8 +6,8 @@
  * (RecordingError, PairingError, …) without the shared layer having to import
  * them. Subclasses MUST pass their code/statusCode through `super(...)` and,
  * because `useDefineForClassFields` is enabled (target ES2022), narrow `code`
- * with `declare override readonly code` rather than a real field — a real field
- * would re-initialize to `undefined` after `super()` runs.
+ * with `declare readonly code` rather than a real field — a real field would
+ * re-initialize to `undefined` after `super()` runs.
  */
 export class DomainError extends Error {
   readonly code: string;
