@@ -50,6 +50,10 @@ export const authConfig = {
         sameSite: 'lax',
         path: '/',
         secure: usesSecureAuthCookies(),
+        // Set AUTH_COOKIE_DOMAIN (e.g. ".example.com") in production so the
+        // session cookie is shared with the separate Socket.IO subdomain
+        // (socket.example.com). Unset in dev => host-only cookie (unchanged).
+        domain: process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined,
       },
     },
   },

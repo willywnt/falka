@@ -50,10 +50,12 @@ sent and socket auth fails.**
 Two viable options — both touch sensitive config, so confirm before we proceed:
 
 - **A. Shared parent domain (recommended).** Put both behind one custom domain:
-  app at `app.example.com`, socket at `socket.example.com`. Configure the
-  Auth.js session cookie with `domain: '.example.com'` so it is sent to both
-  subdomains (same-site, so `SameSite=Lax` still works). This is an **Auth.js
-  config change** (in the sensitive list).
+  app at `app.example.com`, socket at `socket.example.com`, and set the
+  **`AUTH_COOKIE_DOMAIN=.example.com`** env var. The Auth.js session cookie then
+  carries that `domain` (wired in `auth.config.ts`) so it is sent to both
+  subdomains (same-site, so `SameSite=Lax` still works). Leave the var unset in
+  dev to keep the host-only cookie. The socket host also needs the same
+  `AUTH_SECRET`.
 - **B. Token-in-handshake.** Stop relying on the cookie; pass the session token
   through the Socket.IO `auth` handshake payload and validate it server-side.
   Avoids the cookie/domain problem but changes the socket auth mechanism.
