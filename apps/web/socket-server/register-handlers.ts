@@ -132,11 +132,9 @@ export function registerPairingSocketHandlers(io: Server): void {
           const pairingId = rawPayload?.pairingId ?? joinedPairingId;
           if (!pairingId) throw PairingError.notFound();
 
-          const session = await pairingService.recordHeartbeat(userId, pairingId);
-          emitToRoom(pairingId, SERVER_SOCKET_EVENTS.SCANNER_HEARTBEAT, {
-            lastSeenAt: session.lastSeenAt,
-            expiresAt: session.expiresAt,
-          });
+          // Heartbeat keeps lastSeenAt fresh for stale detection; no client
+          // subscribes to a server-side heartbeat echo, so none is emitted.
+          await pairingService.recordHeartbeat(userId, pairingId);
           ack?.({ ok: true });
         } catch (error) {
           const payload = toErrorPayload(error);

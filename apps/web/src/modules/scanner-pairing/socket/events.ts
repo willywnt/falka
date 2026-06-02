@@ -12,12 +12,10 @@ export const CLIENT_SOCKET_EVENTS = {
 export const SERVER_SOCKET_EVENTS = {
   PAIRING_CONNECTED: 'pairing_connected',
   PAIRING_DISCONNECTED: 'pairing_disconnected',
-  PAIRING_EXPIRED: 'pairing_expired',
   BARCODE_SCANNED: 'barcode_scanned',
   BARCODE_ACK: 'barcode_ack',
   RECORDING_TRIGGERED: 'recording_triggered',
   STATION_RECORDING_STATE: 'station_recording_state',
-  SCANNER_HEARTBEAT: 'scanner_heartbeat',
   PAIRING_ERROR: 'pairing_error',
   SESSION_STATE: 'session_state',
 } as const;

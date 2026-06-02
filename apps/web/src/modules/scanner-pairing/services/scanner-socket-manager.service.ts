@@ -132,10 +132,6 @@ function ensureSocketHandlers(): void {
     },
   );
 
-  socket.on(scannerSocketEvents.server.PAIRING_EXPIRED, () => {
-    useScannerPairingStore.getState().setConnectionState('expired');
-  });
-
   socket.on(scannerSocketEvents.server.BARCODE_SCANNED, (payload: BarcodeScannedServerPayload) => {
     useScannerPairingStore.getState().setLastScan({
       barcode: payload.barcode,
