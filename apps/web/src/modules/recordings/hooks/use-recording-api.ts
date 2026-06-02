@@ -13,12 +13,7 @@ import type {
   StartRecordingResponse,
 } from '../types';
 import type { CancelRecordingInput } from '../validators/cancel-recording';
-import { recordingsManagementKeys } from './use-recordings-management';
-
-export const recordingQueryKeys = {
-  all: ['recordings'] as const,
-  active: ['recordings', 'active'] as const,
-};
+import { recordingKeys } from './recording-keys';
 
 export function useStartRecordingMutation() {
   const queryClient = useQueryClient();
@@ -37,7 +32,7 @@ export function useStartRecordingMutation() {
       return result.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: recordingQueryKeys.active });
+      void queryClient.invalidateQueries({ queryKey: recordingKeys.active });
     },
   });
 }
@@ -59,9 +54,7 @@ export function useSaveRecordingMetadataMutation() {
       return result.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: recordingQueryKeys.all });
-      void queryClient.invalidateQueries({ queryKey: recordingQueryKeys.active });
-      void queryClient.invalidateQueries({ queryKey: recordingsManagementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: recordingKeys.all });
       void queryClient.invalidateQueries({ queryKey: storageQueryKeys.quota });
     },
   });
@@ -86,9 +79,7 @@ export function useCancelRecordingMutation() {
       return result.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: recordingQueryKeys.all });
-      void queryClient.invalidateQueries({ queryKey: recordingQueryKeys.active });
-      void queryClient.invalidateQueries({ queryKey: recordingsManagementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: recordingKeys.all });
     },
   });
 }

@@ -15,13 +15,7 @@ import type {
   RecordingPlaybackResponse,
 } from '../types';
 import type { ListRecordingsQuery } from '../validators/list-recordings';
-
-export const recordingsManagementKeys = {
-  all: ['recordings-management'] as const,
-  list: (query: ListRecordingsQuery) => ['recordings-management', 'list', query] as const,
-  detail: (id: string) => ['recordings-management', 'detail', id] as const,
-  playback: (id: string) => ['recordings-management', 'playback', id] as const,
-};
+import { recordingKeys } from './recording-keys';
 
 function buildListQueryString(query: ListRecordingsQuery): string {
   const params = new URLSearchParams();
@@ -41,7 +35,7 @@ function buildListQueryString(query: ListRecordingsQuery): string {
 
 export function useRecordingsListQuery(query: ListRecordingsQuery) {
   return useQuery({
-    queryKey: recordingsManagementKeys.list(query),
+    queryKey: recordingKeys.list(query),
     queryFn: async () => {
       const result = await apiFetch<RecordingListItem[]>(
         `${apiRoutes.recordings}?${buildListQueryString(query)}`,
@@ -62,7 +56,7 @@ export function useRecordingsListQuery(query: ListRecordingsQuery) {
 
 export function useRecordingDetailQuery(id: string | null, enabled = true) {
   return useQuery({
-    queryKey: recordingsManagementKeys.detail(id ?? 'unknown'),
+    queryKey: recordingKeys.detail(id ?? 'unknown'),
     queryFn: async () => {
       const result = await apiFetch<RecordingDetail>(`${apiRoutes.recordings}/${id}`);
 
@@ -78,7 +72,7 @@ export function useRecordingDetailQuery(id: string | null, enabled = true) {
 
 export function useRecordingPlaybackQuery(recordingId: string | null, enabled = true) {
   return useQuery({
-    queryKey: recordingsManagementKeys.playback(recordingId ?? 'unknown'),
+    queryKey: recordingKeys.playback(recordingId ?? 'unknown'),
     queryFn: async () => {
       const result = await apiFetch<RecordingPlaybackResponse>(
         `${apiRoutes.recordings}/${recordingId}/playback`,
@@ -112,7 +106,7 @@ export function useDeleteRecordingMutation() {
       return result.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: recordingsManagementKeys.all });
+      void queryClient.invalidateQueries({ queryKey: recordingKeys.library });
       void queryClient.invalidateQueries({ queryKey: storageQueryKeys.quota });
     },
   });
