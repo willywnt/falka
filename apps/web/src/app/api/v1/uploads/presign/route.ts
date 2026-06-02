@@ -1,32 +1,25 @@
 import { NextResponse } from 'next/server';
 
 import { METRIC_KEYS, incrementMetric } from '@olshop/metrics';
-import { getCurrentUser } from '@/modules/auth/services/session';
 import { StorageError } from '@/modules/storage/errors/storage-errors';
 import { uploadService } from '@/modules/storage/services/upload.service';
 import { presignUploadSchema } from '@/modules/storage/validators/presign';
-import {
-  apiError,
-  apiSuccess,
-  apiUnauthorized,
-  apiValidationError,
-  handleApiError,
-} from '@/lib/api-response';
+import { apiSuccess, apiValidationError } from '@/lib/api-response';
+import { withApiRoute } from '@/lib/api/with-api-route';
 import { assertRateLimitAllowed, enforceRateLimit, rateLimitHeaders } from '@/lib/api/rate-limit';
-import { getRequestIp, runWithRequestContext } from '@/lib/api/request-context';
+import { getRequestIp } from '@/lib/api/request-context';
 import { appLogger } from '@/lib/logger';
 
-export async function POST(request: Request) {
-  return runWithRequestContext(request, undefined, async () => {
+export const POST = withApiRoute(
+  async (request, { user }) => {
+    // Rate limiting stays inside the handler so a throttled request is still
+    // counted in UPLOADS_FAILED, matching the previous behavior.
+    const rateLimitResult = await enforceRateLimit('upload', {
+      ip: getRequestIp(request),
+      userId: user.id,
+    });
+
     try {
-      const user = await getCurrentUser();
-
-      if (!user) {
-        return apiUnauthorized('You must be signed in to upload files.');
-      }
-
-      const ip = getRequestIp(request);
-      const rateLimitResult = await enforceRateLimit('upload', { ip, userId: user.id });
       assertRateLimitAllowed(rateLimitResult);
 
       const body: unknown = await request.json();
@@ -67,14 +60,14 @@ export async function POST(request: Request) {
           code: error.code,
           message: error.message,
         });
-
-        return apiError({ code: error.code, message: error.message }, error.statusCode);
       }
 
-      return handleApiError(error);
+      // handleApiError (via withApiRoute) maps StorageError from its statusCode.
+      throw error;
     }
-  });
-}
+  },
+  { requireAuth: true },
+);
 
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });
