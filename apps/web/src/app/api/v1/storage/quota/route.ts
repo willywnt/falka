@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/modules/auth/services/session';
 import { quotaService } from '@/modules/storage/services/quota.service';
-import { apiSuccess, apiUnauthorized, handleApiError } from '@/lib/api-response';
+import { apiSuccess } from '@/lib/api-response';
+import { withApiRoute } from '@/lib/api/with-api-route';
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return apiUnauthorized();
-
+export const GET = withApiRoute(
+  async (_request, { user }) => {
     const snapshot = await quotaService.getQuotaSnapshot(user.id);
 
     return apiSuccess({
@@ -17,10 +14,9 @@ export async function GET() {
       remainingBytes: Number(snapshot.remainingBytes),
       usagePercent: snapshot.usagePercent,
     });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
+  },
+  { requireAuth: true },
+);
 
 export function OPTIONS() {
   return new NextResponse(null, { status: 204 });
