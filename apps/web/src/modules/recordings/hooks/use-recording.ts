@@ -12,7 +12,6 @@ import {
   resolveRecordingStream,
 } from '@/modules/recording-recovery/utils/camera-stream';
 import { useRecordingReliabilityStore } from '@/modules/recording-recovery/store/recording-reliability.store';
-import { isRecoverableUploadError } from '@/modules/recording-recovery/utils/network';
 import type { SaveTemporaryRecordingInput } from '@/modules/recording-recovery/types';
 import {
   createTimelineEvent,
@@ -48,6 +47,10 @@ import { clearRecordingSession, setRecordingSession } from '../utils/recording-s
 import { isAnotherTabRecording } from '../utils/tab-lock';
 import { noResiSchema } from '../validators/no-resi';
 import { mapRecordingErrorToFailureMetadata } from '../utils/recording-failure';
+import {
+  classifyStopRecordingFailure,
+  type RecoverableFailureParams,
+} from '../utils/stop-recording-failure';
 
 async function persistRecoverableRecording(input: SaveTemporaryRecordingInput): Promise<boolean> {
   if (!recordingRecoveryService.isAvailable()) {
@@ -178,19 +181,7 @@ export function useRecording() {
   );
 
   const handleRecoverableFailure = useCallback(
-    async (params: {
-      blob: Blob;
-      mimeType: string;
-      recordingId: string;
-      noResi: string;
-      durationSeconds: number;
-      message: string;
-      errorCode: string;
-      failureCode?: string;
-      failureReason: string;
-      notifyWebcamDisconnect?: boolean;
-      resetSession?: boolean;
-    }) => {
+    async (params: RecoverableFailureParams) => {
       clearTimer();
       recordingService.cleanup();
       setMediaStream(null);
@@ -501,71 +492,19 @@ export function useRecording() {
       toast.success('Recording uploaded successfully');
       await resetSessionForNextRecording();
     } catch (unknownError) {
-      if (unknownError instanceof DOMException && unknownError.name === 'AbortError') {
-        if (capturedBlob && capturedBlob.size > 0) {
-          await handleRecoverableFailure({
-            blob: capturedBlob,
-            mimeType: capturedMimeType,
-            recordingId,
-            noResi: activeRecording.noResi,
-            durationSeconds: useRecordingStore.getState().durationSeconds,
-            message: resolveFailureFromCode(RECORDING_FAILURE_CODES.UPLOAD_CANCELLED),
-            errorCode: 'UPLOAD_CANCELLED',
-            failureCode: RECORDING_FAILURE_CODES.UPLOAD_CANCELLED,
-            failureReason: 'Upload cancelled by operator',
-            resetSession: true,
-          });
-          return;
-        }
+      const action = classifyStopRecordingFailure(unknownError, {
+        recordingId,
+        noResi: activeRecording.noResi,
+        durationSeconds: useRecordingStore.getState().durationSeconds,
+        blob: capturedBlob,
+        mimeType: capturedMimeType,
+      });
 
-        await handleFailure(RecordingError.uploadFailed('Upload cancelled.'), recordingId);
-        return;
+      if (action.kind === 'recoverable') {
+        await handleRecoverableFailure(action.params);
+      } else {
+        await handleFailure(action.error, recordingId);
       }
-
-      const message = unknownError instanceof Error ? unknownError.message : 'Upload failed';
-      const recordingError =
-        unknownError instanceof RecordingError
-          ? unknownError
-          : RecordingError.fromUnknown(unknownError);
-
-      if (recordingError.code === 'QUOTA_EXCEEDED' || message.toLowerCase().includes('quota')) {
-        if (capturedBlob && capturedBlob.size > 0) {
-          await handleRecoverableFailure({
-            blob: capturedBlob,
-            mimeType: capturedMimeType,
-            recordingId,
-            noResi: activeRecording.noResi,
-            durationSeconds: useRecordingStore.getState().durationSeconds,
-            message: resolveFailureFromCode(RECORDING_FAILURE_CODES.QUOTA_EXCEEDED),
-            errorCode: 'QUOTA_EXCEEDED',
-            failureCode: RECORDING_FAILURE_CODES.QUOTA_EXCEEDED,
-            failureReason: recordingError.message,
-            resetSession: true,
-          });
-          return;
-        }
-
-        await handleFailure(RecordingError.quotaExceeded(), recordingId);
-        return;
-      }
-
-      if (capturedBlob && capturedBlob.size > 0 && isRecoverableUploadError(unknownError)) {
-        const failure = resolveFailureFromError(unknownError);
-        await handleRecoverableFailure({
-          blob: capturedBlob,
-          mimeType: capturedMimeType,
-          recordingId,
-          noResi: activeRecording.noResi,
-          durationSeconds: useRecordingStore.getState().durationSeconds,
-          message: failure.failureMessage,
-          errorCode: 'UPLOAD_RECOVERABLE',
-          failureCode: failure.failureCode,
-          failureReason: failure.debugMessage,
-        });
-        return;
-      }
-
-      await handleFailure(RecordingError.uploadFailed(message), recordingId);
     } finally {
       abortUploadRef.current = null;
     }
