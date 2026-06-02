@@ -6,8 +6,6 @@ export const apiRoutes = {
   recordings: `${API_BASE_PATH}/recordings`,
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
-  users: `${API_BASE_PATH}/users`,
-  auditLogs: `${API_BASE_PATH}/audit-logs`,
   storage: `${API_BASE_PATH}/storage`,
 } as const;
 

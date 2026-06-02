@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { resolveAuthToken } from '@/lib/resolve-auth-token.server';
 
-import { AuthError } from '../errors/auth-errors';
 import type { AuthUser } from '../types';
 
 function userFromToken(token: {
@@ -51,16 +50,6 @@ export async function requireAuth(): Promise<AuthUser> {
 
   if (!user) {
     redirect('/login');
-  }
-
-  return user;
-}
-
-export async function requireRole(...roles: UserRole[]): Promise<AuthUser> {
-  const user = await requireAuth();
-
-  if (!roles.includes(user.role)) {
-    throw AuthError.forbidden();
   }
 
   return user;

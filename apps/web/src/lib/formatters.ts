@@ -16,24 +16,6 @@ export function formatDateTime(value: string | Date): string {
   return STABLE_DATETIME_FORMAT.format(date);
 }
 
-export function formatRelativeTime(date: Date): string {
-  const diffMs = date.getTime() - Date.now();
-  const diffSec = Math.round(diffMs / 1000);
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
-  const absSec = Math.abs(diffSec);
-  if (absSec < 60) return rtf.format(diffSec, 'second');
-
-  const diffMin = Math.round(diffSec / 60);
-  if (Math.abs(diffMin) < 60) return rtf.format(diffMin, 'minute');
-
-  const diffHour = Math.round(diffMin / 60);
-  if (Math.abs(diffHour) < 24) return rtf.format(diffHour, 'hour');
-
-  const diffDay = Math.round(diffHour / 24);
-  return rtf.format(diffDay, 'day');
-}
-
 export function formatStorageUsage(usedBytes: number, quotaBytes: number): string {
   return `${formatBytes(usedBytes)} / ${formatBytes(quotaBytes)}`;
 }
