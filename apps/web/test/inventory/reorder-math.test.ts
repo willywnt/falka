@@ -127,6 +127,20 @@ describe('computeReorderQty', () => {
   it('suggests nothing without demand', () => {
     expect(computeReorderQty({ ...base, dailyVelocity: 0, available: 0, incoming: 0 })).toBe(0);
   });
+
+  it('raises a needed reorder up to the MOQ', () => {
+    // need = 74 - 70 = 4, but MOQ is 20
+    expect(computeReorderQty({ ...base, available: 70, incoming: 0, minOrderQty: 20 })).toBe(20);
+  });
+
+  it('keeps the computed qty when it already exceeds the MOQ', () => {
+    // need = 64, MOQ 20 → 64
+    expect(computeReorderQty({ ...base, available: 10, incoming: 0, minOrderQty: 20 })).toBe(64);
+  });
+
+  it('does not let a MOQ force an order when none is needed', () => {
+    expect(computeReorderQty({ ...base, available: 100, incoming: 0, minOrderQty: 20 })).toBe(0);
+  });
 });
 
 describe('classifyReorder', () => {

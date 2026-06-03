@@ -51,6 +51,8 @@ export class InventoryReorderService {
           name: true,
           cost: true,
           createdAt: true,
+          leadTimeDays: true,
+          minOrderQty: true,
           product: { select: { name: true } },
           inventory: { select: { availableStock: true, incomingStock: true } },
         },
@@ -88,6 +90,10 @@ export class InventoryReorderService {
       const incoming = variant.inventory?.incomingStock ?? 0;
       const unitsSold = soldByVariant.get(variant.id) ?? 0;
 
+      // A variant's own lead time overrides the request-level default.
+      const effectiveLeadTime = variant.leadTimeDays ?? leadTimeDays;
+      const minOrderQty = variant.minOrderQty ?? undefined;
+
       const ageDays = (now.getTime() - variant.createdAt.getTime()) / MS_PER_DAY;
       const effectiveDays = effectiveWindowDays(windowDays, ageDays);
       const dailyVelocity = computeVelocity(unitsSold, effectiveDays);
@@ -96,14 +102,15 @@ export class InventoryReorderService {
         available,
         incoming,
         dailyVelocity,
-        leadTimeDays,
+        leadTimeDays: effectiveLeadTime,
         targetCoverDays,
+        minOrderQty,
       });
       const status = classifyReorder({
         available,
         dailyVelocity,
         daysOfCover,
-        leadTimeDays,
+        leadTimeDays: effectiveLeadTime,
         targetCoverDays,
         variantAgeDays: ageDays,
         deadStockDays: REORDER_DEFAULTS.deadStockDays,
@@ -132,6 +139,8 @@ export class InventoryReorderService {
         unitsSold,
         dailyVelocity,
         daysOfCover,
+        leadTimeDays: effectiveLeadTime,
+        minOrderQty: minOrderQty ?? null,
         suggestedReorderQty,
         status,
         stockValue: stockValueNum.toString(),

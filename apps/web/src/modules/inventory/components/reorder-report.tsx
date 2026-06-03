@@ -182,8 +182,12 @@ function ReorderRow({ item }: { item: ReorderItem }) {
           {item.variantName} · {item.sku}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground text-right text-sm tabular-nums">
-        {formatVelocity(item.dailyVelocity)}
+      <TableCell className="text-right text-sm tabular-nums">
+        <div className="text-muted-foreground">{formatVelocity(item.dailyVelocity)}</div>
+        <div className="text-muted-foreground text-xs">
+          {item.leadTimeDays}d lead
+          {item.minOrderQty ? ` · MOQ ${item.minOrderQty}` : ''}
+        </div>
       </TableCell>
       <TableCell className="text-right tabular-nums">
         {formatDaysOfCover(item.daysOfCover)}

@@ -62,7 +62,9 @@ export function computeDaysOfCover(available: number, dailyVelocity: number): nu
  * Units to reorder so that on-hand + incoming reaches the target horizon
  * (lead time + target cover) at the current velocity. Nets out stock already
  * incoming and rounds up. Oversold (negative available) raises the suggestion to
- * also cover the backlog.
+ * also cover the backlog. When a reorder is needed, the result is raised to the
+ * minimum order quantity (MOQ) if one is set — MOQ never forces an order on its
+ * own.
  */
 export function computeReorderQty(params: {
   available: number;
@@ -70,14 +72,18 @@ export function computeReorderQty(params: {
   dailyVelocity: number;
   leadTimeDays: number;
   targetCoverDays: number;
+  minOrderQty?: number;
 }): number {
-  const { available, incoming, dailyVelocity, leadTimeDays, targetCoverDays } = params;
+  const { available, incoming, dailyVelocity, leadTimeDays, targetCoverDays, minOrderQty } = params;
   if (dailyVelocity <= 0) return 0;
 
   const targetUnits = dailyVelocity * (leadTimeDays + targetCoverDays);
   const need = targetUnits - (available + incoming);
   if (need <= 0) return 0;
-  return Math.ceil(need);
+
+  const qty = Math.ceil(need);
+  if (minOrderQty && minOrderQty > qty) return minOrderQty;
+  return qty;
 }
 
 /**

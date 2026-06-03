@@ -96,7 +96,11 @@ export type ReorderItem = {
   dailyVelocity: number;
   /** Days the available stock lasts at the current velocity; null = no demand. */
   daysOfCover: number | null;
-  /** Units suggested to reorder up to the lead+target horizon. */
+  /** Effective lead time used (per-variant override, else the request default). */
+  leadTimeDays: number;
+  /** Minimum order quantity applied; null = none. */
+  minOrderQty: number | null;
+  /** Units suggested to reorder up to the lead+target horizon (≥ MOQ when set). */
   suggestedReorderQty: number;
   status: ReorderStatus;
   /** available * cost, rounded + serialized; '0' when cost is unset. */
