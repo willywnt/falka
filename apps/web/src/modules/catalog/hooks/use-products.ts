@@ -7,8 +7,8 @@ import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
 
 import { catalogKeys } from './catalog-keys';
-import type { ProductDetail, ProductListItem } from '../types';
-import type { CreateProductInput } from '../validators/create-product';
+import type { ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import type { CreateProductInput, CreateVariantInput } from '../validators/create-product';
 import type { ListProductsQuery } from '../validators/list-products';
 
 const LIST_PAGE_SIZE = 50;
@@ -59,6 +59,28 @@ export function useCreateProductMutation() {
         method: 'POST',
         body: input,
       });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+    },
+  });
+}
+
+export function useAddVariantMutation(productId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateVariantInput) => {
+      const result = await apiFetch<ProductVariantItem>(
+        `${apiRoutes.products}/${productId}/variants`,
+        { method: 'POST', body: input },
+      );
 
       if (!result.success) {
         throw new Error(formatApiErrorMessage(result.error));

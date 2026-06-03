@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Plus, SlidersHorizontal } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import {
 import { useProductQuery } from '../hooks/use-products';
 import type { ProductVariantItem } from '../types';
 import { formatCurrency } from '../utils/format';
+import { AddVariantDialog } from './add-variant-dialog';
 
 export function ProductDetail({
   productId,
@@ -27,6 +29,7 @@ export function ProductDetail({
   onAdjustVariant: (variant: ProductVariantItem) => void;
 }) {
   const { data, isLoading, error } = useProductQuery(productId);
+  const [addOpen, setAddOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -62,15 +65,21 @@ export function ProductDetail({
         </Link>
       </Button>
 
-      <div className="space-y-1">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold tracking-tight">{data.name}</h2>
-          <Badge variant={data.isActive ? 'default' : 'secondary'}>
-            {data.isActive ? 'Active' : 'Inactive'}
-          </Badge>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold tracking-tight">{data.name}</h2>
+            <Badge variant={data.isActive ? 'default' : 'secondary'}>
+              {data.isActive ? 'Active' : 'Inactive'}
+            </Badge>
+          </div>
+          {data.category ? <p className="text-muted-foreground text-sm">{data.category}</p> : null}
+          {data.description ? <p className="text-sm">{data.description}</p> : null}
         </div>
-        {data.category ? <p className="text-muted-foreground text-sm">{data.category}</p> : null}
-        {data.description ? <p className="text-sm">{data.description}</p> : null}
+        <Button onClick={() => setAddOpen(true)}>
+          <Plus className="size-4" />
+          Add variant
+        </Button>
       </div>
 
       <div className="rounded-xl border">
@@ -112,6 +121,8 @@ export function ProductDetail({
           </TableBody>
         </Table>
       </div>
+
+      <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }
