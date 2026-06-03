@@ -193,6 +193,11 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                             {mapping.autoMapped ? (
                               <span className="text-muted-foreground text-xs">auto</span>
                             ) : null}
+                            {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
+                              <Badge variant="outline" className="border-amber-500 text-amber-600">
+                                Review
+                              </Badge>
+                            ) : null}
                           </div>
                           <SyncStatusBadge mapping={mapping} />
                         </div>
@@ -250,6 +255,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                             >
                               <Link2 className="size-4" />
                               Map to {suggested.sku}
+                              {suggested.quality === 'NORMALIZED' ? ' (similar)' : ''}
                             </Button>
                           ) : null}
                           <Button

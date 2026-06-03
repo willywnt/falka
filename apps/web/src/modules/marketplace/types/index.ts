@@ -4,6 +4,7 @@ import type {
   MarketplaceSyncStatus,
 } from '@prisma/client';
 
+import type { SkuMatchQuality } from '../utils/sku-match';
 import type { TokenStatus } from '../utils/token-lifecycle';
 
 export type MarketplaceConnectionStatus = 'connected' | 'disconnected' | 'expired';
@@ -47,6 +48,8 @@ export type MarketplaceSuggestedVariant = {
   sku: string;
   name: string;
   productName: string;
+  /** EXACT = identical SKU; NORMALIZED = same after case/separator/order normalization. */
+  quality: SkuMatchQuality;
 };
 
 export type MarketplaceListingItem = {

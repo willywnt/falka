@@ -8,6 +8,7 @@ import { appLogger } from '@/lib/logger';
 import { getMarketplaceImportAdapter } from '../adapters/import-adapter';
 import { MarketplaceError } from '../errors/marketplace-errors';
 import type { ImportListingsResult } from '../types';
+import { buildVariantSkuIndex, matchSku } from '../utils/sku-match';
 
 /**
  * Pulls external listings from a connection's provider (a stub adapter for now)
@@ -88,7 +89,11 @@ export class MarketplaceImportService {
     return { imported: listings.length, autoMapped };
   }
 
-  /** Links still-unmapped listings to internal variants with an identical SKU. */
+  /**
+   * Auto-maps unmapped listings to internal variants by *normalized* SKU. An
+   * exact SKU is mapped (confidence 1); a normalized-only match is mapped as
+   * NEEDS_REVIEW (confidence 0.9) and stays sync-disabled until confirmed.
+   */
   private async autoMapBySku(
     userId: string,
     connectionId: string,
@@ -107,33 +112,29 @@ export class MarketplaceImportService {
 
     if (unmapped.length === 0) return 0;
 
-    const skus = [
-      ...new Set(
-        unmapped.map((product) => product.externalSku).filter((sku): sku is string => sku !== null),
-      ),
-    ];
-
     const variants = await prisma.productVariant.findMany({
-      where: { userId, sku: { in: skus }, deletedAt: null },
+      where: { userId, deletedAt: null },
       select: { id: true, sku: true },
     });
-    const variantIdBySku = new Map(variants.map((variant) => [variant.sku, variant.id]));
+    const index = buildVariantSkuIndex(variants);
 
     let mapped = 0;
     for (const product of unmapped) {
-      const variantId = product.externalSku ? variantIdBySku.get(product.externalSku) : undefined;
-      if (!variantId) continue;
+      if (!product.externalSku) continue;
+      const match = matchSku(product.externalSku, index);
+      if (!match) continue;
 
+      const exact = match.quality === 'EXACT';
       await prisma.marketplaceProductMapping.create({
         data: {
           userId,
           marketplaceConnectionId: connectionId,
           marketplaceProductId: product.id,
-          productVariantId: variantId,
+          productVariantId: match.variantId,
           provider,
-          mappingStatus: 'MAPPED',
+          mappingStatus: exact ? 'MAPPED' : 'NEEDS_REVIEW',
           autoMapped: true,
-          mappingConfidence: 1,
+          mappingConfidence: exact ? 1 : 0.9,
         },
       });
       mapped += 1;

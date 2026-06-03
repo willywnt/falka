@@ -8,6 +8,7 @@ import { appLogger } from '@/lib/logger';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
 import type { MarketplaceListingItem, MarketplaceSuggestedVariant } from '../types';
+import { buildVariantSkuIndex, matchSku, type VariantSkuIndex } from '../utils/sku-match';
 
 const LISTING_INCLUDE = {
   mapping: {
@@ -20,6 +21,11 @@ const LISTING_INCLUDE = {
 } satisfies Prisma.MarketplaceProductInclude;
 
 type ListingRow = Prisma.MarketplaceProductGetPayload<{ include: typeof LISTING_INCLUDE }>;
+
+type SuggestionContext = {
+  index: VariantSkuIndex;
+  detailsById: Map<string, { id: string; sku: string; name: string; productName: string }>;
+};
 
 function toListingItem(
   row: ListingRow,
@@ -64,8 +70,8 @@ export class MarketplaceMappingService {
       orderBy: [{ externalProductName: 'asc' }, { externalVariantName: 'asc' }],
     });
 
-    const suggestions = await this.buildSuggestions(userId, rows);
-    return rows.map((row) => toListingItem(row, this.suggestionFor(row, suggestions)));
+    const context = await this.buildSuggestionContext(userId, rows);
+    return rows.map((row) => toListingItem(row, this.suggestionFor(row, context)));
   }
 
   async mapListing(
@@ -213,42 +219,49 @@ export class MarketplaceMappingService {
     });
     if (!row) throw MarketplaceError.notFound('Listing not found.');
 
-    const suggestions = await this.buildSuggestions(userId, [row]);
-    return toListingItem(row, this.suggestionFor(row, suggestions));
+    const context = await this.buildSuggestionContext(userId, [row]);
+    return toListingItem(row, this.suggestionFor(row, context));
   }
 
-  private async buildSuggestions(
+  private async buildSuggestionContext(
     userId: string,
     rows: ListingRow[],
-  ): Promise<Map<string, MarketplaceSuggestedVariant>> {
-    const skus = [
-      ...new Set(
-        rows
-          .filter((row) => !row.mapping && row.externalSku)
-          .map((row) => row.externalSku as string),
-      ),
-    ];
-    if (skus.length === 0) return new Map();
+  ): Promise<SuggestionContext | null> {
+    const hasUnmapped = rows.some((row) => !row.mapping && row.externalSku);
+    if (!hasUnmapped) return null;
 
     const variants = await prisma.productVariant.findMany({
-      where: { userId, sku: { in: skus }, deletedAt: null },
+      where: { userId, deletedAt: null },
       select: { id: true, sku: true, name: true, product: { select: { name: true } } },
     });
 
-    return new Map(
-      variants.map((variant) => [
-        variant.sku,
-        { id: variant.id, sku: variant.sku, name: variant.name, productName: variant.product.name },
-      ]),
-    );
+    return {
+      index: buildVariantSkuIndex(variants),
+      detailsById: new Map(
+        variants.map((variant) => [
+          variant.id,
+          {
+            id: variant.id,
+            sku: variant.sku,
+            name: variant.name,
+            productName: variant.product.name,
+          },
+        ]),
+      ),
+    };
   }
 
   private suggestionFor(
     row: ListingRow,
-    suggestions: Map<string, MarketplaceSuggestedVariant>,
+    context: SuggestionContext | null,
   ): MarketplaceSuggestedVariant | null {
-    if (row.mapping || !row.externalSku) return null;
-    return suggestions.get(row.externalSku) ?? null;
+    if (!context || row.mapping || !row.externalSku) return null;
+
+    const match = matchSku(row.externalSku, context.index);
+    if (!match) return null;
+
+    const details = context.detailsById.get(match.variantId);
+    return details ? { ...details, quality: match.quality } : null;
   }
 
   private async assertConnectionOwned(userId: string, connectionId: string): Promise<void> {
