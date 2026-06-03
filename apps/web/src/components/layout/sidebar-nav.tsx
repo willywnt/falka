@@ -77,15 +77,21 @@ function resolveActiveHref(pathname: string): string | undefined {
   return best;
 }
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({
+  onNavigate,
+  collapsed = false,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
   const activeHref = resolveActiveHref(pathname);
 
   return (
-    <nav className="flex flex-col gap-4 px-3">
+    <nav className={cn('flex flex-col gap-4', collapsed ? 'px-2' : 'px-3')}>
       {sidebarNavSections.map((section, index) => (
         <div key={section.label ?? `section-${index}`} className="flex flex-col gap-1">
-          {section.label ? (
+          {section.label && !collapsed ? (
             <p className="text-sidebar-foreground/50 px-3 pb-1 text-xs font-medium tracking-wider uppercase">
               {section.label}
             </p>
@@ -99,15 +105,17 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
+                title={collapsed ? item.title : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center rounded-lg text-sm font-medium transition-colors',
+                  collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
                   isActive
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
                 )}
               >
                 <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
-                {item.title}
+                {collapsed ? null : item.title}
               </Link>
             );
           })}
