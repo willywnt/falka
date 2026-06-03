@@ -1,0 +1,214 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { PackageSearch, ShoppingCart } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
+
+import { REORDER_DEFAULTS } from '../config';
+import { useReorderReportQuery } from '../hooks/use-inventory';
+import { reorderStatusDisplay } from '../utils/reorder-display';
+import type { ReorderItem } from '../types';
+
+const WINDOW_OPTIONS = [7, 30, 90] as const;
+
+function formatVelocity(value: number): string {
+  return value > 0 ? `${value.toFixed(1)}/day` : '—';
+}
+
+function formatDaysOfCover(value: number | null): string {
+  if (value === null) return '∞';
+  return `${Math.round(value)}d`;
+}
+
+export function ReorderReport() {
+  const [windowDays, setWindowDays] = useState<number>(REORDER_DEFAULTS.windowDays);
+  const [reorderOnly, setReorderOnly] = useState(false);
+
+  const { data, isLoading, error } = useReorderReportQuery({
+    windowDays,
+    leadTimeDays: REORDER_DEFAULTS.leadTimeDays,
+    targetCoverDays: REORDER_DEFAULTS.targetCoverDays,
+  });
+
+  const allItems = data?.items ?? [];
+  const items = reorderOnly
+    ? allItems.filter((item) => item.status === 'URGENT' || item.status === 'SOON')
+    : allItems;
+  const isEmpty = !isLoading && items.length === 0;
+
+  return (
+    <div className="space-y-6">
+      {data ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Needs reorder</CardDescription>
+              <CardTitle
+                className={cn('text-2xl', data.summary.reorderCount > 0 && 'text-amber-600')}
+              >
+                {data.summary.reorderCount}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-muted-foreground text-xs">{data.summary.urgentCount} urgent</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Dead stock</CardDescription>
+              <CardTitle className="text-2xl">{data.summary.deadStockCount}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-muted-foreground text-xs">
+                {formatCurrency(data.summary.deadStockValue)} tied up
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Sales window</CardDescription>
+              <CardTitle className="text-2xl">{data.summary.windowDays}d</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-muted-foreground text-xs">
+                {data.summary.leadTimeDays}d lead · {data.summary.targetCoverDays}d target cover
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground mr-1 text-sm">Window</span>
+          {WINDOW_OPTIONS.map((option) => (
+            <Button
+              key={option}
+              variant={windowDays === option ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setWindowDays(option)}
+            >
+              {option}d
+            </Button>
+          ))}
+        </div>
+        <Button
+          variant={reorderOnly ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setReorderOnly((value) => !value)}
+        >
+          Needs reorder only
+        </Button>
+      </div>
+
+      {error ? (
+        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
+          Failed to load the reorder report.{' '}
+          {error instanceof Error ? error.message : 'Please try again.'}
+        </div>
+      ) : null}
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : isEmpty ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-12 text-center">
+          <PackageSearch className="text-muted-foreground size-8" />
+          <div>
+            <p className="font-medium">Nothing to show</p>
+            <p className="text-muted-foreground text-sm">
+              {reorderOnly
+                ? 'No variants need reordering right now.'
+                : 'Add products and record some sales to see reorder suggestions.'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Variant</TableHead>
+                <TableHead className="text-right">Velocity</TableHead>
+                <TableHead className="text-right">Cover</TableHead>
+                <TableHead className="text-right">In stock</TableHead>
+                <TableHead className="text-right">Reorder</TableHead>
+                <TableHead className="text-right">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <ReorderRow key={item.variantId} item={item} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReorderRow({ item }: { item: ReorderItem }) {
+  const status = reorderStatusDisplay(item.status);
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Link
+          href={`/dashboard/products/${item.productId}`}
+          className="font-medium hover:underline"
+        >
+          {item.productName}
+        </Link>
+        <div className="text-muted-foreground text-xs">
+          {item.variantName} · {item.sku}
+        </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground text-right text-sm tabular-nums">
+        {formatVelocity(item.dailyVelocity)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {formatDaysOfCover(item.daysOfCover)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        <span className={cn('font-medium', item.availableStock <= 0 && 'text-destructive')}>
+          {item.availableStock}
+        </span>
+        {item.incomingStock > 0 ? (
+          <div className="text-muted-foreground text-xs">+{item.incomingStock} incoming</div>
+        ) : null}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {item.suggestedReorderQty > 0 ? (
+          <span className="text-foreground inline-flex items-center gap-1 font-semibold">
+            <ShoppingCart className="size-3.5" />
+            {item.suggestedReorderQty}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <Badge className={status.className}>{status.label}</Badge>
+      </TableCell>
+    </TableRow>
+  );
+}

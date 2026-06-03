@@ -1,18 +1,32 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, Boxes, PackageX, Wallet, type LucideIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  Boxes,
+  ChevronRight,
+  PackageX,
+  ShoppingCart,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
-import { useInventoryDashboardQuery } from '../hooks/use-inventory';
+import { REORDER_DEFAULTS } from '../config';
+import { useInventoryDashboardQuery, useReorderReportQuery } from '../hooks/use-inventory';
 import { stockReasonLabel } from '../utils/reason-display';
 
 export function InventoryDashboard() {
   const { data, isLoading, error } = useInventoryDashboardQuery();
+  const reorderQuery = useReorderReportQuery({
+    windowDays: REORDER_DEFAULTS.windowDays,
+    leadTimeDays: REORDER_DEFAULTS.leadTimeDays,
+    targetCoverDays: REORDER_DEFAULTS.targetCoverDays,
+  });
 
   if (isLoading) {
     return (
@@ -36,6 +50,7 @@ export function InventoryDashboard() {
   }
 
   const { summary, lowStock, recentMovements } = data;
+  const reorder = reorderQuery.data?.summary;
 
   const kpis: Array<{
     label: string;
@@ -96,6 +111,31 @@ export function InventoryDashboard() {
           );
         })}
       </div>
+
+      {reorder ? (
+        <Link
+          href="/dashboard/inventory/reorder"
+          className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 text-sm"
+        >
+          <div className="flex items-center gap-3">
+            <ShoppingCart className="text-muted-foreground size-4 shrink-0" />
+            <div>
+              <div className="font-medium">
+                {reorder.reorderCount > 0
+                  ? `${reorder.reorderCount} variant(s) need reordering`
+                  : 'No reorders needed right now'}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                {reorder.urgentCount > 0 ? `${reorder.urgentCount} urgent · ` : ''}
+                {reorder.deadStockCount > 0
+                  ? `${reorder.deadStockCount} dead stock (${formatCurrency(reorder.deadStockValue)})`
+                  : 'View reorder suggestions'}
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+        </Link>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { LineChart } from 'lucide-react';
 
 import { PageHeader } from '@/components/page-header';
+import { Button } from '@/components/ui/button';
 import { InventoryOverview } from '@/modules/inventory/components/inventory-overview';
 
 export const metadata: Metadata = {
@@ -13,7 +16,14 @@ export default function InventoryPage() {
       <PageHeader
         title="Inventory"
         description="Stock levels across your catalog — the source of truth for every channel."
-      />
+      >
+        <Button asChild variant="outline">
+          <Link href="/dashboard/inventory/reorder">
+            <LineChart className="size-4" />
+            Reorder suggestions
+          </Link>
+        </Button>
+      </PageHeader>
       <InventoryOverview />
     </div>
   );

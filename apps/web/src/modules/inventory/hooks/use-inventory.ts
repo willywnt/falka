@@ -11,15 +11,38 @@ import type {
   AdjustStockResult,
   InventoryDashboard,
   InventoryView,
+  ReorderReport,
   StockOverviewItem,
 } from '../types';
 import type { AdjustStockInput } from '../validators/adjust-stock';
+import type { ReorderReportQuery } from '../validators/reorder-report';
 
 export function useInventoryDashboardQuery() {
   return useQuery({
     queryKey: inventoryKeys.dashboard,
     queryFn: async () => {
       const result = await apiFetch<InventoryDashboard>(`${apiRoutes.inventory}/dashboard`);
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+export function useReorderReportQuery(params: ReorderReportQuery) {
+  return useQuery({
+    queryKey: inventoryKeys.reorder(params),
+    queryFn: async () => {
+      const result = await apiFetch<ReorderReport>(`${apiRoutes.inventory}/reorder`, {
+        params: {
+          windowDays: String(params.windowDays),
+          leadTimeDays: String(params.leadTimeDays),
+          targetCoverDays: String(params.targetCoverDays),
+        },
+      });
 
       if (!result.success) {
         throw new Error(formatApiErrorMessage(result.error));

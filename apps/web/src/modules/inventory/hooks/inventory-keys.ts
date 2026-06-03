@@ -8,4 +8,6 @@ export const inventoryKeys = {
   overview: (search: string | undefined, lowStockOnly: boolean) =>
     ['inventory', 'overview', { search: search ?? '', lowStockOnly }] as const,
   dashboard: ['inventory', 'dashboard'] as const,
+  reorder: (params: { windowDays: number; leadTimeDays: number; targetCoverDays: number }) =>
+    ['inventory', 'reorder', params] as const,
 };
