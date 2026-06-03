@@ -4,10 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Clean, airy neutral surfaces + a neutral charcoal sidebar. The brand accent is
- * swappable at runtime via [data-theme] (see PaletteSwitcher): Ombak (teal,
- * default), Senja (amber), Rimba (green), Anggur (berry), Tinta (coral). Only the
- * accent tokens change per theme — surfaces stay neutral so any accent reads well.
+ * Theme "Ombak": clean, airy neutral surfaces, a teal brand accent, and a neutral
+ * charcoal sidebar whose brand mark + active markers pick up the accent.
  */
 :root {
   --radius: 0.875rem;
@@ -93,67 +91,6 @@
   --sidebar-accent-foreground: oklch(0.97 0.003 250);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.7 0.1 200);
-}
-
-/* ── Accent presets (swap with [data-theme]) ───────────────────────────── */
-[data-theme='senja'] {
-  --primary: oklch(0.72 0.15 70);
-  --primary-foreground: oklch(0.27 0.04 60);
-  --ring: oklch(0.72 0.15 70);
-  --sidebar-primary: oklch(0.72 0.15 70);
-  --sidebar-ring: oklch(0.72 0.15 70);
-}
-.dark[data-theme='senja'] {
-  --primary: oklch(0.8 0.14 75);
-  --primary-foreground: oklch(0.24 0.04 60);
-  --ring: oklch(0.8 0.14 75);
-  --sidebar-primary: oklch(0.8 0.14 75);
-  --sidebar-ring: oklch(0.8 0.14 75);
-}
-
-[data-theme='rimba'] {
-  --primary: oklch(0.55 0.12 158);
-  --primary-foreground: oklch(0.99 0.01 150);
-  --ring: oklch(0.55 0.12 158);
-  --sidebar-primary: oklch(0.55 0.12 158);
-  --sidebar-ring: oklch(0.55 0.12 158);
-}
-.dark[data-theme='rimba'] {
-  --primary: oklch(0.68 0.13 158);
-  --primary-foreground: oklch(0.18 0.03 158);
-  --ring: oklch(0.68 0.13 158);
-  --sidebar-primary: oklch(0.68 0.13 158);
-  --sidebar-ring: oklch(0.68 0.13 158);
-}
-
-[data-theme='anggur'] {
-  --primary: oklch(0.55 0.2 350);
-  --primary-foreground: oklch(0.99 0.01 350);
-  --ring: oklch(0.55 0.2 350);
-  --sidebar-primary: oklch(0.55 0.2 350);
-  --sidebar-ring: oklch(0.55 0.2 350);
-}
-.dark[data-theme='anggur'] {
-  --primary: oklch(0.68 0.18 348);
-  --primary-foreground: oklch(0.18 0.03 350);
-  --ring: oklch(0.68 0.18 348);
-  --sidebar-primary: oklch(0.68 0.18 348);
-  --sidebar-ring: oklch(0.68 0.18 348);
-}
-
-[data-theme='tinta'] {
-  --primary: oklch(0.62 0.19 28);
-  --primary-foreground: oklch(0.99 0.01 28);
-  --ring: oklch(0.62 0.19 28);
-  --sidebar-primary: oklch(0.62 0.19 28);
-  --sidebar-ring: oklch(0.62 0.19 28);
-}
-.dark[data-theme='tinta'] {
-  --primary: oklch(0.7 0.17 28);
-  --primary-foreground: oklch(0.18 0.03 28);
-  --ring: oklch(0.7 0.17 28);
-  --sidebar-primary: oklch(0.7 0.17 28);
-  --sidebar-ring: oklch(0.7 0.17 28);
 }
 
 @theme inline {

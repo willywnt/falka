@@ -8,8 +8,6 @@ import { useTheme } from 'next-themes';
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
-import { PaletteSwitcher } from '@/components/layout/palette-switcher';
-import { GlobalSearch } from '@/components/layout/global-search';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -67,10 +65,7 @@ export function DashboardNavbar() {
         </Button>
       </div>
 
-      <GlobalSearch className="hidden w-full max-w-sm md:block" />
-
       <div className="ml-auto flex items-center gap-1.5">
-        <PaletteSwitcher />
         <Button
           variant="ghost"
           size="icon"
