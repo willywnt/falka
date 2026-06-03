@@ -13,6 +13,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatCard } from '@/components/stat-card';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
@@ -57,7 +58,7 @@ export function InventoryDashboard() {
     value: string;
     icon: LucideIcon;
     hint?: string;
-    accent?: string;
+    accentClassName?: string;
   }> = [
     {
       label: 'Stock value',
@@ -70,13 +71,13 @@ export function InventoryDashboard() {
       label: 'Low stock',
       value: String(summary.lowStockCount),
       icon: AlertTriangle,
-      accent: summary.lowStockCount > 0 ? 'text-amber-600' : undefined,
+      accentClassName: summary.lowStockCount > 0 ? 'text-amber-600' : undefined,
     },
     {
       label: 'Out of stock',
       value: String(summary.outOfStockCount),
       icon: PackageX,
-      accent: summary.outOfStockCount > 0 ? 'text-destructive' : undefined,
+      accentClassName: summary.outOfStockCount > 0 ? 'text-destructive' : undefined,
     },
   ];
 
@@ -91,34 +92,27 @@ export function InventoryDashboard() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon;
-          return (
-            <Card key={kpi.label}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardDescription>{kpi.label}</CardDescription>
-                  <Icon className="text-muted-foreground size-4" />
-                </div>
-                <CardTitle className={cn('text-2xl', kpi.accent)}>{kpi.value}</CardTitle>
-              </CardHeader>
-              {kpi.hint ? (
-                <CardContent className="pt-0">
-                  <p className="text-muted-foreground text-xs">{kpi.hint}</p>
-                </CardContent>
-              ) : null}
-            </Card>
-          );
-        })}
+        {kpis.map((kpi) => (
+          <StatCard
+            key={kpi.label}
+            label={kpi.label}
+            value={kpi.value}
+            icon={kpi.icon}
+            hint={kpi.hint}
+            accentClassName={kpi.accentClassName}
+          />
+        ))}
       </div>
 
       {reorder ? (
         <Link
           href="/dashboard/inventory/reorder"
-          className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 text-sm"
+          className="hover:bg-muted/50 flex items-center justify-between rounded-xl border p-3 text-sm transition-colors"
         >
           <div className="flex items-center gap-3">
-            <ShoppingCart className="text-muted-foreground size-4 shrink-0" />
+            <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <ShoppingCart className="size-4" />
+            </span>
             <div>
               <div className="font-medium">
                 {reorder.reorderCount > 0
