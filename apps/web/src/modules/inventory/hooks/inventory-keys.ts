@@ -10,4 +10,6 @@ export const inventoryKeys = {
   dashboard: ['inventory', 'dashboard'] as const,
   reorder: (params: { windowDays: number; leadTimeDays: number; targetCoverDays: number }) =>
     ['inventory', 'reorder', params] as const,
+  activity: (filters: Record<string, string | number>) =>
+    ['inventory', 'activity', filters] as const,
 };

@@ -184,7 +184,15 @@ export function InventoryDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Recent stock movements</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recent stock movements</CardTitle>
+              <Link
+                href="/dashboard/inventory/activity"
+                className="text-muted-foreground hover:text-foreground text-xs font-medium"
+              >
+                View all →
+              </Link>
+            </div>
             <CardDescription>Latest ledger entries</CardDescription>
           </CardHeader>
           <CardContent>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { StockLedgerReason, StockLedgerSource } from '@prisma/client';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
@@ -12,10 +13,37 @@ import type {
   InventoryDashboard,
   InventoryView,
   ReorderReport,
+  StockActivityItem,
   StockOverviewItem,
 } from '../types';
 import type { AdjustStockInput } from '../validators/adjust-stock';
 import type { ReorderReportQuery } from '../validators/reorder-report';
+
+/** Client-held filter state for the stock activity log. Empty string = unset. */
+export type StockActivityFilters = {
+  page: number;
+  search: string;
+  reason: StockLedgerReason | '';
+  source: StockLedgerSource | '';
+  direction: '' | 'in' | 'out';
+  from: string;
+  to: string;
+};
+
+/** Drops empty filters and serializes the rest into URL query params. */
+export function stockActivityParams(
+  filters: StockActivityFilters,
+): Record<string, string | number> {
+  return {
+    page: filters.page,
+    ...(filters.search ? { search: filters.search } : {}),
+    ...(filters.reason ? { reason: filters.reason } : {}),
+    ...(filters.source ? { source: filters.source } : {}),
+    ...(filters.direction ? { direction: filters.direction } : {}),
+    ...(filters.from ? { from: filters.from } : {}),
+    ...(filters.to ? { to: filters.to } : {}),
+  };
+}
 
 export function useInventoryDashboardQuery() {
   return useQuery({
@@ -50,6 +78,26 @@ export function useReorderReportQuery(params: ReorderReportQuery) {
 
       return result.data;
     },
+  });
+}
+
+export function useStockActivityQuery(filters: StockActivityFilters) {
+  const params = stockActivityParams(filters);
+
+  return useQuery({
+    queryKey: inventoryKeys.activity(params),
+    queryFn: async () => {
+      const result = await apiFetch<StockActivityItem[]>(`${apiRoutes.inventory}/activity`, {
+        params,
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return { items: result.data, meta: result.meta };
+    },
+    placeholderData: keepPreviousData,
   });
 }
 
