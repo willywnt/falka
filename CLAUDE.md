@@ -30,7 +30,7 @@ web: `noEmit`, `jsx: preserve`, `allowJs`, next plugin. Alias **`@/*` → `apps/
 
 ## 3. Module boundaries (apps/web/src/modules/<feature>/)
 
-Modules: `admin audit auth marketplace recordings scanner-pairing storage users`.
+Modules: `admin audit auth catalog inventory marketplace orders recordings scanner-pairing storage users`.
 
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
@@ -156,3 +156,24 @@ Analyze & explain before changing · work incrementally **per-module** · **one 
 commit per change** · keep all gates green at every commit · report potential
 bug/security/race/perf as **separate suggestions** (don't silently change) · when unsure
 between approaches, **ASK** — boundary beats dedup.
+
+## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders)
+
+Internal inventory = **source of truth**, integrated with marketplaces (adapter-first, STUBS).
+Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-mvp.md`.
+
+- **`StockLedger` (append-only) is the truth; `Inventory` is a fast-read cache** — every stock
+  change = 1 ledger row + 1 Inventory update in one tx. The `inventory` module owns ALL stock
+  writes; `catalog` (Product/Variant) reaches stock ONLY via the inventory service.
+- **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change
+  enqueues `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub
+  simulates). **Inbound orders** (`orders` module) decrement the SoT on PAID + propagate to the
+  OTHER channels (anti-oversell), idempotent via `Order.inventoryAppliedAt`.
+- **UI cross-module**: import another module's hooks/types, NOT its components — compose at the
+  app layer (page). Marketplace SKU auto-map is NORMALIZED (case/separator/order), NEVER
+  edit-distance (`…-M` ≠ `…-L`); non-exact → `NEEDS_REVIEW`, sync stays off.
+- **Gotchas**: BullMQ jobId can't contain `:`; a running dev server locks the Prisma engine DLL
+  (stop before `prisma generate`/migrate on Windows); `next build` "collect page data" flake →
+  re-run; a real provider adapter needs token-crypto lifted to a shared package.
+- Built on branch `feat/inventory-mvp` (off `main`, unpushed): Phase 0–4 + inventory dashboard,
+  all gates green per commit.

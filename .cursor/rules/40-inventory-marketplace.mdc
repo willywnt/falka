@@ -1,0 +1,63 @@
+---
+description: Inventory MVP — catalog/inventory/marketplace/orders, source-of-truth stock + outbound sync + inbound orders
+globs: apps/web/src/modules/catalog/**,apps/web/src/modules/inventory/**,apps/web/src/modules/marketplace/**,apps/web/src/modules/orders/**,apps/web/src/app/api/v1/products/**,apps/web/src/app/api/v1/inventory/**,apps/web/src/app/api/v1/marketplaces/**,apps/web/src/app/api/v1/orders/**,packages/queue/src/marketplace-sync/**
+alwaysApply: false
+---
+
+# Inventory / Marketplace MVP
+
+Internal inventory is the **source of truth**, integrated with marketplaces (Shopee/Tokopedia
+now). **Adapter-first with STUBS** so the whole pipeline runs without real provider APIs.
+Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions:
+`docs/roadmap/inventory-mvp.md`.
+
+## Modules & domains
+- **catalog** — Product / ProductVariant (master). Server service owns Prisma (no repository).
+  Every product has ≥1 variant; SKU `@@unique([userId, sku])`. Stock changes go through the
+  inventory service, NEVER by writing inventory tables from catalog.
+- **inventory** — `Inventory` (fast-read cache: available/reserved/damaged/incoming) +
+  **`StockLedger` (append-only = the real source of truth)**. Every mutation = 1 ledger row +
+  1 Inventory update in ONE transaction. `adjustStock` (manual, never negative);
+  `applyOrderDecrementTx(tx, …)` (order sale, MAY go negative = honest oversell); `getDashboard`
+  (KPIs). Pure `utils/stock-math.ts` is unit-tested.
+- **marketplace** — connections (kept `MarketplaceConnection`, NOT renamed to Account) +
+  `MarketplaceProduct` (imported listing snapshot) + `MarketplaceProductMapping` (listing↔variant).
+  Import via STUB adapter (`adapters/import-adapter.ts`; external SKU = slug of the variant name).
+  Auto-map by NORMALIZED sku (`utils/sku-match.ts`: case/separator/order-insensitive, NOT
+  edit-distance — `…-M` ≠ `…-L`); non-exact match → `NEEDS_REVIEW` + sync stays off. "Re-run
+  auto-map" links existing listings without re-import.
+- **orders** — pull marketplace orders (STUB adapter) → resolve each item to a variant via its
+  mapping → a PAID, not-yet-applied order decrements stock + stamps `Order.inventoryAppliedAt`
+  (idempotency) in one tx → then propagates each affected variant to its OTHER channels.
+
+## Outbound sync engine (worker-side) — `packages/queue/src/marketplace-sync/`
+SoT change → `enqueuePropagateInventoryStock` (web, best-effort, only if `syncEnabled` mappings
+exist) → `propagate-inventory-stock` job (fan-out, idempotent per ledger event) →
+`sync-marketplace-stock` job → `executeStockSync` (per-provider rate-limit, push LATEST
+available via the provider adapter; `Dev` stub simulates success, `Unwired` stub rejects) →
+marks `MarketplaceSyncJob` + mapping `lastSyncStatus` + listing snapshot. Retryable failures
+throw so BullMQ retries.
+
+## Cross-module composition (respect boundary §3)
+- catalog→inventory ONLY via the inventory service (no cross-table writes). orders→inventory via
+  `applyOrderDecrementTx`. A module may import another module's HOOKS/types but NOT its
+  components — cross-module UI composition lives at the APP layer (e.g.
+  `app/(dashboard)/dashboard/products/[id]/product-detail-view.tsx` wires catalog `ProductDetail`
+  + inventory `AdjustStockDialog`). The variant picker reuses inventory `useStockOverviewQuery`.
+
+## Gotchas (learned the hard way)
+- **BullMQ custom jobId CANNOT contain `:`** → job-id builders use `-` (DB idempotency keys keep `:`).
+- A real provider adapter needs the **DECRYPTED token** → lift marketplace token-crypto into a
+  shared `@olshop/*` package (the engine passes the encrypted token; stubs ignore it).
+- A running dev server (`tsx watch server.ts`) holds the Prisma query-engine DLL on Windows →
+  `prisma generate` fails `EPERM`. Stop it before generate/migrate; restart after.
+- `next build` intermittently fails `Failed to collect page data for /<page>` while node procs
+  run (a `.next` file-lock flake) — just re-run; not a code error.
+- `server-only` services can't be imported into a worker-context `tsx` script without
+  `node --conditions=react-server` + the web tsconfig.
+
+## Deferred (raise as separate suggestions)
+reserved-bucket vs raw-available decrement; cancellation-restock (`ORDER_RELEASE`); exclude the
+source channel from anti-oversell propagation; ProviderHealth + reconciliation/drift; bundles/kits;
+multi-warehouse; `cost` missing from the create-variant form (stock-value KPI reads 0 without it);
+queue package has no vitest (engine is gate-checked only).
