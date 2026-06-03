@@ -47,6 +47,7 @@ model User {
   stockLedgerEntries         StockLedger[]
   marketplaceProducts        MarketplaceProduct[]
   marketplaceProductMappings MarketplaceProductMapping[]
+  marketplaceSyncJobs        MarketplaceSyncJob[]
 
   @@map("users")
 }
@@ -126,6 +127,7 @@ model MarketplaceConnection {
 
   marketplaceProducts MarketplaceProduct[]
   productMappings     MarketplaceProductMapping[]
+  syncJobs            MarketplaceSyncJob[]
 
   @@index([userId])
   @@index([provider])
@@ -297,11 +299,57 @@ model MarketplaceProductMapping {
   syncEnabled             Boolean                  @default(false)
   autoMapped              Boolean                  @default(false)
   mappingConfidence       Decimal?                 @db.Decimal(3, 2)
+  lastSyncedAt            DateTime?
+  lastSyncStatus          MarketplaceSyncStatus?
+  lastSyncError           String?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
+
+  syncJobs MarketplaceSyncJob[]
 
   @@index([userId])
   @@index([marketplaceConnectionId])
   @@index([productVariantId])
   @@map("marketplace_product_mappings")
+}
+
+enum MarketplaceSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+}
+
+enum MarketplaceSyncJobStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  DISABLED
+  SKIPPED
+}
+
+model MarketplaceSyncJob {
+  id                          String                    @id @default(cuid())
+  userId                      String
+  user                        User                      @relation(fields: [userId], references: [id])
+  marketplaceConnectionId     String
+  connection                  MarketplaceConnection     @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
+  marketplaceProductMappingId String
+  mapping                     MarketplaceProductMapping @relation(fields: [marketplaceProductMappingId], references: [id], onDelete: Cascade)
+  provider                    MarketplaceProvider
+  idempotencyKey              String                    @unique
+  syncStatus                  MarketplaceSyncJobStatus  @default(PENDING)
+  payload                     Json
+  providerResponse            Json?
+  attempts                    Int                       @default(0)
+  errorMessage                String?
+  lastAttemptAt               DateTime?
+  completedAt                 DateTime?
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+
+  @@index([userId])
+  @@index([marketplaceProductMappingId])
+  @@index([syncStatus])
+  @@map("marketplace_sync_jobs")
 }
