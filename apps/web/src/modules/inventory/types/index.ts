@@ -76,6 +76,23 @@ export type InventoryMovementItem = {
   createdAt: string;
 };
 
+/** One row of the stock activity log — a ledger entry joined to its variant. */
+export type StockActivityItem = {
+  id: string;
+  variantId: string;
+  productId: string;
+  productName: string;
+  variantName: string;
+  sku: string;
+  delta: number;
+  balanceAfter: number;
+  reason: StockLedgerReason;
+  source: StockLedgerSource;
+  referenceId: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
 export type InventoryDashboard = {
   summary: InventoryDashboardSummary;
   lowStock: InventoryLowStockItem[];
