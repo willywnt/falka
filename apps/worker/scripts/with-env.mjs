@@ -29,6 +29,9 @@ function buildEnv() {
 
   return {
     ...process.env,
+    // PATH is the inherited OS variable (prepend local .bin dirs), not a turbo-tracked
+    // config var — declaring it in turbo.json would make it a cache key.
+    // eslint-disable-next-line turbo/no-undeclared-env-vars
     PATH: [...binDirs, process.env.PATH].filter(Boolean).join(pathSeparator),
   };
 }
