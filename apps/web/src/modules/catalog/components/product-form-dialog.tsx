@@ -32,7 +32,7 @@ const DEFAULT_VALUES: CreateProductFormInput = {
   name: '',
   category: '',
   description: '',
-  variant: { sku: '', name: '', price: 0, lowStockThreshold: 0, initialStock: 0 },
+  variant: { sku: '', name: '', price: 0, cost: 0, lowStockThreshold: 0, initialStock: 0 },
 };
 
 export function ProductFormDialog({
@@ -59,6 +59,7 @@ export function ProductFormDialog({
           sku: values.variant.sku,
           name: values.variant.name,
           price: values.variant.price,
+          cost: values.variant.cost || undefined,
           lowStockThreshold: values.variant.lowStockThreshold,
           initialStock: values.variant.initialStock,
           alertEnabled: true,
@@ -170,7 +171,7 @@ export function ProductFormDialog({
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="variant.price"
@@ -180,6 +181,21 @@ export function ProductFormDialog({
                       <FormControl>
                         <Input type="number" min={0} step={1} {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="variant.cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cost (IDR)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} step={1} {...field} />
+                      </FormControl>
+                      <FormDescription>Modal price — drives stock value.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

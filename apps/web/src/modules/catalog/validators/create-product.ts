@@ -46,6 +46,7 @@ export const createProductFormSchema = z.object({
     sku: z.string().trim().min(1, 'SKU is required').max(64),
     name: z.string().trim().min(1, 'Variant name is required').max(200),
     price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
+    cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
     lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
     initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
   }),
@@ -58,6 +59,7 @@ export const addVariantFormSchema = z.object({
   sku: z.string().trim().min(1, 'SKU is required').max(64),
   name: z.string().trim().min(1, 'Variant name is required').max(200),
   price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
+  cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
   lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
   initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
 });

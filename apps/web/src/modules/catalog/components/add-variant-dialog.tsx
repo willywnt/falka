@@ -31,6 +31,7 @@ const DEFAULT_VALUES: AddVariantFormInput = {
   sku: '',
   name: '',
   price: 0,
+  cost: 0,
   lowStockThreshold: 0,
   initialStock: 0,
 };
@@ -57,6 +58,7 @@ export function AddVariantDialog({
         sku: values.sku,
         name: values.name,
         price: values.price,
+        cost: values.cost || undefined,
         lowStockThreshold: values.lowStockThreshold,
         initialStock: values.initialStock,
         alertEnabled: true,
@@ -118,7 +120,7 @@ export function AddVariantDialog({
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="price"
@@ -128,6 +130,21 @@ export function AddVariantDialog({
                     <FormControl>
                       <Input type="number" min={0} step={1} {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost (IDR)</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} step={1} {...field} />
+                    </FormControl>
+                    <FormDescription>Modal price — drives stock value.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
