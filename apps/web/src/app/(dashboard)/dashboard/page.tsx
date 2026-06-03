@@ -1,17 +1,11 @@
 import type { Metadata } from 'next';
 
-import { PageHeader } from '@/components/page-header';
-import { InventoryDashboard } from '@/modules/inventory/components/inventory-dashboard';
+import { DashboardHome } from './dashboard-home';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
 };
 
 export default function DashboardPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader eyebrow="Overview" title="Dashboard" description="Your inventory at a glance." />
-      <InventoryDashboard />
-    </div>
-  );
+  return <DashboardHome />;
 }

@@ -1,0 +1,89 @@
+'use client';
+
+import type { Route } from 'next';
+import Link from 'next/link';
+import { Boxes, LineChart, ScrollText, ShoppingCart, Video, type LucideIcon } from 'lucide-react';
+
+import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
+import { InventoryDashboard } from '@/modules/inventory/components/inventory-dashboard';
+
+type QuickAction = {
+  label: string;
+  description: string;
+  href: Route;
+  icon: LucideIcon;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: 'New product', description: 'Add to catalog', href: '/dashboard/products', icon: Boxes },
+  {
+    label: 'Pull orders',
+    description: 'Sync from stores',
+    href: '/dashboard/marketplace',
+    icon: ShoppingCart,
+  },
+  { label: 'Record packing', description: 'Proof per parcel', href: '/recordings', icon: Video },
+  {
+    label: 'Reorder',
+    description: 'What to restock',
+    href: '/dashboard/inventory/reorder',
+    icon: LineChart,
+  },
+  {
+    label: 'Activity',
+    description: 'Stock history',
+    href: '/dashboard/inventory/activity',
+    icon: ScrollText,
+  },
+];
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+export function DashboardHome() {
+  const { user } = useCurrentUser();
+  const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
+
+  return (
+    <div className="space-y-6">
+      <div className="from-primary/10 rounded-2xl border bg-gradient-to-br to-transparent p-6">
+        <p className="text-2xl font-semibold tracking-tight" suppressHydrationWarning>
+          {greeting()}
+          {firstName ? `, ${firstName}` : ''} 👋
+        </p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Here&apos;s your shop at a glance — stock, orders, and what needs attention today.
+        </p>
+
+        <div className="mt-5 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.label}
+                href={action.href}
+                className="bg-card hover:border-primary/40 hover:bg-accent/50 group flex items-center gap-3 rounded-xl border p-3 transition-colors"
+              >
+                <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+                  <Icon className="size-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">{action.label}</span>
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {action.description}
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <InventoryDashboard />
+    </div>
+  );
+}
