@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { APP_NAME } from '@olshop/config/constants';
 import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -35,9 +36,17 @@ export function DashboardNavbar() {
               <span className="sr-only">Toggle menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <SheetHeader className="border-b px-6 py-4">
-              <SheetTitle>Navigation</SheetTitle>
+          <SheetContent
+            side="left"
+            className="bg-sidebar text-sidebar-foreground border-sidebar-border w-64 p-0"
+          >
+            <SheetHeader className="border-sidebar-border border-b px-5 py-4">
+              <SheetTitle className="text-sidebar-foreground flex items-center gap-2.5">
+                <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-7 items-center justify-center rounded-lg text-xs font-bold">
+                  {APP_NAME.charAt(0)}
+                </span>
+                {APP_NAME}
+              </SheetTitle>
             </SheetHeader>
             <div className="py-4">
               <SidebarNav />

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import '@fontsource-variable/plus-jakarta-sans';
 import { Providers } from '@/components/providers';
 import { cn } from '@/lib/utils';
 import '@/styles/globals.css';

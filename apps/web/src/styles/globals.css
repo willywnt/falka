@@ -3,71 +3,102 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Theme "Pasar" — warm cream surfaces, forest-green primary, amber highlight,
+ * deep-green sidebar. Tuned for a friendly Indonesian seller tool, not a generic
+ * blue SaaS. Colours are OKLch (perceptually even).
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
+  --radius: 0.875rem;
+
+  --background: oklch(0.985 0.013 95);
+  --foreground: oklch(0.23 0.018 155);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.23 0.018 155);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.511 0.262 276.966);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.585 0.233 277.117);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.511 0.262 276.966);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.585 0.233 277.117);
+  --popover-foreground: oklch(0.23 0.018 155);
+
+  --primary: oklch(0.52 0.118 158);
+  --primary-foreground: oklch(0.99 0.01 95);
+
+  --secondary: oklch(0.955 0.013 140);
+  --secondary-foreground: oklch(0.3 0.03 158);
+
+  --muted: oklch(0.96 0.008 120);
+  --muted-foreground: oklch(0.52 0.022 150);
+
+  --accent: oklch(0.93 0.035 145);
+  --accent-foreground: oklch(0.3 0.04 158);
+
+  --destructive: oklch(0.585 0.2 27);
+  --destructive-foreground: oklch(0.99 0.01 95);
+
+  --border: oklch(0.9 0.012 120);
+  --input: oklch(0.9 0.012 120);
+  --ring: oklch(0.52 0.118 158);
+
+  /* warm highlight for accents, charts, active markers */
+  --highlight: oklch(0.8 0.13 80);
+  --highlight-foreground: oklch(0.26 0.05 160);
+
+  --sidebar: oklch(0.27 0.045 160);
+  --sidebar-foreground: oklch(0.93 0.018 110);
+  --sidebar-primary: oklch(0.8 0.13 80);
+  --sidebar-primary-foreground: oklch(0.26 0.05 160);
+  --sidebar-accent: oklch(0.34 0.05 160);
+  --sidebar-accent-foreground: oklch(0.97 0.012 100);
+  --sidebar-border: oklch(0.4 0.045 160);
+  --sidebar-ring: oklch(0.8 0.13 80);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.585 0.233 277.117);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --background: oklch(0.18 0.016 158);
+  --foreground: oklch(0.95 0.012 100);
+
+  --card: oklch(0.22 0.022 159);
+  --card-foreground: oklch(0.95 0.012 100);
+
+  --popover: oklch(0.22 0.022 159);
+  --popover-foreground: oklch(0.95 0.012 100);
+
+  --primary: oklch(0.66 0.135 158);
+  --primary-foreground: oklch(0.17 0.02 158);
+
+  --secondary: oklch(0.28 0.025 158);
+  --secondary-foreground: oklch(0.95 0.012 100);
+
+  --muted: oklch(0.28 0.022 158);
+  --muted-foreground: oklch(0.7 0.02 130);
+
+  --accent: oklch(0.32 0.04 155);
+  --accent-foreground: oklch(0.95 0.012 100);
+
+  --destructive: oklch(0.66 0.18 25);
+  --destructive-foreground: oklch(0.98 0.01 95);
+
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.585 0.233 277.117);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.585 0.233 277.117);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.585 0.233 277.117);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.66 0.135 158);
+
+  --highlight: oklch(0.8 0.13 80);
+  --highlight-foreground: oklch(0.22 0.04 160);
+
+  --sidebar: oklch(0.16 0.018 160);
+  --sidebar-foreground: oklch(0.92 0.018 110);
+  --sidebar-primary: oklch(0.8 0.13 80);
+  --sidebar-primary-foreground: oklch(0.2 0.04 160);
+  --sidebar-accent: oklch(0.26 0.03 160);
+  --sidebar-accent-foreground: oklch(0.96 0.012 100);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.8 0.13 80);
 }
 
 @theme inline {
   --font-sans:
-    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji';
+    'Plus Jakarta Sans Variable', var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
   --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -89,6 +120,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
