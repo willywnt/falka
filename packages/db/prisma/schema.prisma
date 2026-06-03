@@ -201,6 +201,8 @@ model ProductVariant {
   isActive          Boolean   @default(true)
   lowStockThreshold Int       @default(0)
   alertEnabled      Boolean   @default(true)
+  leadTimeDays      Int? // supplier lead time (days) for reorder planning; null = use global default
+  minOrderQty       Int? // minimum reorder quantity (MOQ); null = no minimum
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
