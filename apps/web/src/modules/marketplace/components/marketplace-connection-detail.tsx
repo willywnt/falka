@@ -26,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { EmptyState } from '@/components/empty-state';
+import { StatCard } from '@/components/stat-card';
 
 import { useMarketplaceConnectionQuery } from '../hooks/use-marketplace-connections';
 import {
@@ -158,6 +160,11 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
 
   const connection = connectionQuery.data;
   const listings = listingsQuery.data ?? [];
+  const mappedCount = listings.filter((listing) => listing.mapping).length;
+  const syncOnCount = listings.filter((listing) => listing.mapping?.syncEnabled).length;
+  const reviewCount = listings.filter(
+    (listing) => listing.mapping?.mappingStatus === 'NEEDS_REVIEW',
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -206,6 +213,23 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         </div>
       </div>
 
+      {listings.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Listings" value={listings.length} />
+          <StatCard
+            label="Matched"
+            value={mappedCount}
+            hint={`${listings.length - mappedCount} not matched`}
+          />
+          <StatCard label="Sync on" value={syncOnCount} />
+          <StatCard
+            label="Needs review"
+            value={reviewCount}
+            accentClassName={reviewCount > 0 ? 'text-amber-600' : undefined}
+          />
+        </div>
+      ) : null}
+
       {listingsQuery.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
@@ -213,12 +237,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
           ))}
         </div>
       ) : listings.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-12 text-center">
-          <p className="font-medium">No listings imported yet</p>
-          <p className="text-muted-foreground text-sm">
-            Import this store&apos;s listings, then map each to an internal variant.
-          </p>
-        </div>
+        <EmptyState
+          icon={DownloadCloud}
+          title="No listings imported yet"
+          description="Import this store's listings, then match each one to a product."
+          action={
+            <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
+              <DownloadCloud className="size-4" />
+              Import listings
+            </Button>
+          }
+        />
       ) : (
         <div className="rounded-xl border">
           <Table>
