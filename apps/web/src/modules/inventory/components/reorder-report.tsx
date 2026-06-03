@@ -60,6 +60,7 @@ export function ReorderReport() {
             label="Needs reorder"
             value={data.summary.reorderCount}
             icon={ShoppingCart}
+            tone="amber"
             accentClassName={data.summary.reorderCount > 0 ? 'text-amber-600' : undefined}
             hint={`${data.summary.urgentCount} urgent`}
           />
@@ -67,12 +68,14 @@ export function ReorderReport() {
             label="Dead stock"
             value={data.summary.deadStockCount}
             icon={PackageX}
+            tone="rose"
             hint={`${formatCurrency(data.summary.deadStockValue)} tied up`}
           />
           <StatCard
             label="Sales window"
             value={`${data.summary.windowDays}d`}
             icon={CalendarRange}
+            tone="violet"
             hint={`${data.summary.leadTimeDays}d lead · ${data.summary.targetCoverDays}d target cover`}
           />
         </div>

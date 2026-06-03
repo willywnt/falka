@@ -215,16 +215,20 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
 
       {listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Listings" value={listings.length} />
+          <StatCard label="Listings" value={listings.length} icon={ShoppingCart} tone="sky" />
           <StatCard
             label="Matched"
             value={mappedCount}
+            icon={Link2}
+            tone="emerald"
             hint={`${listings.length - mappedCount} not matched`}
           />
-          <StatCard label="Sync on" value={syncOnCount} />
+          <StatCard label="Sync on" value={syncOnCount} icon={RefreshCw} tone="primary" />
           <StatCard
             label="Needs review"
             value={reviewCount}
+            icon={Wand2}
+            tone="amber"
             accentClassName={reviewCount > 0 ? 'text-amber-600' : undefined}
           />
         </div>

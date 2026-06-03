@@ -13,7 +13,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatCard } from '@/components/stat-card';
+import { StatCard, type StatTone } from '@/components/stat-card';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
@@ -57,6 +57,7 @@ export function InventoryDashboard() {
     label: string;
     value: string;
     icon: LucideIcon;
+    tone: StatTone;
     hint?: string;
     accentClassName?: string;
   }> = [
@@ -64,19 +65,22 @@ export function InventoryDashboard() {
       label: 'Stock value',
       value: formatCurrency(summary.totalStockValue),
       icon: Wallet,
+      tone: 'primary',
       hint: `${summary.totalAvailableUnits} units in stock`,
     },
-    { label: 'Products (SKUs)', value: String(summary.variantCount), icon: Boxes },
+    { label: 'Products (SKUs)', value: String(summary.variantCount), icon: Boxes, tone: 'sky' },
     {
       label: 'Low stock',
       value: String(summary.lowStockCount),
       icon: AlertTriangle,
+      tone: 'amber',
       accentClassName: summary.lowStockCount > 0 ? 'text-amber-600' : undefined,
     },
     {
       label: 'Out of stock',
       value: String(summary.outOfStockCount),
       icon: PackageX,
+      tone: 'rose',
       accentClassName: summary.outOfStockCount > 0 ? 'text-destructive' : undefined,
     },
   ];
@@ -98,6 +102,7 @@ export function InventoryDashboard() {
             label={kpi.label}
             value={kpi.value}
             icon={kpi.icon}
+            tone={kpi.tone}
             hint={kpi.hint}
             accentClassName={kpi.accentClassName}
           />

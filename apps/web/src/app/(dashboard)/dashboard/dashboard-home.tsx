@@ -4,36 +4,54 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { Boxes, LineChart, ScrollText, ShoppingCart, Video, type LucideIcon } from 'lucide-react';
 
+import { STAT_TONES, type StatTone } from '@/components/stat-card';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { InventoryDashboard } from '@/modules/inventory/components/inventory-dashboard';
+import { cn } from '@/lib/utils';
 
 type QuickAction = {
   label: string;
   description: string;
   href: Route;
   icon: LucideIcon;
+  tone: StatTone;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'New product', description: 'Add to catalog', href: '/dashboard/products', icon: Boxes },
+  {
+    label: 'New product',
+    description: 'Add to catalog',
+    href: '/dashboard/products',
+    icon: Boxes,
+    tone: 'sky',
+  },
   {
     label: 'Pull orders',
     description: 'Sync from stores',
     href: '/dashboard/marketplace',
     icon: ShoppingCart,
+    tone: 'amber',
   },
-  { label: 'Record packing', description: 'Proof per parcel', href: '/recordings', icon: Video },
+  {
+    label: 'Record packing',
+    description: 'Proof per parcel',
+    href: '/recordings',
+    icon: Video,
+    tone: 'rose',
+  },
   {
     label: 'Reorder',
     description: 'What to restock',
     href: '/dashboard/inventory/reorder',
     icon: LineChart,
+    tone: 'emerald',
   },
   {
     label: 'Activity',
     description: 'Stock history',
     href: '/dashboard/inventory/activity',
     icon: ScrollText,
+    tone: 'violet',
   },
 ];
 
@@ -68,7 +86,12 @@ export function DashboardHome() {
                 href={action.href}
                 className="bg-card hover:border-primary/40 hover:bg-accent/50 group flex items-center gap-3 rounded-xl border p-3 transition-colors"
               >
-                <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+                <span
+                  className={cn(
+                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                    STAT_TONES[action.tone],
+                  )}
+                >
                   <Icon className="size-5" />
                 </span>
                 <span className="min-w-0">
