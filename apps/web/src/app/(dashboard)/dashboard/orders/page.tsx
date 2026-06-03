@@ -11,6 +11,7 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Sales channels"
         title="Orders"
         description="Marketplace orders pulled into your source of truth — paid orders decrement stock."
       />

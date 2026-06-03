@@ -13,6 +13,7 @@ export default function SettingsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="System"
         title="Settings"
         description="Manage your account and organization preferences."
       />
@@ -31,7 +32,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-sm">
-                Settings will be available after auth is implemented.
+                Profile and organization preferences are coming soon.
               </p>
             </CardContent>
           </Card>

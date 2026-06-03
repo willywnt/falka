@@ -14,6 +14,7 @@ export default function DashboardRecordingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Fulfillment"
         title="Recordings library"
         description="Browse, play, download, and manage your operational recordings."
       >

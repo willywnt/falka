@@ -18,6 +18,7 @@ export default async function StockActivityPage({
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Inventory"
         title="Stock activity"
         description="Every stock change, newest first — filter and export the full ledger history."
       />

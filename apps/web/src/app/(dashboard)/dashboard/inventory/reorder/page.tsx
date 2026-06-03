@@ -11,6 +11,7 @@ export default function ReorderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Inventory"
         title="Reorder suggestions"
         description="Sales velocity, days of cover, and how much to reorder — from your stock ledger."
       />

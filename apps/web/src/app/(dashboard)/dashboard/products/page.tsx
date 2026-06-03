@@ -11,6 +11,7 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Catalog"
         title="Products"
         description="Your product catalog — the master list of items you sell."
       />

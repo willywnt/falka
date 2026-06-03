@@ -14,6 +14,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Catalog"
         title="Inventory"
         description="Stock levels across your catalog — the source of truth for every channel."
       >
