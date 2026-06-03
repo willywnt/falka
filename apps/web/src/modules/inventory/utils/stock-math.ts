@@ -1,0 +1,36 @@
+import { StockLedgerReason } from '@prisma/client';
+
+/**
+ * Reasons a user may pick for a *manual* stock adjustment. System-driven reasons
+ * (ORDER_RESERVE/ORDER_RELEASE/ORDER_SHIP/MARKETPLACE_SYNC) are written by later
+ * phases and must never be selectable from the manual-adjust API.
+ */
+export const MANUAL_STOCK_REASONS = [
+  StockLedgerReason.RESTOCK,
+  StockLedgerReason.MANUAL_ADJUST,
+  StockLedgerReason.DAMAGE,
+  StockLedgerReason.RECONCILE,
+] as const;
+
+export type ManualStockReason = (typeof MANUAL_STOCK_REASONS)[number];
+
+export function isManualStockReason(reason: StockLedgerReason): boolean {
+  return (MANUAL_STOCK_REASONS as readonly StockLedgerReason[]).includes(reason);
+}
+
+export type StockBalanceResult =
+  | { ok: true; balanceAfter: number }
+  | { ok: false; reason: 'zero_delta' | 'insufficient_stock' };
+
+/**
+ * Resulting available-stock balance after applying a signed delta. Available
+ * stock can never go negative, and a zero delta is rejected (no-op adjustment).
+ */
+export function computeBalanceAfter(currentAvailable: number, delta: number): StockBalanceResult {
+  if (delta === 0) return { ok: false, reason: 'zero_delta' };
+
+  const balanceAfter = currentAvailable + delta;
+  if (balanceAfter < 0) return { ok: false, reason: 'insufficient_stock' };
+
+  return { ok: true, balanceAfter };
+}
