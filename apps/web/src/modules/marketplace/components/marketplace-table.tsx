@@ -1,12 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { MoreHorizontal, Unplug } from 'lucide-react';
 
 import type { MarketplaceConnectionListItem } from '../types';
-import {
-  formatTokenExpiry,
-  formatTokenExpiryRelative,
-} from '../utils/token-lifecycle';
+import { formatTokenExpiry, formatTokenExpiryRelative } from '../utils/token-lifecycle';
 import { MarketplaceProviderBadge } from './marketplace-provider-badge';
 import { MarketplaceStatusBadge } from './marketplace-status-badge';
 import { Button } from '@/components/ui/button';
@@ -56,7 +54,12 @@ export function MarketplaceTable({
                 <MarketplaceProviderBadge provider={connection.provider} />
               </TableCell>
               <TableCell>
-                <div className="font-medium">{connection.shopName}</div>
+                <Link
+                  href={`/dashboard/marketplace/${connection.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {connection.shopName}
+                </Link>
                 <div className="text-muted-foreground text-xs">ID: {connection.shopId}</div>
               </TableCell>
               <TableCell>
