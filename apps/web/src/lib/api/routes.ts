@@ -6,6 +6,7 @@ export const apiRoutes = {
   recordings: `${API_BASE_PATH}/recordings`,
   products: `${API_BASE_PATH}/products`,
   inventory: `${API_BASE_PATH}/inventory`,
+  orders: `${API_BASE_PATH}/orders`,
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
   storage: `${API_BASE_PATH}/storage`,
