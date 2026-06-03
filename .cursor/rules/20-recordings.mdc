@@ -1,0 +1,29 @@
+---
+description: Recordings module — manual-recording happy flow must not change behavior
+globs: apps/web/src/modules/recordings/**,apps/web/src/app/api/v1/recordings/**,apps/web/src/app/api/v1/uploads/**
+alwaysApply: false
+---
+
+# Recordings module
+
+Layers: actions · components · errors (`RecordingError extends DomainError`) · hooks
+(+`recording-keys.ts`) · **recovery/** (internal submodule, has `index.ts`) · services
+(`recording-server.service.ts` server-only; `recording.service.ts` client) · store
+(`recording.store.ts` = UI/lifecycle only) · types · utils · validators.
+
+## 🔒 HAPPY FLOW 1 — Manual Recording (behavior MUST NOT change; structure may)
+1. Input resi, **validated ≥3 chars** (`no-resi` validator) → 2. Start → `POST /recordings/start`
+→ 3. record (MediaRecorder) → 4. duplicate check `GET /recordings/duplicate` → **warning modal on dup**
+→ 5. Stop → presign `POST /uploads/presign` → PUT to R2 → save metadata `POST /recordings`
+→ 6. library table refreshes.
+Duplicate detection is **server-side** (`findRecentDuplicateResi`: exact noResi,
+case-insensitive, includes in-progress, 24h window) — keep it there.
+
+## Rules
+- Route handlers orchestration only; business logic in services; Prisma via the data layer.
+- `recording.store` (Zustand) holds ONLY UI/lifecycle state — never fetched recordings.
+  Recordings lists/details come from TanStack Query (`recordingKeys`).
+- `recordings/recovery/**` is internal — outside code enters via the recovery module, not deep files.
+- Lifecycle/stop-failure classification is pure + tested (`utils/stop-recording-failure.ts`,
+  recovery `failure-codes`) — keep the QUOTA_EXCEEDED branch reachable (checked before the broad size match).
+- Touching Prisma schema / R2 contract / the flow's behavior → confirm first.

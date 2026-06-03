@@ -1,0 +1,52 @@
+---
+description: Core architecture, structure, state, quality gate, hard constraints
+alwaysApply: true
+---
+
+# Olshop core rules (see CLAUDE.md for full detail + code examples)
+
+Modular-monolith: pnpm@9 + Turborepo, Node ≥20. apps/web (Next.js 15 App Router,
+React 19, custom server.ts for Socket.IO), apps/worker (BullMQ), packages/* = `@olshop/*`.
+
+## TypeScript (packages/typescript-config/base.json)
+strict · moduleResolution bundler · ESNext · ES2022 · isolatedModules ·
+noUncheckedIndexedAccess · noImplicitOverride · verbatimModuleSyntax. Alias `@/*` → `apps/web/src/*`.
+- type-only imports MUST be `import type`. Indexed access is `T | undefined` — guard it.
+- DomainError subclass narrows code via `declare readonly code: XErrorCode`.
+
+## Module boundaries (apps/web/src/modules/<feature>/)
+admin · audit · auth · marketplace · recordings · scanner-pairing · storage · users.
+- Cross-module talk ONLY via the other module's `services/`/`hooks/`/`validators/`/`types/`.
+  Never import another module's deep internals.
+- Shared logic → `@olshop/*` or `apps/web/src/lib`, never duplicated per module.
+- CONFLICT RULE: **preserve boundary over removing duplication** (then flag the dup).
+
+## Folders per module
+components · hooks (+`*-keys.ts`) · services (`*.service.ts`, server uses `import 'server-only'`) ·
+repositories (`*.repository.ts`) · validators (Zod, +`index.ts`) · types · errors (extend
+DomainError) · store (`*.store.ts`) · utils · actions · socket · config.ts. Files kebab-case.
+Shared non-module: `src/lib`, `src/components`, `src/hooks`, `src/store`, `src/app/**/route.ts`.
+
+## State
+- Server state (DB/API) → **TanStack Query ONLY**; keys in `*-keys.ts`; invalidate via queryClient.
+- Zustand → ONLY UI state (modal/countdown/filter/sidebar/media-stream/lifecycle).
+- HARD: **no server/fetched entities in Zustand** (pairing session lives in the Query cache).
+
+## Hard constraints — confirm BEFORE touching
+Prisma schema/migrations (`packages/db/prisma/schema.prisma`) · Auth.js config
+(`auth.config.ts`/`auth.ts`/`middleware.ts`) · env var names/values (`turbo.json`) ·
+Socket.IO event contracts (`scanner-pairing/socket/events.ts`) · behavior of the 2 happy
+flows (recording + mobile scanner).
+
+## Quality gate — green after EVERY change
+`pnpm typecheck` · `pnpm lint` (--max-warnings 0) · `pnpm build` · `pnpm test`.
+No `any` · no unused · no duplication · no oversized multi-responsibility files. LF endings.
+
+## Anti-patterns
+over-engineering · server state in Zustand · business logic/Prisma in Route Handler or UI ·
+cross-module deep imports · multi-responsibility files · collapsing error codes to UNKNOWN ·
+console.log over logger.
+
+## Workflow
+Analyze first · incremental per-module · one logical commit per change · gates green each
+commit · report bug/security/race/perf as SEPARATE suggestions · unsure → ASK (boundary > dedup).

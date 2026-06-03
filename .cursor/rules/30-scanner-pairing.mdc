@@ -1,0 +1,41 @@
+---
+description: Scanner-pairing module — mobile-scanner happy flow + Socket.IO contract + xhr-poll fix
+globs: apps/web/src/modules/scanner-pairing/**,apps/web/src/app/api/v1/scanner-pairing/**,apps/web/server.ts,apps/web/socket-server/**
+alwaysApply: false
+---
+
+# Scanner-pairing module (realtime)
+
+Layers: components · config.ts (`SOCKET_PATH`) · errors (`PairingError extends DomainError`) ·
+hooks (desktop+mobile socket hooks, `use-pairing-session-query`) · **repositories/**
+(`pairing.repository.ts` — Prisma here, e.g. `findSessionUser`) · services
+(`pairing.service.ts`, `scanner-socket-manager.service.ts`, `socket-client.service.ts`) ·
+socket (`events.ts` = event contract) · store (`scanner-pairing.store.ts` = UI only) ·
+types · utils (`resolve-public-origin.ts`) · validators.
+
+## 🔒 HAPPY FLOW 2 — Mobile Scanner (behavior MUST NOT change)
+desktop shows QR → phone opens `/mobile/connect` (auto sign-in via pairing code) →
+socket connects → scan barcode → emit `barcode_scanned` → server relays realtime to desktop
+→ desktop prefills resi → duplicate check → **3s countdown** → auto-record.
+
+## 🔒 Socket.IO contract — DO NOT rename/repurpose (events.ts)
+client→server: `join_pairing` `leave_pairing` `barcode_scanned` `scanner_heartbeat`
+`disconnect_pairing` `report_station_state`.
+server→client: `pairing_connected` `pairing_disconnected` `barcode_scanned` `barcode_ack`
+`recording_triggered` `station_recording_state` `pairing_error` `session_state`.
+
+## State
+Pairing session = **server state → TanStack Query cache** (`use-pairing-session-query`,
+socket events write via `setPairingQueryClient`). `scanner-pairing.store` (Zustand) holds
+ONLY UI state (countdown/dialog/connection/station phase). Never store the session in Zustand.
+
+## ⚠️ "xhr poll error" — root cause + fix (do NOT reintroduce)
+Socket.IO exists ONLY on the custom `apps/web/server.ts` (`initPairingSocketServer`), run by
+`tsx server.ts`. Vercel builds `framework: nextjs` and **never runs server.ts** → no
+`/api/socket` handler in prod → the Engine.IO long-poll handshake is unanswered → `xhr poll error`.
+- Forcing `transports: ['websocket']` is **NOT a fix** — serverless can't hold the persistent
+  connection / heartbeat sweeps.
+- Fix: run the socket as a **separate always-on Node host**; browser points via
+  `NEXT_PUBLIC_SOCKET_URL` (unset → same origin, so **dev is unchanged**). Cross-origin cookie:
+  shared parent domain + `AUTH_COOKIE_DOMAIN=.example.com` (option A) or token-in-handshake (B).
+  See `docs/deployment/socket-server.md`. Auth.js cookie / env / socket contract = confirm first.

@@ -1,0 +1,45 @@
+---
+description: API route handlers, services, repositories, validators, data fetching, errors, R2
+globs: apps/web/src/app/api/**,apps/web/src/lib/api/**,apps/web/src/modules/**/services/**,apps/web/src/modules/**/repositories/**,apps/web/src/modules/**/validators/**,apps/web/src/modules/**/hooks/**
+alwaysApply: false
+---
+
+# API & data-layer patterns
+
+## Route Handler = orchestration only (`app/api/**/route.ts`)
+Wrap with `withApiRoute` (auth/admin XOR, rate-limit, request-id, central error map).
+Handler gets non-null `{ user, requestId }`. Parse input with Zod, call ONE service, return.
+```ts
+const schema = z.object({ noResi: z.string().trim().min(1).max(64) });
+export const GET = withApiRoute(async (request, { user }) => {
+  const parsed = schema.safeParse({ noResi: new URL(request.url).searchParams.get('noResi') ?? '' });
+  if (!parsed.success) return apiValidationError(parsed.error);
+  return apiSuccess(await recordingServerService.findRecentDuplicateResi(user.id, parsed.data.noResi));
+}, { requireAuth: true });
+```
+NO business logic, NO Prisma, NO manual auth in the handler.
+
+## Layering
+- **Service** (`*.service.ts`): business logic, HTTP-free; server svc start `import 'server-only'`;
+  throw module errors extending `DomainError(code, message, statusCode, details?)`.
+- **Repository** (`*.repository.ts`): the ONLY place Prisma is touched for that module
+  (e.g. `pairingRepository.findSessionUser`). Services call repositories, not `prisma` directly.
+- **Validators**: Zod schema is the single input source; export `z.infer` types.
+
+## Errors
+`handleApiError` maps ANY `DomainError` generically from code+statusCode (no module imports).
+Client `apiFetch` → `ApiResult<T>`; `apiFetchOrThrow` throws `DomainError` **preserving the
+real server code** — never collapse to `UNKNOWN`.
+
+## Data fetching (hooks)
+`apiFetch`/`apiFetchOrThrow` + TanStack Query. Keys in `*-keys.ts` (one hierarchy).
+Mutations invalidate the right key (`recordingKeys.active`, `.all`, `storageQueryKeys.quota`).
+
+## Logging
+`appLogger`/`logger` from `@olshop/logger`: `('event.name', { ctx })`. No `console.log`,
+no secrets (errors via `sanitizeError`).
+
+## R2 presigned upload
+client → `POST /uploads/presign` → `uploadService.createPresignedUpload` (quota →
+`storageService.generateUploadUrl`, R2 signs content-type ONLY) → browser `PUT`s to R2 →
+`POST /recordings` saves metadata. Server never proxies bytes.

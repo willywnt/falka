@@ -1,0 +1,158 @@
+# Olshop — Project Rules (read fully every session)
+
+Modular-monolith, pnpm@9 + Turborepo, Node ≥20. Edit code to match surrounding
+style. These rules are derived from the actual refactored code — keep them true.
+
+## 1. Stack
+
+- **apps/web** — Next.js 15 App Router + React 19. Custom Node server
+  `apps/web/server.ts` (run via `tsx watch server.ts`) attaches Socket.IO.
+  Prod build = `next build` (Vercel) — **the custom server is NOT run on Vercel**.
+- **apps/worker** — BullMQ background jobs.
+- **packages/** = shared `@olshop/*`: `db` (Prisma+schema), `config` (env+limits),
+  `logger`, `types`, `utils`, `metrics`, `health`, `queue`, `storage`, `rate-limit`,
+  `redis`, `ui`, `eslint-config`, `typescript-config`.
+- Server state → **TanStack Query v5**. UI state → **Zustand v5**.
+  Auth → Auth.js (next-auth 5 beta, JWT). DB → Prisma+Postgres.
+  Files → Cloudflare R2 (S3 SDK, presigned). Tests → Vitest.
+
+## 2. TypeScript (packages/typescript-config/base.json → nextjs.json)
+
+`strict`, `moduleResolution: bundler`, `module: ESNext`, `target: ES2022`,
+`isolatedModules`, **`noUncheckedIndexedAccess`**, **`noImplicitOverride`**,
+**`verbatimModuleSyntax`**, `esModuleInterop`, `forceConsistentCasingInFileNames`.
+web: `noEmit`, `jsx: preserve`, `allowJs`, next plugin. Alias **`@/*` → `apps/web/src/*`**.
+
+- `verbatimModuleSyntax` → type-only imports MUST use `import type { X }`.
+- `noUncheckedIndexedAccess` → indexed access is `T | undefined`; guard it.
+- ES2022 + `useDefineForClassFields`: a `DomainError` subclass narrows its code with
+  `declare readonly code: XErrorCode` (NOT a real field, NOT `declare override`).
+
+## 3. Module boundaries (apps/web/src/modules/<feature>/)
+
+Modules: `admin audit auth marketplace recordings scanner-pairing storage users`.
+
+- A module owns its feature. Talk to another module ONLY through its conventional
+  layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
+  another module's deep internals.
+- Cross-cutting/shared logic lives in `@olshop/*` packages or `apps/web/src/lib` —
+  never duplicated per module.
+- A submodule (e.g. `recordings/recovery/`, has its own `index.ts`) is internal to
+  its parent domain; outside code goes through the parent.
+- **CONFLICT RULE: preserve the boundary over removing duplication.** If dedup would
+  force a boundary-breaking cross-import, keep the duplication (or lift to `@olshop/*`)
+  and flag it as a separate suggestion.
+
+## 4. Folder & naming per module (real structure)
+
+`components/` UI `.tsx` · `hooks/` React+TanStack hooks & `*-keys.ts` query keys ·
+`services/` business logic `*.service.ts` (server svc start with `import 'server-only'`) ·
+`repositories/` Prisma access `*.repository.ts` (where present) · `validators/` Zod
+`*.ts` (+`index.ts` barrel) · `types/` · `errors/` classes extending `DomainError` ·
+`store/` Zustand `*.store.ts` · `utils/` pure helpers · `actions/` server actions ·
+`socket/` event contracts (scanner-pairing) · `config.ts`.
+Files kebab-case. **Shared non-module:** `src/lib` (api infra, errors, logger, env),
+`src/components` (shared UI/providers), `src/hooks`, `src/store` (app UI stores),
+`src/app/**/route.ts` (Route Handlers), `packages/*`.
+
+## 5. Layering — what each layer MAY / MUST NOT do
+
+| Layer                                   | MAY                                                                                         | MUST NOT                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **UI** `components/`                    | render, local interaction, read TanStack/Zustand                                            | fetch, Prisma, business rules       |
+| **Hooks** `hooks/`                      | useQuery/useMutation, query keys, invalidation, call fetch-client                           | business rules, Prisma              |
+| **Route Handler** `app/api/**/route.ts` | `withApiRoute`, Zod-parse input, call ONE service, return `apiSuccess`/`apiValidationError` | business logic, Prisma, manual auth |
+| **Service** `services/*.service.ts`     | business logic, throw module errors                                                         | import `next/server`, touch HTTP    |
+| **Repository / data**                   | Prisma queries (`@olshop/db`)                                                               | leak Prisma types past the module   |
+| **Validators** `validators/`            | Zod schema = single input source; `z.infer` types                                           | —                                   |
+
+Prisma belongs in the data layer — a `repository` where one exists (scanner-pairing),
+otherwise the server service. NEVER in a Route Handler or UI.
+
+## 6. State rules
+
+- **Server state (anything from DB/API) → TanStack Query ONLY.** Query keys live in
+  `*-keys.ts` as one hierarchy (e.g. `recordingKeys.all/.active/.list(q)/.detail(id)`);
+  refresh via `queryClient.invalidateQueries`.
+- **Zustand → ONLY client/UI state**: modal open, countdown, filters, sidebar/nav,
+  media-stream + recording-lifecycle UI. (`ui-store`, `scanner-pairing.store`, `recording.store`.)
+- **HARD: never put server/fetched entities in Zustand.** The pairing session was moved
+  OUT of Zustand into the Query cache — keep it there.
+
+## 7. Patterns (copy these — from real code)
+
+**Route Handler (orchestration only):**
+
+```ts
+const querySchema = z.object({ noResi: z.string().trim().min(1).max(64) });
+export const GET = withApiRoute(
+  async (request, { user }) => {
+    const parsed = querySchema.safeParse({
+      noResi: new URL(request.url).searchParams.get('noResi') ?? '',
+    });
+    if (!parsed.success) return apiValidationError(parsed.error);
+    const data = await recordingServerService.findRecentDuplicateResi(user.id, parsed.data.noResi);
+    return apiSuccess(data);
+  },
+  { requireAuth: true },
+);
+```
+
+`withApiRoute` handles auth/admin (XOR), rate-limit, request-id, and central error
+mapping; the handler gets a guaranteed-non-null `{ user, requestId }`.
+
+**Errors:** throw a module error extending `DomainError(code, message, statusCode, details?)`.
+`handleApiError` maps ANY `DomainError` generically (code+statusCode) — the shared layer
+imports no modules. Client: `apiFetch` → `ApiResult<T>`; `apiFetchOrThrow` throws a
+`DomainError` **preserving the server code** (never collapse to `UNKNOWN`).
+
+**Data fetching (hook):**
+
+```ts
+const result = await apiFetch<StartRecordingResponse>(`${apiRoutes.recordings}/start`, {
+  method: 'POST',
+  body: { noResi },
+});
+if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+// onSuccess: queryClient.invalidateQueries({ queryKey: recordingKeys.active })
+```
+
+**Logging:** `appLogger`/`logger` from `@olshop/logger`; structured `('event.name', { ctx })`.
+Never `console.log`; never log secrets (errors go through `sanitizeError`).
+
+**R2 presigned upload:** client → `POST /api/v1/uploads/presign` →
+`uploadService.createPresignedUpload` (quota check → `storageService.generateUploadUrl`,
+R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
+`POST /api/v1/recordings` saves metadata. The server never proxies file bytes.
+
+## 8. HARD CONSTRAINTS — confirm BEFORE touching
+
+1. **Prisma schema & migrations** — `packages/db/prisma/schema.prisma`.
+2. **Auth.js config** — `auth.config.ts`, `auth.ts`, `middleware.ts`, cookie options.
+3. **Env var names/values** — see `turbo.json` globalEnv + `.env`.
+4. **Socket.IO event contracts** — `scanner-pairing/socket/events.ts`:
+   `pairing_connected`, `pairing_disconnected`, `barcode_scanned`, `barcode_ack`,
+   `recording_triggered`, `station_recording_state`, `scanner_heartbeat`,
+   `session_state`, `pairing_error`. Don't rename/repurpose payloads.
+5. **Behavior of the 2 happy flows** — refactor structure freely, but behavior must not change.
+
+## 9. Quality gate — green after EVERY change
+
+`pnpm typecheck` · `pnpm lint` (`eslint . --max-warnings 0`) · `pnpm build` ·
+`pnpm test` (vitest). **No `any`. No unused. No duplication. No oversized
+multi-responsibility files.** pre-commit (husky+lint-staged) runs eslint --fix +
+prettier. Repo line-endings = **LF**.
+
+## 10. Anti-patterns (reject these)
+
+Over-engineering · server state in Zustand · business logic/Prisma in a Route Handler
+or UI · cross-module deep imports · multi-responsibility/oversized files · swallowing
+errors or collapsing codes to `UNKNOWN` · `console.log` over `logger` · "fixing" the
+socket by forcing `transports: ['websocket']` (see scanner rules — it is NOT a fix).
+
+## 11. Workflow
+
+Analyze & explain before changing · work incrementally **per-module** · **one logical
+commit per change** · keep all gates green at every commit · report potential
+bug/security/race/perf as **separate suggestions** (don't silently change) · when unsure
+between approaches, **ASK** — boundary beats dedup.
