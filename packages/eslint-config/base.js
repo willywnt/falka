@@ -32,7 +32,11 @@ export const config = [
     },
   },
   {
-    ignores: ['dist/**', '.next/**', 'node_modules/**', 'coverage/**'],
+    // Global ignores (object with only `ignores`). Use a `**/` prefix so the patterns
+    // match build output at ANY depth: a package that resolves the repo-root config
+    // (no local eslint.config) would otherwise anchor `dist/**` to the repo root and
+    // still lint its own `packages/*/dist/**`.
+    ignores: ['**/dist/**', '**/.next/**', '**/node_modules/**', '**/coverage/**'],
   },
 ];
 
