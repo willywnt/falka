@@ -19,7 +19,9 @@ async function finalizeRecordingDeletion(params: {
   fileSizeBytes: bigint;
   dryRun: boolean;
 }): Promise<'deleted' | 'skipped'> {
-  const { recordingId, userId, storageKey, fileSizeBytes, dryRun } = params;
+  // fileSizeBytes is part of the caller contract but re-read authoritatively from the
+  // DB below, so it is intentionally not destructured here.
+  const { recordingId, userId, storageKey, dryRun } = params;
   const storage = getObjectStorageProvider();
 
   const recording = await prisma.recording.findUnique({

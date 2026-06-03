@@ -1,7 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-import { generateRequestId, REQUEST_ID_HEADER, resolveRequestId } from './correlation-id.js';
-
 export { generateRequestId, REQUEST_ID_HEADER, resolveRequestId } from './correlation-id.js';
 
 export type CorrelationContext = {
