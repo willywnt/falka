@@ -6,6 +6,7 @@ import { closeAllQueues } from './queues/create-queue.js';
 import { registerScheduledJobs } from './queues/register-schedulers.js';
 import { closeAllWorkers, getRegisteredWorkers } from './workers/create-worker.js';
 import { registerAllWorkers } from './workers/register-workers.js';
+import type { getQueueObservabilitySnapshot } from './observability/queue-metrics.js';
 
 export type WorkerBootstrapOptions = {
   registerSchedulers?: boolean;
@@ -17,9 +18,7 @@ export type WorkerHealthSnapshot = {
   database: boolean;
   workers: number;
   timestamp: string;
-  queues?: Awaited<
-    ReturnType<typeof import('./observability/queue-metrics.js').getQueueObservabilitySnapshot>
-  >;
+  queues?: Awaited<ReturnType<typeof getQueueObservabilitySnapshot>>;
 };
 
 export async function startWorkerInfrastructure(
