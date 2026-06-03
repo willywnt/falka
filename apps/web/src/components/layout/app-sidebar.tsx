@@ -18,13 +18,19 @@ export function AppSidebar({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="flex h-14 items-center border-b border-sidebar-border px-6">
-        <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-          {APP_NAME}
+      <div className="border-sidebar-border flex h-14 items-center border-b px-5">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold shadow-sm">
+            {APP_NAME.charAt(0)}
+          </span>
+          <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
         </Link>
       </div>
       <div className="flex-1 overflow-y-auto py-4">
         <SidebarNav />
+      </div>
+      <div className="border-sidebar-border text-sidebar-foreground/45 border-t px-5 py-3 text-xs">
+        Inventory &amp; fulfillment
       </div>
     </aside>
   );

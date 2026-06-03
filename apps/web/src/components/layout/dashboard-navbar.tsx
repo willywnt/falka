@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Menu, Moon, Sun, User } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
+import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -44,7 +45,12 @@ export function DashboardNavbar() {
           </SheetContent>
         </Sheet>
 
-        <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggleSidebar}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden md:inline-flex"
+          onClick={toggleSidebar}
+        >
           <Menu className="size-4" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
@@ -64,25 +70,37 @@ export function DashboardNavbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <User className="size-4" />
+            <Button variant="ghost" className="h-9 gap-2 px-1.5 sm:pr-2.5">
+              <Avatar name={user?.displayName ?? user?.email ?? 'Account'} />
+              <span className="hidden max-w-[10rem] truncate text-sm font-medium sm:inline-block">
+                {user?.displayName ?? user?.email ?? 'Account'}
+              </span>
+              <ChevronDown className="text-muted-foreground hidden size-4 sm:inline-block" />
               <span className="sr-only">User menu</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm leading-none font-medium">
-                  {user?.displayName ?? user?.email ?? 'Account'}
-                </p>
-                {user?.displayName ? (
-                  <p className="text-muted-foreground text-xs leading-none">{user.email}</p>
-                ) : null}
+              <div className="flex items-center gap-2.5">
+                <Avatar name={user?.displayName ?? user?.email ?? 'Account'} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm leading-none font-medium">
+                    {user?.displayName ?? user?.email ?? 'Account'}
+                  </p>
+                  {user?.displayName ? (
+                    <p className="text-muted-foreground mt-1 truncate text-xs leading-none">
+                      {user.email}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings">Settings</Link>
+              <Link href="/settings">
+                <SettingsIcon className="size-4" />
+                Settings
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={(event) => {
@@ -90,6 +108,7 @@ export function DashboardNavbar() {
                 void logoutAction();
               }}
             >
+              <LogOut className="size-4" />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
