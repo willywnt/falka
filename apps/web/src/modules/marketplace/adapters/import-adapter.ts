@@ -23,10 +23,20 @@ const STUB_CATALOG = [
   { name: 'Enamel Mug', variants: ['300ml', '450ml'] },
 ] as const;
 
+/** A realistic seller SKU derived from the variant name ("Black / M" -> "BLACK-M"). */
+function slugifySku(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 /**
  * Deterministic stand-in for a real provider API: the same shop always yields
- * the same listings, so re-importing is idempotent. Real Shopee/Tokopedia/TikTok
- * adapters replace this without touching the import service.
+ * the same listings, so re-importing is idempotent. External SKUs mirror the
+ * variant (as a real seller would set them) so SKU auto-map is demonstrable.
+ * Real Shopee/Tokopedia/TikTok adapters replace this without touching the import service.
  */
 export class StubMarketplaceImportAdapter implements MarketplaceImportAdapter {
   constructor(readonly provider: MarketplaceProvider) {}
@@ -40,7 +50,7 @@ export class StubMarketplaceImportAdapter implements MarketplaceImportAdapter {
         index += 1;
         const externalProductId = `${params.shopId}-P${index}`;
         const externalVariantId = `${params.shopId}-V${index}`;
-        const externalSku = `${this.provider}-${params.shopId}-${index}`;
+        const externalSku = slugifySku(variantName);
 
         listings.push({
           externalProductId,
