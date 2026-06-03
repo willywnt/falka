@@ -31,6 +31,7 @@ import { MANUAL_STOCK_REASONS } from '../utils/stock-math';
 import { adjustStockFormSchema, type AdjustStockFormInput } from '../validators/adjust-stock';
 
 const DEFAULT_VALUES: AdjustStockFormInput = {
+  mode: 'adjust',
   direction: 'add',
   quantity: 1,
   reason: 'RESTOCK',
@@ -60,11 +61,22 @@ export function AdjustStockDialog({
     defaultValues: DEFAULT_VALUES,
   });
 
+  const mode = form.watch('mode');
   const direction = form.watch('direction');
   const currentStock = data?.snapshot.availableStock ?? availableStock;
 
   async function onSubmit(values: AdjustStockFormInput) {
-    const delta = values.direction === 'add' ? values.quantity : -values.quantity;
+    const delta =
+      values.mode === 'set'
+        ? values.quantity - currentStock
+        : values.direction === 'add'
+          ? values.quantity
+          : -values.quantity;
+
+    if (values.mode === 'set' && delta === 0) {
+      toast.info(`Stock is already ${currentStock}.`);
+      return;
+    }
 
     try {
       const result = await adjustMutation.mutateAsync({
@@ -76,7 +88,7 @@ export function AdjustStockDialog({
         description: `Available is now ${result.inventory.availableStock}.`,
       });
       onAdjusted?.();
-      form.reset({ ...values, quantity: 1, note: '' });
+      form.reset({ ...values, quantity: values.mode === 'set' ? values.quantity : 1, note: '' });
     } catch (error) {
       toast.error('Adjustment failed', {
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -106,29 +118,47 @@ export function AdjustStockDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
-              {(['add', 'remove'] as const).map((value) => (
+              {(['adjust', 'set'] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => form.setValue('direction', value)}
+                  onClick={() => form.setValue('mode', value)}
                   className={cn(
-                    'rounded-lg border px-3 py-2 text-sm font-medium capitalize transition-colors',
-                    direction === value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
+                    'rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+                    mode === value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
                   )}
                 >
-                  {value === 'add' ? 'Add stock' : 'Remove stock'}
+                  {value === 'adjust' ? 'Adjust by' : 'Set to'}
                 </button>
               ))}
             </div>
+
+            {mode === 'adjust' ? (
+              <div className="grid grid-cols-2 gap-2">
+                {(['add', 'remove'] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => form.setValue('direction', value)}
+                    className={cn(
+                      'rounded-lg border px-3 py-2 text-sm font-medium capitalize transition-colors',
+                      direction === value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
+                    )}
+                  >
+                    {value === 'add' ? 'Add stock' : 'Remove stock'}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <FormField
               control={form.control}
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity</FormLabel>
+                  <FormLabel>{mode === 'set' ? 'New stock count' : 'Quantity'}</FormLabel>
                   <FormControl>
-                    <Input type="number" min={1} step={1} {...field} />
+                    <Input type="number" min={mode === 'set' ? 0 : 1} step={1} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -178,7 +208,11 @@ export function AdjustStockDialog({
             />
 
             <Button type="submit" className="w-full" disabled={adjustMutation.isPending}>
-              {adjustMutation.isPending ? 'Saving...' : 'Apply adjustment'}
+              {adjustMutation.isPending
+                ? 'Saving...'
+                : mode === 'set'
+                  ? 'Set stock'
+                  : 'Apply adjustment'}
             </Button>
           </form>
         </Form>

@@ -21,14 +21,23 @@ export const adjustStockSchema = z.object({
 
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
 
-/** Form-facing schema: a direction + positive quantity the dialog converts to a signed delta. */
-export const adjustStockFormSchema = z.object({
-  direction: z.enum(['add', 'remove']),
-  quantity: z.coerce.number().int().positive('Quantity must be at least 1').max(1_000_000_000),
-  reason: z
-    .nativeEnum(StockLedgerReason)
-    .refine(isManualStockReason, 'Unsupported manual stock reason'),
-  note: z.string().trim().max(500),
-});
+/**
+ * Form-facing schema. `adjust` = direction + positive quantity → signed delta;
+ * `set` = an absolute target count (the dialog converts it to a delta vs current).
+ */
+export const adjustStockFormSchema = z
+  .object({
+    mode: z.enum(['adjust', 'set']),
+    direction: z.enum(['add', 'remove']),
+    quantity: z.coerce.number().int().nonnegative().max(1_000_000_000),
+    reason: z
+      .nativeEnum(StockLedgerReason)
+      .refine(isManualStockReason, 'Unsupported manual stock reason'),
+    note: z.string().trim().max(500),
+  })
+  .refine((value) => value.mode === 'set' || value.quantity >= 1, {
+    message: 'Quantity must be at least 1',
+    path: ['quantity'],
+  });
 
 export type AdjustStockFormInput = z.infer<typeof adjustStockFormSchema>;
