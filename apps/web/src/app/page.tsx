@@ -1,77 +1,137 @@
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { APP_NAME } from '@olshop/config/constants';
+import {
+  ArrowRight,
+  Boxes,
+  LineChart,
+  PackageCheck,
+  RefreshCw,
+  ScrollText,
+  ShoppingCart,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const FEATURES = [
+  {
+    icon: Boxes,
+    title: 'Stock as the source of truth',
+    text: 'An append-only ledger drives every channel — reserved vs available, never a guess.',
+  },
+  {
+    icon: RefreshCw,
+    title: 'Multi-marketplace sync',
+    text: 'Map listings once and propagate stock across Shopee, Tokopedia & more to stop oversell.',
+  },
+  {
+    icon: ShoppingCart,
+    title: 'Orders that decrement stock',
+    text: 'Paid orders pull in, decrement the source of truth, and fan out to the other channels.',
+  },
+  {
+    icon: PackageCheck,
+    title: 'Packing-video proof per resi',
+    text: 'Scan, record, ship — evidence that answers “barang tidak sesuai” disputes.',
+  },
+  {
+    icon: LineChart,
+    title: 'Reorder intelligence',
+    text: 'Sales velocity, days of cover and suggested quantities, straight from your ledger.',
+  },
+  {
+    icon: ScrollText,
+    title: 'Full stock activity log',
+    text: 'Every movement, filterable and exportable — a clean audit trail for accounting.',
+  },
+];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="text-xl font-bold">Olshop</span>
-          <div className="flex items-center gap-3">
+    <div className="bg-background min-h-screen">
+      <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
+              {APP_NAME.charAt(0)}
+            </span>
+            <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
+          </Link>
+          <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
             <Button asChild>
-              <Link href="/dashboard">Dashboard</Link>
+              <Link href="/dashboard">
+                Open app
+                <ArrowRight className="size-4" />
+              </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Record. Upload. Sync.</h1>
-          <p className="text-muted-foreground mt-4 text-lg">
-            Browser-based operational recording with Cloudflare R2 storage and marketplace
-            integrations for Shopee and Tokopedia.
-          </p>
-          <Button className="mt-8" size="lg" asChild>
-            <Link href="/dashboard">
-              Get started
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+      <section className="relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="bg-primary/10 absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full blur-3xl" />
         </div>
-
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Webcam Recording</CardTitle>
-              <CardDescription>Capture operational workflows in the browser.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Record, process, and upload video with lifecycle management built in.
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Marketplace Sync</CardTitle>
-              <CardDescription>Connect Shopee and Tokopedia stores.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Keep inventory synchronized across marketplaces from a single dashboard.
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Audit & Compliance</CardTitle>
-              <CardDescription>Full activity logging for your team.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Track every action with organization-scoped audit logs and RBAC-ready architecture.
-              </p>
-            </CardContent>
-          </Card>
+        <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
+          <span className="border-primary/20 bg-primary/5 text-primary inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium">
+            Inventory · Marketplace · Fulfillment
+          </span>
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            One source of truth for stock across every marketplace.
+          </h1>
+          <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
+            {APP_NAME} keeps your inventory honest end-to-end: multi-channel orders in, stock synced
+            out, and packing-video proof for every shipment.
+          </p>
+          <div className="mt-9 flex items-center justify-center gap-3">
+            <Button size="lg" asChild>
+              <Link href="/dashboard">
+                Get started
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/login">Sign in</Link>
+            </Button>
+          </div>
         </div>
       </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className="bg-card hover:border-primary/30 rounded-xl border p-5 transition-colors"
+              >
+                <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="mt-4 font-semibold tracking-tight">{feature.title}</h3>
+                <p className="text-muted-foreground mt-1.5 text-sm text-pretty">{feature.text}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <footer className="border-t">
+        <div className="text-muted-foreground mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm sm:flex-row">
+          <span>{APP_NAME} — inventory &amp; fulfillment for Indonesian sellers.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="hover:text-foreground">
+              Sign in
+            </Link>
+            <Link href="/register" className="hover:text-foreground">
+              Create account
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
