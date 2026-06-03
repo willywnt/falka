@@ -36,3 +36,19 @@ export const createProductSchema = z.object({
 });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
+
+/** Form-facing schema: plain (non-optional) fields the create-product dialog binds to. */
+export const createProductFormSchema = z.object({
+  name: z.string().trim().min(1, 'Product name is required').max(200),
+  category: z.string().trim().max(100),
+  description: z.string().trim().max(2000),
+  variant: z.object({
+    sku: z.string().trim().min(1, 'SKU is required').max(64),
+    name: z.string().trim().min(1, 'Variant name is required').max(200),
+    price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
+    lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
+    initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
+  }),
+});
+
+export type CreateProductFormInput = z.infer<typeof createProductFormSchema>;
