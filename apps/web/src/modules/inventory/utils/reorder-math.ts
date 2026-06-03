@@ -31,20 +31,52 @@ export function netUnitsSold(ledgerDeltaSum: number): number {
   return sold > 0 ? sold : 0;
 }
 
-/**
- * Days the variant has actually been sellable inside the window. A variant that
- * has existed for 3 days must not have its sales averaged over a 30-day window —
- * that would understate its true velocity. Always at least 1 to avoid div-by-0.
- */
-export function effectiveWindowDays(windowDays: number, variantAgeDays: number): number {
-  const existedDays = Math.ceil(variantAgeDays);
-  return Math.max(1, Math.min(windowDays, existedDays));
+/** Recency weight for a bucket (0 = most recent). decay = 1 → flat weights. */
+export function bucketWeight(bucketIndex: number, decay: number): number {
+  return decay ** bucketIndex;
 }
 
-/** Average units sold per day. Zero when nothing measurable sold. */
-export function computeVelocity(unitsSold: number, effectiveDays: number): number {
-  if (effectiveDays <= 0 || unitsSold <= 0) return 0;
-  return unitsSold / effectiveDays;
+/**
+ * Sellable days for a variant inside one bucket. The bucket spans ages
+ * `[newerEdgeDays, olderEdgeDays)` measured back from now; we clamp to the
+ * variant's existence so buckets that predate it contribute nothing (a 3-day-old
+ * variant isn't diluted by 30 days of "window").
+ */
+export function bucketEffectiveDays(
+  variantAgeDays: number,
+  newerEdgeDays: number,
+  olderEdgeDays: number,
+): number {
+  const overlap = Math.min(olderEdgeDays, variantAgeDays) - newerEdgeDays;
+  return overlap > 0 ? overlap : 0;
+}
+
+/**
+ * Recency-weighted sales velocity (units/day). `buckets[0]` is the most recent
+ * sub-window; `effectiveDays[b]` is that bucket's sellable days. Weighting both
+ * the units and the days by the same recency factor means a younger variant or a
+ * sales spike is reflected without dividing by dead time. With decay = 1 this is
+ * a plain moving average.
+ */
+export function computeWeightedVelocity(
+  buckets: number[],
+  effectiveDays: number[],
+  decay: number,
+): number {
+  let weightedSold = 0;
+  let weightedDays = 0;
+
+  for (let b = 0; b < buckets.length; b += 1) {
+    const days = effectiveDays[b] ?? 0;
+    if (days <= 0) continue;
+    const sold = Math.max(0, buckets[b] ?? 0);
+    const weight = bucketWeight(b, decay);
+    weightedSold += weight * sold;
+    weightedDays += weight * days;
+  }
+
+  if (weightedDays <= 0) return 0;
+  return weightedSold / weightedDays;
 }
 
 /**

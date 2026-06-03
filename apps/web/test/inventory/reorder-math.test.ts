@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { REORDER_DEFAULTS } from '@/modules/inventory/config';
 import {
+  bucketEffectiveDays,
+  bucketWeight,
   classifyReorder,
   computeDaysOfCover,
   computeReorderQty,
-  computeVelocity,
-  effectiveWindowDays,
+  computeWeightedVelocity,
   netUnitsSold,
   SALES_LEDGER_REASONS,
 } from '@/modules/inventory/utils/reorder-math';
@@ -39,35 +40,60 @@ describe('netUnitsSold', () => {
   });
 });
 
-describe('effectiveWindowDays', () => {
-  it('uses the full window once the variant is older than it', () => {
-    expect(effectiveWindowDays(30, 90)).toBe(30);
+describe('bucketWeight', () => {
+  it('weights the most recent bucket fully', () => {
+    expect(bucketWeight(0, 0.6)).toBe(1);
   });
 
-  it('shrinks to the variant age for a young variant', () => {
-    expect(effectiveWindowDays(30, 3)).toBe(3);
+  it('decays geometrically for older buckets', () => {
+    expect(bucketWeight(2, 0.5)).toBe(0.25);
   });
 
-  it('rounds a fractional age up to a whole day', () => {
-    expect(effectiveWindowDays(30, 2.4)).toBe(3);
-  });
-
-  it('never returns less than one day (brand-new variant)', () => {
-    expect(effectiveWindowDays(30, 0)).toBe(1);
+  it('is flat (moving average) when decay is 1', () => {
+    expect(bucketWeight(3, 1)).toBe(1);
   });
 });
 
-describe('computeVelocity', () => {
-  it('averages units sold across the effective window', () => {
-    expect(computeVelocity(60, 30)).toBe(2);
+describe('bucketEffectiveDays', () => {
+  it('is the full bucket span when the variant predates it', () => {
+    // bucket covers ages [7, 14); variant is 100 days old
+    expect(bucketEffectiveDays(100, 7, 14)).toBe(7);
   });
 
-  it('is zero when nothing sold', () => {
-    expect(computeVelocity(0, 30)).toBe(0);
+  it('clamps to the variant age inside the bucket', () => {
+    // variant is 10 days old; bucket [7, 14) → only 3 sellable days
+    expect(bucketEffectiveDays(10, 7, 14)).toBe(3);
   });
 
-  it('is zero when the window collapses to nothing', () => {
-    expect(computeVelocity(10, 0)).toBe(0);
+  it('is zero for a bucket entirely before the variant existed', () => {
+    expect(bucketEffectiveDays(5, 7, 14)).toBe(0);
+  });
+});
+
+describe('computeWeightedVelocity', () => {
+  it('reduces to a plain moving average when decay is 1', () => {
+    // 12 units over 4 buckets of 5 days = 20 days total → 0.6/day
+    expect(computeWeightedVelocity([3, 3, 3, 3], [5, 5, 5, 5], 1)).toBeCloseTo(0.6, 10);
+  });
+
+  it('skews toward recent demand when decay < 1', () => {
+    const flat = computeWeightedVelocity([2, 2, 2, 2], [5, 5, 5, 5], 0.6);
+    const recentHeavy = computeWeightedVelocity([8, 0, 0, 0], [5, 5, 5, 5], 0.6);
+    expect(recentHeavy).toBeGreaterThan(flat);
+  });
+
+  it('ignores buckets with no sellable days (young variant)', () => {
+    // only the most recent bucket has real days → 4 units / 5 days
+    expect(computeWeightedVelocity([4, 0, 0, 0], [5, 0, 0, 0], 0.6)).toBeCloseTo(0.8, 10);
+  });
+
+  it('is zero when there are no sellable days at all', () => {
+    expect(computeWeightedVelocity([0, 0, 0, 0], [0, 0, 0, 0], 0.6)).toBe(0);
+  });
+
+  it('clamps a net-negative bucket (returns) to zero', () => {
+    // recent bucket net -3 (more returns than sales) → treated as 0
+    expect(computeWeightedVelocity([-3, 0, 0, 0], [5, 0, 0, 0], 0.6)).toBe(0);
   });
 });
 
