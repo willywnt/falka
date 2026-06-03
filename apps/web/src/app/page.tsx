@@ -15,33 +15,33 @@ import { Button } from '@/components/ui/button';
 const FEATURES = [
   {
     icon: Boxes,
-    title: 'Stock as the source of truth',
-    text: 'An append-only ledger drives every channel — reserved vs available, never a guess.',
+    title: 'One reliable stock count',
+    text: 'A single accurate count behind every store — no more guessing what you have.',
   },
   {
     icon: RefreshCw,
-    title: 'Multi-marketplace sync',
-    text: 'Map listings once and propagate stock across Shopee, Tokopedia & more to stop oversell.',
+    title: 'Synced across stores',
+    text: 'Match your listings once, then keep stock in sync across Shopee, Tokopedia and more.',
   },
   {
     icon: ShoppingCart,
-    title: 'Orders that decrement stock',
-    text: 'Paid orders pull in, decrement the source of truth, and fan out to the other channels.',
+    title: 'Orders that update stock',
+    text: 'Paid orders come in, reduce your stock, and update your other stores automatically.',
   },
   {
     icon: PackageCheck,
-    title: 'Packing-video proof per resi',
-    text: 'Scan, record, ship — evidence that answers “barang tidak sesuai” disputes.',
+    title: 'A packing video per order',
+    text: 'Scan, record, ship — a video that settles “barang tidak sesuai” disputes.',
   },
   {
     icon: LineChart,
-    title: 'Reorder intelligence',
-    text: 'Sales velocity, days of cover and suggested quantities, straight from your ledger.',
+    title: 'Smart reorder tips',
+    text: 'See how fast items sell and how much to buy again — worked out for you.',
   },
   {
     icon: ScrollText,
-    title: 'Full stock activity log',
-    text: 'Every movement, filterable and exportable — a clean audit trail for accounting.',
+    title: 'Full stock history',
+    text: 'Every stock change, searchable and exportable — a clean record for accounting.',
   },
 ];
 
@@ -79,11 +79,11 @@ export default function HomePage() {
             Inventory · Marketplace · Fulfillment
           </span>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            One source of truth for stock across every marketplace.
+            Keep your stock accurate across every marketplace.
           </h1>
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
-            {APP_NAME} keeps your inventory honest end-to-end: multi-channel orders in, stock synced
-            out, and packing-video proof for every shipment.
+            {APP_NAME} keeps your stock right from end to end: orders from every store come in,
+            stock stays in sync, and you get a packing video for every order.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
             <Button size="lg" asChild>

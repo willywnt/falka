@@ -3,16 +3,20 @@ import { APP_NAME } from '@olshop/config/constants';
 import { Boxes, PackageCheck, RefreshCw } from 'lucide-react';
 
 const HIGHLIGHTS = [
-  { icon: Boxes, title: 'One source of truth', text: 'An internal stock ledger that never lies.' },
+  {
+    icon: Boxes,
+    title: 'Always-accurate stock',
+    text: 'One stock count you can trust, everywhere.',
+  },
   {
     icon: RefreshCw,
-    title: 'Multi-marketplace sync',
-    text: 'Push stock across channels, prevent oversell.',
+    title: 'Synced across stores',
+    text: 'Stock stays in sync so you never oversell.',
   },
   {
     icon: PackageCheck,
-    title: 'Packing-video proof',
-    text: 'Evidence per resi against buyer disputes.',
+    title: 'Packing video proof',
+    text: 'A video of every order you pack, for disputes.',
   },
 ];
 
@@ -38,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Inventory &amp; fulfillment, in one place.
             </h2>
             <p className="text-primary-foreground/70 max-w-sm text-pretty">
-              Multi-channel orders in, stock as the source of truth, packing-video proof out.
+              Orders from every store in, accurate stock in sync, a packing video out.
             </p>
           </div>
 

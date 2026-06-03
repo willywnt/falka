@@ -20,7 +20,7 @@ export default async function StockActivityPage({
       <PageHeader
         eyebrow="Inventory"
         title="Stock activity"
-        description="Every stock change, newest first — filter and export the full ledger history."
+        description="Every stock change, newest first — search and export the full history."
       />
       <StockActivity initialSearch={initialSearch} />
     </div>

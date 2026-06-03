@@ -13,7 +13,7 @@ export default function ReorderPage() {
       <PageHeader
         eyebrow="Inventory"
         title="Reorder suggestions"
-        description="Sales velocity, days of cover, and how much to reorder — from your stock ledger."
+        description="How fast items sell, how long your stock will last, and how much to buy again."
       />
       <ReorderReport />
     </div>

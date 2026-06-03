@@ -16,7 +16,7 @@ export default function InventoryPage() {
       <PageHeader
         eyebrow="Catalog"
         title="Inventory"
-        description="Stock levels across your catalog — the source of truth for every channel."
+        description="How much you have of every item, kept in sync across all your sales channels."
       >
         <Button asChild variant="outline">
           <Link href="/dashboard/inventory/activity">

@@ -13,7 +13,7 @@ export default function DashboardMarketplacePage() {
       <PageHeader
         eyebrow="Sales channels"
         title="Marketplace connections"
-        description="Connect and manage Shopee and Tokopedia stores. Tokens are encrypted at rest."
+        description="Connect your Shopee and Tokopedia stores. Login details are stored encrypted."
       />
       <MarketplaceDashboard />
     </div>

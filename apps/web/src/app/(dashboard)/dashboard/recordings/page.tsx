@@ -16,7 +16,7 @@ export default function DashboardRecordingsPage() {
       <PageHeader
         eyebrow="Fulfillment"
         title="Recordings library"
-        description="Browse, play, download, and manage your operational recordings."
+        description="Browse, play, and download your packing videos."
       >
         <PendingUploadTrigger />
       </PageHeader>

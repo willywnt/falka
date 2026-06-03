@@ -86,8 +86,8 @@ export function InventoryDashboard() {
       {summary.oversoldCount > 0 ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
           <AlertTriangle className="size-4 shrink-0" />
-          {summary.oversoldCount} variant(s) are oversold (negative available stock) — restock or
-          reconcile soon.
+          {summary.oversoldCount} item(s) are oversold (stock dropped below zero) — restock or fix
+          the count soon.
         </div>
       ) : null}
 

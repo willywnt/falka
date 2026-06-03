@@ -13,7 +13,7 @@ export default function OrdersPage() {
       <PageHeader
         eyebrow="Sales channels"
         title="Orders"
-        description="Marketplace orders pulled into your source of truth — paid orders decrement stock."
+        description="Orders from your stores. Paid orders automatically reduce your stock."
       />
       <OrdersDashboard />
     </div>
