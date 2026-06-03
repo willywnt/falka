@@ -38,13 +38,15 @@ model User {
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
 
-  recordings             Recording[]
-  pairingSessions        PairingSession[]
-  marketplaceConnections MarketplaceConnection[]
-  auditLogs              AuditLog[]
-  products               Product[]
-  productVariants        ProductVariant[]
-  stockLedgerEntries     StockLedger[]
+  recordings                 Recording[]
+  pairingSessions            PairingSession[]
+  marketplaceConnections     MarketplaceConnection[]
+  auditLogs                  AuditLog[]
+  products                   Product[]
+  productVariants            ProductVariant[]
+  stockLedgerEntries         StockLedger[]
+  marketplaceProducts        MarketplaceProduct[]
+  marketplaceProductMappings MarketplaceProductMapping[]
 
   @@map("users")
 }
@@ -117,9 +119,13 @@ model MarketplaceConnection {
   encryptedRefreshToken String?
   tokenExpiresAt        DateTime?
   isActive              Boolean             @default(true)
+  lastImportedAt        DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   deletedAt             DateTime?
+
+  marketplaceProducts MarketplaceProduct[]
+  productMappings     MarketplaceProductMapping[]
 
   @@index([userId])
   @@index([provider])
@@ -195,8 +201,9 @@ model ProductVariant {
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
 
-  inventory     Inventory?
-  ledgerEntries StockLedger[]
+  inventory           Inventory?
+  ledgerEntries       StockLedger[]
+  marketplaceMappings MarketplaceProductMapping[]
 
   @@unique([userId, sku])
   @@index([userId])
@@ -238,4 +245,63 @@ model StockLedger {
   @@index([variantId])
   @@index([createdAt])
   @@map("stock_ledger_entries")
+}
+
+enum MarketplaceMappingStatus {
+  MAPPED
+  NEEDS_REVIEW
+}
+
+model MarketplaceProduct {
+  id                      String                @id @default(cuid())
+  userId                  String
+  user                    User                  @relation(fields: [userId], references: [id])
+  marketplaceConnectionId String
+  connection              MarketplaceConnection @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
+  provider                MarketplaceProvider
+  externalProductId       String
+  externalVariantId       String
+  externalSku             String?
+  externalProductName     String
+  externalVariantName     String?
+  stock                   Int                   @default(0)
+  status                  String
+  rawPayload              Json?
+  lastImportedAt          DateTime
+  lastSyncedAt            DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  deletedAt               DateTime?
+
+  mapping MarketplaceProductMapping?
+
+  @@unique([marketplaceConnectionId, externalProductId, externalVariantId])
+  @@index([userId])
+  @@index([marketplaceConnectionId])
+  @@index([externalSku])
+  @@map("marketplace_products")
+}
+
+model MarketplaceProductMapping {
+  id                      String                   @id @default(cuid())
+  userId                  String
+  user                    User                     @relation(fields: [userId], references: [id])
+  marketplaceConnectionId String
+  connection              MarketplaceConnection    @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
+  marketplaceProductId    String                   @unique
+  marketplaceProduct      MarketplaceProduct       @relation(fields: [marketplaceProductId], references: [id], onDelete: Cascade)
+  productVariantId        String
+  productVariant          ProductVariant           @relation(fields: [productVariantId], references: [id])
+  provider                MarketplaceProvider
+  mappingStatus           MarketplaceMappingStatus @default(MAPPED)
+  syncEnabled             Boolean                  @default(false)
+  autoMapped              Boolean                  @default(false)
+  mappingConfidence       Decimal?                 @db.Decimal(3, 2)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@index([userId])
+  @@index([marketplaceConnectionId])
+  @@index([productVariantId])
+  @@map("marketplace_product_mappings")
 }
