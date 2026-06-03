@@ -3,6 +3,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 import turboPlugin from 'eslint-plugin-turbo';
 import tseslint from 'typescript-eslint';
 import onlyWarn from 'eslint-plugin-only-warn';
+import globals from 'globals';
 
 /** @type {import("eslint").Linter.Config[]} */
 export const config = [
@@ -29,6 +30,18 @@ export const config = [
         'warn',
         { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
       ],
+    },
+  },
+  {
+    // Node CLI scripts (db/docker helpers, migrations, worker bootstrap). `**/` so it
+    // matches `scripts/` under every package, not just the config file's base dir —
+    // otherwise packages resolving the repo-root config get no Node globals for their
+    // own `packages/*/scripts/*.mjs` and trip `no-undef` on `process`/`console`.
+    files: ['**/scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: globals.node,
     },
   },
   {
