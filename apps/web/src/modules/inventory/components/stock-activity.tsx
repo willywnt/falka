@@ -52,8 +52,11 @@ function buildExportHref(filters: StockActivityFilters): string {
   return `${apiRoutes.inventory}/activity/export${query ? `?${query}` : ''}`;
 }
 
-export function StockActivity() {
-  const [filters, setFilters] = useState<StockActivityFilters>(INITIAL_FILTERS);
+export function StockActivity({ initialSearch }: { initialSearch?: string } = {}) {
+  const [filters, setFilters] = useState<StockActivityFilters>(() => ({
+    ...INITIAL_FILTERS,
+    search: initialSearch ?? '',
+  }));
 
   // Any filter change resets to page 1; only paging keeps the current filters.
   function patch(next: Partial<StockActivityFilters>) {

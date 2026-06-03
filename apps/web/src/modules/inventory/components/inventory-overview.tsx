@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { PackageSearch, SlidersHorizontal } from 'lucide-react';
+import { PackageSearch, ScrollText, SlidersHorizontal } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -110,10 +110,21 @@ export function InventoryOverview() {
                     ) : null}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => setAdjustTarget(item)}>
-                      <SlidersHorizontal className="size-4" />
-                      Adjust
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link
+                          href={`/dashboard/inventory/activity?search=${encodeURIComponent(item.sku)}`}
+                          title="View stock activity"
+                        >
+                          <ScrollText className="size-4" />
+                          Activity
+                        </Link>
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setAdjustTarget(item)}>
+                        <SlidersHorizontal className="size-4" />
+                        Adjust
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
