@@ -10,6 +10,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 
+import { auth } from '@/auth';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -45,7 +46,10 @@ const FEATURES = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+  const isLoggedIn = Boolean(session?.user);
+
   return (
     <div className="bg-background min-h-screen">
       <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
@@ -57,15 +61,23 @@ export default function HomePage() {
             <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/dashboard">
-                Open app
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+            {isLoggedIn ? (
+              <Button asChild>
+                <Link href="/dashboard">
+                  Open app
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Sign in</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Create account</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -86,15 +98,26 @@ export default function HomePage() {
             stock stays in sync, and you get a packing video for every order.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/dashboard">
-                Get started
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
+            {isLoggedIn ? (
+              <Button size="lg" asChild>
+                <Link href="/dashboard">
+                  Go to dashboard
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" asChild>
+                  <Link href="/register">
+                    Get started
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/login">Sign in</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -123,12 +146,20 @@ export default function HomePage() {
         <div className="text-muted-foreground mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm sm:flex-row">
           <span>{APP_NAME} — inventory &amp; fulfillment for Indonesian sellers.</span>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="hover:text-foreground">
-              Sign in
-            </Link>
-            <Link href="/register" className="hover:text-foreground">
-              Create account
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/dashboard" className="hover:text-foreground">
+                Open app
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="hover:text-foreground">
+                  Sign in
+                </Link>
+                <Link href="/register" className="hover:text-foreground">
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </footer>
