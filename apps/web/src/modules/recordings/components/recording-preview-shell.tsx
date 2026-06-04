@@ -208,7 +208,7 @@ export function RecordingPreviewShell({
   const showLoader = isLoading || (Boolean(videoSrc) && !videoReady && !errorMessage);
   const showError = Boolean(errorMessage);
   const canControlVideo = Boolean(videoSrc) && !showError && videoReady;
-  const displayDuration = duration > 0 ? duration : meta.durationSeconds;
+  const displayDuration = meta.durationSeconds;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

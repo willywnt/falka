@@ -39,9 +39,16 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
     return { success: false, error };
   }
 
+  // Our routes always wrap the body in an envelope ({ data, meta? }), so a
+  // present `data` key is the source of truth — even when its value is null.
+  // Only fall back to the raw payload for genuinely non-enveloped responses;
+  // `payload?.data ?? payload` wrongly returned the (truthy) envelope when
+  // `data` was legitimately null.
+  const isEnvelope = typeof payload === 'object' && payload !== null && 'data' in payload;
+
   return {
     success: true,
-    data: (payload?.data ?? payload) as T,
+    data: (isEnvelope ? payload.data : payload) as T,
     meta: payload?.meta,
   };
 }
