@@ -2,21 +2,34 @@ import 'server-only';
 
 import { prisma } from '@olshop/db';
 import { enqueuePropagateInventoryStock } from '@olshop/queue';
-import type { Prisma } from '@prisma/client';
+import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
-import type { OrderDetail, OrderItemDetail, OrderListItem, PullOrdersResult } from '../types';
+import type {
+  MultiPullOrdersResult,
+  OrderDetail,
+  OrderItemDetail,
+  OrderListItem,
+  PullOrdersResult,
+} from '../types';
+
+/** Minimum gap between pulls from the same store, to curb API abuse. */
+const PULL_COOLDOWN_MS = 30_000;
+
+function isCoolingDown(lastPulledAt: Date | null): boolean {
+  return lastPulledAt !== null && Date.now() - lastPulledAt.getTime() < PULL_COOLDOWN_MS;
+}
 
 export class OrdersServerService {
   async listOrders(userId: string): Promise<OrderListItem[]> {
     const orders = await prisma.order.findMany({
       where: { userId },
       include: {
-        connection: { select: { shopName: true } },
+        connection: { select: { shopName: true, lastOrdersPulledAt: true } },
         items: { select: { productVariantId: true } },
       },
       orderBy: { placedAt: 'desc' },
@@ -37,6 +50,7 @@ export class OrdersServerService {
       unresolvedCount: order.items.filter((item) => item.productVariantId === null).length,
       inventoryApplied: order.inventoryAppliedAt !== null,
       placedAt: order.placedAt.toISOString(),
+      lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
     }));
   }
 
@@ -44,7 +58,7 @@ export class OrdersServerService {
     const order = await prisma.order.findFirst({
       where: { id: orderId, userId },
       include: {
-        connection: { select: { shopName: true } },
+        connection: { select: { shopName: true, lastOrdersPulledAt: true } },
         items: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -88,6 +102,7 @@ export class OrdersServerService {
       unresolvedCount: items.filter((item) => !item.resolved).length,
       inventoryApplied: order.inventoryAppliedAt !== null,
       placedAt: order.placedAt.toISOString(),
+      lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
       items,
     };
   }
@@ -99,6 +114,70 @@ export class OrdersServerService {
     if (!connection) throw OrderError.notFound('Marketplace connection not found.');
     if (!connection.isActive) throw OrderError.validation('Marketplace connection is not active.');
 
+    const result = await this.pullOneConnection(userId, connection);
+    await prisma.marketplaceConnection.update({
+      where: { id: connection.id },
+      data: { lastOrdersPulledAt: new Date() },
+    });
+    await this.propagateAffected(userId, result.affected, connection.id);
+
+    appLogger.info('orders.pulled', {
+      userId,
+      connectionId: connection.id,
+      pulled: result.pulled,
+      applied: result.applied,
+    });
+    return { pulled: result.pulled, applied: result.applied };
+  }
+
+  /**
+   * Pull from several stores at once (default: every active store). Stores pulled
+   * within the cooldown window are skipped (anti-abuse) rather than re-fetched.
+   */
+  async pullFromConnections(
+    userId: string,
+    connectionIds?: string[],
+  ): Promise<MultiPullOrdersResult> {
+    const connections = await prisma.marketplaceConnection.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        isActive: true,
+        ...(connectionIds && connectionIds.length > 0 ? { id: { in: connectionIds } } : {}),
+      },
+    });
+
+    let pulled = 0;
+    let applied = 0;
+    let storesPulled = 0;
+    const storesSkipped: string[] = [];
+
+    for (const connection of connections) {
+      if (isCoolingDown(connection.lastOrdersPulledAt)) {
+        storesSkipped.push(connection.shopName);
+        continue;
+      }
+
+      const result = await this.pullOneConnection(userId, connection);
+      await prisma.marketplaceConnection.update({
+        where: { id: connection.id },
+        data: { lastOrdersPulledAt: new Date() },
+      });
+      await this.propagateAffected(userId, result.affected, connection.id);
+
+      pulled += result.pulled;
+      applied += result.applied;
+      storesPulled += 1;
+    }
+
+    appLogger.info('orders.pulled.multi', { userId, storesPulled, pulled, applied });
+    return { storesPulled, storesSkipped, pulled, applied };
+  }
+
+  private async pullOneConnection(
+    userId: string,
+    connection: MarketplaceConnection,
+  ): Promise<{ pulled: number; applied: number; affected: Set<string> }> {
     const adapter = getMarketplaceOrderAdapter(connection.provider);
     const orders = await adapter.fetchOrders({ shopId: connection.shopId, accessToken: '' });
 
@@ -199,10 +278,7 @@ export class OrdersServerService {
       }
     }
 
-    await this.propagateAffected(userId, affectedVariantIds, connection.id);
-
-    appLogger.info('orders.pulled', { userId, connectionId: connection.id, pulled, applied });
-    return { pulled, applied };
+    return { pulled, applied, affected: affectedVariantIds };
   }
 
   /** Best-effort: push each decremented variant's new available stock to its other channels. */

@@ -5,9 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { orderKeys } from './order-keys';
-import type { OrderDetail, OrderListItem, PullOrdersResult } from '../types';
+import type { MultiPullOrdersResult, OrderDetail, OrderListItem, PullOrdersResult } from '../types';
 
 export function useOrdersQuery() {
   return useQuery({
@@ -59,6 +60,30 @@ export function usePullOrdersMutation(connectionId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orderKeys.all });
+    },
+  });
+}
+
+/** Pull orders from several connected stores at once (default: all active). */
+export function usePullFromConnectionsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (connectionIds?: string[]) => {
+      const result = await apiFetch<MultiPullOrdersResult>(`${apiRoutes.orders}/pull`, {
+        method: 'POST',
+        body: { connectionIds },
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },
   });
 }

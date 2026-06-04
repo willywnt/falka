@@ -24,8 +24,18 @@ export type OrderListItem = {
   unresolvedCount: number;
   inventoryApplied: boolean;
   placedAt: string;
+  /** When this order's store was last pulled (ISO), if ever. */
+  lastPulledAt: string | null;
 };
 
 export type OrderDetail = OrderListItem & { items: OrderItemDetail[] };
 
 export type PullOrdersResult = { pulled: number; applied: number };
+
+/** Result of pulling from several stores at once. */
+export type MultiPullOrdersResult = {
+  storesPulled: number;
+  storesSkipped: string[];
+  pulled: number;
+  applied: number;
+};
