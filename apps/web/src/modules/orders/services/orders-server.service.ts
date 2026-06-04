@@ -7,6 +7,7 @@ import type { MarketplaceConnection, Prisma } from '@prisma/client';
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
+import { returnsServerService } from '@/modules/returns/services/returns-server.service';
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
@@ -392,13 +393,17 @@ export class OrdersServerService {
       } else if (saved.status === 'CANCELLED' && wasShipped) {
         // RETURN: cancelled after shipping. The reserved units already physically
         // left at ship time, so crediting available now would be phantom stock.
-        // Leave stock untouched and flag it — the physical return (restock vs
-        // damaged) is handled manually for now (a full returns flow is separate).
-        appLogger.warn('orders.return.detected', {
-          userId,
-          orderId: saved.id,
-          externalOrderId: saved.externalOrderId,
-        });
+        // Open a return (idempotent) to track the goods coming back; stock only
+        // moves once the return is processed. Best-effort — never fail the pull.
+        try {
+          await returnsServerService.createReturn(userId, saved.id, { autoDetected: true });
+        } catch (error) {
+          appLogger.warn('orders.return.autocreate_failed', {
+            userId,
+            orderId: saved.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     }
 

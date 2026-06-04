@@ -13,36 +13,45 @@ type TxClient = {
   orderItem: { deleteMany: ReturnType<typeof vi.fn>; createMany: ReturnType<typeof vi.fn> };
 };
 
-const { state, prismaMock, txMock, enqueueMock, inventoryMock, fetchOrdersMock, logWarnMock } =
-  vi.hoisted(() => {
-    const txMock: TxClient = {
-      order: { upsert: vi.fn(), update: vi.fn() },
-      orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
-    };
-    return {
-      state: {
-        saved: {} as Record<string, unknown>,
-        variantId: 'v1' as string | null,
-        orders: [] as unknown[],
-      },
-      txMock,
-      fetchOrdersMock: vi.fn(),
-      enqueueMock: vi.fn(),
-      logWarnMock: vi.fn(),
-      inventoryMock: {
-        applyOrderReserveTx: vi.fn().mockResolvedValue(0),
-        applyOrderShipTx: vi.fn().mockResolvedValue(0),
-        applyOrderReleaseTx: vi.fn().mockResolvedValue(0),
-      },
-      prismaMock: {
-        marketplaceConnection: { findMany: vi.fn(), update: vi.fn() },
-        marketplaceProduct: { findUnique: vi.fn() },
-        inventory: { findUnique: vi.fn() },
-        order: { findFirst: vi.fn() },
-        $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
-      },
-    };
-  });
+const {
+  state,
+  prismaMock,
+  txMock,
+  enqueueMock,
+  inventoryMock,
+  fetchOrdersMock,
+  logWarnMock,
+  returnsMock,
+} = vi.hoisted(() => {
+  const txMock: TxClient = {
+    order: { upsert: vi.fn(), update: vi.fn() },
+    orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
+  };
+  return {
+    state: {
+      saved: {} as Record<string, unknown>,
+      variantId: 'v1' as string | null,
+      orders: [] as unknown[],
+    },
+    txMock,
+    fetchOrdersMock: vi.fn(),
+    enqueueMock: vi.fn(),
+    logWarnMock: vi.fn(),
+    returnsMock: { createReturn: vi.fn().mockResolvedValue({}) },
+    inventoryMock: {
+      applyOrderReserveTx: vi.fn().mockResolvedValue(0),
+      applyOrderShipTx: vi.fn().mockResolvedValue(0),
+      applyOrderReleaseTx: vi.fn().mockResolvedValue(0),
+    },
+    prismaMock: {
+      marketplaceConnection: { findMany: vi.fn(), update: vi.fn() },
+      marketplaceProduct: { findUnique: vi.fn() },
+      inventory: { findUnique: vi.fn() },
+      order: { findFirst: vi.fn() },
+      $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
+    },
+  };
+});
 
 vi.mock('@olshop/db', () => ({ prisma: prismaMock }));
 vi.mock('@olshop/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
@@ -51,6 +60,9 @@ vi.mock('@/lib/logger', () => ({
 }));
 vi.mock('@/modules/inventory/services/inventory-server.service', () => ({
   inventoryServerService: inventoryMock,
+}));
+vi.mock('@/modules/returns/services/returns-server.service', () => ({
+  returnsServerService: returnsMock,
 }));
 vi.mock('@/modules/marketplace/services/marketplace-mapping.service', () => ({
   marketplaceMappingService: { mapByExternalRef: vi.fn() },
@@ -203,7 +215,7 @@ describe('pullFromConnections — release (CANCELLED)', () => {
     expect(enqueueMock).toHaveBeenCalledTimes(1);
   });
 
-  it('flags a cancellation after shipping as a return without crediting stock', async () => {
+  it('auto-opens a return for a cancellation after shipping without crediting stock', async () => {
     state.orders = [orderFromAdapter('CANCELLED')];
     state.saved = savedOrder({
       status: 'CANCELLED',
@@ -216,7 +228,7 @@ describe('pullFromConnections — release (CANCELLED)', () => {
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
     expect(result.reverted).toBe(0);
     expect(enqueueMock).not.toHaveBeenCalled();
-    expect(logWarnMock).toHaveBeenCalledWith('orders.return.detected', expect.any(Object));
+    expect(returnsMock.createReturn).toHaveBeenCalledWith(USER, 'o1', { autoDetected: true });
   });
 
   it('does not release a cancelled order that was never reserved', async () => {
