@@ -13,22 +13,35 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
 
 ## Modules & domains
 - **catalog** — Product / ProductVariant (master). Server service owns Prisma (no repository).
-  Every product has ≥1 variant; SKU `@@unique([userId, sku])`. Stock changes go through the
-  inventory service, NEVER by writing inventory tables from catalog.
+  Every product has ≥1 variant; SKU `@@unique([userId, sku])`. Variant carries `cost`/`weight`,
+  `lowStockThreshold`/`alertEnabled`, and reorder planning `leadTimeDays?`/`minOrderQty?` (0 in the
+  UI = unset → null). Variants are editable: `PATCH /products/:id/variants/:variantId` →
+  `updateVariant` (create/add-variant forms stay short; advanced planning is set later via Edit).
+  Stock changes go through the inventory service, NEVER by writing inventory tables from catalog.
 - **inventory** — `Inventory` (fast-read cache: available/reserved/damaged/incoming) +
-  **`StockLedger` (append-only = the real source of truth)**. Every mutation = 1 ledger row +
-  1 Inventory update in ONE transaction. `adjustStock` (manual, never negative);
-  `applyOrderDecrementTx(tx, …)` (order sale, MAY go negative = honest oversell); `getDashboard`
-  (KPIs). Pure `utils/stock-math.ts` is unit-tested.
-- **marketplace** — connections (kept `MarketplaceConnection`, NOT renamed to Account) +
-  `MarketplaceProduct` (imported listing snapshot) + `MarketplaceProductMapping` (listing↔variant).
-  Import via STUB adapter (`adapters/import-adapter.ts`; external SKU = slug of the variant name).
-  Auto-map by NORMALIZED sku (`utils/sku-match.ts`: case/separator/order-insensitive, NOT
-  edit-distance — `…-M` ≠ `…-L`); non-exact match → `NEEDS_REVIEW` + sync stays off. "Re-run
-  auto-map" links existing listings without re-import.
-- **orders** — pull marketplace orders (STUB adapter) → resolve each item to a variant via its
-  mapping → a PAID, not-yet-applied order decrements stock + stamps `Order.inventoryAppliedAt`
-  (idempotency) in one tx → then propagates each affected variant to its OTHER channels.
+  **`StockLedger` (append-only = the real source of truth)**. Every mutation = 1 ledger row + 1
+  Inventory update in ONE tx. `adjustStock` (manual, never negative); `applyOrderDecrementTx(tx,…)`
+  (order sale, MAY go negative). Surfaces: `getDashboard` (KPIs); `listStockOverview` (now also the
+  last movement before→after + `lastAdjustedAt`, via a nested `take:1` ledger include); **reorder
+  report** (`inventory-reorder.service` — recency-weighted/EWMA velocity → days-of-cover → suggested
+  qty, honours per-variant lead time/MOQ; bucketed ledger sums per sub-window); **stock activity
+  log** (`inventory-activity.service` — filter reason/source/direction/date + paginate + CSV export).
+  Demand reasons for velocity are centralised in `SALES_LEDGER_REASONS` (ORDER_RESERVE+RELEASE, NOT
+  SHIP — avoids double-count). Pure `utils/stock-math.ts` + `utils/reorder-math.ts` are unit-tested.
+- **marketplace** — connections (`MarketplaceConnection`; now also `lastOrdersPulledAt`) +
+  `MarketplaceProduct` (listing snapshot) + `MarketplaceProductMapping` (listing↔variant). Mapping
+  is **1:1 on the listing** (`marketplaceProductId @unique`) but ONE variant MAY map to many
+  listings — cross-channel sync is by design, do NOT force 1:1. Import via STUB adapter; auto-map by
+  NORMALIZED sku (`utils/sku-match.ts`, NOT edit-distance — `…-M` ≠ `…-L`); non-exact →
+  `NEEDS_REVIEW` + sync stays off (per-listing sync is a **Switch**, disabled while NEEDS_REVIEW).
+  `mapByExternalRef` upserts a listing (creating its snapshot if never imported) + its mapping.
+- **orders** — **multi-store pull** `pullFromConnections(connectionIds?)` (default every active
+  store; STUB adapter) → resolve items via mapping → PAID, not-yet-applied order decrements stock +
+  stamps `Order.inventoryAppliedAt` (idempotency) → propagate to OTHER channels. Per-store **30s
+  cooldown** keyed on `lastOrdersPulledAt` (skipped, not errored = anti-abuse). `resolveOrderItem`
+  maps an unmapped item from the order page (via `mapByExternalRef`) then decrements stock for just
+  the newly-resolved items (idempotent). Endpoints: `POST /api/v1/orders/pull`,
+  `/orders/:id/resolve-item`. Pull lives on the **Orders** page (removed from marketplace detail).
 
 ## Outbound sync engine (worker-side) — `packages/queue/src/marketplace-sync/`
 SoT change → `enqueuePropagateInventoryStock` (web, best-effort, only if `syncEnabled` mappings
@@ -50,7 +63,9 @@ throw so BullMQ retries.
 - A real provider adapter needs the **DECRYPTED token** → lift marketplace token-crypto into a
   shared `@olshop/*` package (the engine passes the encrypted token; stubs ignore it).
 - A running dev server (`tsx watch server.ts`) holds the Prisma query-engine DLL on Windows →
-  `prisma generate` fails `EPERM`. Stop it before generate/migrate; restart after.
+  `prisma generate` fails `EPERM`. Stop it before generate/migrate; restart after. BUT an
+  index-only / no-client-change migration can run with `prisma migrate dev --skip-generate`
+  WITHOUT stopping the dev server (only `generate` overwrites the locked DLL).
 - `next build` intermittently fails `Failed to collect page data for /<page>` while node procs
   run (a `.next` file-lock flake) — just re-run; not a code error.
 - `server-only` services can't be imported into a worker-context `tsx` script without
@@ -59,5 +74,11 @@ throw so BullMQ retries.
 ## Deferred (raise as separate suggestions)
 reserved-bucket vs raw-available decrement; cancellation-restock (`ORDER_RELEASE`); exclude the
 source channel from anti-oversell propagation; ProviderHealth + reconciliation/drift; bundles/kits;
-multi-warehouse; `cost` missing from the create-variant form (stock-value KPI reads 0 without it);
-queue package has no vitest (engine is gate-checked only).
+multi-warehouse; per-order re-pull (pull is store-level only); a `StockLedger (userId, createdAt)`
+index for the activity feed at scale (the `(userId, reason, createdAt)` index serves reorder);
+per-variant supplier + richer lead-time/MOQ; reorder velocity is a simple EWMA (could add seasonality);
+real provider adapters need the decrypted token → lift token-crypto to `@olshop/*`; queue package
+has no vitest (engine is gate-checked only).
+
+> Done this round (was deferred): `cost` + lead-time/MOQ on variants; reorder intelligence;
+> stock activity log + CSV; variant editing; multi-store order pull + cooldown; order-item mapping.

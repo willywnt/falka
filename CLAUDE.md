@@ -167,13 +167,28 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
   writes; `catalog` (Product/Variant) reaches stock ONLY via the inventory service.
 - **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change
   enqueues `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub
-  simulates). **Inbound orders** (`orders` module) decrement the SoT on PAID + propagate to the
-  OTHER channels (anti-oversell), idempotent via `Order.inventoryAppliedAt`.
+  simulates). **Inbound orders** decrement the SoT on PAID + propagate to the OTHER channels
+  (anti-oversell), idempotent via `Order.inventoryAppliedAt`.
+- **Built since the base MVP** (specifics in the cursor rule): reorder report (velocity →
+  days-of-cover → suggested qty, honours per-variant `leadTimeDays`/`minOrderQty`); stock activity
+  log (filter + paginate + CSV); variant editing; **multi-store order pull** (`pullFromConnections`,
+  default all active, 30s per-store cooldown via `lastOrdersPulledAt`) on the Orders page; mapping an
+  unmapped order item (`resolveOrderItem` → `mapByExternalRef`). Mapping is 1:1 per LISTING but a
+  variant MAY map to many listings (cross-channel — do NOT force 1:1). Auto-map is NORMALIZED sku,
+  NEVER edit-distance (`…-M` ≠ `…-L`); non-exact → `NEEDS_REVIEW`, sync stays off.
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the
-  app layer (page). Marketplace SKU auto-map is NORMALIZED (case/separator/order), NEVER
-  edit-distance (`…-M` ≠ `…-L`); non-exact → `NEEDS_REVIEW`, sync stays off.
-- **Gotchas**: BullMQ jobId can't contain `:`; a running dev server locks the Prisma engine DLL
-  (stop before `prisma generate`/migrate on Windows); `next build` "collect page data" flake →
-  re-run; a real provider adapter needs token-crypto lifted to a shared package.
-- Built on branch `feat/inventory-mvp` (off `main`, unpushed): Phase 0–4 + inventory dashboard,
-  all gates green per commit.
+  app layer (page).
+- **Gotchas**: BullMQ jobId can't contain `:`; the dev server locks the Prisma engine DLL — stop it
+  before `prisma generate`/migrate (but an index-only migration can use `--skip-generate` WITHOUT
+  stopping); `next build` "collect page data" flake → re-run; a real provider adapter needs
+  token-crypto lifted to a shared package.
+
+## 13. UI / design system
+
+Single locked theme **"Ombak"** (teal accent, Plus Jakarta Sans, charcoal sidebar). **REUSE** the
+shared primitives + patterns — see `.cursor/rules/50-ui-design-system.mdc`. Key: list filters via
+`useUrlFilters` + debounced search (page wrapped in `<Suspense>`); forms via RHF+zod with
+`FormLabel required` / iconed `FormDescription` / `NumberInput`; `Switch` for toggles; a `⋯`
+DropdownMenu + `Tooltip` for row actions; two-column detail pages; `StatCard` / `EmptyState` /
+`DateRangePicker` / `LowStockBadge`. **Never run `next build` while the dev server is up** (shared
+`.next`). Auth is already enforced — don't touch config/middleware/cookies (HARD CONSTRAINT #2).

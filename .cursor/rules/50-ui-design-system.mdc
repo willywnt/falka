@@ -1,0 +1,62 @@
+---
+description: UI/UX design system — theme "Ombak", shared primitives, filter/form/list patterns. Reuse these; don't rebuild.
+globs: apps/web/src/components/**,apps/web/src/app/**,apps/web/src/styles/**,apps/web/src/hooks/**,apps/web/src/modules/**/components/**
+alwaysApply: false
+---
+
+# UI / Design system
+
+Single locked theme **"Ombak"**: clean airy neutral surfaces, **teal** brand accent, neutral
+charcoal sidebar whose brand mark + active markers pick up the accent, **Plus Jakarta Sans** font
+(`@fontsource-variable/plus-jakarta-sans`), `--radius: 0.875rem`. Tokens (OKLch) live in
+`apps/web/src/styles/globals.css` — light + dark via `next-themes`. There is **no palette switcher**
+(removed); change the accent only by editing `--primary`/`--ring`/`--sidebar-*`.
+
+## Reuse these primitives — don't rebuild
+- `components/ui/`: `button card input textarea label select(native, styled) switch popover calendar
+  number-input badge skeleton table dialog alert-dialog dropdown-menu tooltip sheet separator tabs
+  sonner avatar`.
+- `components/`: **`PageHeader`** (`eyebrow`/title/description/`children` actions), **`StatCard`**
+  (KPI + tinted icon chip via `tone`, palette `STAT_TONES`), **`EmptyState`**, **`LowStockBadge`**
+  (tooltip shows the threshold), **`DateRangePicker`** (single popover, commits on an **Apply**
+  button — not on each day click).
+- `hooks/`: **`useUrlFilters`** (flat string filters ↔ URL query; defaults dropped),
+  **`useDebouncedValue`**.
+
+## Patterns (copy these)
+- **List filters**: hold filter state in `useUrlFilters({ ... })`; debounce the search box (300ms)
+  via `useDebouncedValue` and push the debounced value into the URL filter; reset `page` to `'1'` on
+  any filter change. The page must wrap the client list in `<Suspense>` (it uses `useSearchParams`).
+  Reference: `stock-activity.tsx`, `products-dashboard.tsx`, `inventory-overview.tsx`.
+- **Forms** (react-hook-form + zod): `<FormLabel required>` adds a red `*`; `<FormDescription>` is a
+  small hint with an info icon; numeric fields use `<NumberInput {...field} />` (blank box for 0,
+  strips leading zeros); two-column field grids use CSS grid so an error/hint never misaligns the
+  columns. Keep create/add forms short; defer advanced settings to an Edit dialog.
+- **Row actions**: one primary button (e.g. Adjust) + a `⋯` `DropdownMenu` for the rest; icon-only
+  actions get a `Tooltip` (no bare `title`).
+- **Toggles**: boolean filters/settings use `<Switch>` + `<Label htmlFor>`, never a toggle-button.
+- **Detail pages**: two columns — `lg:grid-cols-3`, main content `lg:col-span-2`, summary/status
+  `<aside>` on the right. Cross-module composition stays at the app/page layer.
+- **Dynamic inputs**: make dependent choices follow each other (adjust-stock modal: Add/Remove →
+  reason options change; live "current → result" preview).
+- **Colour variety**: vary KPI/action chips with `STAT_TONES` (primary/amber/rose/sky/violet/emerald)
+  — don't render a wall of one colour.
+- **Wording**: plain language, no internal jargon ("source of truth" → "accurate/master stock",
+  "decrement" → "reduce"). English for now, written to be translatable later.
+
+## Shell & auth
+- `components/layout/`: `AppSidebar` (collapses to a 64px **icon rail** via `useUiStore.sidebarOpen`;
+  brand mark + a Create menu), `DashboardNavbar` (avatar menu + theme toggle), `SidebarNav`. The
+  mobile nav is a `Sheet` themed like the sidebar.
+- **Auth is already enforced** (middleware + `authorized()` in `auth.config.ts` → redirect to
+  `/login` with `callbackUrl`). Do NOT touch auth config / middleware / cookies without confirming
+  (HARD CONSTRAINT #2). The login form already round-trips `callbackUrl`.
+
+## Gotchas
+- Production `next build` and `tsx watch server.ts` share `.next` → never build while the dev server
+  runs (corrupts the dev session). Stop dev, build, restart.
+- `useSearchParams` (incl. via `useUrlFilters`) forces a `<Suspense>` boundary on the page or the
+  build errors.
+- Typed routes are on: a computed href passed to `router.replace` needs `as Route`.
+- Deps added for this system: `geist`, `@fontsource-variable/plus-jakarta-sans`, `react-day-picker`,
+  `@radix-ui/react-popover`, `@radix-ui/react-switch`.
