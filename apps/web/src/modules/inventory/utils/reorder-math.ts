@@ -2,17 +2,18 @@ import { StockLedgerReason } from '@prisma/client';
 
 /**
  * Ledger reasons that represent real customer demand, used to measure sales
- * velocity. `ORDER_RESERVE` removes units for a sale (negative delta);
- * `ORDER_RELEASE` (cancel before ship) and `RETURN` (restock after ship) add them
- * back (positive delta), so a net across the three is true demand. `ORDER_SHIP` is
- * intentionally EXCLUDED: the reserve→ship lifecycle records demand at reserve
- * time, and ship rows carry a delta of 0 (they move on-hand, not available), so
- * including them would be noise. (A RETURN routed to damaged is also delta 0.)
+ * velocity. `ORDER_RESERVE` (marketplace sale) and `SALE` (offline/POS sale) remove
+ * units (negative delta); `ORDER_RELEASE` (cancel before ship) and `RETURN` (restock
+ * after ship) add them back (positive delta), so a net across them is true demand.
+ * `ORDER_SHIP` is intentionally EXCLUDED: the reserve→ship lifecycle records demand
+ * at reserve time, and ship rows carry a delta of 0 (they move on-hand, not
+ * available), so including them would be noise. (A RETURN routed to damaged is also delta 0.)
  */
 export const SALES_LEDGER_REASONS = [
   StockLedgerReason.ORDER_RESERVE,
   StockLedgerReason.ORDER_RELEASE,
   StockLedgerReason.RETURN,
+  StockLedgerReason.SALE,
 ] as const;
 
 export type ReorderStatus =

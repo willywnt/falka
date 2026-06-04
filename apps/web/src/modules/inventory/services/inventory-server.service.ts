@@ -470,6 +470,43 @@ export class InventoryServerService {
   }
 
   /**
+   * Decrements available stock for an offline (POS) sale WITHIN the caller's
+   * transaction — the unit leaves the counter immediately, so there is no reserve
+   * step. Available MAY go negative (the SoT can lag an online edit while the goods
+   * are physically in hand). Records a `SALE` row (source `POS`). Returns the new
+   * balance; the caller propagates after commit.
+   */
+  async applyOfflineSaleTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; saleId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) - params.quantity;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: -params.quantity,
+        balanceAfter,
+        reason: 'SALE',
+        source: 'POS',
+        referenceId: params.saleId,
+        note: 'Offline sale',
+      },
+    });
+
+    return balanceAfter;
+  }
+
+  /**
    * Reserved units never go below zero. Orders reserved before this lifecycle
    * existed carry no reservation, so shipping/cancelling them would underflow — we
    * clamp at 0 and log instead.

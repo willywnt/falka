@@ -9,6 +9,7 @@ export const STOCK_REASON_LABELS: Record<StockLedgerReason, string> = {
   ORDER_RELEASE: 'Order released',
   ORDER_SHIP: 'Order shipped',
   RETURN: 'Return',
+  SALE: 'Offline sale',
   MARKETPLACE_SYNC: 'Marketplace sync',
 };
 
