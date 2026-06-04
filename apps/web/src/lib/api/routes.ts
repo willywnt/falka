@@ -8,6 +8,7 @@ export const apiRoutes = {
   inventory: `${API_BASE_PATH}/inventory`,
   orders: `${API_BASE_PATH}/orders`,
   returns: `${API_BASE_PATH}/returns`,
+  sales: `${API_BASE_PATH}/sales`,
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
   storage: `${API_BASE_PATH}/storage`,
