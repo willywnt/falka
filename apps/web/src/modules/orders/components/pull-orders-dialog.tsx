@@ -59,6 +59,7 @@ export function PullOrdersDialog({
       );
       const parts = [`${result.pulled} order(s) from ${result.storesPulled} store(s)`];
       if (result.applied > 0) parts.push(`${result.applied} applied to stock`);
+      if (result.reverted > 0) parts.push(`${result.reverted} restocked (cancelled)`);
       toast.success('Orders pulled', { description: parts.join(' · ') });
       if (result.storesSkipped.length > 0) {
         toast.info(`Skipped (pulled recently): ${result.storesSkipped.join(', ')}`);

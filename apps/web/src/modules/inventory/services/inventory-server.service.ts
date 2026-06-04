@@ -291,6 +291,43 @@ export class InventoryServerService {
     return balanceAfter;
   }
 
+  /**
+   * Reverses a marketplace sale's decrement WITHIN the caller's transaction — used
+   * when an applied order is cancelled. Adds the units back to available stock and
+   * records an `ORDER_RELEASE` ledger row (positive delta), so the reorder velocity
+   * nets it out against the original `ORDER_RESERVE`. Returns the new balance. Does
+   * NOT enqueue propagation; the caller does that after commit.
+   */
+  async applyOrderRestockTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; orderId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: params.quantity,
+        balanceAfter,
+        reason: 'ORDER_RELEASE',
+        source: 'MARKETPLACE',
+        referenceId: params.orderId,
+        note: 'Marketplace order cancelled',
+      },
+    });
+
+    return balanceAfter;
+  }
+
   private async assertVariantOwned(userId: string, variantId: string): Promise<void> {
     const variant = await prisma.productVariant.findFirst({
       where: { id: variantId, userId, deletedAt: null },

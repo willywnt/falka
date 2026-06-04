@@ -36,4 +36,6 @@ export type MultiPullOrdersResult = {
   storesSkipped: string[];
   pulled: number;
   applied: number;
+  /** Cancelled orders whose previously-applied decrement was restocked. */
+  reverted: number;
 };

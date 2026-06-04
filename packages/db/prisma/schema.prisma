@@ -389,6 +389,11 @@ model Order {
    * Set once a PAID order's items have decremented internal stock (idempotency).
    */
   inventoryAppliedAt      DateTime?
+  /**
+   * Set once a CANCELLED order's previously-applied decrement has been reversed
+   * (restocked) back to internal stock (idempotency; mirrors inventoryAppliedAt).
+   */
+  inventoryRevertedAt     DateTime?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 

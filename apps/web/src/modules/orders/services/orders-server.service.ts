@@ -193,6 +193,7 @@ export class OrdersServerService {
 
     let pulled = 0;
     let applied = 0;
+    let reverted = 0;
     let storesPulled = 0;
     const storesSkipped: string[] = [];
 
@@ -211,22 +212,24 @@ export class OrdersServerService {
 
       pulled += result.pulled;
       applied += result.applied;
+      reverted += result.reverted;
       storesPulled += 1;
     }
 
-    appLogger.info('orders.pulled.multi', { userId, storesPulled, pulled, applied });
-    return { storesPulled, storesSkipped, pulled, applied };
+    appLogger.info('orders.pulled.multi', { userId, storesPulled, pulled, applied, reverted });
+    return { storesPulled, storesSkipped, pulled, applied, reverted };
   }
 
   private async pullOneConnection(
     userId: string,
     connection: MarketplaceConnection,
-  ): Promise<{ pulled: number; applied: number; affected: Set<string> }> {
+  ): Promise<{ pulled: number; applied: number; reverted: number; affected: Set<string> }> {
     const adapter = getMarketplaceOrderAdapter(connection.provider);
     const orders = await adapter.fetchOrders({ shopId: connection.shopId, accessToken: '' });
 
     let pulled = 0;
     let applied = 0;
+    let reverted = 0;
     const affectedVariantIds = new Set<string>();
 
     for (const order of orders) {
@@ -320,9 +323,37 @@ export class OrdersServerService {
         });
         applied += 1;
       }
+
+      // A previously-applied order that is now cancelled must give its units back.
+      // Reverses the current resolved line items (assumes the marketplace doesn't
+      // change items after payment, same assumption as the decrement above).
+      const shouldRevert =
+        saved.status === 'CANCELLED' &&
+        saved.inventoryAppliedAt !== null &&
+        saved.inventoryRevertedAt === null;
+
+      if (shouldRevert) {
+        await prisma.$transaction(async (tx) => {
+          for (const item of resolvedItems) {
+            if (!item.productVariantId) continue;
+            await inventoryServerService.applyOrderRestockTx(tx, {
+              userId,
+              variantId: item.productVariantId,
+              quantity: item.quantity,
+              orderId: saved.id,
+            });
+            affectedVariantIds.add(item.productVariantId);
+          }
+          await tx.order.update({
+            where: { id: saved.id },
+            data: { inventoryRevertedAt: new Date() },
+          });
+        });
+        reverted += 1;
+      }
     }
 
-    return { pulled, applied, affected: affectedVariantIds };
+    return { pulled, applied, reverted, affected: affectedVariantIds };
   }
 
   /** Best-effort: push each decremented variant's new available stock to its other channels. */
