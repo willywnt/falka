@@ -1,8 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@olshop/config/constants';
-import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings as SettingsIcon,
+  Sun,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { logoutAction } from '@/modules/auth/actions/logout';
@@ -23,8 +33,14 @@ import { useUiStore } from '@/store/ui-store';
 
 export function DashboardNavbar() {
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const { setTheme, theme } = useTheme();
   const { user } = useCurrentUser();
+
+  // Match the sidebar's mounted-guard so the icon doesn't mismatch the SSR'd HTML.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const collapsed = mounted ? !sidebarOpen : false;
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 flex h-14 items-center gap-4 border-b px-4 backdrop-blur md:px-6">
@@ -59,9 +75,10 @@ export function DashboardNavbar() {
           size="icon"
           className="hidden md:inline-flex"
           onClick={toggleSidebar}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <Menu className="size-4" />
-          <span className="sr-only">Toggle sidebar</span>
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+          <span className="sr-only">{collapsed ? 'Expand sidebar' : 'Collapse sidebar'}</span>
         </Button>
       </div>
 

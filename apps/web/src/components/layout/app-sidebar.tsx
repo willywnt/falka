@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@olshop/config/constants';
 import { Boxes, Plus, ShoppingBag, Video } from 'lucide-react';
@@ -60,7 +61,13 @@ function SidebarCreate({ collapsed }: { collapsed: boolean }) {
 }
 
 export function AppSidebar({ className }: { className?: string }) {
-  const collapsed = !useUiStore((state) => state.sidebarOpen);
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  // The collapse preference is persisted (localStorage); ignore it until mounted so
+  // the server-rendered HTML (expanded) matches the first client render, then settle
+  // to the saved state (the width animates via transition-all).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const collapsed = mounted ? !sidebarOpen : false;
 
   return (
     <aside
