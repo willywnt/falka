@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LowStockBadge } from '@/components/low-stock-badge';
 import {
   Table,
   TableBody,
@@ -124,9 +125,7 @@ export function ProductDetail({
                     <TableCell className="text-right">
                       <span className="font-medium tabular-nums">{variant.availableStock}</span>
                       {variant.isLowStock ? (
-                        <Badge variant="destructive" className="ml-2">
-                          Low
-                        </Badge>
+                        <LowStockBadge threshold={variant.lowStockThreshold} className="ml-2" />
                       ) : null}
                     </TableCell>
                     <TableCell className="text-right">
