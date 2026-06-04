@@ -93,7 +93,6 @@ export function RecordingPreviewShell({
   const [videoReady, setVideoReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [pipSupported, setPipSupported] = useState(false);
 
   useEffect(() => {
@@ -105,7 +104,6 @@ export function RecordingPreviewShell({
       setVideoReady(false);
       setIsPlaying(false);
       setCurrentTime(0);
-      setDuration(0);
       videoRef.current?.pause();
     }
   }, [open]);
@@ -113,7 +111,6 @@ export function RecordingPreviewShell({
   useEffect(() => {
     setVideoReady(false);
     setCurrentTime(0);
-    setDuration(0);
   }, [videoSrc, videoKey]);
 
   useEffect(() => {
@@ -277,7 +274,6 @@ export function RecordingPreviewShell({
                 preload="metadata"
                 src={videoSrc}
                 onLoadedData={() => setVideoReady(true)}
-                onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
                 onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
