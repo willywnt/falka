@@ -6,6 +6,7 @@ import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
+import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
@@ -105,6 +106,78 @@ export class OrdersServerService {
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
       items,
     };
+  }
+
+  /**
+   * Map an unmapped order item to an internal variant: persist the listing→variant
+   * mapping (so future pulls resolve), resolve every matching item in this order,
+   * and — for a PAID order — decrement stock for the items just resolved.
+   */
+  async resolveOrderItem(
+    userId: string,
+    orderId: string,
+    orderItemId: string,
+    variantId: string,
+  ): Promise<OrderDetail> {
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { items: true },
+    });
+    if (!order) throw OrderError.notFound();
+
+    const item = order.items.find((entry) => entry.id === orderItemId);
+    if (!item) throw OrderError.notFound('Order item not found.');
+
+    await marketplaceMappingService.mapByExternalRef(
+      userId,
+      order.marketplaceConnectionId,
+      {
+        externalProductId: item.externalProductId,
+        externalVariantId: item.externalVariantId,
+        externalSku: item.externalSku,
+        externalName: item.externalName,
+        provider: order.provider,
+      },
+      variantId,
+    );
+
+    // Resolve every still-unmapped item in this order with the same external ref.
+    const newlyResolved = order.items.filter(
+      (entry) =>
+        entry.productVariantId === null &&
+        entry.externalProductId === item.externalProductId &&
+        entry.externalVariantId === item.externalVariantId,
+    );
+
+    await prisma.orderItem.updateMany({
+      where: { id: { in: newlyResolved.map((entry) => entry.id) } },
+      data: { productVariantId: variantId },
+    });
+
+    // For a PAID order, decrement for the items just resolved (they were never
+    // applied), stamping inventoryAppliedAt if it wasn't set yet.
+    if (order.status === 'PAID' && newlyResolved.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        for (const entry of newlyResolved) {
+          await inventoryServerService.applyOrderDecrementTx(tx, {
+            userId,
+            variantId,
+            quantity: entry.quantity,
+            orderId: order.id,
+          });
+        }
+        if (order.inventoryAppliedAt === null) {
+          await tx.order.update({
+            where: { id: order.id },
+            data: { inventoryAppliedAt: new Date() },
+          });
+        }
+      });
+      await this.propagateAffected(userId, new Set([variantId]), order.marketplaceConnectionId);
+    }
+
+    appLogger.info('orders.item.resolved', { userId, orderId, orderItemId, variantId });
+    return this.getOrder(userId, orderId);
   }
 
   async pullOrders(userId: string, connectionId: string): Promise<PullOrdersResult> {

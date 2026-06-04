@@ -64,6 +64,30 @@ export function usePullOrdersMutation(connectionId: string) {
   });
 }
 
+/** Match an unmapped order item to an internal variant (persists the listing mapping). */
+export function useResolveOrderItemMutation(orderId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ orderItemId, variantId }: { orderItemId: string; variantId: string }) => {
+      const result = await apiFetch<OrderDetail>(`${apiRoutes.orders}/${orderId}/resolve-item`, {
+        method: 'POST',
+        body: { orderItemId, variantId },
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
 /** Pull orders from several connected stores at once (default: all active). */
 export function usePullFromConnectionsMutation() {
   const queryClient = useQueryClient();

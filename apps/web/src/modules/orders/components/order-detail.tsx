@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Link2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,11 +19,27 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
-import { useOrderQuery } from '../hooks/use-orders';
+import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
+import { MapOrderItemDialog } from './map-order-item-dialog';
 import { OrderStatusBadge } from './order-status-badge';
 
 export function OrderDetail({ orderId }: { orderId: string }) {
   const { data, isLoading, error } = useOrderQuery(orderId);
+  const resolveMutation = useResolveOrderItemMutation(orderId);
+  const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
+
+  async function handleResolve(variantId: string) {
+    if (!mapTarget) return;
+    try {
+      await resolveMutation.mutateAsync({ orderItemId: mapTarget.id, variantId });
+      toast.success('Item matched', { description: 'Stock is updated if the order is paid.' });
+      setMapTarget(null);
+    } catch (error) {
+      toast.error('Could not match item', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
 
   if (isLoading) {
     return (
@@ -99,9 +117,24 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                           </div>
                         </div>
                       ) : (
-                        <Badge variant="outline" className="border-amber-500 text-amber-600">
-                          Unmapped
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">
+                            Unmapped
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setMapTarget({
+                                id: item.id,
+                                label: `${item.externalName}${item.externalSku ? ` · ${item.externalSku}` : ''}`,
+                              })
+                            }
+                          >
+                            <Link2 className="size-4" />
+                            Map
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -160,6 +193,18 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           </Card>
         </aside>
       </div>
+
+      {mapTarget ? (
+        <MapOrderItemDialog
+          open={Boolean(mapTarget)}
+          onOpenChange={(next) => {
+            if (!next) setMapTarget(null);
+          }}
+          itemLabel={mapTarget.label}
+          isMapping={resolveMutation.isPending}
+          onSelect={(variantId) => void handleResolve(variantId)}
+        />
+      ) : null}
     </div>
   );
 }

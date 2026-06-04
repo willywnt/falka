@@ -2,7 +2,7 @@ import 'server-only';
 
 import { prisma } from '@olshop/db';
 import { buildManualRetryEventId, enqueuePropagateInventoryStock } from '@olshop/queue';
-import type { Prisma } from '@prisma/client';
+import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 
@@ -121,6 +121,73 @@ export class MarketplaceMappingService {
     });
 
     return this.getListing(userId, connectionId, marketplaceProductId);
+  }
+
+  /**
+   * Map a listing identified by its external reference (creating the listing
+   * snapshot if it was never imported), then link it to a variant. Used when
+   * resolving an unmapped order item so the mapping persists for future pulls.
+   */
+  async mapByExternalRef(
+    userId: string,
+    connectionId: string,
+    ref: {
+      externalProductId: string;
+      externalVariantId: string;
+      externalSku: string | null;
+      externalName: string;
+      provider: MarketplaceProvider;
+    },
+    variantId: string,
+  ): Promise<void> {
+    await this.assertConnectionOwned(userId, connectionId);
+
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!variant) throw MarketplaceError.validation('Product variant not found.');
+
+    const listing = await prisma.marketplaceProduct.upsert({
+      where: {
+        marketplaceConnectionId_externalProductId_externalVariantId: {
+          marketplaceConnectionId: connectionId,
+          externalProductId: ref.externalProductId,
+          externalVariantId: ref.externalVariantId,
+        },
+      },
+      create: {
+        userId,
+        marketplaceConnectionId: connectionId,
+        provider: ref.provider,
+        externalProductId: ref.externalProductId,
+        externalVariantId: ref.externalVariantId,
+        externalSku: ref.externalSku,
+        externalProductName: ref.externalName,
+        externalVariantName: null,
+        stock: 0,
+        status: 'ACTIVE',
+        lastImportedAt: new Date(),
+      },
+      update: {},
+      select: { id: true, provider: true },
+    });
+
+    await prisma.marketplaceProductMapping.upsert({
+      where: { marketplaceProductId: listing.id },
+      create: {
+        userId,
+        marketplaceConnectionId: connectionId,
+        marketplaceProductId: listing.id,
+        productVariantId: variantId,
+        provider: listing.provider,
+        mappingStatus: 'MAPPED',
+        autoMapped: false,
+      },
+      update: { productVariantId: variantId, mappingStatus: 'MAPPED', autoMapped: false },
+    });
+
+    appLogger.info('marketplace.listing.mapped_by_ref', { userId, connectionId, variantId });
   }
 
   async unmapListing(
