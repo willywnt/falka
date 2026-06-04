@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
@@ -15,26 +16,49 @@ function formatRange(range: DateRange | undefined, placeholder: string): string 
   return `${format(range.from, 'd MMM yyyy')} – ${format(range.to, 'd MMM yyyy')}`;
 }
 
-/** Single-popover from–to date range picker (react-day-picker range mode). */
+/**
+ * Single-popover from–to date range picker. Selection is held as a draft and only
+ * committed (via `onChange`) when the user clicks Apply, so the caller doesn't
+ * re-query on every day click.
+ */
 export function DateRangePicker({
   value,
   onChange,
   className,
-  placeholder = 'Any date',
+  placeholder = 'Date range',
 }: {
   value: DateRange | undefined;
   onChange: (range: DateRange | undefined) => void;
   className?: string;
   placeholder?: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<DateRange | undefined>(value);
+
+  function handleOpenChange(next: boolean) {
+    if (next) setDraft(value);
+    setOpen(next);
+  }
+
+  function apply() {
+    onChange(draft);
+    setOpen(false);
+  }
+
+  function clear() {
+    setDraft(undefined);
+    onChange(undefined);
+    setOpen(false);
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
           className={cn(
-            'h-9 justify-start gap-2 font-normal',
+            'h-9 min-w-44 justify-start gap-2 font-normal',
             !value?.from && 'text-muted-foreground',
             className,
           )}
@@ -44,14 +68,15 @@ export function DateRangePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="range" selected={value} onSelect={onChange} numberOfMonths={2} autoFocus />
-        {value?.from ? (
-          <div className="flex justify-end border-t p-2">
-            <Button variant="ghost" size="sm" onClick={() => onChange(undefined)}>
-              Clear
-            </Button>
-          </div>
-        ) : null}
+        <Calendar mode="range" selected={draft} onSelect={setDraft} numberOfMonths={2} autoFocus />
+        <div className="flex items-center justify-between gap-2 border-t p-2">
+          <Button variant="ghost" size="sm" onClick={clear} disabled={!draft?.from}>
+            Clear
+          </Button>
+          <Button size="sm" onClick={apply} disabled={!draft?.from}>
+            Apply
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   );
