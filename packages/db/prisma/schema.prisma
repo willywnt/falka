@@ -49,6 +49,7 @@ model User {
   marketplaceProductMappings MarketplaceProductMapping[]
   marketplaceSyncJobs        MarketplaceSyncJob[]
   orders                     Order[]
+  returns                    Return[]
 
   @@map("users")
 }
@@ -158,6 +159,7 @@ enum StockLedgerReason {
   ORDER_RESERVE
   ORDER_RELEASE
   ORDER_SHIP
+  RETURN
   MARKETPLACE_SYNC
   RECONCILE
 }
@@ -402,7 +404,8 @@ model Order {
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
-  items OrderItem[]
+  items   OrderItem[]
+  returns Return[]
 
   @@unique([marketplaceConnectionId, externalOrderId])
   @@index([userId])
@@ -430,4 +433,54 @@ model OrderItem {
   @@index([orderId])
   @@index([productVariantId])
   @@map("order_items")
+}
+
+enum ReturnStatus {
+  PENDING // opened — awaiting the physical goods
+  RECEIVED // goods received and each item dispositioned (stock applied)
+  REJECTED // closed without restock (goods not returned / dispute lost)
+}
+
+enum ReturnDisposition {
+  RESTOCK // resellable — back to available
+  DAMAGED // unsellable — into damaged stock
+}
+
+model Return {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  orderId      String
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status       ReturnStatus @default(PENDING)
+  reason       String?
+  /** True when opened automatically from a detected post-ship cancellation. */
+  autoDetected Boolean      @default(false)
+  /** Copied from the order for packing-video evidence lookup (matched by noResi). */
+  noResi       String?
+  processedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  items ReturnItem[]
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@map("returns")
+}
+
+model ReturnItem {
+  id               String             @id @default(cuid())
+  returnId         String
+  return           Return             @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  /** Snapshot of the returned order line (plain refs, not FKs). */
+  orderItemId      String
+  productVariantId String?
+  quantity         Int
+  /** Set when the return is processed; null while PENDING. */
+  disposition      ReturnDisposition?
+
+  @@index([returnId])
+  @@map("return_items")
 }

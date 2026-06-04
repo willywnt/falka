@@ -383,6 +383,85 @@ export class InventoryServerService {
   }
 
   /**
+   * Returns a resellable unit to available WITHIN the caller's transaction — used
+   * when a received return is dispositioned RESTOCK. Records a `RETURN` row
+   * (positive available delta) so the reorder velocity nets it out against the
+   * original sale. Returns the new available balance. Does NOT enqueue propagation;
+   * the caller does that after commit.
+   */
+  async applyReturnRestockTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; returnId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: params.quantity,
+        balanceAfter,
+        reason: 'RETURN',
+        source: 'MARKETPLACE',
+        referenceId: params.returnId,
+        note: 'Return — restocked',
+      },
+    });
+
+    return balanceAfter;
+  }
+
+  /**
+   * Routes a received return into damaged stock WITHIN the caller's transaction —
+   * used when a received return is dispositioned DAMAGED. Available is unchanged
+   * (the unit is not resellable), so the `RETURN` row carries a delta of 0 (the
+   * ledger tracks available; damaged is a separate bucket) for the audit trail.
+   * Returns the unchanged available balance.
+   */
+  async applyReturnDamagedTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; returnId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const available = existing?.availableStock ?? 0;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: {
+        variantId: params.variantId,
+        availableStock: available,
+        damagedStock: params.quantity,
+        lastAdjustedAt: now,
+      },
+      update: { damagedStock: { increment: params.quantity }, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: 0,
+        balanceAfter: available,
+        reason: 'RETURN',
+        source: 'MARKETPLACE',
+        referenceId: params.returnId,
+        note: 'Return — damaged',
+      },
+    });
+
+    return available;
+  }
+
+  /**
    * Reserved units never go below zero. Orders reserved before this lifecycle
    * existed carry no reservation, so shipping/cancelling them would underflow — we
    * clamp at 0 and log instead.
