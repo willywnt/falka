@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useCreateProductMutation } from '../hooks/use-products';
@@ -110,7 +111,7 @@ export function ProductFormDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product name</FormLabel>
+                    <FormLabel required>Product name</FormLabel>
                     <FormControl>
                       <Input placeholder="Kaos Polos Cotton" autoComplete="off" {...field} />
                     </FormControl>
@@ -157,7 +158,7 @@ export function ProductFormDialog({
                   name="variant.sku"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>SKU</FormLabel>
+                      <FormLabel required>SKU</FormLabel>
                       <FormControl>
                         <Input placeholder="KAOS-BLK-M" autoComplete="off" {...field} />
                       </FormControl>
@@ -172,7 +173,7 @@ export function ProductFormDialog({
                   name="variant.name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Variant name</FormLabel>
+                      <FormLabel required>Variant name</FormLabel>
                       <FormControl>
                         <Input placeholder="Black / M" autoComplete="off" {...field} />
                       </FormControl>
@@ -188,9 +189,9 @@ export function ProductFormDialog({
                   name="variant.price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price (IDR)</FormLabel>
+                      <FormLabel required>Price (IDR)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step={1} {...field} />
+                        <NumberInput min={0} step={1} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -204,7 +205,7 @@ export function ProductFormDialog({
                     <FormItem>
                       <FormLabel>Cost (IDR)</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step={1} {...field} />
+                        <NumberInput min={0} step={1} {...field} />
                       </FormControl>
                       <FormDescription>Modal price — drives stock value.</FormDescription>
                       <FormMessage />
@@ -219,7 +220,7 @@ export function ProductFormDialog({
                     <FormItem>
                       <FormLabel>Initial stock</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step={1} {...field} />
+                        <NumberInput min={0} step={1} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -233,7 +234,7 @@ export function ProductFormDialog({
                     <FormItem>
                       <FormLabel>Low-stock at</FormLabel>
                       <FormControl>
-                        <Input type="number" min={0} step={1} {...field} />
+                        <NumberInput min={0} step={1} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

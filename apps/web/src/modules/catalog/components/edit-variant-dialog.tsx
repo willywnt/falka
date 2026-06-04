@@ -22,7 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 
 import { useUpdateVariantMutation } from '../hooks/use-products';
 import type { ProductVariantItem } from '../types';
@@ -95,7 +95,7 @@ export function EditVariantDialog({
                   <FormItem>
                     <FormLabel>Lead time (days)</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormDescription>0 = use the global default.</FormDescription>
                     <FormMessage />
@@ -110,7 +110,7 @@ export function EditVariantDialog({
                   <FormItem>
                     <FormLabel>Min order qty</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormDescription>MOQ — 0 = no minimum.</FormDescription>
                     <FormMessage />
@@ -125,7 +125,7 @@ export function EditVariantDialog({
                   <FormItem>
                     <FormLabel>Low-stock at</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

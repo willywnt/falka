@@ -3,6 +3,7 @@
 import * as React from 'react';
 import type * as LabelPrimitive from '@radix-ui/react-label';
 import { Slot } from '@radix-ui/react-slot';
+import { Info } from 'lucide-react';
 import {
   Controller,
   FormProvider,
@@ -79,7 +80,12 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({
+  className,
+  required,
+  children,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root> & { required?: boolean }) {
   const { error, formItemId } = useFormField();
 
   return (
@@ -89,7 +95,14 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
       className={cn('data-[error=true]:text-destructive', className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required ? (
+        <span className="text-destructive ml-0.5" aria-hidden>
+          *
+        </span>
+      ) : null}
+    </Label>
   );
 }
 
@@ -107,16 +120,19 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
   );
 }
 
-function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
+function FormDescription({ className, children, ...props }: React.ComponentProps<'p'>) {
   const { formDescriptionId } = useFormField();
 
   return (
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-muted-foreground flex items-start gap-1 text-xs', className)}
       {...props}
-    />
+    >
+      <Info className="mt-px size-3 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
   );
 }
 

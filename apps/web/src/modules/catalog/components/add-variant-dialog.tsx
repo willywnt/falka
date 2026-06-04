@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 
 import { useAddVariantMutation } from '../hooks/use-products';
 import { addVariantFormSchema, type AddVariantFormInput } from '../validators/create-product';
@@ -99,7 +100,7 @@ export function AddVariantDialog({
                 name="sku"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>SKU</FormLabel>
+                    <FormLabel required>SKU</FormLabel>
                     <FormControl>
                       <Input placeholder="KAOS-BLK-L" autoComplete="off" {...field} />
                     </FormControl>
@@ -114,7 +115,7 @@ export function AddVariantDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Variant name</FormLabel>
+                    <FormLabel required>Variant name</FormLabel>
                     <FormControl>
                       <Input placeholder="Black / L" autoComplete="off" {...field} />
                     </FormControl>
@@ -130,9 +131,9 @@ export function AddVariantDialog({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (IDR)</FormLabel>
+                    <FormLabel required>Price (IDR)</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -146,7 +147,7 @@ export function AddVariantDialog({
                   <FormItem>
                     <FormLabel>Cost (IDR)</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormDescription>Modal price — drives stock value.</FormDescription>
                     <FormMessage />
@@ -161,7 +162,7 @@ export function AddVariantDialog({
                   <FormItem>
                     <FormLabel>Initial stock</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -175,7 +176,7 @@ export function AddVariantDialog({
                   <FormItem>
                     <FormLabel>Low-stock at</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} {...field} />
+                      <NumberInput min={0} step={1} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
