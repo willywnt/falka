@@ -19,9 +19,13 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   `updateVariant` (create/add-variant forms stay short; advanced planning is set later via Edit).
   Stock changes go through the inventory service, NEVER by writing inventory tables from catalog.
 - **inventory** — `Inventory` (fast-read cache: available/reserved/damaged/incoming) +
-  **`StockLedger` (append-only = the real source of truth)**. Every mutation = 1 ledger row + 1
-  Inventory update in ONE tx. `adjustStock` (manual, never negative); `applyOrderDecrementTx(tx,…)`
-  (order sale, MAY go negative). Surfaces: `getDashboard` (KPIs); `listStockOverview` (now also the
+  **`StockLedger` (append-only = the real source of truth, available-centric)**. Every mutation =
+  1 ledger row + 1 Inventory update in ONE tx. `adjustStock` (manual, never negative). Inbound-order
+  stock **lifecycle trio** (all `(tx,…)`, available MAY go negative): `applyOrderReserveTx`
+  (available−, reserved+; `ORDER_RESERVE`), `applyOrderShipTx` (reserved− only, available unchanged;
+  `ORDER_SHIP` delta 0), `applyOrderReleaseTx` (available+, reserved−; `ORDER_RELEASE`). Reserved
+  decrements clamp at 0 (+warn) for orders reserved before the lifecycle existed; on-hand = available
+  + reserved. Surfaces: `getDashboard` (KPIs incl. `totalReservedUnits`); `listStockOverview` (now also the
   last movement before→after + `lastAdjustedAt`, via a nested `take:1` ledger include); **reorder
   report** (`inventory-reorder.service` — recency-weighted/EWMA velocity → days-of-cover → suggested
   qty, honours per-variant lead time/MOQ; bucketed ledger sums per sub-window); **stock activity
@@ -36,11 +40,14 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   `NEEDS_REVIEW` + sync stays off (per-listing sync is a **Switch**, disabled while NEEDS_REVIEW).
   `mapByExternalRef` upserts a listing (creating its snapshot if never imported) + its mapping.
 - **orders** — **multi-store pull** `pullFromConnections(connectionIds?)` (default every active
-  store; STUB adapter) → resolve items via mapping → PAID, not-yet-applied order decrements stock +
-  stamps `Order.inventoryAppliedAt` (idempotency) → propagate to OTHER channels. Per-store **30s
-  cooldown** keyed on `lastOrdersPulledAt` (skipped, not errored = anti-abuse). `resolveOrderItem`
-  maps an unmapped item from the order page (via `mapByExternalRef`) then decrements stock for just
-  the newly-resolved items (idempotent). Endpoints: `POST /api/v1/orders/pull`,
+  store; STUB adapter) → resolve items via mapping → advance the per-order **stock lifecycle** (each
+  stage once, idempotent via `Order.inventoryAppliedAt`/`inventoryShippedAt`/`inventoryRevertedAt`):
+  RESERVE on PAID, SHIP on SHIPPED/COMPLETED (consumes the reservation; an order first seen already
+  shipped reserves then ships), RELEASE on CANCELLED-before-ship. Only available changes
+  (reserve/release) propagate to OTHER channels — excluding the source channel (`excludeConnectionId`);
+  ship does not. Per-store **30s cooldown** keyed on `lastOrdersPulledAt` (skipped, not errored =
+  anti-abuse). `resolveOrderItem` maps an unmapped item from the order page (via `mapByExternalRef`)
+  then reserves stock for just the newly-resolved items of a PAID order (idempotent). Endpoints: `POST /api/v1/orders/pull`,
   `/orders/:id/resolve-item`. Pull lives on the **Orders** page (removed from marketplace detail).
 
 ## Outbound sync engine (worker-side) — `packages/queue/src/marketplace-sync/`
@@ -53,7 +60,7 @@ throw so BullMQ retries.
 
 ## Cross-module composition (respect boundary §3)
 - catalog→inventory ONLY via the inventory service (no cross-table writes). orders→inventory via
-  `applyOrderDecrementTx`. A module may import another module's HOOKS/types but NOT its
+  the lifecycle trio (`applyOrderReserveTx`/`ShipTx`/`ReleaseTx`). A module may import another module's HOOKS/types but NOT its
   components — cross-module UI composition lives at the APP layer (e.g.
   `app/(dashboard)/dashboard/products/[id]/product-detail-view.tsx` wires catalog `ProductDetail`
   + inventory `AdjustStockDialog`). The variant picker reuses inventory `useStockOverviewQuery`.
@@ -72,13 +79,15 @@ throw so BullMQ retries.
   `node --conditions=react-server` + the web tsconfig.
 
 ## Deferred (raise as separate suggestions)
-reserved-bucket vs raw-available decrement; cancellation-restock (`ORDER_RELEASE`); exclude the
-source channel from anti-oversell propagation; ProviderHealth + reconciliation/drift; bundles/kits;
-multi-warehouse; per-order re-pull (pull is store-level only); a `StockLedger (userId, createdAt)`
-index for the activity feed at scale (the `(userId, reason, createdAt)` index serves reorder);
-per-variant supplier + richer lead-time/MOQ; reorder velocity is a simple EWMA (could add seasonality);
-real provider adapters need the decrypted token → lift token-crypto to `@olshop/*`; queue package
-has no vitest (engine is gate-checked only).
+ProviderHealth + reconciliation/drift; bundles/kits; multi-warehouse; per-order re-pull (pull is
+store-level only); PENDING-order reservation (needs expiry/auto-release); returns after ship (a
+cancellation arriving post-ship is skipped+logged, not released — full returns is a separate feature);
+a `StockLedger (userId, createdAt)` index for the activity feed at scale (the `(userId, reason,
+createdAt)` index serves reorder); per-variant supplier + richer lead-time/MOQ; reorder velocity is a
+simple EWMA (could add seasonality); real provider adapters need the decrypted token → lift
+token-crypto to `@olshop/*`; queue package has no vitest (engine is gate-checked only).
 
 > Done this round (was deferred): `cost` + lead-time/MOQ on variants; reorder intelligence;
-> stock activity log + CSV; variant editing; multi-store order pull + cooldown; order-item mapping.
+> stock activity log + CSV; variant editing; multi-store order pull + cooldown; order-item mapping;
+> cancellation→restock (`ORDER_RELEASE`); exclude source channel from propagation; reserved-vs-available
+> reserve→ship→release lifecycle (reserved bucket surfaced in overview + dashboard).
