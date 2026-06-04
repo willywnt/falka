@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarRange, PackageSearch, PackageX, ShoppingCart } from 'lucide-react';
+import { CalendarRange, Info, PackageSearch, PackageX, ShoppingCart } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -95,13 +98,12 @@ export function ReorderReport() {
             </Button>
           ))}
         </div>
-        <Button
-          variant={reorderOnly ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setReorderOnly((value) => !value)}
-        >
-          Needs reorder only
-        </Button>
+        <div className="flex items-center gap-2">
+          <Switch id="needs-reorder-only" checked={reorderOnly} onCheckedChange={setReorderOnly} />
+          <Label htmlFor="needs-reorder-only" className="text-sm font-normal">
+            Needs reorder only
+          </Label>
+        </div>
       </div>
 
       {error ? (
@@ -136,7 +138,21 @@ export function ReorderReport() {
                 <TableHead className="text-right">Velocity</TableHead>
                 <TableHead className="text-right">Cover</TableHead>
                 <TableHead className="text-right">In stock</TableHead>
-                <TableHead className="text-right">Reorder</TableHead>
+                <TableHead className="text-right">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-1">
+                        Reorder
+                        <Info className="text-muted-foreground size-3.5" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      Suggested quantity to buy: enough to cover your lead time (days until a
+                      restock arrives) plus the target days of cover, and at least the supplier MOQ
+                      (minimum order quantity).
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
                 <TableHead className="text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -170,10 +186,20 @@ function ReorderRow({ item }: { item: ReorderItem }) {
       </TableCell>
       <TableCell className="text-right text-sm tabular-nums">
         <div className="text-muted-foreground">{formatVelocity(item.dailyVelocity)}</div>
-        <div className="text-muted-foreground text-xs">
-          {item.leadTimeDays}d lead
-          {item.minOrderQty ? ` · MOQ ${item.minOrderQty}` : ''}
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-muted-foreground w-fit cursor-default text-xs">
+              {item.leadTimeDays}d lead
+              {item.minOrderQty ? ` · MOQ ${item.minOrderQty}` : ''}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs text-xs">
+            Lead time: days until a restock arrives.{' '}
+            {item.minOrderQty
+              ? `MOQ: supplier minimum order of ${item.minOrderQty}.`
+              : 'No supplier minimum order set.'}
+          </TooltipContent>
+        </Tooltip>
       </TableCell>
       <TableCell className="text-right tabular-nums">
         {formatDaysOfCover(item.daysOfCover)}
