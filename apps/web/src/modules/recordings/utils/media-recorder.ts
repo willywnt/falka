@@ -67,10 +67,6 @@ export function extractGeneratedFilename(storageKey: string): string {
   return segments[segments.length - 1] ?? storageKey;
 }
 
-export function isUserStorageKey(storageKey: string, userId: string): boolean {
-  return storageKey.startsWith(`recordings/${userId}/`);
-}
-
 export function blobToUploadFile(blob: Blob, filename: string): File {
   return new File([blob], filename, {
     type: normalizeRecordingMimeType(blob.type || RECORDING_MIME_TYPE),

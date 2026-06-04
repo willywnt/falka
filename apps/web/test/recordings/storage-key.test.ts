@@ -4,25 +4,28 @@ import {
   generateRecordingFilename,
   generateStorageKey,
   isPendingStorageKey,
-} from '@/modules/storage/utils/storage-key';
-import {
-  extractGeneratedFilename,
   isUserStorageKey,
-} from '@/modules/recordings/utils/media-recorder';
+} from '@/modules/storage/utils/storage-key';
+import { extractGeneratedFilename } from '@/modules/recordings/utils/media-recorder';
 
 /**
  * Happy Flow #1 — upload ownership gate.
- * `completeRecording` rejects any storage key that is not under the caller's own
- * `recordings/{userId}/` prefix, so these helpers are a security-relevant boundary.
+ * `completeRecording` rejects any storage key that is not a final object under
+ * the caller's own `{env}/{userId}/` prefix (or the legacy `recordings/{userId}/`),
+ * so these helpers are a security-relevant boundary.
  */
 describe('isUserStorageKey', () => {
-  it('accepts a key under the user prefix', () => {
-    expect(isUserStorageKey('recordings/user-1/2026/06/rec_20260602_abcd1234.webm', 'user-1')).toBe(
-      true,
-    );
+  it('accepts a key under the env-scoped user prefix', () => {
+    expect(isUserStorageKey('dev/user-1/2026/06/rec_20260602_abcd1234.webm', 'user-1')).toBe(true);
+    expect(isUserStorageKey('production/user-1/2026/06/rec.webm', 'user-1')).toBe(true);
+  });
+
+  it('accepts the legacy recordings/ prefix (objects from before env scoping)', () => {
+    expect(isUserStorageKey('recordings/user-1/2026/06/rec.webm', 'user-1')).toBe(true);
   });
 
   it('rejects a key belonging to another user', () => {
+    expect(isUserStorageKey('dev/user-2/2026/06/rec.webm', 'user-1')).toBe(false);
     expect(isUserStorageKey('recordings/user-2/2026/06/rec.webm', 'user-1')).toBe(false);
   });
 
@@ -31,6 +34,7 @@ describe('isUserStorageKey', () => {
   });
 
   it('rejects a prefix-injection attempt', () => {
+    expect(isUserStorageKey('dev/user-12/rec.webm', 'user-1')).toBe(false);
     expect(isUserStorageKey('recordings/user-12/rec.webm', 'user-1')).toBe(false);
   });
 });
@@ -53,11 +57,10 @@ describe('extractGeneratedFilename', () => {
 });
 
 describe('generateStorageKey', () => {
-  it('builds recordings/{userId}/{year}/{month}/{filename} with zero-padded month', () => {
+  it('builds {env}/{userId}/{year}/{month}/{filename} with zero-padded month', () => {
+    // NODE_ENV is `test` under vitest, so the env prefix resolves to `dev`.
     const date = new Date(Date.UTC(2026, 0, 9)); // January 2026
-    expect(generateStorageKey('user-1', 'rec_x.webm', date)).toBe(
-      'recordings/user-1/2026/01/rec_x.webm',
-    );
+    expect(generateStorageKey('user-1', 'rec_x.webm', date)).toBe('dev/user-1/2026/01/rec_x.webm');
   });
 });
 

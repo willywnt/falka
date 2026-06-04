@@ -27,7 +27,7 @@ Already implemented:
 - Server-side MIME type validation (`video/webm`)
 - Max file size (500 MB)
 - Presigned URL expiry (5 minutes)
-- Storage key ownership check (`recordings/{userId}/...`)
+- Storage key ownership check (`{env}/{userId}/...`, env = `production`|`dev`; legacy `recordings/{userId}/...` still accepted)
 - User storage quota enforcement
 
 ## API security

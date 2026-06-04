@@ -13,9 +13,21 @@ export function generateRecordingFilename(date = new Date()): string {
   return `rec_${year}${month}${day}_${uniqueId}.webm`;
 }
 
+/** Top-level object prefix for the current runtime environment. */
+export function storageEnvPrefix(): 'production' | 'dev' {
+  return process.env.NODE_ENV === 'production' ? 'production' : 'dev';
+}
+
+/**
+ * Top-level prefixes that mark a final (uploaded, non-pending) user object.
+ * `recordings` is the legacy prefix from before keys were environment-scoped —
+ * kept so objects uploaded under the old layout stay owned/deletable.
+ */
+const USER_OBJECT_PREFIXES = ['production', 'dev', 'recordings'] as const;
+
 /**
  * Builds an object key using:
- * recordings/{user_id}/{year}/{month}/{generated_filename}
+ * {env}/{user_id}/{year}/{month}/{generated_filename}  (env = production | dev)
  */
 export function generateStorageKey(
   userId: string,
@@ -25,7 +37,16 @@ export function generateStorageKey(
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
 
-  return `recordings/${userId}/${year}/${month}/${generatedFilename}`;
+  return `${storageEnvPrefix()}/${userId}/${year}/${month}/${generatedFilename}`;
+}
+
+/**
+ * Whether a storage key is a final object owned by `userId`. Security boundary
+ * for upload completion and deletion — accepts the current env prefix and the
+ * legacy `recordings/` prefix, never `pending/`.
+ */
+export function isUserStorageKey(storageKey: string, userId: string): boolean {
+  return USER_OBJECT_PREFIXES.some((prefix) => storageKey.startsWith(`${prefix}/${userId}/`));
 }
 
 export function isPendingStorageKey(storageKey: string): boolean {

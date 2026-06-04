@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { recordingServerService } from '@/modules/recordings/services/recording-server.service';
 import { saveRecordingMetadataSchema } from '@/modules/recordings/validators/create-recording';
 import { listRecordingsQuerySchema } from '@/modules/recordings/validators/list-recordings';
+import { isUserStorageKey } from '@/modules/storage/utils/storage-key';
 import { apiError, apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 import { appLogger } from '@/lib/logger';
@@ -34,7 +35,7 @@ export const POST = withApiRoute(
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    if (!parsed.data.storageKey.startsWith(`recordings/${user.id}/`)) {
+    if (!isUserStorageKey(parsed.data.storageKey, user.id)) {
       return apiError(
         { code: 'VALIDATION_ERROR', message: 'Invalid storage key for this user.' },
         400,
