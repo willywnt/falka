@@ -44,6 +44,8 @@ export type StockOverviewItem = {
   availableStock: number;
   /** Units committed to paid-not-shipped orders. on-hand = available + reserved. */
   reservedStock: number;
+  /** Units written off from returns as unsellable. */
+  damagedStock: number;
   lowStockThreshold: number;
   isLowStock: boolean;
   /** When stock was last changed (ISO), and the most recent movement. */
@@ -58,6 +60,8 @@ export type InventoryDashboardSummary = {
   totalAvailableUnits: number;
   /** Units committed to paid-not-shipped orders across all variants. */
   totalReservedUnits: number;
+  /** Units written off as damaged (e.g. from returns) across all variants. */
+  totalDamagedUnits: number;
   lowStockCount: number;
   outOfStockCount: number;
   oversoldCount: number;

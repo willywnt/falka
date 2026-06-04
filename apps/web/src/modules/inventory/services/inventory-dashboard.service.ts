@@ -20,12 +20,13 @@ export class InventoryDashboardService {
         alertEnabled: true,
         productId: true,
         product: { select: { name: true } },
-        inventory: { select: { availableStock: true, reservedStock: true } },
+        inventory: { select: { availableStock: true, reservedStock: true, damagedStock: true } },
       },
     });
 
     let totalAvailableUnits = 0;
     let totalReservedUnits = 0;
+    let totalDamagedUnits = 0;
     let lowStockCount = 0;
     let outOfStockCount = 0;
     let oversoldCount = 0;
@@ -36,6 +37,7 @@ export class InventoryDashboardService {
       const available = variant.inventory?.availableStock ?? 0;
       totalAvailableUnits += available;
       totalReservedUnits += variant.inventory?.reservedStock ?? 0;
+      totalDamagedUnits += variant.inventory?.damagedStock ?? 0;
       if (variant.cost) totalValue += Number(variant.cost) * available;
 
       if (available < 0) oversoldCount += 1;
@@ -77,6 +79,7 @@ export class InventoryDashboardService {
         variantCount: variants.length,
         totalAvailableUnits,
         totalReservedUnits,
+        totalDamagedUnits,
         lowStockCount,
         outOfStockCount,
         oversoldCount,

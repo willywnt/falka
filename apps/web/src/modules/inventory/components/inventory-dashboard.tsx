@@ -67,8 +67,14 @@ export function InventoryDashboard() {
       icon: Wallet,
       tone: 'primary',
       hint:
-        summary.totalReservedUnits > 0
-          ? `${summary.totalAvailableUnits} available · ${summary.totalReservedUnits} reserved`
+        summary.totalReservedUnits > 0 || summary.totalDamagedUnits > 0
+          ? [
+              `${summary.totalAvailableUnits} available`,
+              summary.totalReservedUnits > 0 ? `${summary.totalReservedUnits} reserved` : null,
+              summary.totalDamagedUnits > 0 ? `${summary.totalDamagedUnits} damaged` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
           : `${summary.totalAvailableUnits} units in stock`,
     },
     { label: 'Products (SKUs)', value: String(summary.variantCount), icon: Boxes, tone: 'sky' },

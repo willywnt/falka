@@ -123,7 +123,14 @@ export class InventoryServerService {
           : {}),
       },
       include: {
-        inventory: { select: { availableStock: true, reservedStock: true, lastAdjustedAt: true } },
+        inventory: {
+          select: {
+            availableStock: true,
+            reservedStock: true,
+            damagedStock: true,
+            lastAdjustedAt: true,
+          },
+        },
         product: { select: { name: true } },
         ledgerEntries: {
           orderBy: { createdAt: 'desc' },
@@ -151,6 +158,7 @@ export class InventoryServerService {
         variantName: variant.name,
         availableStock,
         reservedStock: variant.inventory?.reservedStock ?? 0,
+        damagedStock: variant.inventory?.damagedStock ?? 0,
         lowStockThreshold: variant.lowStockThreshold,
         isLowStock: variant.alertEnabled && availableStock <= variant.lowStockThreshold,
         lastUpdatedAt: variant.inventory?.lastAdjustedAt?.toISOString() ?? null,

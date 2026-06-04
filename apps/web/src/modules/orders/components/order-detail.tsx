@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Link2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Link2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -19,14 +20,30 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
+import { useCreateReturnMutation } from '@/modules/returns/hooks/use-returns';
+
 import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
 import { MapOrderItemDialog } from './map-order-item-dialog';
 import { OrderStatusBadge } from './order-status-badge';
 
 export function OrderDetail({ orderId }: { orderId: string }) {
+  const router = useRouter();
   const { data, isLoading, error } = useOrderQuery(orderId);
   const resolveMutation = useResolveOrderItemMutation(orderId);
+  const createReturnMutation = useCreateReturnMutation();
   const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
+
+  async function handleCreateReturn() {
+    try {
+      const created = await createReturnMutation.mutateAsync({ orderId });
+      toast.success('Return opened', { description: 'Receive it to restock or write off goods.' });
+      router.push(`/dashboard/returns/${created.id}`);
+    } catch (err) {
+      toast.error('Could not open a return', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  }
 
   async function handleResolve(variantId: string) {
     if (!mapTarget) return;
@@ -191,6 +208,18 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
             </CardContent>
           </Card>
+
+          {data.status === 'SHIPPED' || data.status === 'COMPLETED' ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void handleCreateReturn()}
+              disabled={createReturnMutation.isPending}
+            >
+              <Undo2 className="size-4" />
+              {createReturnMutation.isPending ? 'Opening...' : 'Open a return'}
+            </Button>
+          ) : null}
         </aside>
       </div>
 

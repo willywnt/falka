@@ -10,6 +10,7 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
+  Undo2,
   Video,
   Warehouse,
   type LucideIcon,
@@ -51,6 +52,7 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
     items: [
       { title: 'Record', href: '/recordings', icon: Video },
       { title: 'Library', href: '/dashboard/recordings', icon: Library },
+      { title: 'Returns', href: '/dashboard/returns', icon: Undo2 },
     ],
   },
   {
