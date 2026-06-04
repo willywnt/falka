@@ -11,6 +11,25 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
+// Cross-cutting "session expired" signal. The fetch layer stays free of React
+// and navigation — it only broadcasts that a 401 (UNAUTHORIZED) was seen, and a
+// client component (SessionExpiryWatcher) decides how to react.
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+}
+
+function notifyUnauthorized(): void {
+  for (const listener of unauthorizedListeners) {
+    listener();
+  }
+}
+
 function buildUrl(path: string, params?: FetchOptions['params']): string {
   const url = path.startsWith('http') ? path : `${window.location.origin}${path}`;
 
@@ -31,6 +50,13 @@ async function parseResponse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
+    // A 401 from any route means the session is gone/invalid (the API only
+    // returns 401 via apiUnauthorized). Broadcast so the app can bounce the
+    // user to /login while preserving where they were.
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+
     const error: ApiError = payload?.error ?? {
       code: 'HTTP_ERROR',
       message: response.statusText || 'Request failed',

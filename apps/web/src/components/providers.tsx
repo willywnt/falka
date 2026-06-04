@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react';
 
+import { SessionExpiryWatcher } from '@/components/session-expiry-watcher';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
+          <SessionExpiryWatcher />
           {children}
           <Toaster richColors closeButton />
           {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
