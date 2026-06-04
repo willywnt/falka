@@ -17,6 +17,101 @@ async function hashSeedPassword(password: string): Promise<string> {
   });
 }
 
+/**
+ * Variants the order-pull lifecycle demo drives. Each `index` mirrors the stub
+ * import/order adapters' external ids (`${shopId}-P{index}`/`-V{index}`) and SKU,
+ * so pulling orders resolves to these mapped variants and moves their stock.
+ */
+const DEMO_VARIANTS = [
+  { index: 1, productName: 'Cotton Tee', variantName: 'Black / S', sku: 'BLACK-S', stock: 50 },
+  { index: 2, productName: 'Cotton Tee', variantName: 'Black / M', sku: 'BLACK-M', stock: 50 },
+  { index: 4, productName: 'Canvas Tote', variantName: 'Natural', sku: 'NATURAL', stock: 50 },
+] as const;
+
+/**
+ * Idempotently seed a small mapped catalog (product → variant → stocked inventory →
+ * listing → sync-ready mapping) so a freshly seeded DB can demonstrate the
+ * reserve → ship → release order lifecycle out of the box. Skips any variant whose
+ * SKU already exists, so re-running the seed is safe.
+ */
+async function seedInventoryDemo(
+  userId: string,
+  connection: { id: string; shopId: string; provider: MarketplaceProvider },
+) {
+  let created = 0;
+
+  for (const demo of DEMO_VARIANTS) {
+    const existingVariant = await prisma.productVariant.findFirst({
+      where: { userId, sku: demo.sku },
+    });
+    if (existingVariant) continue;
+
+    const product =
+      (await prisma.product.findFirst({ where: { userId, name: demo.productName } })) ??
+      (await prisma.product.create({ data: { userId, name: demo.productName } }));
+
+    const variant = await prisma.productVariant.create({
+      data: {
+        userId,
+        productId: product.id,
+        sku: demo.sku,
+        name: demo.variantName,
+        price: '100000',
+      },
+    });
+
+    await prisma.inventory.create({
+      data: { variantId: variant.id, availableStock: demo.stock, lastAdjustedAt: new Date() },
+    });
+    await prisma.stockLedger.create({
+      data: {
+        userId,
+        variantId: variant.id,
+        delta: demo.stock,
+        balanceAfter: demo.stock,
+        reason: 'RESTOCK',
+        source: 'MANUAL',
+        note: 'Seed initial stock',
+      },
+    });
+
+    const listing = await prisma.marketplaceProduct.create({
+      data: {
+        userId,
+        marketplaceConnectionId: connection.id,
+        provider: connection.provider,
+        externalProductId: `${connection.shopId}-P${demo.index}`,
+        externalVariantId: `${connection.shopId}-V${demo.index}`,
+        externalSku: demo.sku,
+        externalProductName: demo.productName,
+        externalVariantName: demo.variantName,
+        stock: demo.stock,
+        status: 'ACTIVE',
+        lastImportedAt: new Date(),
+      },
+    });
+    await prisma.marketplaceProductMapping.create({
+      data: {
+        userId,
+        marketplaceConnectionId: connection.id,
+        marketplaceProductId: listing.id,
+        productVariantId: variant.id,
+        provider: connection.provider,
+        mappingStatus: 'MAPPED',
+        syncEnabled: true,
+        autoMapped: true,
+      },
+    });
+    created += 1;
+  }
+
+  console.log(
+    created > 0
+      ? `Inventory demo: ${created} mapped variant(s) seeded for the order-pull lifecycle.`
+      : 'Inventory demo: mapped variants already present.',
+  );
+}
+
 async function main() {
   console.log('Seeding database...');
 
@@ -87,16 +182,15 @@ async function main() {
     console.log(`Sample recording: ${recording.noResi} (${recording.status})`);
   }
 
-  const existingConnection = await prisma.marketplaceConnection.findFirst({
-    where: {
-      userId: demoUser.id,
-      provider: MarketplaceProvider.SHOPEE,
-      shopId: 'seed-shop-001',
-    },
-  });
-
-  if (!existingConnection) {
-    const connection = await prisma.marketplaceConnection.create({
+  const connection =
+    (await prisma.marketplaceConnection.findFirst({
+      where: {
+        userId: demoUser.id,
+        provider: MarketplaceProvider.SHOPEE,
+        shopId: 'seed-shop-001',
+      },
+    })) ??
+    (await prisma.marketplaceConnection.create({
       data: {
         userId: demoUser.id,
         provider: MarketplaceProvider.SHOPEE,
@@ -106,10 +200,11 @@ async function main() {
         encryptedRefreshToken: 'encrypted-refresh-placeholder',
         isActive: true,
       },
-    });
+    }));
 
-    console.log(`Sample marketplace connection: ${connection.provider} / ${connection.shopName}`);
-  }
+  console.log(`Sample marketplace connection: ${connection.provider} / ${connection.shopName}`);
+
+  await seedInventoryDemo(demoUser.id, connection);
 
   await prisma.auditLog.create({
     data: {

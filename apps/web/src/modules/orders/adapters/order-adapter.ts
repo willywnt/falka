@@ -47,49 +47,79 @@ function stubItem(
 }
 
 /**
- * Deterministic stand-in for a real order API. Returns a stable set of orders
- * for a shop (idempotent re-pull) that reference the stub listings, so a paid
- * order decrements the mapped internal variant. Real provider adapters replace
+ * Deterministic stand-in for a real order API that walks a scripted lifecycle so
+ * the reserve → ship → release behavior is observable end-to-end across pulls:
+ *
+ *   pull #1   → all 3 orders PAID                  → each RESERVES stock (available−, reserved+)
+ *   pull #2+  → `${s}-SHIP`   becomes SHIPPED      → reservation consumed (reserved−)
+ *               `${s}-RELEASE` becomes CANCELLED   → reservation released (available+, reserved−)
+ *               `${s}-RESERVE` stays PAID          → a standing reservation
+ *               `${s}-PENDING` stays PENDING       → unpaid, never touches stock
+ *
+ * Each order references a distinct stub listing (mirrors StubMarketplaceImportAdapter's
+ * external ids) so it resolves to a mapped internal variant. The per-shop pull counter
+ * lives in memory, so the timeline restarts when the dev server restarts — the
+ * idempotent lifecycle guards make any replay harmless. Real provider adapters replace
  * this without touching the ingest service.
+ *
+ * Note: each store has a 30s pull cooldown, so wait ~30s between pulls to advance a step.
  */
 export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
   constructor(readonly provider: MarketplaceProvider) {}
 
+  private readonly pullCount = new Map<string, number>();
+
   fetchOrders(params: { shopId: string }): Promise<NormalizedOrder[]> {
     const s = params.shopId;
-    const raw = { source: 'stub' };
+    const step = this.pullCount.get(s) ?? 0;
+    this.pullCount.set(s, step + 1);
+
+    const shipStatus: NormalizedOrderStatus = step === 0 ? 'PAID' : 'SHIPPED';
+    const releaseStatus: NormalizedOrderStatus = step === 0 ? 'PAID' : 'CANCELLED';
+    const raw = { source: 'stub', step };
 
     return Promise.resolve([
       {
-        externalOrderId: `${s}-ORD-1`,
+        externalOrderId: `${s}-RESERVE`,
         status: 'PAID',
-        noResi: `RESI-${s}-1`,
-        buyerName: 'Budi',
+        noResi: `RESI-${s}-RESERVE`,
+        buyerName: 'Budi (reserve)',
         totalAmount: 200_000,
         currency: 'IDR',
         placedAt: new Date(Date.UTC(2026, 0, 10)),
-        items: [stubItem(s, 2, 'BLACK-M', 'Cotton Tee - Black / M', 2)],
+        items: [stubItem(s, 1, 'BLACK-S', 'Cotton Tee - Black / S', 2)],
         raw,
       },
       {
-        externalOrderId: `${s}-ORD-2`,
-        status: 'PAID',
-        noResi: `RESI-${s}-2`,
-        buyerName: 'Sari',
-        totalAmount: 100_000,
+        externalOrderId: `${s}-SHIP`,
+        status: shipStatus,
+        noResi: `RESI-${s}-SHIP`,
+        buyerName: 'Sari (ship)',
+        totalAmount: 300_000,
         currency: 'IDR',
         placedAt: new Date(Date.UTC(2026, 0, 11)),
-        items: [stubItem(s, 1, 'BLACK-S', 'Cotton Tee - Black / S', 1)],
+        items: [stubItem(s, 2, 'BLACK-M', 'Cotton Tee - Black / M', 3)],
         raw,
       },
       {
-        externalOrderId: `${s}-ORD-3`,
-        status: 'PENDING',
-        noResi: null,
-        buyerName: 'Andi',
+        externalOrderId: `${s}-RELEASE`,
+        status: releaseStatus,
+        noResi: releaseStatus === 'PAID' ? `RESI-${s}-RELEASE` : null,
+        buyerName: 'Andi (release)',
         totalAmount: 150_000,
         currency: 'IDR',
         placedAt: new Date(Date.UTC(2026, 0, 12)),
+        items: [stubItem(s, 4, 'NATURAL', 'Canvas Tote - Natural', 1)],
+        raw,
+      },
+      {
+        externalOrderId: `${s}-PENDING`,
+        status: 'PENDING',
+        noResi: null,
+        buyerName: 'Dewi (pending)',
+        totalAmount: 100_000,
+        currency: 'IDR',
+        placedAt: new Date(Date.UTC(2026, 0, 13)),
         items: [stubItem(s, 5, '300ML', 'Enamel Mug - 300ml', 3)],
         raw,
       },
