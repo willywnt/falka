@@ -70,6 +70,11 @@ export const propagateInventoryStockJobSchema = z.object({
   availableStock: z.number().int(),
   /** The stock-ledger entry id that triggered this propagation (idempotency key). */
   eventId: z.string().min(1),
+  /**
+   * When set, mappings on this connection are skipped — used for inbound orders so
+   * the channel the order came from isn't re-synced against its own stock change.
+   */
+  excludeConnectionId: z.string().cuid().optional(),
 });
 
 export type PropagateInventoryStockJobPayload = z.infer<typeof propagateInventoryStockJobSchema>;

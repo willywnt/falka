@@ -373,6 +373,8 @@ export class OrdersServerService {
           variantId,
           availableStock: inventory?.availableStock ?? 0,
           eventId: `order-${connectionId}-${variantId}-${Date.now()}`,
+          // Don't re-sync the channel the order came from against its own change.
+          excludeConnectionId: connectionId,
         });
       } catch (error) {
         appLogger.warn('orders.propagate.enqueue_failed', {

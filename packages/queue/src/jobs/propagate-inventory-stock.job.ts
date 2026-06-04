@@ -33,7 +33,11 @@ export async function processPropagateInventoryStockJob(
     durationMs: 0,
   };
 
-  const mappings = await findSyncReadyMappingsByVariant(payload.userId, payload.variantId);
+  const mappings = await findSyncReadyMappingsByVariant(
+    payload.userId,
+    payload.variantId,
+    payload.excludeConnectionId,
+  );
   const syncQueue = createQueue(QUEUE_NAMES.MARKETPLACE_STOCK_SYNC);
 
   for (const mapping of mappings) {

@@ -8,10 +8,15 @@ export type SyncReadyMapping = {
   marketplaceProductId: string;
 };
 
-/** Mappings eligible to receive a stock push for a given variant. */
+/**
+ * Mappings eligible to receive a stock push for a given variant. When
+ * `excludeConnectionId` is set, mappings on that connection are skipped — used for
+ * inbound orders so the source channel isn't re-synced against its own change.
+ */
 export async function findSyncReadyMappingsByVariant(
   userId: string,
   variantId: string,
+  excludeConnectionId?: string,
 ): Promise<SyncReadyMapping[]> {
   const mappings = await prisma.marketplaceProductMapping.findMany({
     where: {
@@ -20,6 +25,7 @@ export async function findSyncReadyMappingsByVariant(
       syncEnabled: true,
       connection: { isActive: true, deletedAt: null },
       marketplaceProduct: { deletedAt: null },
+      ...(excludeConnectionId ? { marketplaceConnectionId: { not: excludeConnectionId } } : {}),
     },
     select: {
       id: true,
