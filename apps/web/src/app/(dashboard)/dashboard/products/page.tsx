@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
 import { PageHeader } from '@/components/page-header';
 import { ProductsDashboard } from '@/modules/catalog/components/products-dashboard';
@@ -15,7 +16,9 @@ export default function ProductsPage() {
         title="Products"
         description="Your product catalog — the master list of items you sell."
       />
-      <ProductsDashboard />
+      <Suspense fallback={null}>
+        <ProductsDashboard />
+      </Suspense>
     </div>
   );
 }

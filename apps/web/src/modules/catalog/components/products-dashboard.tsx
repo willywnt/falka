@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MoreHorizontal, Package, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +24,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 
 import { useDeleteProductMutation, useProductsQuery } from '../hooks/use-products';
 import type { ProductListItem } from '../types';
@@ -31,11 +33,17 @@ import { DeleteProductDialog } from './delete-product-dialog';
 import { ProductFormDialog } from './product-form-dialog';
 
 export function ProductsDashboard() {
-  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useUrlFilters({ search: '' });
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ProductListItem | null>(null);
 
-  const { data, isLoading, error } = useProductsQuery(search.trim() || undefined);
+  useEffect(() => {
+    if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch });
+  }, [debouncedSearch, filters.search, setFilters]);
+
+  const { data, isLoading, error } = useProductsQuery(filters.search.trim() || undefined);
   const deleteMutation = useDeleteProductMutation();
 
   async function handleDeleteConfirm() {
@@ -59,8 +67,8 @@ export function ProductsDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
           placeholder="Search products..."
           className="sm:max-w-xs"
         />
@@ -87,12 +95,12 @@ export function ProductsDashboard() {
           icon={Package}
           title="No products yet"
           description={
-            search
+            filters.search
               ? 'No products match your search.'
               : 'Create your first product to start tracking stock.'
           }
           action={
-            search ? null : (
+            filters.search ? null : (
               <Button onClick={() => setCreateOpen(true)} variant="outline">
                 <Plus className="size-4" />
                 New product
