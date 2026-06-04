@@ -268,10 +268,14 @@ describe('findByResi / markFulfilledByResi (fulfillment)', () => {
 
     expect(count).toBe(1);
     const args = prismaMock.order.updateMany.mock.calls[0]?.[0] as {
-      where: { userId: string; noResi: string; fulfilledAt: null };
+      where: { userId: string; noResi: { equals: string; mode: string }; fulfilledAt: null };
       data: { fulfilledAt: Date };
     };
-    expect(args.where).toMatchObject({ userId: USER, noResi: 'RESI-1', fulfilledAt: null });
+    expect(args.where).toMatchObject({
+      userId: USER,
+      noResi: { equals: 'RESI-1', mode: 'insensitive' },
+      fulfilledAt: null,
+    });
     expect(args.data.fulfilledAt).toBeInstanceOf(Date);
   });
 });

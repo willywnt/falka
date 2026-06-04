@@ -105,10 +105,14 @@ export class OrdersServerService {
     };
   }
 
-  /** The most recent order matching a tracking number — for the packing-station view. */
+  /**
+   * The most recent order matching a tracking number — for the packing-station
+   * view. Matched case-insensitively (resi/tracking numbers are case-insensitive;
+   * the scanner uppercases while marketplaces may not).
+   */
   async findByResi(userId: string, noResi: string): Promise<OrderDetail | null> {
     const order = await prisma.order.findFirst({
-      where: { userId, noResi },
+      where: { userId, noResi: { equals: noResi, mode: 'insensitive' } },
       orderBy: { placedAt: 'desc' },
       select: { id: true },
     });
@@ -118,12 +122,13 @@ export class OrdersServerService {
 
   /**
    * Mark the order(s) with this tracking number as fulfilled (packed + recorded).
-   * Idempotent — only stamps where `fulfilledAt` is null. Returns how many were
-   * stamped. Called best-effort after a packing video completes.
+   * Idempotent — only stamps where `fulfilledAt` is null. Matched case-insensitively
+   * (see findByResi). Returns how many were stamped. Called best-effort after a
+   * packing video completes.
    */
   async markFulfilledByResi(userId: string, noResi: string): Promise<number> {
     const result = await prisma.order.updateMany({
-      where: { userId, noResi, fulfilledAt: null },
+      where: { userId, noResi: { equals: noResi, mode: 'insensitive' }, fulfilledAt: null },
       data: { fulfilledAt: new Date() },
     });
     if (result.count > 0) {

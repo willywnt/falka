@@ -158,7 +158,7 @@ export function RecordingPanel() {
                     id="noResi"
                     placeholder="Enter resi number"
                     value={noResi}
-                    onChange={(event) => setNoResi(event.target.value.toUpperCase())}
+                    onChange={(event) => setNoResi(event.target.value)}
                     disabled={isBusy}
                     autoComplete="off"
                   />
