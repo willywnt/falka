@@ -27,6 +27,7 @@ async function main() {
   const userId = demoUser.id;
 
   const deletedOrders = await prisma.order.deleteMany({ where: { userId } });
+  const deletedSales = await prisma.sale.deleteMany({ where: { userId } });
 
   await prisma.marketplaceConnection.updateMany({
     where: { userId, shopId: DEMO_SHOP_ID },
@@ -66,7 +67,7 @@ async function main() {
   }
 
   console.log(
-    `Demo reset: removed ${deletedOrders.count} order(s) (+ their returns), reset ${resetVariants} variant(s) to seed stock, cleared pull cooldown.`,
+    `Demo reset: removed ${deletedOrders.count} order(s) (+ their returns) and ${deletedSales.count} sale(s), reset ${resetVariants} variant(s) to seed stock, cleared pull cooldown.`,
   );
   console.log('Restart the dev server to rewind the stub pull timeline to #1.');
 }
