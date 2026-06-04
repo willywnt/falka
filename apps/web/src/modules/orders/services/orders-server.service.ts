@@ -10,13 +10,7 @@ import { marketplaceMappingService } from '@/modules/marketplace/services/market
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
-import type {
-  MultiPullOrdersResult,
-  OrderDetail,
-  OrderItemDetail,
-  OrderListItem,
-  PullOrdersResult,
-} from '../types';
+import type { MultiPullOrdersResult, OrderDetail, OrderItemDetail, OrderListItem } from '../types';
 
 /** Minimum gap between pulls from the same store, to curb API abuse. */
 const PULL_COOLDOWN_MS = 30_000;
@@ -178,29 +172,6 @@ export class OrdersServerService {
 
     appLogger.info('orders.item.resolved', { userId, orderId, orderItemId, variantId });
     return this.getOrder(userId, orderId);
-  }
-
-  async pullOrders(userId: string, connectionId: string): Promise<PullOrdersResult> {
-    const connection = await prisma.marketplaceConnection.findFirst({
-      where: { id: connectionId, userId, deletedAt: null },
-    });
-    if (!connection) throw OrderError.notFound('Marketplace connection not found.');
-    if (!connection.isActive) throw OrderError.validation('Marketplace connection is not active.');
-
-    const result = await this.pullOneConnection(userId, connection);
-    await prisma.marketplaceConnection.update({
-      where: { id: connection.id },
-      data: { lastOrdersPulledAt: new Date() },
-    });
-    await this.propagateAffected(userId, result.affected, connection.id);
-
-    appLogger.info('orders.pulled', {
-      userId,
-      connectionId: connection.id,
-      pulled: result.pulled,
-      applied: result.applied,
-    });
-    return { pulled: result.pulled, applied: result.applied };
   }
 
   /**

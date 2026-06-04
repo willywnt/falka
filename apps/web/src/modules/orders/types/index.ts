@@ -30,8 +30,6 @@ export type OrderListItem = {
 
 export type OrderDetail = OrderListItem & { items: OrderItemDetail[] };
 
-export type PullOrdersResult = { pulled: number; applied: number };
-
 /** Result of pulling from several stores at once. */
 export type MultiPullOrdersResult = {
   storesPulled: number;
