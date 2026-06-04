@@ -389,6 +389,16 @@ export class OrdersServerService {
           });
         });
         reverted += 1;
+      } else if (saved.status === 'CANCELLED' && wasShipped) {
+        // RETURN: cancelled after shipping. The reserved units already physically
+        // left at ship time, so crediting available now would be phantom stock.
+        // Leave stock untouched and flag it — the physical return (restock vs
+        // damaged) is handled manually for now (a full returns flow is separate).
+        appLogger.warn('orders.return.detected', {
+          userId,
+          orderId: saved.id,
+          externalOrderId: saved.externalOrderId,
+        });
       }
     }
 
