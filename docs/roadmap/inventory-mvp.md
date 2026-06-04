@@ -1,6 +1,7 @@
 # Inventory & Multi-Marketplace Stock Sync — MVP Roadmap
 
-> Status: **planning / Phase 0 in progress** · Started 2026-06-03 · Owner: @willywnt
+> Status: **Phases 0–5 shipped (stub-backed)** · Started 2026-06-03 · Owner: @willywnt
+> · current work on branch `feat/order-loop-correctness`. Next: Phase 6 (automation/reporting).
 >
 > This is the working reference for the next big MVP: an **internal inventory system
 > that is the source of truth**, integrating stock across marketplaces (Shopee,
@@ -58,35 +59,36 @@ marketplace via adapter; idempotent, rate-limited, retried) + reconciliation (dr
 Each phase follows the `CLAUDE.md` workflow: incremental, per-module, one logical commit
 per change, all gates green (`typecheck`/`lint`/`build`/`test`).
 
-- **Phase 0 — IA reshell** _(no schema)_ — Group the sidebar into product sections
-  (Catalog, Channels, Fulfillment, System), add placeholder Products/Inventory pages.
-  Existing pages and routes untouched.
-- **Phase 1 — Inventory foundation** _(internal SoT, no marketplace)_ — `Product`,
-  `ProductVariant`, `Inventory`, and an **append-only `StockLedger`** as the real SoT.
-  New modules `catalog` + `inventory`: catalog CRUD, manual stock adjustments, ledger,
-  low-stock alerts. Usable on its own as an internal stock manager. **Needs schema approval.**
-- **Phase 2 — Catalog ↔ marketplace mapping** _(read-only import)_ — Evolve
-  `MarketplaceConnection` → `MarketplaceAccount`; add `MarketplaceProduct` + import job
-  (via stub adapter); `MarketplaceProductMapping` (auto-map by SKU/barcode + confidence,
-  manual override). No writes to marketplaces yet.
-- **Phase 3 — Outbound stock sync** _(SoT → marketplaces)_ — Port the reverted engine:
-  `propagate-inventory-stock` + `sync-marketplace-stock`, idempotency, rate-limit,
-  provider health, sync log/status. `Dev`/`Unwired` adapters → first real Shopee adapter.
-  Per-account toggle, dry-run, manual retry; read-only reconciliation preview.
-- **Phase 4 — Inbound orders** _(close the loop, anti-oversell)_ — `Order` + `OrderItem`;
-  pull/webhook orders per marketplace. Paid order → reserve/decrement internal SoT →
-  propagate updated available to the **other** channels. Idempotent (webhooks retry).
-- **Phase 5 — Fulfillment unification** — Link `Recording` ↔ `Order` via `noResi`. Scan
-  resi → resolve order → show what to pack → record packing video → mark fulfilled.
-- **Phase 6 — Automation & reporting** — Scheduled reconciliation (auto-correct/alert on
-  drift), provider health dashboard, token auto-refresh worker, sales-velocity / dead-stock
-  / channel-performance reports.
+- **Phase 0 — IA reshell** _(no schema)_ — ✅ **done**. Sidebar product sections + placeholder pages.
+- **Phase 1 — Inventory foundation** — ✅ **done**. `catalog` + `inventory`: Product/Variant,
+  Inventory, append-only `StockLedger`, manual adjustments, ledger, low-stock alerts.
+- **Phase 2 — Catalog ↔ marketplace mapping** — ✅ **done** (stub import). `MarketplaceProduct` +
+  `MarketplaceProductMapping`, auto-map by NORMALIZED sku → `NEEDS_REVIEW` when non-exact.
+  (Connection kept as `MarketplaceConnection`, not renamed to `MarketplaceAccount`.)
+- **Phase 3 — Outbound stock sync** — ✅ **done** (stubs). `propagate-inventory-stock` +
+  `sync-marketplace-stock` engine, idempotency, rate-limit, per-listing sync status, `Dev`/`Unwired`
+  adapters. (First REAL Shopee adapter + provider-health/reconciliation → Phase 6.)
+- **Phase 4 — Inbound orders** — ✅ **done, and extended**. Multi-store pull + 30s cooldown; a full
+  per-order **reserve → ship → release stock lifecycle** (reserved/damaged buckets) with
+  cancellation→restock and **source-channel exclusion**; plus **Returns/RMA** (auto-open on post-ship
+  cancel + manual; process restock/damaged). Idempotent via the order's `inventory*` timestamps.
+  (Webhook ingestion still polling-only — pull, not push.)
+- **Phase 5 — Fulfillment unification** — ✅ **done**. Orders ↔ packing videos joined by
+  case-insensitive `noResi`; station **pack view** (what to pack), **auto-fulfill** on packing-video
+  complete (`Order.fulfilledAt`), packing-video **evidence** on orders/returns, links both ways.
+  (Formal `Recording.orderId` FK + pre-order backfill deferred — noResi-join for now.)
+- **Phase 6 — Automation & reporting** — ⏳ **next**. Scheduled reconciliation (drift), provider-health
+  dashboard, token auto-refresh worker, channel-performance / dead-stock reports. (Reorder intelligence
+  — velocity → days-of-cover → suggested qty, dead-stock status — already shipped in `inventory`.)
 - **Then** — full visual UI/UX redesign, once the domain is stable.
 
-## 5. Phase 1 schema draft — **REVIEW BEFORE IMPLEMENTING**
+## 5. Phase 1 schema draft — **APPLIED (+ evolved since)**
 
-Prisma schema is `CLAUDE.md` HARD CONSTRAINT #1. This is a proposal; it is **not** applied
-until approved.
+Applied — `packages/db/prisma/schema.prisma` is the source of truth. Beyond this draft the live
+schema has grown: `ProductVariant.cost`/`weight`/`leadTimeDays`/`minOrderQty`;
+`Order.inventoryAppliedAt`/`inventoryShippedAt`/`inventoryRevertedAt`/`fulfilledAt`; `StockLedgerReason`
+gained `ORDER_RELEASE` + `RETURN`; and `Return`/`ReturnItem` (+ `ReturnStatus`/`ReturnDisposition`).
+The original draft is kept below for historical context.
 
 ```prisma
 model Product {            // catalog master
@@ -130,8 +132,9 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 - `apps/web/src/modules/inventory` — stock levels, `StockLedger`, adjustments, alerts.
 - `apps/web/src/modules/marketplace` _(existing)_ — extend with accounts, external
   products, mappings, sync orchestration UI.
-- `apps/web/src/modules/orders` — Phase 4.
-- `apps/web/src/modules/recordings` _(existing)_ — becomes order-aware in Phase 5.
+- `apps/web/src/modules/orders` — orders + the reserve/ship/release lifecycle + fulfillment helpers.
+- `apps/web/src/modules/returns` — Returns/RMA (`Return`/`ReturnItem`), restock/damaged processing.
+- `apps/web/src/modules/recordings` _(existing)_ — now order-aware (pack view, by-resi evidence).
 - `packages/queue/src/marketplace-sync` — the sync engine (worker-side), ported from `dist`.
 - **Boundary watch:** token decryption currently lives in the web `marketplace` module, but
   the worker needs it for sync. Lift the token-crypto into a shared `@olshop/*` package
@@ -140,17 +143,18 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 
 ## 8. Parked ideas for later MVPs
 
-- Export packing-video as **dispute evidence** (shareable link to buyer/marketplace).
+- ✅ **Returns (retur) tied to recordings** — done (Returns/RMA + packing-video evidence by `noResi`).
+- Export packing-video as **dispute evidence** — basic in-app evidence (order/return show the video by
+  `noResi`) shipped; a **shareable external link** to buyer/marketplace is still parked.
 - **AI mismatch detection** in packing video (vision/OCR) — `aiProcessing`/`ocrProcessing`
   placeholders already reserved in `packages/queue` types.
-- Purchasing / restock + suppliers (`incomingStock` already modeled).
+- Purchasing / restock + suppliers (`incomingStock` modeled but still unused — the last empty bucket).
 - Bundles / kits (one listing = many SKUs) — a classic oversell trap.
 - Multi-warehouse / location stock.
-- Returns (retur) tied to recordings.
-- Analytics / reporting.
+- Analytics / reporting (profit/channel-performance — partly Phase 6).
 - Recording thumbnail generation (`thumbnailGeneration` placeholder reserved).
 
 ## 9. Approval gates
 
-- [ ] Phase 1 schema (§5) approved before touching `schema.prisma` + migration.
-- [ ] Real marketplace API wiring (Phase 3+) gated on partner/developer approvals.
+- [x] Phase 1 schema (§5) approved + applied (and evolved through Phases 4–5).
+- [ ] Real marketplace API wiring (Phase 3+) gated on partner/developer approvals (still stubs).
