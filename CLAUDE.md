@@ -165,31 +165,44 @@ commit per change** · keep all gates green at every commit · report potential
 bug/security/race/perf as **separate suggestions** (don't silently change) · when unsure
 between approaches, **ASK** — boundary beats dedup.
 
-## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders)
+## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders · returns · order-aware recordings)
 
 Internal inventory = **source of truth**, integrated with marketplaces (adapter-first, STUBS).
 Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-mvp.md`.
 
-- **`StockLedger` (append-only) is the truth; `Inventory` is a fast-read cache** — every stock
-  change = 1 ledger row + 1 Inventory update in one tx. The `inventory` module owns ALL stock
-  writes; `catalog` (Product/Variant) reaches stock ONLY via the inventory service.
-- **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change
-  enqueues `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub
-  simulates). **Inbound orders** decrement the SoT on PAID + propagate to the OTHER channels
-  (anti-oversell), idempotent via `Order.inventoryAppliedAt`.
-- **Built since the base MVP** (specifics in the cursor rule): reorder report (velocity →
-  days-of-cover → suggested qty, honours per-variant `leadTimeDays`/`minOrderQty`); stock activity
-  log (filter + paginate + CSV); variant editing; **multi-store order pull** (`pullFromConnections`,
-  default all active, 30s per-store cooldown via `lastOrdersPulledAt`) on the Orders page; mapping an
-  unmapped order item (`resolveOrderItem` → `mapByExternalRef`). Mapping is 1:1 per LISTING but a
-  variant MAY map to many listings (cross-channel — do NOT force 1:1). Auto-map is NORMALIZED sku,
-  NEVER edit-distance (`…-M` ≠ `…-L`); non-exact → `NEEDS_REVIEW`, sync stays off.
-- **UI cross-module**: import another module's hooks/types, NOT its components — compose at the
-  app layer (page).
+- **`StockLedger` (append-only, available-centric) is the truth; `Inventory` is a fast-read cache**
+  (available/reserved/damaged/incoming) — every stock change = 1 ledger row + 1 Inventory update in
+  one tx. The `inventory` module owns ALL stock writes; `catalog` (Product/Variant) reaches stock
+  ONLY via the inventory service.
+- **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change enqueues
+  `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub simulates).
+- **Inbound order stock lifecycle** (each stage once, idempotent via `Order.inventoryAppliedAt`/
+  `inventoryShippedAt`/`inventoryRevertedAt`): RESERVE on PAID (`available−`, `reserved+`) → SHIP on
+  SHIPPED/COMPLETED (consume reservation, `reserved−`, available unchanged) → RELEASE on
+  cancel-**before**-ship (`available+`, `reserved−`); cancel-**after**-ship is a **return**, not a
+  release. Only available changes (reserve/release) propagate, **excluding the source channel**.
+- **Returns/RMA** (`returns` module): a return opens (auto on post-ship cancel, or manual) → processed
+  per line to RESTOCK (`available+`) or DAMAGED (`damagedStock+`); ledger reason `RETURN`. Stock moves
+  only at processing, via the inventory service — never over-credit.
+- **Fulfillment (Phase 5)**: orders ↔ packing videos (recordings) join by **`noResi`** (no FK,
+  **case-insensitive**). A completed packing video best-effort stamps `Order.fulfilledAt`; the
+  recording **station shows a pack view** (the matched order's items), and orders/returns show the
+  packing video as **dispute evidence**. Links work both ways.
+- **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty, honours per-variant
+  `leadTimeDays`/`minOrderQty`); stock activity log (filter + paginate + CSV); variant editing. Demand
+  velocity sums `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN` (net), excludes the delta-0 `ORDER_SHIP`.
+- **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
+  — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
+  `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
+  **Multi-store pull** `pullFromConnections` (default all active, 30s per-store cooldown).
+- **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
+  layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/stock to re-test the
+  loop (then restart the dev server to rewind the stub pull timeline).
 - **Gotchas**: BullMQ jobId can't contain `:`; the dev server locks the Prisma engine DLL — stop it
-  before `prisma generate`/migrate (but an index-only migration can use `--skip-generate` WITHOUT
-  stopping); `next build` "collect page data" flake → re-run; a real provider adapter needs
-  token-crypto lifted to a shared package.
+  before `prisma generate`/migrate (index-only migration can use `--skip-generate` WITHOUT stopping);
+  after adding a `page.tsx`/route, **typed routes** make `tsc` fail on `Route` literals until
+  `next build` regenerates `.next/types` (build before typecheck); `next build` "collect page data"
+  flake → re-run; a real provider adapter needs token-crypto lifted to a shared package.
 
 ## 13. UI / design system
 
