@@ -11,6 +11,7 @@ import { useCameraDevices } from '@/modules/recordings/recovery/hooks/use-camera
 
 import { useRecording } from '../hooks/use-recording';
 import { useDuplicateResiWarning } from '../hooks/use-duplicate-resi-warning';
+import { PackOrderPanel } from './pack-order-panel';
 import { RecordingControls } from './recording-controls';
 import { RecordingLifecycleStatusBadge } from './recording-lifecycle-status-badge';
 import { RecordingTimer } from './recording-timer';
@@ -162,6 +163,8 @@ export function RecordingPanel() {
                     autoComplete="off"
                   />
                 </div>
+
+                <PackOrderPanel noResi={noResi} />
 
                 {showCameraPicker ? (
                   <div className="space-y-2">
