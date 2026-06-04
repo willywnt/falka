@@ -2,6 +2,8 @@ import { MarketplaceProvider, PrismaClient, RecordingStatus, UserRole } from '@p
 import { DEFAULT_STORAGE_QUOTA_BYTES } from '@olshop/config/limits';
 import argon2 from 'argon2';
 
+import { DEMO_SHOP_ID, DEMO_USER_EMAIL, DEMO_VARIANTS } from './demo-data';
+
 const prisma = new PrismaClient();
 
 const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@olshop.local';
@@ -16,18 +18,6 @@ async function hashSeedPassword(password: string): Promise<string> {
     parallelism: 4,
   });
 }
-
-/**
- * Variants the order-pull lifecycle demo drives. Each `index` mirrors the stub
- * import/order adapters' external ids (`${shopId}-P{index}`/`-V{index}`) and SKU,
- * so pulling orders resolves to these mapped variants and moves their stock.
- */
-const DEMO_VARIANTS = [
-  { index: 1, productName: 'Cotton Tee', variantName: 'Black / S', sku: 'BLACK-S', stock: 50 },
-  { index: 2, productName: 'Cotton Tee', variantName: 'Black / M', sku: 'BLACK-M', stock: 50 },
-  { index: 3, productName: 'Cotton Tee', variantName: 'White / M', sku: 'WHITE-M', stock: 50 },
-  { index: 4, productName: 'Canvas Tote', variantName: 'Natural', sku: 'NATURAL', stock: 50 },
-] as const;
 
 /**
  * Idempotently seed a small mapped catalog (product → variant → stocked inventory →
@@ -139,14 +129,14 @@ async function main() {
   console.log(`Admin user: ${admin.email} (${admin.role})`);
 
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@olshop.local' },
+    where: { email: DEMO_USER_EMAIL },
     update: {
       displayName: 'Demo User',
       role: UserRole.USER,
       passwordHash: demoPasswordHash,
     },
     create: {
-      email: 'demo@olshop.local',
+      email: DEMO_USER_EMAIL,
       passwordHash: demoPasswordHash,
       displayName: 'Demo User',
       role: UserRole.USER,
@@ -188,14 +178,14 @@ async function main() {
       where: {
         userId: demoUser.id,
         provider: MarketplaceProvider.SHOPEE,
-        shopId: 'seed-shop-001',
+        shopId: DEMO_SHOP_ID,
       },
     })) ??
     (await prisma.marketplaceConnection.create({
       data: {
         userId: demoUser.id,
         provider: MarketplaceProvider.SHOPEE,
-        shopId: 'seed-shop-001',
+        shopId: DEMO_SHOP_ID,
         shopName: 'Seed Shopee Store',
         encryptedAccessToken: 'encrypted-token-placeholder',
         encryptedRefreshToken: 'encrypted-refresh-placeholder',
