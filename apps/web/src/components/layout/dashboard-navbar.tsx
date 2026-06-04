@@ -1,23 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@olshop/config/constants';
-import {
-  ChevronDown,
-  LogOut,
-  Menu,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Settings as SettingsIcon,
-  Sun,
-} from 'lucide-react';
+import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
+import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,18 +20,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { useUiStore } from '@/store/ui-store';
 
 export function DashboardNavbar() {
-  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
-  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const { toggle } = useSidebar();
   const { setTheme, theme } = useTheme();
   const { user } = useCurrentUser();
-
-  // Match the sidebar's mounted-guard so the icon doesn't mismatch the SSR'd HTML.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const collapsed = mounted ? !sidebarOpen : false;
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 flex h-14 items-center gap-4 border-b px-4 backdrop-blur md:px-6">
@@ -70,15 +54,9 @@ export function DashboardNavbar() {
           </SheetContent>
         </Sheet>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden md:inline-flex"
-          onClick={toggleSidebar}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-          <span className="sr-only">{collapsed ? 'Expand sidebar' : 'Collapse sidebar'}</span>
+        <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggle}>
+          <Menu className="size-4" />
+          <span className="sr-only">Toggle sidebar</span>
         </Button>
       </div>
 

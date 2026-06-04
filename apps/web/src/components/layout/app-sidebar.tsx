@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@olshop/config/constants';
 import { Boxes, Plus, ShoppingBag, Video } from 'lucide-react';
 
 import { SidebarNav } from '@/components/layout/sidebar-nav';
+import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { useUiStore } from '@/store/ui-store';
 
 function SidebarCreate({ collapsed }: { collapsed: boolean }) {
   return (
@@ -61,13 +60,7 @@ function SidebarCreate({ collapsed }: { collapsed: boolean }) {
 }
 
 export function AppSidebar({ className }: { className?: string }) {
-  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
-  // The collapse preference is persisted (localStorage); ignore it until mounted so
-  // the server-rendered HTML (expanded) matches the first client render, then settle
-  // to the saved state (the width animates via transition-all).
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const collapsed = mounted ? !sidebarOpen : false;
+  const { collapsed } = useSidebar();
 
   return (
     <aside
@@ -97,7 +90,7 @@ export function AppSidebar({ className }: { className?: string }) {
         <SidebarCreate collapsed={collapsed} />
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-4">
+      <div className="sidebar-scroll flex-1 overflow-y-auto pb-4">
         <SidebarNav collapsed={collapsed} />
       </div>
 

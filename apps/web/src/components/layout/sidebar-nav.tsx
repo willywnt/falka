@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Boxes,
+  ChevronRight,
   LayoutDashboard,
   Library,
   Settings,
@@ -17,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { useSidebar } from '@/components/layout/sidebar-provider';
 import { cn } from '@/lib/utils';
 
 type SidebarNavItem = {
@@ -90,41 +92,62 @@ export function SidebarNav({
 }) {
   const pathname = usePathname();
   const activeHref = resolveActiveHref(pathname);
+  const { collapsedSections, toggleSection } = useSidebar();
 
   return (
     <nav className={cn('flex flex-col gap-4', collapsed ? 'px-2' : 'px-3')}>
-      {sidebarNavSections.map((section, index) => (
-        <div key={section.label ?? `section-${index}`} className="flex flex-col gap-1">
-          {section.label && !collapsed ? (
-            <p className="text-sidebar-foreground/50 px-3 pb-1 text-xs font-medium tracking-wider uppercase">
-              {section.label}
-            </p>
-          ) : null}
-          {section.items.map((item) => {
-            const isActive = item.href === activeHref;
-            const Icon = item.icon;
+      {sidebarNavSections.map((section, index) => {
+        const label = section.label;
+        const sectionCollapsed = label ? collapsedSections.has(label) : false;
+        // The icon rail always shows items; the expanded sidebar honours the accordion.
+        const showItems = collapsed || !sectionCollapsed;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                title={collapsed ? item.title : undefined}
-                className={cn(
-                  'flex items-center rounded-lg text-sm font-medium transition-colors',
-                  collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
-                )}
+        return (
+          <div key={label ?? `section-${index}`} className="flex flex-col gap-1">
+            {label && !collapsed ? (
+              <button
+                type="button"
+                onClick={() => toggleSection(label)}
+                aria-expanded={!sectionCollapsed}
+                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/80 flex w-full items-center justify-between gap-2 px-3 pb-1 text-xs font-medium tracking-wider uppercase transition-colors"
               >
-                <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
-                {collapsed ? null : item.title}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+                {label}
+                <ChevronRight
+                  className={cn(
+                    'size-3.5 transition-transform duration-200',
+                    !sectionCollapsed && 'rotate-90',
+                  )}
+                />
+              </button>
+            ) : null}
+            {showItems
+              ? section.items.map((item) => {
+                  const isActive = item.href === activeHref;
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onNavigate}
+                      title={collapsed ? item.title : undefined}
+                      className={cn(
+                        'flex items-center rounded-lg text-sm font-medium transition-colors',
+                        collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+                      )}
+                    >
+                      <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
+                      {collapsed ? null : item.title}
+                    </Link>
+                  );
+                })
+              : null}
+          </div>
+        );
+      })}
     </nav>
   );
 }

@@ -1,20 +1,34 @@
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { DashboardNavbar } from '@/components/layout/dashboard-navbar';
+import { SidebarProvider } from '@/components/layout/sidebar-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { GlobalRecordingReliability } from '@/modules/recordings/recovery/components/global-recording-reliability';
 import { PendingUploadProvider } from '@/modules/recordings/recovery/components/pending-upload-center';
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  defaultCollapsed,
+  defaultCollapsedSections,
+}: {
+  children: React.ReactNode;
+  defaultCollapsed: boolean;
+  defaultCollapsedSections: string[];
+}) {
   return (
     <TooltipProvider>
       <GlobalRecordingReliability>
-        <div className="flex h-screen overflow-hidden">
-          <AppSidebar />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <DashboardNavbar />
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <SidebarProvider
+          defaultCollapsed={defaultCollapsed}
+          defaultCollapsedSections={defaultCollapsedSections}
+        >
+          <div className="flex h-screen overflow-hidden">
+            <AppSidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <DashboardNavbar />
+              <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+            </div>
           </div>
-        </div>
+        </SidebarProvider>
         <PendingUploadProvider />
       </GlobalRecordingReliability>
     </TooltipProvider>
