@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Link2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Link2, Undo2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
+import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordings-management';
 import { useCreateReturnMutation } from '@/modules/returns/hooks/use-returns';
 
 import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
@@ -31,6 +32,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const { data, isLoading, error } = useOrderQuery(orderId);
   const resolveMutation = useResolveOrderItemMutation(orderId);
   const createReturnMutation = useCreateReturnMutation();
+  const { data: packingVideos } = useRecordingsByResiQuery(data?.noResi ?? null);
   const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
 
   async function handleCreateReturn() {
@@ -95,6 +97,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
         <OrderStatusBadge status={data.status} />
+        {data.fulfilledAt ? (
+          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Fulfilled</Badge>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -208,6 +213,35 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
             </CardContent>
           </Card>
+
+          {data.noResi ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Packing video</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {packingVideos && packingVideos.length > 0 ? (
+                  <>
+                    <p className="text-muted-foreground text-xs">
+                      {packingVideos.length} recording(s) for this resi — dispute evidence.
+                    </p>
+                    <Button variant="outline" size="sm" asChild className="w-full">
+                      <Link
+                        href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}
+                      >
+                        <Video className="size-4" />
+                        View packing video
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    No packing video yet — record one at the station for this resi.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {data.status === 'SHIPPED' || data.status === 'COMPLETED' ? (
             <Button

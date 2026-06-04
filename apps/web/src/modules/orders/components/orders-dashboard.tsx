@@ -89,7 +89,14 @@ export function OrdersDashboard() {
                     <div className="text-muted-foreground text-xs">{order.shopName}</div>
                   </TableCell>
                   <TableCell>
-                    <OrderStatusBadge status={order.status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <OrderStatusBadge status={order.status} />
+                      {order.fulfilledAt ? (
+                        <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                          Fulfilled
+                        </Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm">{order.buyerName ?? '—'}</TableCell>
                   <TableCell className="text-right">

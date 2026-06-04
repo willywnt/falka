@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
 
+import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordings-management';
+
 import {
   useProcessReturnMutation,
   useRejectReturnMutation,
@@ -38,6 +40,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
   const { data, isLoading, error } = useReturnQuery(returnId);
   const processMutation = useProcessReturnMutation(returnId);
   const rejectMutation = useRejectReturnMutation(returnId);
+  const { data: packingVideos } = useRecordingsByResiQuery(data?.noResi ?? null);
   // returnItemId → resellable? (true = RESTOCK, false = DAMAGED). Defaults to restock.
   const [resellable, setResellable] = useState<Record<string, boolean>>({});
 
@@ -189,12 +192,19 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                 <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
               {data.noResi ? (
-                <Button variant="outline" size="sm" asChild className="w-full">
-                  <Link href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}>
-                    <Video className="size-4" />
-                    View packing video
-                  </Link>
-                </Button>
+                <>
+                  <p className="text-muted-foreground text-xs">
+                    {packingVideos && packingVideos.length > 0
+                      ? `${packingVideos.length} packing video(s) for this resi.`
+                      : 'No packing video found for this resi.'}
+                  </p>
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}>
+                      <Video className="size-4" />
+                      View packing video
+                    </Link>
+                  </Button>
+                </>
               ) : (
                 <p className="text-muted-foreground text-xs">No tracking number on this order.</p>
               )}
