@@ -8,7 +8,7 @@ import { apiRoutes } from '@/lib/api/routes';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { catalogKeys } from './catalog-keys';
-import type { ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
 import type { CreateProductInput, CreateVariantInput } from '../validators/create-product';
 import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateVariantInput } from '../validators/update-variant';
@@ -25,6 +25,25 @@ export function useProductsQuery(search?: string) {
     queryFn: async () => {
       const result = await apiFetch<ProductListItem[]>(apiRoutes.products, {
         params: { page: 1, pageSize: LIST_PAGE_SIZE, ...(search ? { search } : {}) },
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+/** Active variants for the label studio (debounced search by SKU/barcode/name). */
+export function useLabelVariantsQuery(q: string) {
+  const trimmed = q.trim();
+  return useQuery({
+    queryKey: catalogKeys.labelVariants(trimmed),
+    queryFn: async () => {
+      const result = await apiFetch<LabelVariant[]>(`${apiRoutes.products}/variants`, {
+        params: trimmed ? { q: trimmed } : undefined,
       });
 
       if (!result.success) {

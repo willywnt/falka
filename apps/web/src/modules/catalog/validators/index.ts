@@ -18,4 +18,5 @@ export {
   type EditVariantFormInput,
 } from './update-variant';
 export { listProductsQuerySchema, type ListProductsQuery } from './list-products';
+export { labelVariantsQuerySchema, type LabelVariantsQuery } from './label-variants';
 export { productIdParamSchema, type ProductIdParam } from './product-id';

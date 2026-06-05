@@ -10,4 +10,5 @@ export const catalogKeys = {
   products: ['catalog', 'products'] as const,
   list: (query: ListProductsQuery) => ['catalog', 'products', 'list', query] as const,
   detail: (id: string) => ['catalog', 'products', 'detail', id] as const,
+  labelVariants: (q: string) => ['catalog', 'label-variants', q] as const,
 };

@@ -21,6 +21,17 @@ export type ProductVariantItem = {
   updatedAt: string;
 };
 
+/** A printable variant row for the label studio — the QR encodes `barcode ?? sku`. */
+export type LabelVariant = {
+  variantId: string;
+  productName: string;
+  name: string;
+  sku: string;
+  barcode: string | null;
+  /** Decimal serialized as a string to avoid float precision loss. */
+  price: string;
+};
+
 export type ProductListItem = {
   id: string;
   name: string;

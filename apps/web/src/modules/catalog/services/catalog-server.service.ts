@@ -7,7 +7,7 @@ import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 
 import { CatalogError } from '../errors/catalog-errors';
-import type { ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
 import type { CreateProductInput, CreateVariantInput } from '../validators/create-product';
 import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateProductInput } from '../validators/update-product';
@@ -87,12 +87,49 @@ function buildVariantData(
   };
 }
 
+/** A label sheet for a large catalog is paginated by search, not by page — cap the read. */
+const LABEL_VARIANTS_LIMIT = 500;
+
 /**
  * Owns the catalog master (`Product` / `ProductVariant`). Stock lives in the
  * inventory module — this service reaches it only through `inventoryServerService`,
  * never by writing the inventory tables directly.
  */
 export class CatalogServerService {
+  /** Active variants for the label studio — matched by SKU/barcode/name, flat across products. */
+  async listLabelVariants(userId: string, q: string): Promise<LabelVariant[]> {
+    const term = q.trim();
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        isActive: true,
+        ...(term
+          ? {
+              OR: [
+                { sku: { contains: term, mode: 'insensitive' } },
+                { barcode: { contains: term, mode: 'insensitive' } },
+                { name: { contains: term, mode: 'insensitive' } },
+                { product: { name: { contains: term, mode: 'insensitive' } } },
+              ],
+            }
+          : {}),
+      },
+      include: { product: { select: { name: true } } },
+      orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
+      take: LABEL_VARIANTS_LIMIT,
+    });
+
+    return variants.map((variant) => ({
+      variantId: variant.id,
+      productName: variant.product.name,
+      name: variant.name,
+      sku: variant.sku,
+      barcode: variant.barcode,
+      price: variant.price.toString(),
+    }));
+  }
+
   async listProducts(
     userId: string,
     query: ListProductsQuery,
