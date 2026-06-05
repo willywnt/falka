@@ -108,6 +108,7 @@ export function InventoryOverview() {
                 <TableHead className="text-right">Available</TableHead>
                 <TableHead className="text-right">Reserved</TableHead>
                 <TableHead className="text-right">Damaged</TableHead>
+                <TableHead className="text-right">Incoming</TableHead>
                 <TableHead className="text-right">Last change</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -145,6 +146,15 @@ export function InventoryOverview() {
                     {item.damagedStock > 0 ? (
                       <span className="text-destructive" title="Written off from returns">
                         {item.damagedStock}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                    {item.incomingStock > 0 ? (
+                      <span className="text-sky-600" title="On order from suppliers">
+                        {item.incomingStock}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>

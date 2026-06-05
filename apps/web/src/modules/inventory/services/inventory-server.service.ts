@@ -128,6 +128,7 @@ export class InventoryServerService {
             availableStock: true,
             reservedStock: true,
             damagedStock: true,
+            incomingStock: true,
             lastAdjustedAt: true,
           },
         },
@@ -159,6 +160,7 @@ export class InventoryServerService {
         availableStock,
         reservedStock: variant.inventory?.reservedStock ?? 0,
         damagedStock: variant.inventory?.damagedStock ?? 0,
+        incomingStock: variant.inventory?.incomingStock ?? 0,
         lowStockThreshold: variant.lowStockThreshold,
         isLowStock: variant.alertEnabled && availableStock <= variant.lowStockThreshold,
         lastUpdatedAt: variant.inventory?.lastAdjustedAt?.toISOString() ?? null,
@@ -500,6 +502,74 @@ export class InventoryServerService {
         source: 'POS',
         referenceId: params.saleId,
         note: 'Offline sale',
+      },
+    });
+
+    return balanceAfter;
+  }
+
+  /**
+   * Adjusts the incoming (on-order) bucket WITHIN the caller's transaction — used
+   * when a purchase order is placed (positive delta) or cancelled (negative). No
+   * ledger row: incoming is a forecast bucket and available is unchanged. Clamped at 0.
+   */
+  async adjustIncomingTx(
+    tx: TransactionClient,
+    params: { variantId: string; delta: number },
+  ): Promise<void> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const current = existing?.incomingStock ?? 0;
+    if (current + params.delta < 0) {
+      appLogger.warn('inventory.incoming.underflow_clamped', {
+        variantId: params.variantId,
+        current,
+        delta: params.delta,
+      });
+    }
+    const next = Math.max(0, current + params.delta);
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: {
+        variantId: params.variantId,
+        incomingStock: Math.max(0, params.delta),
+        lastAdjustedAt: now,
+      },
+      update: { incomingStock: next, lastAdjustedAt: now },
+    });
+  }
+
+  /**
+   * Receives purchased units WITHIN the caller's transaction: incoming drops
+   * (clamped at 0) and available rises. Records a `RESTOCK` row (source `PURCHASE`).
+   * Returns the new available balance; the caller propagates after commit.
+   */
+  async applyPurchaseReceiveTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; purchaseOrderId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
+    const incomingStock = Math.max(0, (existing?.incomingStock ?? 0) - params.quantity);
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, incomingStock, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: params.quantity,
+        balanceAfter,
+        reason: 'RESTOCK',
+        source: 'PURCHASE',
+        referenceId: params.purchaseOrderId,
+        note: 'Purchase received',
       },
     });
 

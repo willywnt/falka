@@ -46,6 +46,8 @@ export type StockOverviewItem = {
   reservedStock: number;
   /** Units written off from returns as unsellable. */
   damagedStock: number;
+  /** Units on order from suppliers (purchase orders not yet received). */
+  incomingStock: number;
   lowStockThreshold: number;
   isLowStock: boolean;
   /** When stock was last changed (ISO), and the most recent movement. */
