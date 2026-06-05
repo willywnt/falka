@@ -325,10 +325,8 @@ export function PoForm() {
           <CardTitle className="text-base">Purchase order</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="supplier" className="text-muted-foreground text-xs">
-              Supplier (optional)
-            </Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="supplier">Supplier (optional)</Label>
             <Input
               id="supplier"
               value={supplierName}
@@ -366,8 +364,8 @@ export function PoForm() {
                     </Button>
                   </div>
                   <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Qty</Label>
+                    <div className="space-y-1.5">
+                      <Label>Qty</Label>
                       <NumberInput
                         value={line.quantity}
                         onChange={(value) =>
@@ -375,8 +373,8 @@ export function PoForm() {
                         }
                       />
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Unit cost</Label>
+                    <div className="space-y-1.5">
+                      <Label>Unit cost</Label>
                       <NumberInput
                         value={line.unitCost}
                         onChange={(value) =>

@@ -293,8 +293,8 @@ export function PosTerminal() {
                       </Button>
                     </div>
                     <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Qty</Label>
+                      <div className="space-y-1.5">
+                        <Label>Qty</Label>
                         <NumberInput
                           value={line.quantity}
                           onChange={(value) =>
@@ -302,8 +302,8 @@ export function PosTerminal() {
                           }
                         />
                       </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Unit price</Label>
+                      <div className="space-y-1.5">
+                        <Label>Unit price</Label>
                         <NumberInput
                           value={line.unitPrice}
                           onChange={(value) =>
@@ -331,10 +331,8 @@ export function PosTerminal() {
 
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="payment" className="text-muted-foreground text-xs">
-                  Payment
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="payment">Payment</Label>
                 <Select
                   id="payment"
                   value={paymentMethod}
@@ -347,10 +345,8 @@ export function PosTerminal() {
                   ))}
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="customer" className="text-muted-foreground text-xs">
-                  Customer (optional)
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="customer">Customer (optional)</Label>
                 <Input
                   id="customer"
                   value={customerName}

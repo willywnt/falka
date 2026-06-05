@@ -31,8 +31,8 @@ export function TablePagination({
   const to = Math.min(safePage * pageSize, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-      <div className="text-muted-foreground flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+      <div className="text-muted-foreground flex items-center gap-1.5">
         <span>Rows</span>
         <Select
           value={String(pageSize)}
@@ -46,31 +46,30 @@ export function TablePagination({
             </option>
           ))}
         </Select>
-        <span className="hidden sm:inline">
-          {from}–{to} of {total}
-        </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground">
-          Page {safePage} of {totalPages}
+      <div className="text-muted-foreground flex items-center gap-1.5">
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-8"
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(safePage - 1)}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span className="whitespace-nowrap tabular-nums">
+          {from}–{to} of {total}
         </span>
         <Button
           variant="outline"
-          size="sm"
-          disabled={safePage <= 1}
-          onClick={() => onPageChange(safePage - 1)}
-        >
-          <ChevronLeft className="size-4" />
-          Prev
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+          size="icon"
+          className="size-8"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
+          aria-label="Next page"
         >
-          Next
           <ChevronRight className="size-4" />
         </Button>
       </div>
