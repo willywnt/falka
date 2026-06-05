@@ -71,7 +71,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
 
   const handleScanSuccess = useCallback((barcode: string) => {
     toast.success('Barcode sent', {
-      description: `${barcode} — desktop is handling recording`,
+      description: `${barcode} — handled on desktop`,
     });
   }, []);
 

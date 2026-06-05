@@ -180,19 +180,25 @@ export function registerPairingSocketHandlers(io: Server): void {
           };
 
           emitToRoom(parsed.data.pairingId, SERVER_SOCKET_EVENTS.BARCODE_SCANNED, scannedPayload);
-          emitToRoom(parsed.data.pairingId, SERVER_SOCKET_EVENTS.RECORDING_TRIGGERED, {
-            barcode,
-            pairingSessionId: parsed.data.pairingId,
-          });
+          // Only a recordings pairing drives the auto-record countdown. A POS
+          // pairing must NOT trigger recording — otherwise the phone (and station)
+          // would flip into the recording-busy state on every scan-to-cart.
+          if (session.purpose === 'RECORDING') {
+            emitToRoom(parsed.data.pairingId, SERVER_SOCKET_EVENTS.RECORDING_TRIGGERED, {
+              barcode,
+              pairingSessionId: parsed.data.pairingId,
+            });
+          }
 
           const ackPayload: BarcodeAckPayload = { barcode, success: true };
           socket.emit(SERVER_SOCKET_EVENTS.BARCODE_ACK, ackPayload);
           ack?.({ ok: true, data: ackPayload });
 
-          socketLogger.info('pairing.auto_recording_triggered', {
+          socketLogger.info('pairing.barcode_relayed', {
             userId,
             pairingSessionId: parsed.data.pairingId,
             barcode,
+            purpose: session.purpose,
             sessionStatus: session.status,
           });
         } catch (error) {
