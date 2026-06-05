@@ -130,10 +130,10 @@ export function useAddVariantMutation(productId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: CreateVariantInput) => {
-      const result = await apiFetch<ProductVariantItem>(
+    mutationFn: async (variants: CreateVariantInput[]) => {
+      const result = await apiFetch<ProductVariantItem[]>(
         `${apiRoutes.products}/${productId}/variants`,
-        { method: 'POST', body: input },
+        { method: 'POST', body: { variants } },
       );
 
       if (!result.success) {
@@ -144,6 +144,8 @@ export function useAddVariantMutation(productId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+      // New leaves create inventory rows — refresh inventory-backed views too.
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },
   });
 }

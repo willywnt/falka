@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
-import { createVariantSchema, productIdParamSchema } from '@/modules/catalog/validators';
+import { addVariantsSchema, productIdParamSchema } from '@/modules/catalog/validators';
 import { apiNotFound, apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
@@ -13,15 +13,15 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsedParams.success) return apiNotFound('Product not found');
 
     const body: unknown = await request.json();
-    const parsed = createVariantSchema.safeParse(body);
+    const parsed = addVariantsSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const variant = await catalogServerService.addVariant(
+    const variants = await catalogServerService.addVariants(
       user.id,
       parsedParams.data.id,
-      parsed.data,
+      parsed.data.variants,
     );
-    return apiSuccess(variant, 201);
+    return apiSuccess(variants, 201);
   },
   { requireAuth: true },
 );

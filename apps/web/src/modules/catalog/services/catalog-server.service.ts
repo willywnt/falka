@@ -274,36 +274,61 @@ export class CatalogServerService {
     return this.getProductById(userId, productId);
   }
 
-  async addVariant(
+  /**
+   * Add one or more leaf variants to a product in one go — a standalone variant
+   * (single input) or a grouped variant (one input per subvariant, all sharing a
+   * `variantGroup`). Rows are created in a transaction; stock is then initialized
+   * per leaf. SKUs must be unique within the batch and across the account.
+   */
+  async addVariants(
     userId: string,
     productId: string,
-    input: CreateVariantInput,
-  ): Promise<ProductVariantItem> {
+    inputs: CreateVariantInput[],
+  ): Promise<ProductVariantItem[]> {
     await this.assertProductOwned(userId, productId);
-    await this.assertSkuAvailable(userId, input.sku);
 
-    let variantId: string;
+    const skus = inputs.map((input) => input.sku);
+    const duplicate = skus.find((sku, index) => skus.indexOf(sku) !== index);
+    if (duplicate) throw CatalogError.validation(`Duplicate SKU "${duplicate}" in this variant.`);
+    for (const sku of skus) await this.assertSkuAvailable(userId, sku);
+
+    let variantIds: string[];
     try {
-      const variant = await prisma.productVariant.create({
-        data: buildVariantData(userId, productId, input),
-        select: { id: true },
+      variantIds = await prisma.$transaction(async (tx) => {
+        const ids: string[] = [];
+        for (const input of inputs) {
+          const variant = await tx.productVariant.create({
+            data: buildVariantData(userId, productId, input),
+            select: { id: true },
+          });
+          ids.push(variant.id);
+        }
+        return ids;
       });
-      variantId = variant.id;
     } catch (error) {
-      if (isUniqueConstraintError(error)) throw CatalogError.duplicateSku(input.sku);
+      if (isUniqueConstraintError(error)) throw CatalogError.duplicateSku(skus[0] ?? '');
       throw error;
     }
 
-    await this.initializeVariantStock(userId, variantId, input.initialStock);
+    for (let index = 0; index < variantIds.length; index += 1) {
+      const variantId = variantIds[index];
+      const input = inputs[index];
+      if (variantId && input)
+        await this.initializeVariantStock(userId, variantId, input.initialStock);
+    }
 
-    appLogger.info('catalog.variant.created', { userId, productId, variantId });
+    appLogger.info('catalog.variants.created', { userId, productId, count: variantIds.length });
 
-    const created = await prisma.productVariant.findUniqueOrThrow({
-      where: { id: variantId },
+    const created = await prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
       include: { inventory: true },
     });
+    const byId = new Map(created.map((variant) => [variant.id, variant]));
 
-    return mapVariant(created);
+    return variantIds
+      .map((id) => byId.get(id))
+      .filter((variant): variant is VariantWithInventory => variant !== undefined)
+      .map(mapVariant);
   }
 
   /**

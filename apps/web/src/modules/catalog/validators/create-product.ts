@@ -83,17 +83,3 @@ export const createProductFormSchema = z
   });
 
 export type CreateProductFormInput = z.infer<typeof createProductFormSchema>;
-
-/** Form-facing schema for adding a single variant to an existing product. */
-export const addVariantFormSchema = z.object({
-  sku: z.string().trim().min(1, 'SKU is required').max(64),
-  name: z.string().trim().min(1, 'Variant name is required').max(200),
-  price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
-  cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
-  lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-  initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-  leadTimeDays: z.coerce.number().int().nonnegative().max(MAX_LEAD_DAYS),
-  minOrderQty: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-});
-
-export type AddVariantFormInput = z.infer<typeof addVariantFormSchema>;

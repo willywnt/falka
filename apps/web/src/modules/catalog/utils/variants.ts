@@ -1,3 +1,5 @@
+import type { CreateVariantInput } from '../validators/create-product';
+
 /** The minimal shape variant grouping needs: its parent group, or null if standalone. */
 type GroupableVariant = { variantGroup: string | null };
 
@@ -45,4 +47,49 @@ function slugifyPart(value: string): string {
 /** Suggest a SKU by slugging + joining parts, e.g. ("iPhone","16","Hitam") → "IPHONE-16-HITAM". */
 export function suggestVariantSku(...parts: string[]): string {
   return parts.map(slugifyPart).filter(Boolean).join('-');
+}
+
+/** Stock/pricing fields shared by a standalone variant and a subvariant row. */
+type VariantLeafFields = {
+  sku: string;
+  price: number;
+  cost: number;
+  initialStock: number;
+  lowStockThreshold: number;
+};
+
+function toLeaf(
+  name: string,
+  variantGroup: string | null,
+  fields: VariantLeafFields,
+): CreateVariantInput {
+  return {
+    sku: fields.sku.trim(),
+    name: name.trim(),
+    variantGroup: variantGroup ?? undefined,
+    price: fields.price,
+    cost: fields.cost || undefined,
+    lowStockThreshold: fields.lowStockThreshold,
+    alertEnabled: true,
+    initialStock: fields.initialStock,
+  };
+}
+
+/**
+ * Flatten the add-variant form into the leaf variants to create. A variant with
+ * options becomes one leaf per subvariant (sharing `variantGroup` = the variant
+ * name); without options it is a single standalone leaf named after the variant.
+ */
+export function buildAddVariantsPayload(input: {
+  variantName: string;
+  hasOptions: boolean;
+  single: VariantLeafFields;
+  subvariants: Array<VariantLeafFields & { name: string }>;
+}): CreateVariantInput[] {
+  if (!input.hasOptions) {
+    return [toLeaf(input.variantName, null, input.single)];
+  }
+  return input.subvariants.map((subvariant) =>
+    toLeaf(subvariant.name, input.variantName, subvariant),
+  );
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildVariantBlocks, suggestVariantSku } from '@/modules/catalog/utils/variants';
+import {
+  buildAddVariantsPayload,
+  buildVariantBlocks,
+  suggestVariantSku,
+} from '@/modules/catalog/utils/variants';
 
 describe('buildVariantBlocks', () => {
   it('renders standalone variants (variantGroup null) as single blocks', () => {
@@ -58,5 +62,85 @@ describe('suggestVariantSku', () => {
 
   it('drops empty segments and odd separators', () => {
     expect(suggestVariantSku('iPhone', '', ' 128 GB ')).toBe('IPHONE-128-GB');
+  });
+});
+
+describe('buildAddVariantsPayload', () => {
+  it('builds a single standalone leaf when hasOptions is off', () => {
+    const payload = buildAddVariantsPayload({
+      variantName: 'iPhone 16',
+      hasOptions: false,
+      single: {
+        sku: 'iphone-16',
+        price: 15_000_000,
+        cost: 0,
+        initialStock: 5,
+        lowStockThreshold: 2,
+      },
+      subvariants: [],
+    });
+
+    expect(payload).toEqual([
+      {
+        sku: 'iphone-16',
+        name: 'iPhone 16',
+        variantGroup: undefined,
+        price: 15_000_000,
+        cost: undefined,
+        lowStockThreshold: 2,
+        alertEnabled: true,
+        initialStock: 5,
+      },
+    ]);
+  });
+
+  it('builds one grouped leaf per subvariant when hasOptions is on', () => {
+    const payload = buildAddVariantsPayload({
+      variantName: 'iPhone 16',
+      hasOptions: true,
+      single: { sku: '', price: 0, cost: 0, initialStock: 0, lowStockThreshold: 0 },
+      subvariants: [
+        {
+          name: 'Hitam',
+          sku: 'IPH16-BLK',
+          price: 15_000_000,
+          cost: 12_000_000,
+          initialStock: 5,
+          lowStockThreshold: 1,
+        },
+        {
+          name: 'Putih',
+          sku: 'IPH16-WHT',
+          price: 15_000_000,
+          cost: 12_000_000,
+          initialStock: 3,
+          lowStockThreshold: 1,
+        },
+      ],
+    });
+
+    expect(payload).toHaveLength(2);
+    expect(payload[0]).toMatchObject({
+      name: 'Hitam',
+      variantGroup: 'iPhone 16',
+      sku: 'IPH16-BLK',
+      cost: 12_000_000,
+    });
+    expect(payload[1]).toMatchObject({
+      name: 'Putih',
+      variantGroup: 'iPhone 16',
+      sku: 'IPH16-WHT',
+    });
+  });
+
+  it('treats cost 0 as unset', () => {
+    const [leaf] = buildAddVariantsPayload({
+      variantName: 'Tee',
+      hasOptions: false,
+      single: { sku: 'TEE', price: 100, cost: 0, initialStock: 0, lowStockThreshold: 0 },
+      subvariants: [],
+    });
+
+    expect(leaf?.cost).toBeUndefined();
   });
 });
