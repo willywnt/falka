@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { PackageSearch, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { PackageSearch, Plus, ScanLine, ShoppingCart, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SalePaymentMethod } from '@prisma/client';
 
@@ -16,8 +16,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { formatCurrency } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
+import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/connect-scanner-dialog';
 
 import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sales';
+import { usePosScanner } from '../hooks/use-pos-scanner';
 import type { SellableVariant } from '../types';
 
 type CartLine = {
@@ -46,6 +49,7 @@ export function PosTerminal() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('CASH');
   const [customerName, setCustomerName] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const createSale = useCreateSaleMutation();
 
@@ -76,6 +80,9 @@ export function PosTerminal() {
       ];
     });
   }
+
+  // Mobile scan-to-cart: a paired phone scans a product label → add the line.
+  const { scannerEnabled, isConnected } = usePosScanner(addToCart);
 
   function patchLine(variantId: string, patch: Partial<CartLine>) {
     setCart((prev) =>
@@ -117,7 +124,22 @@ export function PosTerminal() {
       {/* Product picker */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Find product</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">Find product</CardTitle>
+            {scannerEnabled ? (
+              <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)}>
+                <span
+                  className={cn(
+                    'size-2 rounded-full',
+                    isConnected ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+                  )}
+                  aria-hidden
+                />
+                <ScanLine className="size-4" />
+                {isConnected ? 'Phone connected' : 'Scan with phone'}
+              </Button>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <Input
@@ -284,6 +306,8 @@ export function PosTerminal() {
           </div>
         </CardContent>
       </Card>
+
+      <ConnectScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} />
     </div>
   );
 }
