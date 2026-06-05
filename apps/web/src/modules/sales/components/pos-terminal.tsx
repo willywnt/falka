@@ -1,7 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { PackageSearch, Plus, ScanLine, ShoppingCart, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  PackageSearch,
+  Plus,
+  ScanLine,
+  ShoppingCart,
+  Trash2,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import type { SalePaymentMethod } from '@prisma/client';
 
@@ -20,8 +28,35 @@ import { cn } from '@/lib/utils';
 import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/connect-scanner-dialog';
 
 import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sales';
-import { usePosScanner } from '../hooks/use-pos-scanner';
+import { usePosScanner, type PosScannerStatus } from '../hooks/use-pos-scanner';
+import { unlockScanSound } from '../utils/scan-sound';
 import type { SellableVariant } from '../types';
+
+const SCAN_SOUND_STORAGE_KEY = 'olshop-pos-scan-sound';
+
+/** Per-state copy + accent for the POS phone-scanner indicator. */
+const SCAN_STATUS_META: Record<
+  PosScannerStatus,
+  { dot: string; cta: string; hint: string | null }
+> = {
+  off: { dot: '', cta: '', hint: null },
+  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan with phone', hint: null },
+  waiting: {
+    dot: 'bg-amber-500',
+    cta: 'Show QR',
+    hint: 'Waiting for your phone to connect…',
+  },
+  connected: {
+    dot: 'bg-emerald-500',
+    cta: 'Phone connected',
+    hint: 'Phone connected — scan a product label to add it to the cart.',
+  },
+  disconnected: {
+    dot: 'bg-destructive',
+    cta: 'Reconnect',
+    hint: 'Phone disconnected. Tap Reconnect to show a fresh QR.',
+  },
+};
 
 type CartLine = {
   variantId: string;
@@ -50,6 +85,35 @@ export function PosTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('CASH');
   const [customerName, setCustomerName] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
+
+  // Restore the cashier's sound preference (defaults to on).
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(SCAN_SOUND_STORAGE_KEY) === 'off') setSoundOn(false);
+    } catch {
+      // localStorage may be unavailable (private mode) — keep the default.
+    }
+  }, []);
+
+  function toggleSound() {
+    unlockScanSound();
+    setSoundOn((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SCAN_SOUND_STORAGE_KEY, next ? 'on' : 'off');
+      } catch {
+        // ignore storage write errors
+      }
+      return next;
+    });
+  }
+
+  function openScanner() {
+    // Opening from a click unlocks audio so later socket-driven beeps can play.
+    unlockScanSound();
+    setScannerOpen(true);
+  }
 
   const createSale = useCreateSaleMutation();
 
@@ -82,7 +146,11 @@ export function PosTerminal() {
   }
 
   // Mobile scan-to-cart: a paired phone scans a product label → add the line.
-  const { scannerEnabled, isConnected } = usePosScanner(addToCart);
+  const { scannerEnabled, status: scannerStatus } = usePosScanner({
+    onResolved: addToCart,
+    soundEnabled: soundOn,
+  });
+  const scanMeta = SCAN_STATUS_META[scannerStatus];
 
   function patchLine(variantId: string, patch: Partial<CartLine>) {
     setCart((prev) =>
@@ -127,17 +195,27 @@ export function PosTerminal() {
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base">Find product</CardTitle>
             {scannerEnabled ? (
-              <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)}>
-                <span
-                  className={cn(
-                    'size-2 rounded-full',
-                    isConnected ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={toggleSound}
+                  aria-label={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
+                  title={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
+                >
+                  {soundOn ? (
+                    <Volume2 className="size-4" />
+                  ) : (
+                    <VolumeX className="text-muted-foreground size-4" />
                   )}
-                  aria-hidden
-                />
-                <ScanLine className="size-4" />
-                {isConnected ? 'Phone connected' : 'Scan with phone'}
-              </Button>
+                </Button>
+                <Button variant="outline" size="sm" onClick={openScanner}>
+                  <span className={cn('size-2 rounded-full', scanMeta.dot)} aria-hidden />
+                  <ScanLine className="size-4" />
+                  {scanMeta.cta}
+                </Button>
+              </div>
             ) : null}
           </div>
         </CardHeader>
@@ -148,6 +226,16 @@ export function PosTerminal() {
             placeholder="Search SKU or product name..."
             autoFocus
           />
+          {scannerEnabled && scanMeta.hint ? (
+            <p
+              className={cn(
+                'text-xs',
+                scannerStatus === 'disconnected' ? 'text-destructive' : 'text-muted-foreground',
+              )}
+            >
+              {scanMeta.hint}
+            </p>
+          ) : null}
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, index) => (
