@@ -50,6 +50,15 @@ export function suggestVariantSku(...parts: string[]): string {
   return parts.map(slugifyPart).filter(Boolean).join('-');
 }
 
+/**
+ * The SKU to store on a soft-deleted variant. The `@@unique([userId, sku])` index
+ * spans archived rows too, so we mangle the SKU on delete to free the original for
+ * reuse. The variant id keeps it unique; archived rows are never shown live.
+ */
+export function archivedSku(sku: string, variantId: string): string {
+  return `${sku}::deleted::${variantId}`;
+}
+
 /** Stock/pricing fields shared by a standalone variant and a subvariant row. */
 type VariantLeafFields = {
   sku: string;

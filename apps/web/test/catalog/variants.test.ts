@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  archivedSku,
   buildVariantBlocks,
   suggestVariantSku,
   variantBlockToLeaves,
@@ -63,6 +64,16 @@ describe('suggestVariantSku', () => {
 
   it('drops empty segments and odd separators', () => {
     expect(suggestVariantSku('iPhone', '', ' 128 GB ')).toBe('IPHONE-128-GB');
+  });
+});
+
+describe('archivedSku', () => {
+  it('frees the original SKU by appending the variant id', () => {
+    expect(archivedSku('IPH16-BLK', 'cuid_123')).toBe('IPH16-BLK::deleted::cuid_123');
+  });
+
+  it('is unique per variant even for the same SKU', () => {
+    expect(archivedSku('DUP', 'a')).not.toBe(archivedSku('DUP', 'b'));
   });
 });
 

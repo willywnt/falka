@@ -8,6 +8,7 @@ import { inventoryServerService } from '@/modules/inventory/services/inventory-s
 
 import { CatalogError } from '../errors/catalog-errors';
 import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import { archivedSku } from '../utils/variants';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -378,16 +379,32 @@ export class CatalogServerService {
   async deleteProduct(userId: string, productId: string): Promise<void> {
     await this.assertProductOwned(userId, productId);
 
+    const variants = await prisma.productVariant.findMany({
+      where: { productId, deletedAt: null },
+      select: { id: true, sku: true },
+    });
+
     const now = new Date();
     await prisma.$transaction(async (tx) => {
-      await tx.productVariant.updateMany({
-        where: { productId, deletedAt: null },
-        data: { deletedAt: now },
-      });
+      await this.archiveVariantRows(tx, variants, now);
       await tx.product.update({ where: { id: productId }, data: { deletedAt: now } });
     });
 
-    appLogger.info('catalog.product.deleted', { userId, productId });
+    appLogger.info('catalog.product.deleted', { userId, productId, variants: variants.length });
+  }
+
+  /** Soft-delete the given variants, freeing each SKU for reuse (see archivedSku). */
+  private async archiveVariantRows(
+    tx: Prisma.TransactionClient,
+    variants: { id: string; sku: string }[],
+    now: Date,
+  ): Promise<void> {
+    for (const variant of variants) {
+      await tx.productVariant.update({
+        where: { id: variant.id },
+        data: { deletedAt: now, sku: archivedSku(variant.sku, variant.id) },
+      });
+    }
   }
 
   private async initializeVariantStock(
