@@ -275,7 +275,13 @@ export function ProductDetail({
         />
       ) : null}
 
-      <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
+      <AddVariantDialog
+        productId={productId}
+        productName={data.name}
+        optionTypes={data.optionTypes}
+        open={addOpen}
+        onOpenChange={setAddOpen}
+      />
 
       {editTarget ? (
         <EditVariantDialog

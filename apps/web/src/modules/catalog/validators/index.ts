@@ -1,7 +1,7 @@
 export {
   createProductSchema,
   createProductFormSchema,
-  addVariantFormSchema,
+  buildAddVariantFormSchema,
   createVariantSchema,
   type CreateProductInput,
   type CreateProductFormInput,
