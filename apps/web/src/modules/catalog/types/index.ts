@@ -53,6 +53,18 @@ export type ProductListItem = {
   updatedAt: string;
 };
 
+/** Why a product/variant/group can't (or can, with warnings) be deleted. */
+export type DeletionBlockers = {
+  /** True when at least one hard reason blocks deletion. */
+  blocked: boolean;
+  /** Hard blockers — mapping, reserved, incoming, open returns. */
+  reasons: string[];
+  /** Soft heads-up — on-hand and damaged stock that will be archived. */
+  warnings: string[];
+  /** How many active variants the check covered. */
+  variantCount: number;
+};
+
 export type ProductDetail = {
   id: string;
   name: string;

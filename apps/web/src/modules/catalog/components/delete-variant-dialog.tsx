@@ -11,18 +11,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import type { ProductVariantItem } from '../types';
+import { useDeletionBlockersQuery } from '../hooks/use-products';
+import { DeletionImpact } from './deletion-impact';
 
 export function DeleteVariantDialog({
-  targets,
+  productId,
+  variantIds,
   label,
   open,
   onOpenChange,
   onConfirm,
   isDeleting,
 }: {
-  /** The leaf variants to archive — one row, or every leaf of a group. */
-  targets: ProductVariantItem[];
+  productId: string;
+  /** Leaf ids to archive — one row, or every leaf of a group. */
+  variantIds: string[];
   /** Reads inside "This archives …", e.g. `“Hitam”` or `the “iPhone 16” group`. */
   label: string;
   open: boolean;
@@ -30,13 +33,14 @@ export function DeleteVariantDialog({
   onConfirm: () => void;
   isDeleting?: boolean;
 }) {
-  if (targets.length === 0) return null;
+  const { data: blockers, isLoading } = useDeletionBlockersQuery(
+    productId,
+    variantIds,
+    open && variantIds.length > 0,
+  );
 
-  const reserved = targets.reduce((sum, variant) => sum + variant.reservedStock, 0);
-  const available = targets.reduce((sum, variant) => sum + variant.availableStock, 0);
-  const incoming = targets.reduce((sum, variant) => sum + variant.incomingStock, 0);
-  const blocked = reserved > 0;
-  const count = targets.length;
+  const count = variantIds.length;
+  const blocked = blockers?.blocked ?? false;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -46,30 +50,17 @@ export function DeleteVariantDialog({
             Delete {count === 1 ? 'variant' : `${count} subvariants`}?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This archives {label}. Stock history is kept; {count === 1 ? 'it is' : 'they are'}{' '}
-            hidden from your catalog and the SKU{count === 1 ? '' : 's'} freed for reuse.
+            This archives {label}. Stock history is kept; the SKU{count === 1 ? '' : 's'} free up
+            for reuse.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {blocked ? (
-          <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border p-3 text-sm">
-            {reserved} unit{reserved === 1 ? '' : 's'} reserved for unshipped orders. Ship or cancel
-            those orders before deleting.
-          </div>
-        ) : (
-          <ul className="text-muted-foreground bg-muted/30 space-y-1 rounded-md border p-3 text-sm">
-            {available > 0 ? <li>{available} in stock will be removed from view.</li> : null}
-            {incoming > 0 ? <li>{incoming} incoming from open purchase orders.</li> : null}
-            <li>
-              Marketplace listings mapped here aren&apos;t unmapped automatically — review them.
-            </li>
-          </ul>
-        )}
+        <DeletionImpact blockers={blockers} isLoading={isLoading} />
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            disabled={isDeleting || blocked}
+            disabled={isDeleting || isLoading || blocked}
             onClick={(event) => {
               event.preventDefault();
               onConfirm();

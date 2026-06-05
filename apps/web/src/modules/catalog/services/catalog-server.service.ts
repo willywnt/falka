@@ -5,9 +5,17 @@ import { Prisma, type Inventory, type Product, type ProductVariant } from '@pris
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
+import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
+import { returnsServerService } from '@/modules/returns/services/returns-server.service';
 
 import { CatalogError } from '../errors/catalog-errors';
-import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import type {
+  DeletionBlockers,
+  LabelVariant,
+  ProductDetail,
+  ProductListItem,
+  ProductVariantItem,
+} from '../types';
 import { archivedSku } from '../utils/variants';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
@@ -21,6 +29,19 @@ type ProductWithVariants = Product & { variants: VariantWithInventory[] };
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
+
+function quoteNames(names: string[]): string {
+  return names.map((name) => `“${name}”`).join(', ');
+}
+
+type InventoryStockField = 'reservedStock' | 'incomingStock' | 'availableStock' | 'damagedStock';
+
+function sumInventory(
+  variants: { inventory: Record<InventoryStockField, number> | null }[],
+  field: InventoryStockField,
+): number {
+  return variants.reduce((total, variant) => total + (variant.inventory?.[field] ?? 0), 0);
 }
 
 function isLowStock(variant: ProductVariant, availableStock: number): boolean {
@@ -381,10 +402,10 @@ export class CatalogServerService {
   async deleteProduct(userId: string, productId: string): Promise<void> {
     await this.assertProductOwned(userId, productId);
 
-    const variants = await prisma.productVariant.findMany({
-      where: { productId, deletedAt: null },
-      select: { id: true, sku: true },
-    });
+    const { blockers, variants } = await this.computeDeletionBlockers(userId, productId);
+    if (blockers.blocked) {
+      throw CatalogError.validation(`Cannot delete. ${blockers.reasons.join(' ')}`);
+    }
 
     const now = new Date();
     await prisma.$transaction(async (tx) => {
@@ -396,37 +417,117 @@ export class CatalogServerService {
   }
 
   /**
-   * Soft-delete one variant or a whole group's leaves. Blocked when any target has
-   * reserved stock (units committed to unshipped orders). Stock history is kept;
-   * each freed SKU becomes reusable. Marketplace mappings are NOT auto-unmapped.
+   * Soft-delete one variant or a whole group's leaves. Blocked when any target is
+   * mapped to a marketplace, has reserved/incoming stock, or has an open return.
+   * Stock history is kept; each freed SKU becomes reusable.
    */
   async deleteVariants(userId: string, productId: string, variantIds: string[]): Promise<void> {
     await this.assertProductOwned(userId, productId);
 
-    const variants = await prisma.productVariant.findMany({
-      where: { id: { in: variantIds }, productId, userId, deletedAt: null },
-      select: { id: true, sku: true, name: true, inventory: { select: { reservedStock: true } } },
-    });
+    const { blockers, variants } = await this.computeDeletionBlockers(
+      userId,
+      productId,
+      variantIds,
+    );
     if (variants.length === 0) throw CatalogError.notFound('Variant not found.');
-
-    const reserved = variants.filter((variant) => (variant.inventory?.reservedStock ?? 0) > 0);
-    if (reserved.length > 0) {
-      const names = reserved.map((variant) => variant.name).join(', ');
-      throw CatalogError.validation(
-        `Cannot delete ${names}: stock is reserved for unshipped orders. Ship or cancel those orders first.`,
-      );
+    if (blockers.blocked) {
+      throw CatalogError.validation(`Cannot delete. ${blockers.reasons.join(' ')}`);
     }
 
     const now = new Date();
-    await prisma.$transaction(async (tx) => {
-      await this.archiveVariantRows(
-        tx,
-        variants.map((variant) => ({ id: variant.id, sku: variant.sku })),
-        now,
-      );
-    });
+    await prisma.$transaction((tx) => this.archiveVariantRows(tx, variants, now));
 
     appLogger.info('catalog.variants.deleted', { userId, productId, count: variants.length });
+  }
+
+  /**
+   * Why a delete is (not) allowed. Scopes to `variantIds` when given, else every
+   * active variant of the product. Hard blockers: marketplace mapping, reserved or
+   * incoming stock, an open (PENDING) return. Soft warnings: on-hand + damaged stock.
+   */
+  async getDeletionBlockers(
+    userId: string,
+    productId: string,
+    variantIds?: string[],
+  ): Promise<DeletionBlockers> {
+    await this.assertProductOwned(userId, productId);
+    return (await this.computeDeletionBlockers(userId, productId, variantIds)).blockers;
+  }
+
+  private async computeDeletionBlockers(
+    userId: string,
+    productId: string,
+    variantIds?: string[],
+  ): Promise<{ blockers: DeletionBlockers; variants: { id: string; sku: string }[] }> {
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        productId,
+        userId,
+        deletedAt: null,
+        ...(variantIds ? { id: { in: variantIds } } : {}),
+      },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        inventory: {
+          select: {
+            reservedStock: true,
+            incomingStock: true,
+            availableStock: true,
+            damagedStock: true,
+          },
+        },
+      },
+    });
+
+    const ids = variants.map((variant) => variant.id);
+    const [mapped, openReturns] = await Promise.all([
+      marketplaceMappingService.getMappedVariantIds(userId, ids),
+      returnsServerService.getVariantIdsWithOpenReturns(userId, ids),
+    ]);
+
+    const reasons: string[] = [];
+    const warnings: string[] = [];
+
+    const mappedNames = variants.filter((variant) => mapped.has(variant.id)).map((v) => v.name);
+    if (mappedNames.length > 0) {
+      reasons.push(
+        `${quoteNames(mappedNames)} ${mappedNames.length === 1 ? 'is' : 'are'} mapped to a marketplace — unmap first.`,
+      );
+    }
+
+    const returnNames = variants
+      .filter((variant) => openReturns.has(variant.id))
+      .map((v) => v.name);
+    if (returnNames.length > 0) {
+      reasons.push(
+        `${quoteNames(returnNames)} ${returnNames.length === 1 ? 'has' : 'have'} an open return — process it first.`,
+      );
+    }
+
+    const reserved = sumInventory(variants, 'reservedStock');
+    if (reserved > 0) {
+      reasons.push(`${reserved} unit${reserved === 1 ? '' : 's'} reserved for unshipped orders.`);
+    }
+
+    const incoming = sumInventory(variants, 'incomingStock');
+    if (incoming > 0) {
+      reasons.push(
+        `${incoming} unit${incoming === 1 ? '' : 's'} incoming from open purchase orders.`,
+      );
+    }
+
+    const available = sumInventory(variants, 'availableStock');
+    if (available > 0) warnings.push(`${available} in stock will be archived.`);
+
+    const damaged = sumInventory(variants, 'damagedStock');
+    if (damaged > 0) warnings.push(`${damaged} damaged unit${damaged === 1 ? '' : 's'} recorded.`);
+
+    return {
+      blockers: { blocked: reasons.length > 0, reasons, warnings, variantCount: variants.length },
+      variants: variants.map((variant) => ({ id: variant.id, sku: variant.sku })),
+    };
   }
 
   /** Soft-delete the given variants, freeing each SKU for reuse (see archivedSku). */

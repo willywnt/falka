@@ -255,6 +255,21 @@ export class ReturnsServerService {
     return this.getReturn(userId, returnId);
   }
 
+  /** Variant ids (from the given set) referenced by a still-open (PENDING) return. */
+  async getVariantIdsWithOpenReturns(userId: string, variantIds: string[]): Promise<Set<string>> {
+    if (variantIds.length === 0) return new Set();
+    const rows = await prisma.returnItem.findMany({
+      where: {
+        productVariantId: { in: variantIds },
+        return: { userId, status: 'PENDING' },
+      },
+      select: { productVariantId: true },
+    });
+    return new Set(
+      rows.map((row) => row.productVariantId).filter((id): id is string => id !== null),
+    );
+  }
+
   /** Best-effort: push each restocked variant's new available stock to all channels. */
   private async propagateRestocked(userId: string, variantIds: Set<string>): Promise<void> {
     for (const variantId of variantIds) {

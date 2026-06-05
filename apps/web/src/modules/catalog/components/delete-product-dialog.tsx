@@ -11,7 +11,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import { useDeletionBlockersQuery } from '../hooks/use-products';
 import type { ProductListItem } from '../types';
+import { DeletionImpact } from './deletion-impact';
 
 export function DeleteProductDialog({
   product,
@@ -26,7 +28,15 @@ export function DeleteProductDialog({
   onConfirm: () => void;
   isDeleting?: boolean;
 }) {
+  const { data: blockers, isLoading } = useDeletionBlockersQuery(
+    product?.id ?? '',
+    null,
+    open && Boolean(product),
+  );
+
   if (!product) return null;
+
+  const blocked = blockers?.blocked ?? false;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -39,10 +49,13 @@ export function DeleteProductDialog({
             kept; the product is hidden from your catalog.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        <DeletionImpact blockers={blockers} isLoading={isLoading} />
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            disabled={isDeleting}
+            disabled={isDeleting || isLoading || blocked}
             onClick={(event) => {
               event.preventDefault();
               onConfirm();

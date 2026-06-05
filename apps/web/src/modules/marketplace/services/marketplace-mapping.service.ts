@@ -228,6 +228,16 @@ export class MarketplaceMappingService {
     return this.getListing(userId, connectionId, marketplaceProductId);
   }
 
+  /** Variant ids (from the given set) that have at least one marketplace mapping. */
+  async getMappedVariantIds(userId: string, variantIds: string[]): Promise<Set<string>> {
+    if (variantIds.length === 0) return new Set();
+    const rows = await prisma.marketplaceProductMapping.findMany({
+      where: { userId, productVariantId: { in: variantIds } },
+      select: { productVariantId: true },
+    });
+    return new Set(rows.map((row) => row.productVariantId));
+  }
+
   async syncNow(
     userId: string,
     connectionId: string,

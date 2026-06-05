@@ -9,7 +9,13 @@ import type { PageMeta } from '@/hooks/use-pagination';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { catalogKeys } from './catalog-keys';
-import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
+import type {
+  DeletionBlockers,
+  LabelVariant,
+  ProductDetail,
+  ProductListItem,
+  ProductVariantItem,
+} from '../types';
 import type { CreateProductInput } from '../validators/create-product';
 import type { CreateVariantInput } from '../validators/variant';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -172,6 +178,33 @@ export function useUpdateVariantMutation(productId: string) {
       // Planning fields feed the reorder report — refresh it too.
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },
+  });
+}
+
+/**
+ * Preflight a delete: fetch the hard blockers (mapping / reserved / incoming /
+ * open return) + soft warnings. `variantIds` null = the whole product.
+ */
+export function useDeletionBlockersQuery(
+  productId: string,
+  variantIds: string[] | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: catalogKeys.deletionBlockers(productId, variantIds),
+    queryFn: async () => {
+      const result = await apiFetch<DeletionBlockers>(
+        `${apiRoutes.products}/${productId}/deletion-blockers`,
+        variantIds && variantIds.length > 0 ? { params: { variantIds: variantIds.join(',') } } : {},
+      );
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    enabled,
   });
 }
 

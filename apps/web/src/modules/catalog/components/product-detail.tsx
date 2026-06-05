@@ -64,7 +64,7 @@ export function ProductDetail({
   const [editTarget, setEditTarget] = useState<ProductVariantItem | null>(null);
   const [qrTarget, setQrTarget] = useState<ProductVariantItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
-    targets: ProductVariantItem[];
+    variantIds: string[];
     label: string;
   } | null>(null);
   const [addSubGroup, setAddSubGroup] = useState<string | null>(null);
@@ -74,10 +74,10 @@ export function ProductDetail({
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
     try {
-      await deleteVariants.mutateAsync(deleteTarget.targets.map((variant) => variant.id));
+      await deleteVariants.mutateAsync(deleteTarget.variantIds);
       toast.success('Deleted', {
-        description: `${deleteTarget.targets.length} ${
-          deleteTarget.targets.length === 1 ? 'variant' : 'variants'
+        description: `${deleteTarget.variantIds.length} ${
+          deleteTarget.variantIds.length === 1 ? 'variant' : 'variants'
         } archived.`,
       });
       setDeleteTarget(null);
@@ -177,7 +177,7 @@ export function ProductDetail({
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() =>
-                    setDeleteTarget({ targets: [variant], label: `“${variant.name}”` })
+                    setDeleteTarget({ variantIds: [variant.id], label: `“${variant.name}”` })
                   }
                 >
                   <Trash2 className="size-4" />
@@ -280,7 +280,7 @@ export function ProductDetail({
                                       className="text-destructive focus:text-destructive"
                                       onClick={() =>
                                         setDeleteTarget({
-                                          targets: block.variants,
+                                          variantIds: block.variants.map((variant) => variant.id),
                                           label: `the “${block.name}” group`,
                                         })
                                       }
@@ -368,7 +368,8 @@ export function ProductDetail({
       ) : null}
 
       <DeleteVariantDialog
-        targets={deleteTarget?.targets ?? []}
+        productId={productId}
+        variantIds={deleteTarget?.variantIds ?? []}
         label={deleteTarget?.label ?? ''}
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
