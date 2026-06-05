@@ -1,9 +1,9 @@
 # Inventory & Multi-Marketplace Stock Sync — MVP Roadmap
 
-> Status: **Phases 0–5 shipped (stub-backed)** + **POS (offline sales) and Purchasing/POs shipped**
-> as counter/restock verticals · Started 2026-06-03 · Owner: @willywnt · current work on branch
-> `feat/purchasing-po` (stacked on `feat/offline-pos-sales`). Next: **QR-scan (POS phase 2, §10)**;
-> Phase 6 (automation/reporting) still open.
+> Status: **Phases 0–5 shipped (stub-backed)** + **POS (offline sales), Purchasing/POs, and QR-scan
+> (labels + mobile scan-to-cart/order) shipped** as counter/restock verticals · Started 2026-06-03 ·
+> Owner: @willywnt · current work on branch `feat/pos-qr-labels`. Next: **Phase 6 (automation/reporting)**
+> still open.
 >
 > This is the working reference for the next big MVP: an **internal inventory system
 > that is the source of truth**, integrating stock across marketplaces (Shopee,
@@ -92,15 +92,19 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
     `applyPurchaseReceiveTx` (incoming−, available+, ledger `RESTOCK`/source `PURCHASE`),
     ORDERED→PARTIALLY_RECEIVED→RECEIVED; cancel → incoming−. Free-text `supplierName` (no Supplier
     entity yet). The reorder report's **"Create PO"** prefills from URGENT/SOON suggestions.
+  - **QR-scan (POS phase 2)** — printable QR labels (label studio + `labelPrintedAt`) and mobile
+    scan-to-cart (POS) / scan-to-order (New PO) via `scanner-pairing`. Full detail in §10.
 - **Then** — full visual UI/UX redesign, once the domain is stable.
 
 ## 5. Phase 1 schema draft — **APPLIED (+ evolved since)**
 
 Applied — `packages/db/prisma/schema.prisma` is the source of truth. Beyond this draft the live
-schema has grown: `ProductVariant.cost`/`weight`/`leadTimeDays`/`minOrderQty`;
+schema has grown: `ProductVariant.cost`/`weight`/`leadTimeDays`/`minOrderQty`/**`labelPrintedAt`**;
 `Order.inventoryAppliedAt`/`inventoryShippedAt`/`inventoryRevertedAt`/`fulfilledAt`; `StockLedgerReason`
-gained `ORDER_RELEASE` + `RETURN`; and `Return`/`ReturnItem` (+ `ReturnStatus`/`ReturnDisposition`).
-The original draft is kept below for historical context.
+gained `ORDER_RELEASE` + `RETURN`; `Return`/`ReturnItem` (+ `ReturnStatus`/`ReturnDisposition`);
+the POS/purchasing models (`Sale`/`SaleItem`, `PurchaseOrder`/`PurchaseOrderItem`); and for QR-scan,
+**`PairingSession.purpose`** (enum `PairingPurpose` RECORDING/POS/PURCHASING). The original draft is
+kept below for historical context.
 
 ```prisma
 model Product {            // catalog master
@@ -175,23 +179,26 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 - [x] Phase 1 schema (§5) approved + applied (and evolved through Phases 4–5).
 - [ ] Real marketplace API wiring (Phase 3+) gated on partner/developer approvals (still stubs).
 
-## 10. QR-scan (POS phase 2) — ⏳ next
+## 10. QR-scan (POS phase 2) — ✅ shipped
 
-The queued follow-up to POS: scan a SKU at the counter instead of typing the search box. Split so the
-useful half ships without the realtime dependency.
+Scan a SKU at the counter instead of typing the search box. Both halves shipped.
 
-- **Phase A — QR/barcode labels (standalone, no schema change).** A printable label sheet (one
-  cell per variant) encoding the existing `ProductVariant.barcode` (fallback `sku` — both already on
-  the model). Pick variants → render an A4 grid of QR/Code128 labels (name + sku + price + code) →
-  print. Lives in `catalog` or a small `labels` view; pure client render, no new tables. Ships first.
-- **Phase B — mobile scan-to-cart.** Pair a phone camera to an open POS terminal and add a line by
-  scanning a label. **REUSE `scanner-pairing`** — the same pair-a-phone-to-a-station socket flow the
-  recordings station uses (HARD CONSTRAINT #4: do NOT rename/repurpose its event contracts:
-  `pairing_connected`, `barcode_scanned`, `barcode_ack`, …). The scanned code resolves a variant
-  (`barcode`/`sku`) → POS cart.
-- **Dependency / gating.** Phase B needs the realtime **socket host** — the custom `server.ts` that
-  attaches Socket.IO, which is **feature-gated and NOT run on Vercel** (see the deploy plan: single-host
-  Indonesia VPS for the realtime features). That's why Phase A (labels) is decoupled and goes first.
-- **Deferred within QR:** a dedicated `barcode` print format/per-variant override, bulk label reprints,
-  hardware USB/Bluetooth scanner support (HID keyboard-wedge would work at the POS search box with no
-  pairing — a cheap parallel option worth a separate suggestion).
+- **Phase A — QR labels (shipped).** A label studio at `/dashboard/labels` (catalog) prints an A4 grid
+  of QR labels (name + sku + price + code) encoding **`barcode ?? sku`**. The picker is paginated and
+  sorts already-printed variants last. **`ProductVariant.labelPrintedAt`** (+ `markLabelsPrinted`,
+  `POST /products/variants/printed`) records the last print — surfaced in the picker and a shared
+  **`QrCodeDialog`** (product-detail inline `QrImage`, inventory ⋯ action; "Print again" allowed).
+  Pure client render (`qrcode`), no proxying. Endpoints: `GET /products/variants?q=&page=&pageSize=`.
+- **Phase B — scan-to-cart / scan-to-order (shipped).** A phone paired via **`scanner-pairing`** adds a
+  line by scanning a product label — POS (`usePosScanner`) and New PO (`usePurchaseScanner`); a repeat
+  scan **bumps qty**. Each pairing carries a **`PairingPurpose` (RECORDING | POS | PURCHASING)** so a
+  scan only drives its own station (gated client-side; `recording_triggered` fires ONLY for RECORDING —
+  socket contracts unchanged, HARD CONSTRAINT #4 intact). Scanned codes are relayed **verbatim** (lenient
+  `scannedCodeSchema`; strict resi `noResiSchema` only at recording-create + manual/hardware-wedge —
+  `normalizeBarcodeValue` removed); the reader accepts QR + 1D. Resolvers:
+  `GET /sales|purchase-orders/variants/resolve?code=` (barcode-then-sku, case-insensitive). Scan feedback
+  (beep + countdown ticks) is **browser-only** (`@/lib/scan-sound`).
+- **Gating.** Phase B needs the realtime **socket host** (custom `server.ts`, **NOT on Vercel** — single-host
+  Indonesia VPS, see the deploy plan), so it's dev/VPS-only; Phase A labels work anywhere.
+- **Deferred (still open):** a dedicated 1D/Code128 print format + per-variant override; bulk label
+  reprints; copies-per-label; hardware USB/Bluetooth (HID keyboard-wedge) scanner at the POS search box.
