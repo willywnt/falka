@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Layers,
   MoreHorizontal,
+  Package,
   Pencil,
   Plus,
   ScrollText,
@@ -22,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/empty-state';
 import { LowStockBadge } from '@/components/low-stock-badge';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
 import { QrImage } from '@/components/qr-image';
@@ -37,7 +39,7 @@ import {
 import { useMarkLabelsPrintedMutation, useProductQuery } from '../hooks/use-products';
 import type { ProductVariantItem } from '../types';
 import { formatCurrency } from '../utils/format';
-import { formatSubOptions, groupVariantsByFirstOption } from '../utils/options';
+import { buildVariantBlocks } from '../utils/variants';
 import { AddVariantDialog } from './add-variant-dialog';
 import { EditVariantDialog } from './edit-variant-dialog';
 
@@ -80,16 +82,11 @@ export function ProductDetail({
   }
 
   const totalAvailable = data.variants.reduce((sum, variant) => sum + variant.availableStock, 0);
-  // Group only when there is a sub-dimension to distinguish leaves within a group
-  // (≥2 options: e.g. Model groups, Warna distinguishes). One dimension = a flat list.
-  const variantGroups =
-    data.optionTypes.length >= 2 ? groupVariantsByFirstOption(data.variants) : null;
-  const firstDimension = data.optionTypes[0] ?? null;
+  // Standalone variants render flat; subvariants sharing a variantGroup collapse
+  // under one group header (placed where the group first appears).
+  const variantBlocks = buildVariantBlocks(data.variants);
 
   function renderVariantRow(variant: ProductVariantItem, grouped: boolean) {
-    // Under a group the header already shows the first dimension, so the row only
-    // needs the sub-option(s) that set it apart (e.g. "Hitam"); ungrouped shows the name.
-    const label = grouped ? formatSubOptions(variant.options) || variant.name : variant.name;
     return (
       <TableRow key={variant.id}>
         <TableCell className={grouped ? 'pl-10' : undefined}>
@@ -108,7 +105,7 @@ export function ProductDetail({
               <span className="sr-only">View QR label for {variant.sku}</span>
             </button>
             <div>
-              <div className="font-medium">{label}</div>
+              <div className="font-medium">{variant.name}</div>
               <div className="text-muted-foreground text-xs">{variant.sku}</div>
             </div>
           </div>
@@ -181,55 +178,62 @@ export function ProductDetail({
               Add variant
             </Button>
           </div>
-          <div className="rounded-xl border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Variant</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">In stock</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {variantGroups
-                  ? variantGroups.map((group) => (
-                      <Fragment key={group.value || '__ungrouped'}>
-                        {group.value ? (
-                          <TableRow className="bg-muted/40 hover:bg-muted/40">
-                            <TableCell colSpan={4} className="py-2.5">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-baseline gap-2">
-                                  <Layers className="text-muted-foreground size-3.5 self-center" />
-                                  <span className="font-semibold">{group.value}</span>
-                                  {firstDimension ? (
-                                    <span className="text-muted-foreground text-xs">
-                                      {firstDimension}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <span className="text-muted-foreground text-xs tabular-nums">
-                                  {group.variants.length}{' '}
-                                  {group.variants.length === 1 ? 'variant' : 'variants'} ·{' '}
-                                  {group.variants.reduce(
-                                    (sum, variant) => sum + variant.availableStock,
-                                    0,
-                                  )}{' '}
-                                  in stock
-                                </span>
+          {data.variants.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="No variants yet"
+              description="Add a variant to start tracking stock and pricing. A variant can stand alone or hold several subvariants (e.g. colors)."
+              action={
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <Plus className="size-4" />
+                  Add variant
+                </Button>
+              }
+            />
+          ) : (
+            <div className="rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Variant</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">In stock</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {variantBlocks.map((block) =>
+                    block.kind === 'single' ? (
+                      renderVariantRow(block.variant, false)
+                    ) : (
+                      <Fragment key={`group-${block.name}`}>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={4} className="py-2.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <Layers className="text-muted-foreground size-3.5" />
+                                <span className="font-semibold">{block.name}</span>
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                        {group.variants.map((variant) =>
-                          renderVariantRow(variant, Boolean(group.value)),
-                        )}
+                              <span className="text-muted-foreground text-xs tabular-nums">
+                                {block.variants.length}{' '}
+                                {block.variants.length === 1 ? 'subvariant' : 'subvariants'} ·{' '}
+                                {block.variants.reduce(
+                                  (sum, variant) => sum + variant.availableStock,
+                                  0,
+                                )}{' '}
+                                in stock
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {block.variants.map((variant) => renderVariantRow(variant, true))}
                       </Fragment>
-                    ))
-                  : data.variants.map((variant) => renderVariantRow(variant, false))}
-              </TableBody>
-            </Table>
-          </div>
+                    ),
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
 
         <aside className="space-y-4">
@@ -280,13 +284,7 @@ export function ProductDetail({
         />
       ) : null}
 
-      <AddVariantDialog
-        productId={productId}
-        productName={data.name}
-        optionTypes={data.optionTypes}
-        open={addOpen}
-        onOpenChange={setAddOpen}
-      />
+      <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
 
       {editTarget ? (
         <EditVariantDialog

@@ -1,7 +1,7 @@
 export {
   createProductSchema,
   createProductFormSchema,
-  buildAddVariantFormSchema,
+  addVariantFormSchema,
   createVariantSchema,
   type CreateProductInput,
   type CreateProductFormInput,
@@ -21,12 +21,3 @@ export { listProductsQuerySchema, type ListProductsQuery } from './list-products
 export { labelVariantsQuerySchema, type LabelVariantsQuery } from './label-variants';
 export { markLabelsPrintedSchema, type MarkLabelsPrintedInput } from './mark-labels-printed';
 export { productIdParamSchema, type ProductIdParam } from './product-id';
-export {
-  variantOptionSchema,
-  variantOptionsSchema,
-  optionTypesSchema,
-  parseVariantOptions,
-  parseOptionTypes,
-  MAX_OPTION_TYPES,
-  type VariantOption,
-} from './options';

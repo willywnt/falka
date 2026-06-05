@@ -1,14 +1,10 @@
-import type { VariantOption } from '../validators/options';
-
-export type { VariantOption };
-
 export type ProductVariantItem = {
   id: string;
   productId: string;
   sku: string;
   name: string;
-  /** Option values keyed to the product's optionTypes; empty = a plain variant. */
-  options: VariantOption[];
+  /** Parent variant name when this is a subvariant (e.g. "iPhone 16"); null = standalone. */
+  variantGroup: string | null;
   barcode: string | null;
   /** Decimal serialized as a string to avoid float precision loss. */
   price: string;
@@ -58,8 +54,6 @@ export type ProductDetail = {
   name: string;
   description: string | null;
   category: string | null;
-  /** Ordered option dimension names, e.g. ["Model", "Warna"]; empty = simple product. */
-  optionTypes: string[];
   isActive: boolean;
   variants: ProductVariantItem[];
   createdAt: string;

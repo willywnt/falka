@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { MAX_OPTION_TYPES, optionTypesSchema, variantOptionsSchema } from './options';
-
 /** Decimal(12,2) caps the storable money value just under 10^10. */
 const MAX_MONEY = 9_999_999_999;
 /** Decimal(10,3) caps the storable weight just under 10^7. */
@@ -21,7 +19,8 @@ const optionalTrimmed = (max: number) =>
 export const createVariantSchema = z.object({
   sku: z.string().trim().min(1, 'SKU is required').max(64),
   name: z.string().trim().min(1, 'Variant name is required').max(200),
-  options: variantOptionsSchema.optional(),
+  // Parent variant name when this is a subvariant (e.g. "iPhone 16"); omit for a standalone variant.
+  variantGroup: optionalTrimmed(200),
   barcode: optionalTrimmed(64),
   price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
   cost: z.coerce.number().nonnegative().max(MAX_MONEY).optional(),
@@ -39,70 +38,62 @@ export const createProductSchema = z.object({
   name: z.string().trim().min(1, 'Product name is required').max(200),
   description: optionalTrimmed(2000),
   category: optionalTrimmed(100),
-  optionTypes: optionTypesSchema.optional(),
-  variant: createVariantSchema,
+  // A product may be created with no variant; variants are added later from the detail page.
+  variant: createVariantSchema.optional(),
 });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
-/** One option row in the create form: a dimension name + the first variant's value. */
-const formOptionRowSchema = z.object({
-  name: z.string().trim().min(1, 'Option name is required').max(40),
-  value: z.string().trim().min(1, 'Value is required').max(60),
-});
-
-/** Form-facing schema: plain (non-optional) fields the create-product dialog binds to. */
+/**
+ * Form-facing schema for the create dialog. The first variant is optional — when
+ * `addVariant` is off the product is created on its own. The variant fields are
+ * only required when `addVariant` is on (enforced via superRefine).
+ */
 export const createProductFormSchema = z
   .object({
     name: z.string().trim().min(1, 'Product name is required').max(200),
     category: z.string().trim().max(100),
     description: z.string().trim().max(2000),
-    options: z.array(formOptionRowSchema).max(MAX_OPTION_TYPES),
+    addVariant: z.boolean(),
     variant: z.object({
-      sku: z.string().trim().min(1, 'SKU is required').max(64),
-      name: z.string().trim().min(1, 'Variant name is required').max(200),
+      sku: z.string().trim().max(64),
+      name: z.string().trim().max(200),
       price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
       cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
       lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
       initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-      leadTimeDays: z.coerce.number().int().nonnegative().max(MAX_LEAD_DAYS),
-      minOrderQty: z.coerce.number().int().nonnegative().max(MAX_STOCK),
     }),
   })
   .superRefine((data, ctx) => {
-    const names = data.options.map((option) => option.name.trim().toLowerCase());
-    names.forEach((name, index) => {
-      if (name && names.indexOf(name) !== index) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['options', index, 'name'],
-          message: 'Duplicate option',
-        });
-      }
-    });
+    if (!data.addVariant) return;
+    if (!data.variant.sku.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['variant', 'sku'],
+        message: 'SKU is required',
+      });
+    }
+    if (!data.variant.name.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['variant', 'name'],
+        message: 'Variant name is required',
+      });
+    }
   });
 
 export type CreateProductFormInput = z.infer<typeof createProductFormSchema>;
 
-const optionValueSchema = z.string().trim().min(1, 'Required').max(60);
+/** Form-facing schema for adding a single variant to an existing product. */
+export const addVariantFormSchema = z.object({
+  sku: z.string().trim().min(1, 'SKU is required').max(64),
+  name: z.string().trim().min(1, 'Variant name is required').max(200),
+  price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
+  cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
+  lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
+  initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
+  leadTimeDays: z.coerce.number().int().nonnegative().max(MAX_LEAD_DAYS),
+  minOrderQty: z.coerce.number().int().nonnegative().max(MAX_STOCK),
+});
 
-/**
- * Form-facing schema for adding a variant to an existing product. Built per
- * product so `optionValues` requires exactly one value per declared dimension
- * (empty array when the product has no options).
- */
-export function buildAddVariantFormSchema(optionTypes: readonly string[]) {
-  return z.object({
-    sku: z.string().trim().min(1, 'SKU is required').max(64),
-    name: z.string().trim().min(1, 'Variant name is required').max(200),
-    optionValues: z.array(optionValueSchema).length(optionTypes.length),
-    price: z.coerce.number().nonnegative('Price must be 0 or more').max(MAX_MONEY),
-    cost: z.coerce.number().nonnegative('Cost must be 0 or more').max(MAX_MONEY),
-    lowStockThreshold: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-    initialStock: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-    leadTimeDays: z.coerce.number().int().nonnegative().max(MAX_LEAD_DAYS),
-    minOrderQty: z.coerce.number().int().nonnegative().max(MAX_STOCK),
-  });
-}
-
-export type AddVariantFormInput = z.infer<ReturnType<typeof buildAddVariantFormSchema>>;
+export type AddVariantFormInput = z.infer<typeof addVariantFormSchema>;
