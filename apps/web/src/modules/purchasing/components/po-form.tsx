@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardList, PackagePlus, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,7 +12,9 @@ import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { usePagination } from '@/hooks/use-pagination';
 import { formatCurrency } from '@/lib/formatters';
 import { REORDER_DEFAULTS } from '@/modules/inventory/config';
 import { useReorderReportQuery } from '@/modules/inventory/hooks/use-inventory';
@@ -38,7 +40,16 @@ export function PoForm() {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
-  const { data: results, isLoading } = usePurchaseVariantsQuery(debouncedSearch);
+  const { page, setPage, pageSize, setPageSize } = usePagination(10);
+  const { data: results, isLoading } = usePurchaseVariantsQuery(debouncedSearch, page, pageSize);
+
+  // A new search resets to the first page.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, setPage]);
+
+  const variants = results?.items ?? [];
+  const meta = results?.meta;
 
   const [lines, setLines] = useState<PoLine[]>([]);
   const [supplierName, setSupplierName] = useState('');
@@ -166,7 +177,7 @@ export function PoForm() {
                 <Skeleton key={index} className="h-12 w-full" />
               ))}
             </div>
-          ) : (results?.length ?? 0) === 0 ? (
+          ) : variants.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-sm">
               {debouncedSearch
                 ? 'No matching products.'
@@ -174,7 +185,7 @@ export function PoForm() {
             </p>
           ) : (
             <ul className="divide-y rounded-lg border">
-              {results?.map((variant) => (
+              {variants.map((variant) => (
                 <li
                   key={variant.variantId}
                   className="flex items-center justify-between gap-3 px-3 py-2"
@@ -196,6 +207,16 @@ export function PoForm() {
               ))}
             </ul>
           )}
+
+          {meta && meta.total > 0 ? (
+            <TablePagination
+              page={meta.page}
+              pageSize={pageSize}
+              total={meta.total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

@@ -1,16 +1,23 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import type { PageMeta } from '@/hooks/use-pagination';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { purchaseOrderKeys } from './purchase-order-keys';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
 import type { ReceivePurchaseOrderInput } from '../validators/receive-po';
 import type { PurchasableVariant, PurchaseOrderDetail, PurchaseOrderListItem } from '../types';
+
+/** A page of PO-picker variants (mirror of the server's PaginatedResult). */
+export type PurchasableVariantsPage = {
+  items: PurchasableVariant[];
+  meta: PageMeta;
+};
 
 export function usePurchaseOrdersQuery() {
   return useQuery({
@@ -35,19 +42,26 @@ export function usePurchaseOrderQuery(id: string | null, enabled = true) {
   });
 }
 
-/** Variants for the PO picker (debounced search by SKU/name). */
-export function usePurchaseVariantsQuery(q: string, enabled = true) {
+/** A paginated page of PO-picker variants (debounced search by SKU/name). */
+export function usePurchaseVariantsQuery(
+  q: string,
+  page: number,
+  pageSize: number,
+  enabled = true,
+) {
   const trimmed = q.trim();
   return useQuery({
-    queryKey: purchaseOrderKeys.variants(trimmed),
+    queryKey: purchaseOrderKeys.variants(trimmed, page, pageSize),
     queryFn: async () => {
-      const result = await apiFetch<PurchasableVariant[]>(
-        `${apiRoutes.purchaseOrders}/variants?q=${encodeURIComponent(trimmed)}`,
+      const result = await apiFetch<PurchasableVariantsPage>(
+        `${apiRoutes.purchaseOrders}/variants`,
+        { params: { page, pageSize, ...(trimmed ? { q: trimmed } : {}) } },
       );
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 

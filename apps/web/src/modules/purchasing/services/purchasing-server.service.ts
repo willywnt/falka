@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
+import { buildPaginatedResult, prisma, type PaginatedResult } from '@olshop/db';
 import { enqueuePropagateInventoryStock } from '@olshop/queue';
 import type { Prisma } from '@prisma/client';
 
@@ -10,6 +10,7 @@ import { inventoryServerService } from '@/modules/inventory/services/inventory-s
 import { PurchaseOrderError } from '../errors/purchase-order-errors';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
 import type { ReceivePurchaseOrderInput } from '../validators/receive-po';
+import type { SearchVariantsQuery } from '../validators/search-variants';
 import type {
   PurchaseOrderDetail,
   PurchaseOrderItemDetail,
@@ -17,7 +18,6 @@ import type {
   PurchasableVariant,
 } from '../types';
 
-const SEARCH_LIMIT = 20;
 const LIST_LIMIT = 100;
 
 const DETAIL_INCLUDE = {
@@ -59,32 +59,41 @@ function mapDetail(row: PurchaseOrderRow): PurchaseOrderDetail {
  * inventory service; this module reads catalog variants read-only.
  */
 export class PurchasingServerService {
-  /** Variants for the PO picker — matched by SKU/name, with cost + available/incoming. */
-  async searchVariants(userId: string, q: string): Promise<PurchasableVariant[]> {
-    const term = q.trim();
-    const variants = await prisma.productVariant.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-        isActive: true,
-        ...(term
-          ? {
-              OR: [
-                { sku: { contains: term, mode: 'insensitive' } },
-                { name: { contains: term, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        inventory: { select: { availableStock: true, incomingStock: true } },
-        product: { select: { name: true } },
-      },
-      orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
-      take: SEARCH_LIMIT,
-    });
+  /** Variants for the PO picker — matched by SKU/name, with cost + available/incoming, paginated. */
+  async searchVariants(
+    userId: string,
+    query: SearchVariantsQuery,
+  ): Promise<PaginatedResult<PurchasableVariant>> {
+    const term = query.q.trim();
+    const where: Prisma.ProductVariantWhereInput = {
+      userId,
+      deletedAt: null,
+      isActive: true,
+      ...(term
+        ? {
+            OR: [
+              { sku: { contains: term, mode: 'insensitive' } },
+              { name: { contains: term, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
 
-    return variants.map((variant) => ({
+    const [variants, total] = await Promise.all([
+      prisma.productVariant.findMany({
+        where,
+        include: {
+          inventory: { select: { availableStock: true, incomingStock: true } },
+          product: { select: { name: true } },
+        },
+        orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.productVariant.count({ where }),
+    ]);
+
+    const items: PurchasableVariant[] = variants.map((variant) => ({
       variantId: variant.id,
       sku: variant.sku,
       name: variant.name,
@@ -93,6 +102,8 @@ export class PurchasingServerService {
       availableStock: variant.inventory?.availableStock ?? 0,
       incomingStock: variant.inventory?.incomingStock ?? 0,
     }));
+
+    return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
   async listPurchaseOrders(userId: string): Promise<PurchaseOrderListItem[]> {

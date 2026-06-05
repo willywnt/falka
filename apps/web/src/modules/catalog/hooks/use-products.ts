@@ -5,6 +5,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import type { PageMeta } from '@/hooks/use-pagination';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { catalogKeys } from './catalog-keys';
@@ -14,20 +15,11 @@ import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateVariantInput } from '../validators/update-variant';
 
 const LIST_PAGE_SIZE = 50;
-/** Per-page size for the label studio picker (small to avoid long scrolling). */
-export const LABEL_PAGE_SIZE = 10;
 
 /** A page of label-studio variants (mirror of the server's PaginatedResult). */
 export type LabelVariantsPage = {
   items: LabelVariant[];
-  meta: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
+  meta: PageMeta;
 };
 
 function listQuery(search?: string): ListProductsQuery {
@@ -52,13 +44,13 @@ export function useProductsQuery(search?: string) {
 }
 
 /** A paginated page of label-studio variants (debounced search by SKU/barcode/name). */
-export function useLabelVariantsQuery(q: string, page: number) {
+export function useLabelVariantsQuery(q: string, page: number, pageSize: number) {
   const trimmed = q.trim();
   return useQuery({
-    queryKey: catalogKeys.labelVariants(trimmed, page),
+    queryKey: catalogKeys.labelVariants(trimmed, page, pageSize),
     queryFn: async () => {
       const result = await apiFetch<LabelVariantsPage>(`${apiRoutes.products}/variants`, {
-        params: { page, pageSize: LABEL_PAGE_SIZE, ...(trimmed ? { q: trimmed } : {}) },
+        params: { page, pageSize, ...(trimmed ? { q: trimmed } : {}) },
       });
 
       if (!result.success) {

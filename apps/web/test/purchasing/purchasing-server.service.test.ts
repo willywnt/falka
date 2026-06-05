@@ -29,7 +29,7 @@ const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
       applyPurchaseReceiveTx: vi.fn().mockResolvedValue(0),
     },
     prismaMock: {
-      productVariant: { findMany: vi.fn() },
+      productVariant: { findMany: vi.fn(), count: vi.fn() },
       purchaseOrder: { findMany: vi.fn(), findFirst: vi.fn() },
       inventory: { findUnique: vi.fn() },
       marketplaceProductMapping: { count: vi.fn() },
@@ -38,7 +38,20 @@ const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock('@olshop/db', () => ({ prisma: prismaMock }));
+vi.mock('@olshop/db', () => ({
+  prisma: prismaMock,
+  buildPaginatedResult: (items: unknown[], total: number, page: number, pageSize: number) => ({
+    items,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
+      hasNextPage: page * pageSize < total,
+      hasPreviousPage: page > 1,
+    },
+  }),
+}));
 vi.mock('@olshop/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -176,10 +189,11 @@ describe('searchVariants', () => {
         product: { name: 'Cotton Tee' },
       },
     ]);
+    prismaMock.productVariant.count.mockResolvedValue(1);
 
-    const result = await service.searchVariants(USER, 'black');
+    const result = await service.searchVariants(USER, { q: 'black', page: 1, pageSize: 10 });
 
-    expect(result).toEqual([
+    expect(result.items).toEqual([
       {
         variantId: 'v1',
         sku: 'BLACK-S',
@@ -190,5 +204,6 @@ describe('searchVariants', () => {
         incomingStock: 20,
       },
     ]);
+    expect(result.meta.total).toBe(1);
   });
 });

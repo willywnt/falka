@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Printer, QrCode } from 'lucide-react';
+import { Check, Printer, QrCode } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { usePagination } from '@/hooks/use-pagination';
 import { formatCurrency, formatRelativeTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -25,13 +27,13 @@ import { LabelSheet, labelCodeFor } from './label-sheet';
 export function LabelStudio() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
-  const [page, setPage] = useState(1);
-  const { data: results, isLoading } = useLabelVariantsQuery(debouncedSearch, page);
+  const { page, setPage, pageSize, setPageSize } = usePagination(10);
+  const { data: results, isLoading } = useLabelVariantsQuery(debouncedSearch, page, pageSize);
 
   // A new search resets to the first page.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, setPage]);
 
   const [selected, setSelected] = useState<Map<string, LabelVariant>>(new Map());
   const labels = useMemo(() => [...selected.values()], [selected]);
@@ -160,32 +162,14 @@ export function LabelStudio() {
               </ul>
             )}
 
-            {meta && meta.totalPages > 1 ? (
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <span className="text-muted-foreground text-xs">
-                  Page {meta.page} of {meta.totalPages}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!meta.hasPreviousPage}
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  >
-                    <ChevronLeft className="size-4" />
-                    Prev
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!meta.hasNextPage}
-                    onClick={() => setPage((current) => current + 1)}
-                  >
-                    Next
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
+            {meta && meta.total > 0 ? (
+              <TablePagination
+                page={meta.page}
+                pageSize={pageSize}
+                total={meta.total}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             ) : null}
           </CardContent>
         </Card>

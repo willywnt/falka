@@ -26,7 +26,9 @@ import {
 import { EmptyState } from '@/components/empty-state';
 import { LowStockBadge } from '@/components/low-stock-badge';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
+import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { usePagination } from '@/hooks/use-pagination';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatters';
@@ -54,8 +56,18 @@ export function InventoryOverview() {
     lowStockOnly,
   );
 
+  const { page, setPage, pageSize, setPageSize } = usePagination(10);
+
+  // A new filter resets to the first page.
+  useEffect(() => {
+    setPage(1);
+  }, [filters.search, lowStockOnly, setPage]);
+
   const items = data ?? [];
   const isEmpty = !isLoading && items.length === 0;
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = items.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
     <div className="space-y-6">
@@ -119,7 +131,7 @@ export function InventoryOverview() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {pageItems.map((item) => (
                 <TableRow key={item.variantId}>
                   <TableCell>
                     <Link
@@ -225,6 +237,16 @@ export function InventoryOverview() {
           </Table>
         </div>
       )}
+
+      {items.length > 0 ? (
+        <TablePagination
+          page={safePage}
+          pageSize={pageSize}
+          total={items.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
 
       {adjustTarget ? (
         <AdjustStockDialog
