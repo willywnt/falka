@@ -20,7 +20,8 @@ export function useQrCodes(values: readonly string[]): Map<string, string> {
       unique.map(async (value) => {
         // A short SKU/barcode never fails to encode; fall back to an empty data
         // URL so one odd value can't block the rest of the sheet.
-        const dataUrl = await QRCode.toDataURL(value, { width: 240, margin: 0 }).catch(() => '');
+        // margin: 2 keeps the required quiet zone so a phone camera can lock on.
+        const dataUrl = await QRCode.toDataURL(value, { width: 240, margin: 2 }).catch(() => '');
         return [value, dataUrl] as const;
       }),
     ).then((entries) => {

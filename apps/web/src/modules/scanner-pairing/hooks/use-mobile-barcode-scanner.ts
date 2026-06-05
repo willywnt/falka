@@ -14,7 +14,10 @@ import { boundsFromResultPoints, type BarcodeOverlayBounds } from '../utils/barc
 import { getCameraUnavailableMessage, isCameraApiAvailable } from '../utils/camera-environment';
 import type { MobileScanHistoryEntry } from '../components/mobile-scan-history';
 
-const LOGISTICS_FORMATS = [
+// QR_CODE first for the POS product labels (printed via the label studio); the
+// rest are the 1D logistics symbologies used by packing/recordings shipping labels.
+const SUPPORTED_SCAN_FORMATS = [
+  BarcodeFormat.QR_CODE,
   BarcodeFormat.CODE_128,
   BarcodeFormat.CODE_39,
   BarcodeFormat.EAN_13,
@@ -115,7 +118,7 @@ export function useMobileBarcodeScanner({
     const reader = new BrowserMultiFormatReader(undefined, {
       delayBetweenScanAttempts: 200,
     });
-    reader.possibleFormats = LOGISTICS_FORMATS;
+    reader.possibleFormats = SUPPORTED_SCAN_FORMATS;
     readerRef.current = reader;
 
     try {
