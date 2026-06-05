@@ -1,8 +1,18 @@
 import { z } from 'zod';
 
-import { noResiSchema } from '@/modules/recordings/validators/no-resi';
-
 export const pairingIdSchema = z.string().uuid('Invalid pairing session id');
+
+/**
+ * A code from a camera/QR scan — a shipping resi OR a product SKU/barcode. Kept
+ * deliberately lenient (verbatim, just trimmed) so a scan is never dropped for
+ * casing or characters; the resi FORMAT is only enforced when a recording is
+ * actually created (`noResiSchema`), and a product code is matched as-is.
+ */
+export const scannedCodeSchema = z
+  .string()
+  .trim()
+  .min(1, 'Empty scan')
+  .max(128, 'Scanned code is too long');
 
 /** Secret from QR (`code` query param); matches server-generated pairingCode. */
 export const pairingCodeSchema = z.preprocess(
@@ -31,7 +41,7 @@ export const connectPairingSchema = z.object({
 
 export const submitBarcodeSchema = z.object({
   pairingId: pairingIdSchema,
-  barcode: noResiSchema,
+  barcode: scannedCodeSchema,
 });
 
 export const joinPairingSocketSchema = z.object({
@@ -44,7 +54,7 @@ export const stationRecordingPhaseSchema = z.enum(['idle', 'countdown', 'recordi
 export const reportStationStateSchema = z.object({
   pairingId: pairingIdSchema,
   phase: stationRecordingPhaseSchema,
-  barcode: noResiSchema.optional(),
+  barcode: scannedCodeSchema.optional(),
 });
 
 export type CreatePairingInput = z.infer<typeof createPairingSchema>;

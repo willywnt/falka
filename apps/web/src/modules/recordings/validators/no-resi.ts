@@ -1,10 +1,5 @@
 import { z } from 'zod';
 
-/** Normalize keyboard-wedge barcode input (strip whitespace, uppercase). */
-export function normalizeBarcodeValue(raw: string): string {
-  return raw.trim().replace(/\s+/g, '').toUpperCase();
-}
-
 export const noResiSchema = z
   .string()
   .trim()

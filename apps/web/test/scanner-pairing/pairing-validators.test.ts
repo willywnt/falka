@@ -63,9 +63,15 @@ describe('submitBarcodeSchema', () => {
     ).toBe(true);
   });
 
-  it('rejects an invalid barcode (reuses the resi rules)', () => {
+  it('accepts a code with spaces or punctuation (lenient — relayed verbatim)', () => {
     expect(
-      submitBarcodeSchema.safeParse({ pairingId: VALID_UUID, barcode: 'no spaces' }).success,
-    ).toBe(false);
+      submitBarcodeSchema.safeParse({ pairingId: VALID_UUID, barcode: 'Black / S' }).success,
+    ).toBe(true);
+  });
+
+  it('rejects an empty barcode', () => {
+    expect(submitBarcodeSchema.safeParse({ pairingId: VALID_UUID, barcode: '   ' }).success).toBe(
+      false,
+    );
   });
 });

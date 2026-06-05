@@ -6,8 +6,6 @@ import type { PairingPurpose, PairingSession } from '@prisma/client';
 import { createLogger } from '@olshop/logger/server';
 import type { AuthUser } from '@/modules/auth/types';
 
-import { normalizeBarcodeValue } from '@/modules/recordings/validators/no-resi';
-
 const pairingLogger = createLogger({ component: 'pairing' });
 
 import {
@@ -289,7 +287,8 @@ export class PairingService {
       throw new PairingError(PAIRING_ERROR_CODES.SCANNER_DISCONNECTED);
     }
 
-    const barcode = normalizeBarcodeValue(rawBarcode);
+    // Stored/relayed verbatim (just trimmed) — see scannedCodeSchema.
+    const barcode = rawBarcode.trim();
 
     if (isDuplicateScan(pairingId, barcode)) {
       throw PairingError.duplicateScan();

@@ -138,7 +138,7 @@ describe('submitBarcode', () => {
     });
   });
 
-  it('normalizes and records the first scan, then debounces an immediate re-scan', async () => {
+  it('records the first scan verbatim (trimmed), then debounces an immediate re-scan', async () => {
     const connected = fakeSession({
       id: 'pair-bc',
       status: 'CONNECTED',
@@ -147,12 +147,13 @@ describe('submitBarcode', () => {
     });
     repoMock.findById.mockResolvedValue(connected);
     repoMock.recordScan.mockResolvedValue(
-      fakeSession({ id: 'pair-bc', status: 'CONNECTED', lastBarcode: 'JNE123' }),
+      fakeSession({ id: 'pair-bc', status: 'CONNECTED', lastBarcode: 'jne 123' }),
     );
 
-    const first = await service.submitBarcode(USER, 'pair-bc', 'jne 123');
-    expect(first.barcode).toBe('JNE123');
-    expect(repoMock.recordScan).toHaveBeenCalledWith('pair-bc', 'JNE123');
+    // No uppercasing / whitespace stripping — only the outer whitespace is trimmed.
+    const first = await service.submitBarcode(USER, 'pair-bc', '  jne 123  ');
+    expect(first.barcode).toBe('jne 123');
+    expect(repoMock.recordScan).toHaveBeenCalledWith('pair-bc', 'jne 123');
 
     await expect(service.submitBarcode(USER, 'pair-bc', 'jne 123')).rejects.toMatchObject({
       code: PAIRING_ERROR_CODES.DUPLICATE_SCAN,

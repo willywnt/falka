@@ -5,13 +5,11 @@ import { BarcodeFormat, BrowserMultiFormatReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import type { Result } from '@zxing/library';
 
-import { normalizeBarcodeValue } from '@/modules/recordings/validators/no-resi';
-import { noResiSchema } from '@/modules/recordings/validators/no-resi';
-
 import { PAIRING_ERROR_MESSAGES, PAIRING_ERROR_CODES } from '../errors/pairing-errors';
 import { emitBarcodeScanned, getScannerSocket } from '../services/socket-client.service';
 import { boundsFromResultPoints, type BarcodeOverlayBounds } from '../utils/barcode-overlay-bounds';
 import { getCameraUnavailableMessage, isCameraApiAvailable } from '../utils/camera-environment';
+import { scannedCodeSchema } from '../validators/pairing';
 import type { MobileScanHistoryEntry } from '../components/mobile-scan-history';
 
 // QR_CODE first for the POS product labels (printed via the label studio); the
@@ -75,7 +73,7 @@ export function useMobileBarcodeScanner({
       );
       setDetectionBounds(bounds);
       setBarcodeDetected(true);
-      setPreviewBarcode(normalizeBarcodeValue(result.getText()));
+      setPreviewBarcode(result.getText().trim());
 
       if (detectionClearTimerRef.current !== null) {
         window.clearTimeout(detectionClearTimerRef.current);
@@ -135,28 +133,29 @@ export function useMobileBarcodeScanner({
 
           markBarcodeDetected(result);
 
-          const raw = result.getText();
-          const normalized = normalizeBarcodeValue(raw);
-          const parsed = noResiSchema.safeParse(normalized);
+          // Emit the scanned code verbatim (just trimmed) — no uppercasing or
+          // whitespace stripping, so a SKU/barcode matches its stored value exactly.
+          const parsed = scannedCodeSchema.safeParse(result.getText());
           if (!parsed.success) return;
+          const code = parsed.data;
 
           const now = Date.now();
           if (
             lastScanRef.current &&
-            lastScanRef.current.barcode === normalized &&
+            lastScanRef.current.barcode === code &&
             now - lastScanRef.current.at < 2000
           ) {
             return;
           }
-          lastScanRef.current = { barcode: normalized, at: now };
+          lastScanRef.current = { barcode: code, at: now };
 
           const socket = getScannerSocket();
           if (!socket.connected) return;
 
-          const ack = await emitBarcodeScanned(socket, pairingId, normalized);
+          const ack = await emitBarcodeScanned(socket, pairingId, code);
           if (ack.ok) {
-            pushScanHistory(normalized);
-            onScanSuccess?.(normalized);
+            pushScanHistory(code);
+            onScanSuccess?.(code);
           }
         },
       );

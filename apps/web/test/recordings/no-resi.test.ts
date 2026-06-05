@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { noResiSchema, normalizeBarcodeValue } from '@/modules/recordings/validators/no-resi';
+import { noResiSchema } from '@/modules/recordings/validators/no-resi';
 
 /**
  * Happy Flow #1 — manual recording input gate.
@@ -39,15 +39,5 @@ describe('noResiSchema', () => {
     if (result.success) {
       expect(result.data).toBe('ABC123');
     }
-  });
-});
-
-describe('normalizeBarcodeValue', () => {
-  it('strips all whitespace and uppercases', () => {
-    expect(normalizeBarcodeValue('  jne 001 234  ')).toBe('JNE001234');
-  });
-
-  it('is idempotent for an already-normalized value', () => {
-    expect(normalizeBarcodeValue('ABC123')).toBe('ABC123');
   });
 });
