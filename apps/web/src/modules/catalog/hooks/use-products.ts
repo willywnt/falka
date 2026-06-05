@@ -14,8 +14,8 @@ import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateVariantInput } from '../validators/update-variant';
 
 const LIST_PAGE_SIZE = 50;
-/** Per-page size for the label studio picker. */
-export const LABEL_PAGE_SIZE = 24;
+/** Per-page size for the label studio picker (small to avoid long scrolling). */
+export const LABEL_PAGE_SIZE = 10;
 
 /** A page of label-studio variants (mirror of the server's PaginatedResult). */
 export type LabelVariantsPage = {
