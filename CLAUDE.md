@@ -212,12 +212,21 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
   layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/sales/stock to re-test
   the loop (then restart the dev server to rewind the stub pull timeline).
-- **Next (planned) — QR-scan (POS phase 2)**: per-SKU **QR/barcode labels** (printable sheet, encodes
-  the existing `ProductVariant.barcode`/`sku` — no schema change for phase A) → **mobile scan-to-cart**
-  for the POS terminal, reusing **`scanner-pairing`** (HARD CONSTRAINT #4 — don't repurpose its socket
-  contracts) to pair a phone camera to the till. Phase B depends on the realtime **socket host** (the
-  custom `server.ts` is feature-gated / NOT on Vercel — see the deploy plan), so phase A (labels) ships
-  first, standalone. See `docs/roadmap/inventory-mvp.md` §10.
+- **QR-scan (POS phase 2) — ✅ shipped.** Per-SKU **QR labels**: a label studio at `/dashboard/labels`
+  (catalog) prints an A4 grid encoding `barcode ?? sku` (`listLabelVariants` paginated, already-printed
+  sort last). **`ProductVariant.labelPrintedAt`** records the last print (`markLabelsPrinted`) — surfaced
+  in the labels picker + a shared **`QrCodeDialog`** on the product-detail (inline `QrImage`) and inventory
+  (⋯ action) tables; re-print ("Print again") stays allowed. **Scan-to-cart / scan-to-order**: a phone
+  paired via **`scanner-pairing`** adds a line by scanning a product label — POS (`usePosScanner`) and New
+  PO (`usePurchaseScanner`); a repeat scan **bumps qty**. Each pairing carries a **`PairingPurpose`
+  (RECORDING | POS | PURCHASING)** so a scan only drives its own station (gated client-side; `recording_
+triggered` fires ONLY for RECORDING — contracts unchanged, HARD CONSTRAINT #4 intact). Scanned codes are
+  relayed **verbatim** (lenient `scannedCodeSchema`; strict resi `noResiSchema` only gates recording-create
+  - manual/hardware-wedge entry — `normalizeBarcodeValue` was removed). The mobile reader accepts QR + 1D.
+    Resolvers: `GET /sales|purchase-orders/variants/resolve?code=` → barcode-then-sku, case-insensitive.
+    Scan feedback (beep + countdown ticks) is **browser-only** via `@/lib/scan-sound`. Realtime needs the
+    socket host (`server.ts`, gated off on Vercel) → dev/VPS only; labels work anywhere. Detail in
+    `.cursor/rules/30-scanner-pairing.mdc` + `…/40-inventory-marketplace.mdc`.
 - **Gotchas**: BullMQ jobId can't contain `:`; the dev server locks the Prisma engine DLL — stop it
   before `prisma generate`/migrate (index-only migration can use `--skip-generate` WITHOUT stopping);
   after adding a `page.tsx`/route, **typed routes** make `tsc` fail on `Route` literals until
@@ -231,5 +240,8 @@ shared primitives + patterns — see `.cursor/rules/50-ui-design-system.mdc`. Ke
 `useUrlFilters` + debounced search (page wrapped in `<Suspense>`); forms via RHF+zod with
 `FormLabel required` / iconed `FormDescription` / `NumberInput`; `Switch` for toggles; a `⋯`
 DropdownMenu + `Tooltip` for row actions; two-column detail pages; `StatCard` / `EmptyState` /
-`DateRangePicker` / `LowStockBadge`. **Never run `next build` while the dev server is up** (shared
+`DateRangePicker` / `LowStockBadge`. Paginated tables: `usePagination` + `TablePagination`
+(rows-per-page 10/20/50/100, resets to page 1 on size change). QR: `QrImage` + `QrCodeDialog`.
+Scanner sound: `@/lib/scan-sound` + `useSoundUnlock` + `useScanSoundPref` (browser-only, mute toggle).
+**Never run `next build` while the dev server is up** (shared
 `.next`). Auth is already enforced — don't touch config/middleware/cookies (HARD CONSTRAINT #2).

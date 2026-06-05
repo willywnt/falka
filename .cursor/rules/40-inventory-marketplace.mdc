@@ -18,6 +18,12 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   UI = unset → null). Variants are editable: `PATCH /products/:id/variants/:variantId` →
   `updateVariant` (create/add-variant forms stay short; advanced planning is set later via Edit).
   Stock changes go through the inventory service, NEVER by writing inventory tables from catalog.
+  **QR labels**: `/dashboard/labels` label studio — `listLabelVariants` (paginated; already-printed
+  sort last via `labelPrintedAt nulls-first`), prints an A4 grid encoding `barcode ?? sku`.
+  `ProductVariant.labelPrintedAt` + `markLabelsPrinted` (`POST /products/variants/printed`) stamp the
+  last print; shown in the picker + the shared `QrCodeDialog` (product-detail inline `QrImage`,
+  inventory ⋯ action). Endpoints: `GET /products/variants?q=&page=&pageSize=` (label list),
+  `POST /products/variants/printed`.
 - **inventory** — `Inventory` (fast-read cache: available/reserved/damaged/incoming) +
   **`StockLedger` (append-only = the real source of truth, available-centric)**. Every mutation =
   1 ledger row + 1 Inventory update in ONE tx. `adjustStock` (manual, never negative). Inbound-order
@@ -78,8 +84,11 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   is **allowed** (goods are in hand → available MAY go negative). After commit, propagate each sold
   variant's new available to **all** sync-ready channels (selling in-store can't oversell online). The
   POS picker reads ProductVariant read-only (`searchSellableVariants`, active only, by sku/name + price +
-  available). `SALE` joins `SALES_LEDGER_REASONS`, so offline sales feed reorder velocity. Endpoints:
-  `GET/POST /api/v1/sales`, `/sales/:id`, `/sales/variants?q=`.
+  available). `SALE` joins `SALES_LEDGER_REASONS`, so offline sales feed reorder velocity. **Scan-to-cart**
+  (`usePosScanner`, `scanner-pairing` purpose **POS**): a paired phone scans a product label →
+  `resolveSellableVariant` (barcode-then-sku, case-insensitive) → cart line, repeat scan bumps qty, with a
+  browser beep. Endpoints: `GET/POST /api/v1/sales`, `/sales/:id`, `/sales/variants?q=`,
+  `/sales/variants/resolve?code=`.
 - **purchasing (restock / POs)** — `PurchaseOrder` + `PurchaseOrderItem` (snapshot sku/name + `quantity`/
   `receivedQuantity`/`unitCost`), `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED,
   code `PO00001` per-user. **Lights up the `incomingStock` bucket** (the last empty one). Two inventory
@@ -92,10 +101,12 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   PARTIALLY_RECEIVED), propagate received variants to **all** channels; **cancel** (not-yet-RECEIVED) →
   `adjustIncomingTx(−outstanding)` per line, status CANCELLED (already-received units stay in available).
   `supplierName` is **free text** (no Supplier entity yet); variant `cost` stays manual. `searchVariants`
-  reads ProductVariant read-only (cost + available + incoming). The reorder report's **"Create PO"**
-  prefills `/dashboard/purchasing/new` from URGENT/SOON suggestions. Endpoints:
+  reads ProductVariant read-only (cost + available + incoming), now **paginated** (`?q=&page=&pageSize=`).
+  The reorder report's **"Create PO"** prefills `/dashboard/purchasing/new` from URGENT/SOON suggestions.
+  **Scan-to-order** (`usePurchaseScanner`, `scanner-pairing` purpose **PURCHASING**): a paired phone scans
+  a product label → `resolvePurchasableVariant` → PO line, repeat scan bumps qty, browser beep. Endpoints:
   `GET/POST /api/v1/purchase-orders`, `/purchase-orders/:id`, `/:id/receive`, `/:id/cancel`,
-  `/purchase-orders/variants?q=`.
+  `/purchase-orders/variants?q=&page=&pageSize=`, `/purchase-orders/variants/resolve?code=`.
 
 ## Outbound sync engine (worker-side) — `packages/queue/src/marketplace-sync/`
 SoT change → `enqueuePropagateInventoryStock` (web, best-effort, only if `syncEnabled` mappings
@@ -132,13 +143,19 @@ throw so BullMQ retries.
 - Typed routes: after adding a new `app/**/page.tsx`, `pnpm typecheck` (`tsc`) fails on `Route`
   literals until `next build` regenerates `.next/types`. Build first, then typecheck.
 
-## Next up — QR-scan (POS phase 2)
-The queued follow-up to POS. **Phase A (standalone): per-SKU QR/barcode labels** — a printable label
-sheet encoding the existing `ProductVariant.barcode`/`sku` (NO schema change; barcode already exists).
-**Phase B: mobile scan-to-cart** — pair a phone camera to the POS terminal to add lines by scan, REUSING
-the **`scanner-pairing`** module (HARD CONSTRAINT #4 — do NOT rename/repurpose its socket event
-contracts). Phase B depends on the realtime **socket host** (custom `server.ts`, feature-gated / NOT on
-Vercel — see the deploy plan), so ship phase A (labels) first. Roadmap §10.
+## QR-scan (POS phase 2) — ✅ shipped
+**Phase A — QR labels**: `/dashboard/labels` (catalog) + `ProductVariant.labelPrintedAt` (last-print
+tracking) + shared `QrImage`/`QrCodeDialog` on the product-detail & inventory tables (above). **Phase B —
+scan-to-cart/order**: POS (`usePosScanner`, purpose POS) and New PO (`usePurchaseScanner`, purpose
+PURCHASING) add a line by scanning a product label (repeat = +qty), reusing **`scanner-pairing`** — see
+`30-scanner-pairing.mdc` for the purpose split, verbatim `scannedCodeSchema`, QR+1D reader, and
+browser-only sound. Realtime needs the socket host (`server.ts`, gated off on Vercel) → dev/VPS only.
+
+## Paginated tables (shared)
+Inventory overview, the label picker, and the New-PO product picker use `usePagination` +
+`TablePagination` (rows-per-page 10/20/50/100, resets to page 1). The label + PO pickers are
+**server-paginated** (service returns `PaginatedResult`, route forwards `page`/`pageSize`); inventory
+paginates client-side over its capped overview. See `50-ui-design-system.mdc`.
 
 ## Deferred (raise as separate suggestions)
 ProviderHealth + reconciliation/drift; bundles/kits; multi-warehouse; per-order re-pull (pull is
@@ -161,3 +178,7 @@ vitest (engine is gate-checked only).
 > **offline sales / POS** (`SALE`/`POS`, propagate to all channels, velocity-aware); **purchasing / POs**
 > (lights up `incomingStock`: create→incoming+, partial receive→`RESTOCK`/`PURCHASE` available+,
 > cancel→incoming−; reorder "Create PO"). **Inventory overview now shows all four buckets (Incoming added).**
+> **QR-scan (POS phase 2)**: QR label studio + `labelPrintedAt` last-print tracking + `QrImage`/
+> `QrCodeDialog` on product-detail & inventory; POS scan-to-cart + New-PO scan-to-order via
+> `scanner-pairing` (`PairingPurpose` RECORDING/POS/PURCHASING, verbatim `scannedCodeSchema`, QR+1D,
+> browser-only sound); shared `usePagination`/`TablePagination` on inventory + label + PO pickers.

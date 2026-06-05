@@ -19,15 +19,23 @@ charcoal sidebar whose brand mark + active markers pick up the accent, **Plus Ja
 - `components/`: **`PageHeader`** (`eyebrow`/title/description/`children` actions), **`StatCard`**
   (KPI + tinted icon chip via `tone`, palette `STAT_TONES`), **`EmptyState`**, **`LowStockBadge`**
   (tooltip shows the threshold), **`DateRangePicker`** (single popover, commits on an **Apply**
-  button — not on each day click).
+  button — not on each day click), **`TablePagination`** (rows-per-page select + page nav),
+  **`QrImage`** (client PNG QR) + **`QrCodeDialog`** (enlarged, printable label).
 - `hooks/`: **`useUrlFilters`** (flat string filters ↔ URL query; defaults dropped),
-  **`useDebouncedValue`**.
+  **`useDebouncedValue`**, **`usePagination`** (`page`/`pageSize`, resets to 1 on size change;
+  `PAGE_SIZE_OPTIONS` 10/20/50/100, `PageMeta`), **`useSoundUnlock`** + **`useScanSoundPref`**
+  (scanner beeps via `@/lib/scan-sound`, browser-only + per-station mute).
 
 ## Patterns (copy these)
 - **List filters**: hold filter state in `useUrlFilters({ ... })`; debounce the search box (300ms)
   via `useDebouncedValue` and push the debounced value into the URL filter; reset `page` to `'1'` on
   any filter change. The page must wrap the client list in `<Suspense>` (it uses `useSearchParams`).
   Reference: `stock-activity.tsx`, `products-dashboard.tsx`, `inventory-overview.tsx`.
+- **Pagination**: `const { page, setPage, pageSize, setPageSize } = usePagination()` + render
+  `<TablePagination page pageSize total onPageChange onPageSizeChange />` (pass the server `meta.total`
+  or the client array length). Reset `page` to 1 when filters change. Server-paginated lists feed `page`/
+  `pageSize` into the query (key + params) and read back `{ items, meta }`; client-paginated lists slice
+  the fetched array. Reference: `label-studio.tsx`, `po-form.tsx` (server), `inventory-overview.tsx` (client).
 - **Forms** (react-hook-form + zod): `<FormLabel required>` adds a red `*`; `<FormDescription>` is a
   small hint with an info icon; numeric fields use `<NumberInput {...field} />` (blank box for 0,
   strips leading zeros); two-column field grids use CSS grid so an error/hint never misaligns the
