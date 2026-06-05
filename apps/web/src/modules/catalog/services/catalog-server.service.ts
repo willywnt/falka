@@ -8,7 +8,8 @@ import { inventoryServerService } from '@/modules/inventory/services/inventory-s
 
 import { CatalogError } from '../errors/catalog-errors';
 import type { LabelVariant, ProductDetail, ProductListItem, ProductVariantItem } from '../types';
-import { parseOptionTypes, parseVariantOptions } from '../validators/options';
+import { findOptionError, optionsSignature } from '../utils/options';
+import { parseOptionTypes, parseVariantOptions, type VariantOption } from '../validators/options';
 import type { CreateProductInput, CreateVariantInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -81,6 +82,7 @@ function buildVariantData(
     productId,
     sku: input.sku,
     name: input.name,
+    options: input.options && input.options.length > 0 ? input.options : undefined,
     barcode: input.barcode ?? null,
     price: input.price,
     cost: input.cost ?? null,
@@ -233,6 +235,10 @@ export class CatalogServerService {
   async createProduct(userId: string, input: CreateProductInput): Promise<ProductDetail> {
     await this.assertSkuAvailable(userId, input.variant.sku);
 
+    const optionTypes = input.optionTypes ?? [];
+    const optionError = findOptionError(optionTypes, input.variant.options ?? []);
+    if (optionError) throw CatalogError.validation(optionError);
+
     let productId: string;
     let variantId: string;
 
@@ -244,6 +250,7 @@ export class CatalogServerService {
             name: input.name,
             description: input.description ?? null,
             category: input.category ?? null,
+            optionTypes: optionTypes.length > 0 ? optionTypes : undefined,
           },
         });
 
@@ -273,8 +280,18 @@ export class CatalogServerService {
     productId: string,
     input: CreateVariantInput,
   ): Promise<ProductVariantItem> {
-    await this.assertProductOwned(userId, productId);
+    const product = await prisma.product.findFirst({
+      where: { id: productId, userId, deletedAt: null },
+      select: { id: true, optionTypes: true },
+    });
+    if (!product) throw CatalogError.notFound();
+
+    const options = input.options ?? [];
+    const optionError = findOptionError(parseOptionTypes(product.optionTypes), options);
+    if (optionError) throw CatalogError.validation(optionError);
+
     await this.assertSkuAvailable(userId, input.sku);
+    await this.assertOptionComboAvailable(userId, productId, options);
 
     let variantId: string;
     try {
@@ -411,6 +428,35 @@ export class CatalogServerService {
       select: { id: true },
     });
     if (existing) throw CatalogError.duplicateSku(sku);
+  }
+
+  /**
+   * Reject a variant whose option combination already exists on a sibling of the
+   * same product (e.g. a second "16 / Hitam"). Empty options skip the check.
+   */
+  private async assertOptionComboAvailable(
+    userId: string,
+    productId: string,
+    options: VariantOption[],
+    excludeVariantId?: string,
+  ): Promise<void> {
+    if (options.length === 0) return;
+
+    const signature = optionsSignature(options);
+    const siblings = await prisma.productVariant.findMany({
+      where: {
+        productId,
+        userId,
+        deletedAt: null,
+        ...(excludeVariantId ? { id: { not: excludeVariantId } } : {}),
+      },
+      select: { options: true },
+    });
+
+    const clash = siblings.some(
+      (sibling) => optionsSignature(parseVariantOptions(sibling.options)) === signature,
+    );
+    if (clash) throw CatalogError.validation('A variant with these options already exists.');
   }
 }
 

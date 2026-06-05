@@ -36,3 +36,57 @@ export function formatSubOptions(options: VariantOption[]): string {
     .map((option) => option.value)
     .join(' · ');
 }
+
+/**
+ * Order-independent, case-insensitive signature of an option combination —
+ * used to enforce that no two variants of a product share the same options.
+ * An empty options array yields an empty signature (uniqueness is not enforced).
+ */
+export function optionsSignature(options: VariantOption[]): string {
+  return options
+    .map((option) => `${option.name.trim().toLowerCase()}=${option.value.trim().toLowerCase()}`)
+    .sort()
+    .join('|');
+}
+
+/**
+ * Validate a variant's options against the product's declared dimensions.
+ * Returns the first problem as a message, or `null` when the options are valid.
+ * Empty options are always valid (a plain variant under an options product).
+ */
+export function findOptionError(optionTypes: string[], options: VariantOption[]): string | null {
+  if (options.length === 0) return null;
+
+  const allowed = new Set(optionTypes);
+  const seen = new Set<string>();
+  for (const option of options) {
+    if (!allowed.has(option.name)) {
+      const declared = optionTypes.join(', ') || 'none';
+      return `Unknown option "${option.name}". This product's options are: ${declared}.`;
+    }
+    if (seen.has(option.name)) return `Duplicate option "${option.name}".`;
+    seen.add(option.name);
+  }
+  return null;
+}
+
+function slugifyPart(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Suggest a SKU from the product name + option values, e.g. "IPHONE-16-HITAM". */
+export function suggestVariantSku(productName: string, values: string[]): string {
+  return [productName, ...values].map(slugifyPart).filter(Boolean).join('-');
+}
+
+/** Suggest a variant name from its option values, e.g. "16 / Hitam". */
+export function suggestVariantName(values: string[]): string {
+  return values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(' / ');
+}
