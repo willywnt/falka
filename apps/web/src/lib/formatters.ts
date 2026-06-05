@@ -1,6 +1,15 @@
+import { formatDistanceToNow } from 'date-fns';
+
 import { formatBytes, formatDate, formatDuration } from '@olshop/utils/date';
 
 export { formatDate, formatDuration, formatBytes as formatFileSize };
+
+/** Human "x minutes ago" style relative time; '—' for an invalid date. */
+export function formatRelativeTime(value: string | Date): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '—';
+  return formatDistanceToNow(date, { addSuffix: true });
+}
 
 const STABLE_DATETIME_FORMAT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',

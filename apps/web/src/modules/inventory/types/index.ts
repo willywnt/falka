@@ -52,6 +52,8 @@ export type StockOverviewItem = {
   incomingStock: number;
   lowStockThreshold: number;
   isLowStock: boolean;
+  /** When a QR/barcode label was last printed for this variant; null = never. */
+  labelPrintedAt: string | null;
   /** When stock was last changed (ISO), and the most recent movement. */
   lastUpdatedAt: string | null;
   lastChange: number | null;

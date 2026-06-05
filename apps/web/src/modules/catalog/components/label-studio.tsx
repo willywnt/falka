@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatRelativeTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
-import { useLabelVariantsQuery } from '../hooks/use-products';
+import { useLabelVariantsQuery, useMarkLabelsPrintedMutation } from '../hooks/use-products';
 import { useQrCodes } from '../hooks/use-qr-codes';
 import type { LabelVariant } from '../types';
 import { LabelSheet, labelCodeFor } from './label-sheet';
@@ -32,8 +32,16 @@ export function LabelStudio() {
   const codeValues = useMemo(() => labels.map(labelCodeFor), [labels]);
   const qrCodes = useQrCodes(codeValues);
   const qrReady = codeValues.every((value) => qrCodes.has(value));
+  const markPrinted = useMarkLabelsPrintedMutation();
 
   const variants = results ?? [];
+
+  function handlePrint() {
+    if (labels.length === 0 || !qrReady) return;
+    // Stamp the printed time so the picker flags these as already printed.
+    markPrinted.mutate(labels.map((label) => label.variantId));
+    window.print();
+  }
 
   function toggle(variant: LabelVariant) {
     setSelected((prev) => {
@@ -72,7 +80,7 @@ export function LabelStudio() {
           <Button variant="outline" onClick={clearAll} disabled={selected.size === 0}>
             Clear ({selected.size})
           </Button>
-          <Button onClick={() => window.print()} disabled={labels.length === 0 || !qrReady}>
+          <Button onClick={handlePrint} disabled={labels.length === 0 || !qrReady}>
             <Printer className="size-4" />
             Print
           </Button>
@@ -124,6 +132,14 @@ export function LabelStudio() {
                           <span className="text-muted-foreground block truncate text-xs">
                             {labelCodeFor(variant)} · {formatCurrency(variant.price)}
                           </span>
+                          {variant.labelPrintedAt ? (
+                            <span
+                              className="block truncate text-[11px] text-amber-600"
+                              suppressHydrationWarning
+                            >
+                              Printed {formatRelativeTime(variant.labelPrintedAt)}
+                            </span>
+                          ) : null}
                         </span>
                       </button>
                     </li>

@@ -30,6 +30,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatters';
+import { useMarkLabelsPrintedMutation } from '@/modules/catalog/hooks/use-products';
 
 import { useStockOverviewQuery } from '../hooks/use-inventory';
 import type { StockOverviewItem } from '../types';
@@ -41,6 +42,7 @@ export function InventoryOverview() {
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [adjustTarget, setAdjustTarget] = useState<StockOverviewItem | null>(null);
   const [qrTarget, setQrTarget] = useState<StockOverviewItem | null>(null);
+  const markPrinted = useMarkLabelsPrintedMutation();
 
   useEffect(() => {
     if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch });
@@ -245,6 +247,8 @@ export function InventoryOverview() {
           value={qrTarget.barcode?.trim() || qrTarget.sku}
           title={`${qrTarget.productName} · ${qrTarget.variantName}`}
           subtitle={qrTarget.sku}
+          lastPrintedAt={qrTarget.labelPrintedAt}
+          onPrint={() => markPrinted.mutate([qrTarget.variantId])}
         />
       ) : null}
     </div>

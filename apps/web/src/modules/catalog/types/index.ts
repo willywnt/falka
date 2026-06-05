@@ -17,6 +17,8 @@ export type ProductVariantItem = {
   minOrderQty: number | null;
   availableStock: number;
   isLowStock: boolean;
+  /** When a QR/barcode label was last printed for this variant; null = never. */
+  labelPrintedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -30,6 +32,8 @@ export type LabelVariant = {
   barcode: string | null;
   /** Decimal serialized as a string to avoid float precision loss. */
   price: string;
+  /** When a label was last printed for this variant; null = never. */
+  labelPrintedAt: string | null;
 };
 
 export type ProductListItem = {

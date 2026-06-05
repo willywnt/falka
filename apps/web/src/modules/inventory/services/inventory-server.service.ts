@@ -164,6 +164,7 @@ export class InventoryServerService {
         incomingStock: variant.inventory?.incomingStock ?? 0,
         lowStockThreshold: variant.lowStockThreshold,
         isLowStock: variant.alertEnabled && availableStock <= variant.lowStockThreshold,
+        labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
         lastUpdatedAt: variant.inventory?.lastAdjustedAt?.toISOString() ?? null,
         lastChange: last ? last.delta : null,
         balanceBefore: last ? last.balanceAfter - last.delta : null,

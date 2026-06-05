@@ -19,4 +19,5 @@ export {
 } from './update-variant';
 export { listProductsQuerySchema, type ListProductsQuery } from './list-products';
 export { labelVariantsQuerySchema, type LabelVariantsQuery } from './label-variants';
+export { markLabelsPrintedSchema, type MarkLabelsPrintedInput } from './mark-labels-printed';
 export { productIdParamSchema, type ProductIdParam } from './product-id';

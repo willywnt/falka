@@ -55,6 +55,30 @@ export function useLabelVariantsQuery(q: string) {
   });
 }
 
+/** Stamp the label-printed time for variants (after a print) and refresh views. */
+export function useMarkLabelsPrintedMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variantIds: string[]) => {
+      const result = await apiFetch<{ ok: boolean }>(`${apiRoutes.products}/variants/printed`, {
+        method: 'POST',
+        body: { variantIds },
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
 export function useProductQuery(id: string | null, enabled = true) {
   return useQuery({
     queryKey: catalogKeys.detail(id ?? 'unknown'),

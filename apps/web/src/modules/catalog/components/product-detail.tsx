@@ -33,7 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { useProductQuery } from '../hooks/use-products';
+import { useMarkLabelsPrintedMutation, useProductQuery } from '../hooks/use-products';
 import type { ProductVariantItem } from '../types';
 import { formatCurrency } from '../utils/format';
 import { AddVariantDialog } from './add-variant-dialog';
@@ -50,6 +50,7 @@ export function ProductDetail({
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ProductVariantItem | null>(null);
   const [qrTarget, setQrTarget] = useState<ProductVariantItem | null>(null);
+  const markPrinted = useMarkLabelsPrintedMutation();
 
   if (isLoading) {
     return (
@@ -232,6 +233,8 @@ export function ProductDetail({
           value={qrTarget.barcode?.trim() || qrTarget.sku}
           title={`${data.name} · ${qrTarget.name}`}
           subtitle={`${qrTarget.sku} · ${formatCurrency(qrTarget.price)}`}
+          lastPrintedAt={qrTarget.labelPrintedAt}
+          onPrint={() => markPrinted.mutate([qrTarget.id])}
         />
       ) : null}
 

@@ -43,6 +43,7 @@ function mapVariant(variant: VariantWithInventory): ProductVariantItem {
     minOrderQty: variant.minOrderQty,
     availableStock,
     isLowStock: isLowStock(variant, availableStock),
+    labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
     createdAt: variant.createdAt.toISOString(),
     updatedAt: variant.updatedAt.toISOString(),
   };
@@ -127,7 +128,25 @@ export class CatalogServerService {
       sku: variant.sku,
       barcode: variant.barcode,
       price: variant.price.toString(),
+      labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
     }));
+  }
+
+  /** Stamp the label-printed time for the given variants (re-printing is allowed). */
+  async markLabelsPrinted(userId: string, variantIds: string[]): Promise<void> {
+    const ids = [...new Set(variantIds)];
+    if (ids.length === 0) return;
+
+    const result = await prisma.productVariant.updateMany({
+      where: { id: { in: ids }, userId, deletedAt: null },
+      data: { labelPrintedAt: new Date() },
+    });
+
+    appLogger.info('catalog.labels.printed', {
+      userId,
+      requested: ids.length,
+      updated: result.count,
+    });
   }
 
   async listProducts(
