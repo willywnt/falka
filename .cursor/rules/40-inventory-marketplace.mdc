@@ -1,6 +1,6 @@
 ---
 description: Inventory MVP — catalog/inventory/marketplace/orders, source-of-truth stock + outbound sync + inbound orders
-globs: apps/web/src/modules/catalog/**,apps/web/src/modules/inventory/**,apps/web/src/modules/marketplace/**,apps/web/src/modules/orders/**,apps/web/src/app/api/v1/products/**,apps/web/src/app/api/v1/inventory/**,apps/web/src/app/api/v1/marketplaces/**,apps/web/src/app/api/v1/orders/**,packages/queue/src/marketplace-sync/**
+globs: apps/web/src/modules/catalog/**,apps/web/src/modules/inventory/**,apps/web/src/modules/marketplace/**,apps/web/src/modules/orders/**,apps/web/src/modules/returns/**,apps/web/src/modules/sales/**,apps/web/src/modules/purchasing/**,apps/web/src/app/api/v1/products/**,apps/web/src/app/api/v1/inventory/**,apps/web/src/app/api/v1/marketplaces/**,apps/web/src/app/api/v1/orders/**,apps/web/src/app/api/v1/returns/**,apps/web/src/app/api/v1/sales/**,apps/web/src/app/api/v1/purchase-orders/**,packages/queue/src/marketplace-sync/**
 alwaysApply: false
 ---
 
@@ -25,13 +25,16 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   (available−, reserved+; `ORDER_RESERVE`), `applyOrderShipTx` (reserved− only, available unchanged;
   `ORDER_SHIP` delta 0), `applyOrderReleaseTx` (available+, reserved−; `ORDER_RELEASE`). Reserved
   decrements clamp at 0 (+warn) for orders reserved before the lifecycle existed; on-hand = available
-  + reserved. Surfaces: `getDashboard` (KPIs incl. `totalReservedUnits`); `listStockOverview` (now also the
+  + reserved. Other modules' SoT writes also funnel through here: `applyReturnRestockTx`/
+  `applyReturnDamagedTx` (returns), `applyOfflineSaleTx` (POS — available−, `SALE`/`POS`),
+  `adjustIncomingTx`/`applyPurchaseReceiveTx` (purchasing — the `incomingStock` bucket). Surfaces: `getDashboard` (KPIs incl. `totalReservedUnits`); `listStockOverview` (now also the
   last movement before→after + `lastAdjustedAt`, via a nested `take:1` ledger include); **reorder
   report** (`inventory-reorder.service` — recency-weighted/EWMA velocity → days-of-cover → suggested
   qty, honours per-variant lead time/MOQ; bucketed ledger sums per sub-window); **stock activity
   log** (`inventory-activity.service` — filter reason/source/direction/date + paginate + CSV export).
-  Demand reasons for velocity are centralised in `SALES_LEDGER_REASONS` (ORDER_RESERVE+RELEASE, NOT
-  SHIP — avoids double-count). Pure `utils/stock-math.ts` + `utils/reorder-math.ts` are unit-tested.
+  Demand reasons for velocity are centralised in `SALES_LEDGER_REASONS` (ORDER_RESERVE + ORDER_RELEASE
+  + RETURN + SALE, NOT delta-0 ORDER_SHIP — avoids double-count; nets returns + counts offline POS
+  sales). Pure `utils/stock-math.ts` + `utils/reorder-math.ts` are unit-tested.
 - **marketplace** — connections (`MarketplaceConnection`; now also `lastOrdersPulledAt`) +
   `MarketplaceProduct` (listing snapshot) + `MarketplaceProductMapping` (listing↔variant). Mapping
   is **1:1 on the listing** (`marketplaceProductId @unique`) but ONE variant MAY map to many
@@ -68,6 +71,31 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   (`SALES_LEDGER_REASONS`). Idempotent (one return per order). Return detail links the packing video by
   `noResi` (dispute evidence). Endpoints: `GET/POST /api/v1/returns`, `/returns/:id`,
   `/returns/:id/process`, `/returns/:id/reject`.
+- **sales (offline / POS)** — `Sale` + `SaleItem` (snapshot sku/name/unitPrice), `SalePaymentMethod`
+  (CASH/QRIS/TRANSFER), `SaleStatus` (COMPLETED/VOID), code `S00001` per-user. A counter sale
+  **decrements the SoT immediately**: one tx creates the sale + lines and calls `applyOfflineSaleTx`
+  per line (`available−`, ledger `SALE` / source `POS` / ref = saleId, `note: 'Offline sale'`). Oversell
+  is **allowed** (goods are in hand → available MAY go negative). After commit, propagate each sold
+  variant's new available to **all** sync-ready channels (selling in-store can't oversell online). The
+  POS picker reads ProductVariant read-only (`searchSellableVariants`, active only, by sku/name + price +
+  available). `SALE` joins `SALES_LEDGER_REASONS`, so offline sales feed reorder velocity. Endpoints:
+  `GET/POST /api/v1/sales`, `/sales/:id`, `/sales/variants?q=`.
+- **purchasing (restock / POs)** — `PurchaseOrder` + `PurchaseOrderItem` (snapshot sku/name + `quantity`/
+  `receivedQuantity`/`unitCost`), `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED,
+  code `PO00001` per-user. **Lights up the `incomingStock` bucket** (the last empty one). Two inventory
+  tx-methods (no over-credit): `adjustIncomingTx(tx,{variantId,delta})` — `incomingStock += delta`
+  clamped at 0, **NO ledger row** (forecast bucket, available unchanged); `applyPurchaseReceiveTx` —
+  `incoming−` (clamped) + `available+`, ledger `RESTOCK` / source `PURCHASE` / ref = PO id. Lifecycle:
+  **create** (already ORDERED) → `adjustIncomingTx(+qty)` per line + `totalCost`; **receive** (only
+  ORDERED/PARTIALLY_RECEIVED, per-line qty clamped to outstanding) → `receivedQuantity +=` +
+  `applyPurchaseReceiveTx`, recompute status (all received → RECEIVED + `receivedAt`, else
+  PARTIALLY_RECEIVED), propagate received variants to **all** channels; **cancel** (not-yet-RECEIVED) →
+  `adjustIncomingTx(−outstanding)` per line, status CANCELLED (already-received units stay in available).
+  `supplierName` is **free text** (no Supplier entity yet); variant `cost` stays manual. `searchVariants`
+  reads ProductVariant read-only (cost + available + incoming). The reorder report's **"Create PO"**
+  prefills `/dashboard/purchasing/new` from URGENT/SOON suggestions. Endpoints:
+  `GET/POST /api/v1/purchase-orders`, `/purchase-orders/:id`, `/:id/receive`, `/:id/cancel`,
+  `/purchase-orders/variants?q=`.
 
 ## Outbound sync engine (worker-side) — `packages/queue/src/marketplace-sync/`
 SoT change → `enqueuePropagateInventoryStock` (web, best-effort, only if `syncEnabled` mappings
@@ -81,10 +109,13 @@ throw so BullMQ retries.
 - catalog→inventory ONLY via the inventory service (no cross-table writes). orders→inventory via
   the lifecycle trio (`applyOrderReserveTx`/`ShipTx`/`ReleaseTx`); orders→returns via its service
   (auto-open). returns→inventory via `applyReturnRestockTx`/`DamagedTx` and reads Order/OrderItem
-  read-only. A module may import another module's HOOKS/types but NOT its
-  components — cross-module UI composition lives at the APP layer (e.g.
-  `app/(dashboard)/dashboard/products/[id]/product-detail-view.tsx` wires catalog `ProductDetail`
-  + inventory `AdjustStockDialog`). The variant picker reuses inventory `useStockOverviewQuery`.
+  read-only. sales→inventory via `applyOfflineSaleTx`; purchasing→inventory via `adjustIncomingTx`/
+  `applyPurchaseReceiveTx` — both read ProductVariant read-only for their pickers and propagate to
+  ALL channels after commit (a counter sale or restock moves sellable everywhere). A module may import
+  another module's HOOKS/types but NOT its components — cross-module UI composition lives at the APP
+  layer (e.g. `app/(dashboard)/dashboard/products/[id]/product-detail-view.tsx` wires catalog
+  `ProductDetail` + inventory `AdjustStockDialog`; the reorder report's "Create PO" links into
+  purchasing). The variant picker reuses inventory `useStockOverviewQuery`.
 
 ## Gotchas (learned the hard way)
 - **BullMQ custom jobId CANNOT contain `:`** → job-id builders use `-` (DB idempotency keys keep `:`).
@@ -101,18 +132,32 @@ throw so BullMQ retries.
 - Typed routes: after adding a new `app/**/page.tsx`, `pnpm typecheck` (`tsc`) fails on `Route`
   literals until `next build` regenerates `.next/types`. Build first, then typecheck.
 
+## Next up — QR-scan (POS phase 2)
+The queued follow-up to POS. **Phase A (standalone): per-SKU QR/barcode labels** — a printable label
+sheet encoding the existing `ProductVariant.barcode`/`sku` (NO schema change; barcode already exists).
+**Phase B: mobile scan-to-cart** — pair a phone camera to the POS terminal to add lines by scan, REUSING
+the **`scanner-pairing`** module (HARD CONSTRAINT #4 — do NOT rename/repurpose its socket event
+contracts). Phase B depends on the realtime **socket host** (custom `server.ts`, feature-gated / NOT on
+Vercel — see the deploy plan), so ship phase A (labels) first. Roadmap §10.
+
 ## Deferred (raise as separate suggestions)
 ProviderHealth + reconciliation/drift; bundles/kits; multi-warehouse; per-order re-pull (pull is
 store-level only); PENDING-order reservation (needs expiry/auto-release); within returns: per-line
 split (part restock + part damaged), partial-quantity returns, refund/money tracking, marketplace
 return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed at scale (the
-`(userId, reason, createdAt)` index serves reorder); per-variant supplier + richer lead-time/MOQ;
-reorder velocity is a simple EWMA (could add seasonality); real provider adapters need the decrypted
-token → lift token-crypto to `@olshop/*`; queue package has no vitest (engine is gate-checked only).
+`(userId, reason, createdAt)` index serves reorder); **purchasing**: Supplier entity (contacts,
+per-supplier lead time), auto **cost update** on receive (moving-average → profit reporting), PO
+edit/DRAFT, supplier invoice (faktur) printing, landed cost; **POS**: VOID/refund a sale, printable
+receipt/nota, per-sale discount/tax; reorder velocity is a simple EWMA (could add seasonality); real
+provider adapters need the decrypted token → lift token-crypto to `@olshop/*`; queue package has no
+vitest (engine is gate-checked only).
 
 > Done this round (was deferred): `cost` + lead-time/MOQ on variants; reorder intelligence;
 > stock activity log + CSV; variant editing; multi-store order pull + cooldown; order-item mapping;
 > cancellation→restock (`ORDER_RELEASE`); exclude source channel from propagation; reserved-vs-available
 > reserve→ship→release lifecycle (reserved bucket surfaced in overview + dashboard); returns/RMA
 > (auto-open on post-ship cancel + manual; process restock/damaged; packing-video evidence by noResi);
-> Phase 5 fulfillment (order↔packing-video by noResi, station pack view, auto-fulfill + Fulfilled badge).
+> Phase 5 fulfillment (order↔packing-video by noResi, station pack view, auto-fulfill + Fulfilled badge);
+> **offline sales / POS** (`SALE`/`POS`, propagate to all channels, velocity-aware); **purchasing / POs**
+> (lights up `incomingStock`: create→incoming+, partial receive→`RESTOCK`/`PURCHASE` available+,
+> cancel→incoming−; reorder "Create PO"). **Inventory overview now shows all four buckets (Incoming added).**

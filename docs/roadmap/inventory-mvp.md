@@ -1,7 +1,9 @@
 # Inventory & Multi-Marketplace Stock Sync — MVP Roadmap
 
-> Status: **Phases 0–5 shipped (stub-backed)** · Started 2026-06-03 · Owner: @willywnt
-> · current work on branch `feat/order-loop-correctness`. Next: Phase 6 (automation/reporting).
+> Status: **Phases 0–5 shipped (stub-backed)** + **POS (offline sales) and Purchasing/POs shipped**
+> as counter/restock verticals · Started 2026-06-03 · Owner: @willywnt · current work on branch
+> `feat/purchasing-po` (stacked on `feat/offline-pos-sales`). Next: **QR-scan (POS phase 2, §10)**;
+> Phase 6 (automation/reporting) still open.
 >
 > This is the working reference for the next big MVP: an **internal inventory system
 > that is the source of truth**, integrating stock across marketplaces (Shopee,
@@ -77,9 +79,19 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
   case-insensitive `noResi`; station **pack view** (what to pack), **auto-fulfill** on packing-video
   complete (`Order.fulfilledAt`), packing-video **evidence** on orders/returns, links both ways.
   (Formal `Recording.orderId` FK + pre-order backfill deferred — noResi-join for now.)
-- **Phase 6 — Automation & reporting** — ⏳ **next**. Scheduled reconciliation (drift), provider-health
+- **Phase 6 — Automation & reporting** — ⏳ **open**. Scheduled reconciliation (drift), provider-health
   dashboard, token auto-refresh worker, channel-performance / dead-stock reports. (Reorder intelligence
   — velocity → days-of-cover → suggested qty, dead-stock status — already shipped in `inventory`.)
+- **Counter & restock verticals** (beyond the marketplace-sync phases, same SoT) — ✅ **shipped**:
+  - **Offline sales / POS** (`sales` module) — counter sale decrements the SoT immediately
+    (`applyOfflineSaleTx`: available−, ledger `SALE`/source `POS`, oversell allowed) and propagates to
+    all channels, so in-store selling can't oversell online. `Sale`/`SaleItem`, CASH/QRIS/TRANSFER,
+    code `S00001`. `SALE` joins `SALES_LEDGER_REASONS` (feeds reorder velocity).
+  - **Purchasing / POs** (`purchasing` module) — **lights up `incomingStock`** (the last empty bucket):
+    create PO → `adjustIncomingTx(+qty)` (no ledger row); **partial per-line receive** →
+    `applyPurchaseReceiveTx` (incoming−, available+, ledger `RESTOCK`/source `PURCHASE`),
+    ORDERED→PARTIALLY_RECEIVED→RECEIVED; cancel → incoming−. Free-text `supplierName` (no Supplier
+    entity yet). The reorder report's **"Create PO"** prefills from URGENT/SOON suggestions.
 - **Then** — full visual UI/UX redesign, once the domain is stable.
 
 ## 5. Phase 1 schema draft — **APPLIED (+ evolved since)**
@@ -148,7 +160,11 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
   `noResi`) shipped; a **shareable external link** to buyer/marketplace is still parked.
 - **AI mismatch detection** in packing video (vision/OCR) — `aiProcessing`/`ocrProcessing`
   placeholders already reserved in `packages/queue` types.
-- Purchasing / restock + suppliers (`incomingStock` modeled but still unused — the last empty bucket).
+- ✅ **Purchasing / restock** — done (`purchasing` module fills `incomingStock`: PO create→incoming+,
+  partial receive→available+ via `RESTOCK`/`PURCHASE`, cancel→incoming−). Suppliers (a real Supplier
+  entity + per-supplier lead time) + auto cost-update on receive remain parked.
+- ✅ **Offline sales / POS** — done (`sales` module: counter sale → `SALE`/`POS`, propagate to all
+  channels). Printable receipt/nota, VOID/refund, discount/tax remain parked.
 - Bundles / kits (one listing = many SKUs) — a classic oversell trap.
 - Multi-warehouse / location stock.
 - Analytics / reporting (profit/channel-performance — partly Phase 6).
@@ -158,3 +174,24 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 
 - [x] Phase 1 schema (§5) approved + applied (and evolved through Phases 4–5).
 - [ ] Real marketplace API wiring (Phase 3+) gated on partner/developer approvals (still stubs).
+
+## 10. QR-scan (POS phase 2) — ⏳ next
+
+The queued follow-up to POS: scan a SKU at the counter instead of typing the search box. Split so the
+useful half ships without the realtime dependency.
+
+- **Phase A — QR/barcode labels (standalone, no schema change).** A printable label sheet (one
+  cell per variant) encoding the existing `ProductVariant.barcode` (fallback `sku` — both already on
+  the model). Pick variants → render an A4 grid of QR/Code128 labels (name + sku + price + code) →
+  print. Lives in `catalog` or a small `labels` view; pure client render, no new tables. Ships first.
+- **Phase B — mobile scan-to-cart.** Pair a phone camera to an open POS terminal and add a line by
+  scanning a label. **REUSE `scanner-pairing`** — the same pair-a-phone-to-a-station socket flow the
+  recordings station uses (HARD CONSTRAINT #4: do NOT rename/repurpose its event contracts:
+  `pairing_connected`, `barcode_scanned`, `barcode_ack`, …). The scanned code resolves a variant
+  (`barcode`/`sku`) → POS cart.
+- **Dependency / gating.** Phase B needs the realtime **socket host** — the custom `server.ts` that
+  attaches Socket.IO, which is **feature-gated and NOT run on Vercel** (see the deploy plan: single-host
+  Indonesia VPS for the realtime features). That's why Phase A (labels) is decoupled and goes first.
+- **Deferred within QR:** a dedicated `barcode` print format/per-variant override, bulk label reprints,
+  hardware USB/Bluetooth scanner support (HID keyboard-wedge would work at the POS search box with no
+  pairing — a cheap parallel option worth a separate suggestion).

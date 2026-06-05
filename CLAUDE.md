@@ -30,7 +30,7 @@ web: `noEmit`, `jsx: preserve`, `allowJs`, next plugin. Alias **`@/*` → `apps/
 
 ## 3. Module boundaries (apps/web/src/modules/<feature>/)
 
-Modules: `admin audit auth catalog inventory marketplace orders recordings scanner-pairing storage users`.
+Modules: `admin audit auth catalog inventory marketplace orders purchasing recordings returns sales scanner-pairing storage users`.
 
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
@@ -165,7 +165,7 @@ commit per change** · keep all gates green at every commit · report potential
 bug/security/race/perf as **separate suggestions** (don't silently change) · when unsure
 between approaches, **ASK** — boundary beats dedup.
 
-## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders · returns · order-aware recordings)
+## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders · returns · sales/POS · purchasing · order-aware recordings)
 
 Internal inventory = **source of truth**, integrated with marketplaces (adapter-first, STUBS).
 Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-mvp.md`.
@@ -188,6 +188,20 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
   **case-insensitive**). A completed packing video best-effort stamps `Order.fulfilledAt`; the
   recording **station shows a pack view** (the matched order's items), and orders/returns show the
   packing video as **dispute evidence**. Links work both ways.
+- **Offline sales / POS** (`sales` module — `Sale`/`SaleItem`, `SalePaymentMethod` CASH/QRIS/TRANSFER,
+  `SaleStatus` COMPLETED/VOID): a counter sale **decrements the SoT immediately** (`available−`, ledger
+  reason `SALE` / source `POS`, ref = saleId) in one tx, then propagates to **all** channels (selling
+  in-store can't oversell online). Oversell is allowed — goods are in hand. Code `S00001` per-user.
+  Velocity counts `SALE` too (`SALES_LEDGER_REASONS` = `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN`+`SALE`).
+- **Purchasing / restock** (`purchasing` module — `PurchaseOrder`/`PurchaseOrderItem`,
+  `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED): lights up the **`incomingStock`**
+  bucket. Create a PO → `adjustIncomingTx(+qty)` per line (forecast bucket, **no ledger row**, available
+  unchanged). **Receive** (partial per-line, clamped to outstanding) → `applyPurchaseReceiveTx`
+  (`incoming−`, `available+`, ledger `RESTOCK` / source `PURCHASE`), recompute status, propagate to all
+  channels. **Cancel** (pre-receive) → `adjustIncomingTx(−outstanding)`. `supplierName` is **free text**
+  (no Supplier entity yet); variant `cost` stays manual. Code `PO00001` per-user. The reorder report's
+  **"Create PO"** prefills the form from URGENT/SOON suggestions (its `suggestedReorderQty` already nets
+  `incoming`, so a PO immediately corrects the suggestion).
 - **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty, honours per-variant
   `leadTimeDays`/`minOrderQty`); stock activity log (filter + paginate + CSV); variant editing. Demand
   velocity sums `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN` (net), excludes the delta-0 `ORDER_SHIP`.
@@ -196,8 +210,14 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
   **Multi-store pull** `pullFromConnections` (default all active, 30s per-store cooldown).
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
-  layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/stock to re-test the
-  loop (then restart the dev server to rewind the stub pull timeline).
+  layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/sales/stock to re-test
+  the loop (then restart the dev server to rewind the stub pull timeline).
+- **Next (planned) — QR-scan (POS phase 2)**: per-SKU **QR/barcode labels** (printable sheet, encodes
+  the existing `ProductVariant.barcode`/`sku` — no schema change for phase A) → **mobile scan-to-cart**
+  for the POS terminal, reusing **`scanner-pairing`** (HARD CONSTRAINT #4 — don't repurpose its socket
+  contracts) to pair a phone camera to the till. Phase B depends on the realtime **socket host** (the
+  custom `server.ts` is feature-gated / NOT on Vercel — see the deploy plan), so phase A (labels) ships
+  first, standalone. See `docs/roadmap/inventory-mvp.md` §10.
 - **Gotchas**: BullMQ jobId can't contain `:`; the dev server locks the Prisma engine DLL — stop it
   before `prisma generate`/migrate (index-only migration can use `--skip-generate` WITHOUT stopping);
   after adding a `page.tsx`/route, **typed routes** make `tsc` fail on `Route` literals until
