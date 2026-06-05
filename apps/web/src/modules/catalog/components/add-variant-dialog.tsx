@@ -127,33 +127,39 @@ export function AddVariantDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {optionTypes.length > 0 ? (
-              <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
-                {optionTypes.map((optionType, index) => (
-                  <FormField
-                    key={optionType}
-                    control={form.control}
-                    name={`optionValues.${index}`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel required>{optionType}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={`e.g. ${optionType}`}
-                            autoComplete="off"
-                            {...field}
-                            onChange={(event) => {
-                              field.onChange(event);
-                              const next = [...form.getValues('optionValues')];
-                              next[index] = event.target.value;
-                              applySuggestions(next);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
+              <div className="space-y-3 rounded-lg border p-4">
+                <p className="text-muted-foreground text-xs">
+                  Set this variant&apos;s {optionTypes.join(' / ')} — it must be a new combination.
+                  SKU and name are auto-filled from these.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {optionTypes.map((optionType, index) => (
+                    <FormField
+                      key={optionType}
+                      control={form.control}
+                      name={`optionValues.${index}`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel required>{optionType}</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={`e.g. ${optionType}`}
+                              autoComplete="off"
+                              {...field}
+                              onChange={(event) => {
+                                field.onChange(event);
+                                const next = [...form.getValues('optionValues')];
+                                next[index] = event.target.value;
+                                applySuggestions(next);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
             ) : null}
 

@@ -196,16 +196,18 @@ export function ProductFormDialog({
               <div>
                 <p className="text-sm font-medium">Options (optional)</p>
                 <p className="text-muted-foreground text-xs">
-                  Add dimensions like Model or Warna to group variants. Leave empty for a simple
-                  product.
+                  Define dimensions like <span className="font-medium">Model</span> or{' '}
+                  <span className="font-medium">Warna</span>, then set this first variant&apos;s
+                  value for each. Add the other variants (e.g. more colors) later from the product
+                  page. Leave empty for a simple product.
                 </p>
               </div>
 
               {optionFields.fields.length > 0 ? (
                 <div className="space-y-3">
                   <div className="text-muted-foreground grid grid-cols-[1fr_1fr_auto] gap-2 text-xs">
-                    <span>Option name</span>
-                    <span>First variant value</span>
+                    <span>Option · e.g. Model</span>
+                    <span>Value for this variant · e.g. 16</span>
                     <span className="w-8" />
                   </div>
                   {optionFields.fields.map((optionField, index) => (
@@ -269,6 +271,13 @@ export function ProductFormDialog({
                     </div>
                   ))}
                 </div>
+              ) : null}
+
+              {optionFields.fields.length > 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  The SKU and variant name below are auto-filled from these values — edit them if
+                  needed.
+                </p>
               ) : null}
 
               <Button

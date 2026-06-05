@@ -80,14 +80,19 @@ export function ProductDetail({
   }
 
   const totalAvailable = data.variants.reduce((sum, variant) => sum + variant.availableStock, 0);
-  const variantGroups = groupVariantsByFirstOption(data.variants);
+  // Group only when there is a sub-dimension to distinguish leaves within a group
+  // (≥2 options: e.g. Model groups, Warna distinguishes). One dimension = a flat list.
+  const variantGroups =
+    data.optionTypes.length >= 2 ? groupVariantsByFirstOption(data.variants) : null;
   const firstDimension = data.optionTypes[0] ?? null;
 
-  function renderVariantRow(variant: ProductVariantItem, indented: boolean) {
-    const subOptions = formatSubOptions(variant.options);
+  function renderVariantRow(variant: ProductVariantItem, grouped: boolean) {
+    // Under a group the header already shows the first dimension, so the row only
+    // needs the sub-option(s) that set it apart (e.g. "Hitam"); ungrouped shows the name.
+    const label = grouped ? formatSubOptions(variant.options) || variant.name : variant.name;
     return (
       <TableRow key={variant.id}>
-        <TableCell className={indented ? 'pl-10' : undefined}>
+        <TableCell className={grouped ? 'pl-10' : undefined}>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -103,14 +108,7 @@ export function ProductDetail({
               <span className="sr-only">View QR label for {variant.sku}</span>
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{variant.name}</span>
-                {subOptions ? (
-                  <Badge variant="secondary" className="font-normal">
-                    {subOptions}
-                  </Badge>
-                ) : null}
-              </div>
+              <div className="font-medium">{label}</div>
               <div className="text-muted-foreground text-xs">{variant.sku}</div>
             </div>
           </div>
@@ -198,20 +196,27 @@ export function ProductDetail({
                   ? variantGroups.map((group) => (
                       <Fragment key={group.value || '__ungrouped'}>
                         {group.value ? (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30">
-                            <TableCell colSpan={4} className="py-2">
-                              <div className="flex items-center gap-2">
-                                <Layers className="text-muted-foreground size-3.5" />
-                                {firstDimension ? (
-                                  <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                                    {firstDimension}
-                                  </span>
-                                ) : null}
-                                <span className="font-semibold">{group.value}</span>
-                                <Badge variant="outline" className="font-normal">
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableCell colSpan={4} className="py-2.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-baseline gap-2">
+                                  <Layers className="text-muted-foreground size-3.5 self-center" />
+                                  <span className="font-semibold">{group.value}</span>
+                                  {firstDimension ? (
+                                    <span className="text-muted-foreground text-xs">
+                                      {firstDimension}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <span className="text-muted-foreground text-xs tabular-nums">
                                   {group.variants.length}{' '}
-                                  {group.variants.length === 1 ? 'variant' : 'variants'}
-                                </Badge>
+                                  {group.variants.length === 1 ? 'variant' : 'variants'} ·{' '}
+                                  {group.variants.reduce(
+                                    (sum, variant) => sum + variant.availableStock,
+                                    0,
+                                  )}{' '}
+                                  in stock
+                                </span>
                               </div>
                             </TableCell>
                           </TableRow>
