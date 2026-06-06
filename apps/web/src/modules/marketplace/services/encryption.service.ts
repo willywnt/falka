@@ -1,9 +1,9 @@
 import 'server-only';
 
 import { getServerEnv } from '@olshop/config/env.server';
+import { decrypt, encrypt } from '@olshop/utils/crypto';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
-import { decrypt, encrypt } from '../utils/encryption';
 
 export class MarketplaceEncryptionService {
   private getSecret(): string {
