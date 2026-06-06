@@ -7,6 +7,7 @@ import { appLogger } from '@/lib/logger';
 
 import { getMarketplaceImportAdapter } from '../adapters/import-adapter';
 import { MarketplaceError } from '../errors/marketplace-errors';
+import { marketplaceEncryptionService } from './encryption.service';
 import type { ImportListingsResult } from '../types';
 import { buildVariantSkuIndex, matchSku } from '../utils/sku-match';
 
@@ -29,7 +30,10 @@ export class MarketplaceImportService {
     const adapter = getMarketplaceImportAdapter(connection.provider);
     const listings = await adapter.fetchListings({
       shopId: connection.shopId,
-      accessToken: '',
+      // Stub adapters ignore the token; seeded/stub connections store a non-cipher
+      // placeholder, so decrypt leniently and let a real adapter fail its own auth.
+      accessToken:
+        marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '',
     });
 
     const now = new Date();

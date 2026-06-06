@@ -1,4 +1,7 @@
+import { getServerEnv } from '@olshop/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
+
+import { LazadaImportAdapter } from './lazada-import-adapter';
 
 /** A marketplace listing normalized to our shape, regardless of provider. */
 export type NormalizedListing = {
@@ -71,13 +74,24 @@ export class StubMarketplaceImportAdapter implements MarketplaceImportAdapter {
 
 const adapters = new Map<MarketplaceProvider, MarketplaceImportAdapter>();
 
+/** Real adapter when the provider is configured via env; the stub otherwise. */
+function createImportAdapter(provider: MarketplaceProvider): MarketplaceImportAdapter {
+  const env = getServerEnv();
+
+  if (provider === 'LAZADA' && env.LAZADA_APP_KEY && env.LAZADA_APP_SECRET) {
+    return new LazadaImportAdapter();
+  }
+
+  return new StubMarketplaceImportAdapter(provider);
+}
+
 export function getMarketplaceImportAdapter(
   provider: MarketplaceProvider,
 ): MarketplaceImportAdapter {
   const existing = adapters.get(provider);
   if (existing) return existing;
 
-  const adapter = new StubMarketplaceImportAdapter(provider);
+  const adapter = createImportAdapter(provider);
   adapters.set(provider, adapter);
   return adapter;
 }
