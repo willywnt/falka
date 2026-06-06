@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
+import { cn } from '@/lib/utils';
 
 import { useAddVariantMutation } from '../hooks/use-products';
 import { suggestVariantSku, variantBlockToLeaves } from '../utils/variants';
@@ -109,7 +110,7 @@ export function AddSubvariantsDialog({
                     <span className="sr-only">Remove subvariant</span>
                   </Button>
                 ) : null}
-                <div className={`flex items-start gap-2${rows.fields.length > 1 ? 'pr-8' : ''}`}>
+                <div className={cn('flex items-start gap-2', rows.fields.length > 1 && 'pr-8')}>
                   <FormField
                     control={form.control}
                     name={`subvariants.${index}.name`}

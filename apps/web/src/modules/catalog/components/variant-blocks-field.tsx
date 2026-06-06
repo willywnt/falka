@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 import { suggestVariantSku } from '../utils/variants';
 import type { VariantBlockForm } from '../validators/add-variant';
@@ -170,7 +171,7 @@ function VariantBlockFields({
                 </Button>
               ) : null}
               <div
-                className={`flex items-start gap-2${subvariants.fields.length > 1 ? 'pr-8' : ''}`}
+                className={cn('flex items-start gap-2', subvariants.fields.length > 1 && 'pr-8')}
               >
                 <FormField
                   control={form.control}
