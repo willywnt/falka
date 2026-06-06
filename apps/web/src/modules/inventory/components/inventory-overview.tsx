@@ -24,13 +24,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ImageThumb } from '@/components/image-thumb';
 import { LowStockBadge } from '@/components/low-stock-badge';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
 import { useUrlFilters } from '@/hooks/use-url-filters';
-import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatters';
 import { useMarkLabelsPrintedMutation } from '@/modules/catalog/hooks/use-products';
 
@@ -125,7 +125,6 @@ export function InventoryOverview() {
                 <TableHead className="text-right">Reserved</TableHead>
                 <TableHead className="text-right">Damaged</TableHead>
                 <TableHead className="text-right">Incoming</TableHead>
-                <TableHead className="text-right">Last change</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -134,13 +133,18 @@ export function InventoryOverview() {
               {pageItems.map((item) => (
                 <TableRow key={item.variantId}>
                   <TableCell>
-                    <Link
-                      href={`/dashboard/products/${item.productId}`}
-                      className="font-medium hover:underline"
-                    >
-                      {item.productName}
-                    </Link>
-                    <div className="text-muted-foreground text-xs">{item.variantName}</div>
+                    <div className="flex items-center gap-3">
+                      <ImageThumb src={item.imageUrl} alt={item.variantName} />
+                      <div className="min-w-0">
+                        <Link
+                          href={`/dashboard/products/${item.productId}`}
+                          className="font-medium hover:underline"
+                        >
+                          {item.productName}
+                        </Link>
+                        <div className="text-muted-foreground text-xs">{item.variantName}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{item.sku}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
@@ -174,24 +178,6 @@ export function InventoryOverview() {
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right text-sm whitespace-nowrap tabular-nums">
-                    {item.lastChange === null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span>
-                        {item.balanceBefore} → {item.balanceAfter}
-                        <span
-                          className={cn(
-                            'ml-1 text-xs',
-                            item.lastChange >= 0 ? 'text-emerald-600' : 'text-destructive',
-                          )}
-                        >
-                          ({item.lastChange >= 0 ? '+' : ''}
-                          {item.lastChange})
-                        </span>
-                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs whitespace-nowrap">

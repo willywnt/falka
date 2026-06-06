@@ -52,13 +52,12 @@ export type StockOverviewItem = {
   incomingStock: number;
   lowStockThreshold: number;
   isLowStock: boolean;
+  /** Variant photo public URL; null = none. */
+  imageUrl: string | null;
   /** When a QR/barcode label was last printed for this variant; null = never. */
   labelPrintedAt: string | null;
-  /** When stock was last changed (ISO), and the most recent movement. */
+  /** When stock was last changed (ISO). */
   lastUpdatedAt: string | null;
-  lastChange: number | null;
-  balanceBefore: number | null;
-  balanceAfter: number | null;
 };
 
 export type InventoryDashboardSummary = {

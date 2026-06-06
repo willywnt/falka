@@ -133,11 +133,6 @@ export class InventoryServerService {
           },
         },
         product: { select: { name: true } },
-        ledgerEntries: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { delta: true, balanceAfter: true },
-        },
       },
       orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
       take: OVERVIEW_CAP + 1,
@@ -150,7 +145,6 @@ export class InventoryServerService {
 
     const items = variants.map((variant): StockOverviewItem => {
       const availableStock = variant.inventory?.availableStock ?? 0;
-      const last = variant.ledgerEntries[0];
       return {
         variantId: variant.id,
         productId: variant.productId,
@@ -164,11 +158,9 @@ export class InventoryServerService {
         incomingStock: variant.inventory?.incomingStock ?? 0,
         lowStockThreshold: variant.lowStockThreshold,
         isLowStock: variant.alertEnabled && availableStock <= variant.lowStockThreshold,
+        imageUrl: variant.imageUrl,
         labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
         lastUpdatedAt: variant.inventory?.lastAdjustedAt?.toISOString() ?? null,
-        lastChange: last ? last.delta : null,
-        balanceBefore: last ? last.balanceAfter - last.delta : null,
-        balanceAfter: last ? last.balanceAfter : null,
       };
     });
 
