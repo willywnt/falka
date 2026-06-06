@@ -11,6 +11,8 @@ import { storageService } from '@/modules/storage/services/storage.service';
 
 import { CatalogError } from '../errors/catalog-errors';
 import type {
+  BundleComponentItem,
+  BundleDetail,
   DeletionBlockers,
   LabelVariant,
   ProductDetail,
@@ -18,7 +20,9 @@ import type {
   ProductVariantItem,
   VariantMappingRef,
 } from '../types';
+import { computeBuildableQty } from '../utils/bundle';
 import { archivedSku } from '../utils/variants';
+import type { SetBundleInput } from '../validators/bundle';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -468,6 +472,124 @@ export class CatalogServerService {
 
     appLogger.info('catalog.variant.image.removed', { userId, productId, variantId });
     return this.getProductById(userId, productId);
+  }
+
+  /** A variant's bundle composition + current buildable count. */
+  async getBundle(userId: string, productId: string, variantId: string): Promise<BundleDetail> {
+    await this.assertVariantInProduct(userId, productId, variantId);
+    return this.buildBundleDetail(userId, variantId);
+  }
+
+  /**
+   * Replaces a variant's bundle components (empty array clears the bundle). Guards:
+   * components must be owned, distinct, not the bundle itself, and not bundles
+   * themselves (no nested bundles in v1).
+   */
+  async setBundleComponents(
+    userId: string,
+    productId: string,
+    variantId: string,
+    input: SetBundleInput,
+  ): Promise<BundleDetail> {
+    await this.assertVariantInProduct(userId, productId, variantId);
+
+    const componentIds = input.components.map((component) => component.componentVariantId);
+    if (componentIds.includes(variantId)) {
+      throw CatalogError.validation('A bundle cannot contain itself.');
+    }
+    if (new Set(componentIds).size !== componentIds.length) {
+      throw CatalogError.validation('A component is listed more than once.');
+    }
+
+    if (componentIds.length > 0) {
+      const owned = await prisma.productVariant.findMany({
+        where: { id: { in: componentIds }, userId, deletedAt: null },
+        select: { id: true },
+      });
+      if (owned.length !== componentIds.length) {
+        throw CatalogError.validation('A selected component no longer exists.');
+      }
+      const nested = await prisma.bundleComponent.findFirst({
+        where: { bundleVariantId: { in: componentIds } },
+        select: { id: true },
+      });
+      if (nested) throw CatalogError.validation('A bundle component cannot itself be a bundle.');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bundleComponent.deleteMany({ where: { bundleVariantId: variantId } });
+      if (input.components.length > 0) {
+        await tx.bundleComponent.createMany({
+          data: input.components.map((component) => ({
+            userId,
+            bundleVariantId: variantId,
+            componentVariantId: component.componentVariantId,
+            quantity: component.quantity,
+          })),
+        });
+      }
+    });
+
+    appLogger.info('catalog.bundle.set', {
+      userId,
+      productId,
+      variantId,
+      components: input.components.length,
+    });
+
+    return this.buildBundleDetail(userId, variantId);
+  }
+
+  private async buildBundleDetail(userId: string, variantId: string): Promise<BundleDetail> {
+    const rows = await prisma.bundleComponent.findMany({
+      where: { bundleVariantId: variantId, userId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        componentVariantId: true,
+        quantity: true,
+        componentVariant: {
+          select: {
+            sku: true,
+            name: true,
+            deletedAt: true,
+            inventory: { select: { availableStock: true } },
+          },
+        },
+      },
+    });
+
+    const components: BundleComponentItem[] = rows.map((row) => ({
+      componentVariantId: row.componentVariantId,
+      sku: row.componentVariant.sku,
+      name: row.componentVariant.name,
+      quantity: row.quantity,
+      availableStock: row.componentVariant.deletedAt
+        ? 0
+        : (row.componentVariant.inventory?.availableStock ?? 0),
+    }));
+
+    return {
+      bundleVariantId: variantId,
+      components,
+      buildable: computeBuildableQty(
+        components.map((component) => ({
+          quantity: component.quantity,
+          availableStock: component.availableStock,
+        })),
+      ),
+    };
+  }
+
+  private async assertVariantInProduct(
+    userId: string,
+    productId: string,
+    variantId: string,
+  ): Promise<void> {
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!variant) throw CatalogError.notFound('Variant not found.');
   }
 
   /** Best-effort image delete — a failed cleanup must not fail the request. */

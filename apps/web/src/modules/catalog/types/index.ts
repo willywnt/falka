@@ -88,3 +88,19 @@ export type ProductDetail = {
   createdAt: string;
   updatedAt: string;
 };
+
+/** A component line of a bundle, with the component's current sellable stock. */
+export type BundleComponentItem = {
+  componentVariantId: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  availableStock: number;
+};
+
+/** A variant's bundle composition + how many whole bundles can currently be built. */
+export type BundleDetail = {
+  bundleVariantId: string;
+  components: BundleComponentItem[];
+  buildable: number;
+};

@@ -14,4 +14,5 @@ export const catalogKeys = {
     ['catalog', 'products', 'deletion-blockers', id, variantIds ?? 'all'] as const,
   labelVariants: (q: string, page: number, pageSize: number) =>
     ['catalog', 'label-variants', q, page, pageSize] as const,
+  bundle: (variantId: string) => ['catalog', 'bundle', variantId] as const,
 };
