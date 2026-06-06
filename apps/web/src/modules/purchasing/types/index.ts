@@ -11,6 +11,8 @@ export type PurchasableVariant = {
   cost: string | null;
   availableStock: number;
   incomingStock: number;
+  /** Variant photo public URL; null = none. */
+  imageUrl: string | null;
 };
 
 export type PurchaseOrderItemDetail = {

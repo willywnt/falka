@@ -101,6 +101,7 @@ export class PurchasingServerService {
       cost: variant.cost?.toString() ?? null,
       availableStock: variant.inventory?.availableStock ?? 0,
       incomingStock: variant.inventory?.incomingStock ?? 0,
+      imageUrl: variant.imageUrl,
     }));
 
     return buildPaginatedResult(items, total, query.page, query.pageSize);
@@ -144,6 +145,7 @@ export class PurchasingServerService {
       cost: variant.cost?.toString() ?? null,
       availableStock: variant.inventory?.availableStock ?? 0,
       incomingStock: variant.inventory?.incomingStock ?? 0,
+      imageUrl: variant.imageUrl,
     };
   }
 

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { ImageThumb } from '@/components/image-thumb';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
@@ -58,6 +59,7 @@ type PoLine = {
   unitCost: number;
   availableStock: number;
   incomingStock: number;
+  imageUrl: string | null;
 };
 
 export function PoForm() {
@@ -122,6 +124,7 @@ export function PoForm() {
       unitCost: Number(variant.cost ?? 0),
       availableStock: variant.availableStock,
       incomingStock: variant.incomingStock,
+      imageUrl: variant.imageUrl,
     });
   }
 
@@ -145,6 +148,7 @@ export function PoForm() {
           unitCost: Number(variant.cost ?? 0),
           availableStock: variant.availableStock,
           incomingStock: variant.incomingStock,
+          imageUrl: variant.imageUrl,
         },
       ];
     });
@@ -170,6 +174,7 @@ export function PoForm() {
         unitCost: 0,
         availableStock: item.availableStock,
         incomingStock: item.incomingStock,
+        imageUrl: null,
       });
     }
     toast.success(`Loaded ${suggestions.length} suggestion(s)`, {
@@ -289,13 +294,16 @@ export function PoForm() {
                   key={variant.variantId}
                   className="flex items-center justify-between gap-3 px-3 py-2"
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">
-                      {variant.productName} · {variant.name}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {variant.sku} · {variant.availableStock} avail · {variant.incomingStock}{' '}
-                      incoming
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ImageThumb src={variant.imageUrl} alt={variant.name} />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {variant.productName} · {variant.name}
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        {variant.sku} · {variant.availableStock} avail · {variant.incomingStock}{' '}
+                        incoming
+                      </div>
                     </div>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => addVariant(variant)}>
@@ -346,12 +354,15 @@ export function PoForm() {
               {lines.map((line) => (
                 <div key={line.variantId} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">
-                        {line.productName} · {line.name}
-                      </div>
-                      <div className="text-muted-foreground text-xs">
-                        {line.sku} · {line.availableStock} avail · {line.incomingStock} incoming
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ImageThumb src={line.imageUrl} alt={line.name} />
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">
+                          {line.productName} · {line.name}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {line.sku} · {line.availableStock} avail · {line.incomingStock} incoming
+                        </div>
                       </div>
                     </div>
                     <Button
