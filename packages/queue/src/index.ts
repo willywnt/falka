@@ -4,6 +4,7 @@ import { logger } from '@olshop/utils/logger';
 import { closeSharedRedisConnection, pingRedis } from './connection/index.js';
 import { closeAllQueues } from './queues/create-queue.js';
 import { registerScheduledJobs } from './queues/register-schedulers.js';
+import { registerConfiguredStockProviders } from './marketplace-sync/register-providers.js';
 import { closeAllWorkers, getRegisteredWorkers } from './workers/create-worker.js';
 import { registerAllWorkers } from './workers/register-workers.js';
 import type { getQueueObservabilitySnapshot } from './observability/queue-metrics.js';
@@ -24,6 +25,7 @@ export type WorkerHealthSnapshot = {
 export async function startWorkerInfrastructure(
   options: WorkerBootstrapOptions = {},
 ): Promise<void> {
+  registerConfiguredStockProviders();
   registerAllWorkers();
 
   if (options.registerSchedulers ?? true) {
