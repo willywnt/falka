@@ -93,23 +93,7 @@ function VariantBlockFields({
     name: `variants.${index}.subvariants`,
   });
   const hasOptions = form.watch(`variants.${index}.hasOptions`);
-
-  function onVariantNameChange(name: string) {
-    if (!form.getValues(`variants.${index}.hasOptions`)) {
-      if (!form.getValues(`variants.${index}.single.sku`).trim()) {
-        form.setValue(`variants.${index}.single.sku`, suggestVariantSku(name));
-      }
-      return;
-    }
-    form.getValues(`variants.${index}.subvariants`).forEach((row, subIndex) => {
-      if (row.name.trim() && !row.sku.trim()) {
-        form.setValue(
-          `variants.${index}.subvariants.${subIndex}.sku`,
-          suggestVariantSku(name, row.name),
-        );
-      }
-    });
-  }
+  const variantName = form.watch(`variants.${index}.variantName`);
 
   function onToggleOptions(next: boolean) {
     form.setValue(`variants.${index}.hasOptions`, next);
@@ -131,15 +115,7 @@ function VariantBlockFields({
             <FormItem className="flex-1">
               <FormLabel required>Variant name</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="iPhone 16"
-                  autoComplete="off"
-                  {...field}
-                  onChange={(event) => {
-                    field.onChange(event);
-                    onVariantNameChange(event.target.value);
-                  }}
-                />
+                <Input placeholder="iPhone 16" autoComplete="off" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -180,8 +156,22 @@ function VariantBlockFields({
       {hasOptions ? (
         <div className="space-y-3">
           {subvariants.fields.map((row, subIndex) => (
-            <div key={row.id} className="space-y-3 rounded-md border p-3">
-              <div className="flex items-start gap-2">
+            <div key={row.id} className="relative space-y-3 rounded-md border p-3">
+              {subvariants.fields.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1.5 right-1.5 size-7"
+                  onClick={() => subvariants.remove(subIndex)}
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Remove subvariant</span>
+                </Button>
+              ) : null}
+              <div
+                className={`flex items-start gap-2${subvariants.fields.length > 1 ? 'pr-8' : ''}`}
+              >
                 <FormField
                   control={form.control}
                   name={`variants.${index}.subvariants.${subIndex}.name`}
@@ -189,25 +179,7 @@ function VariantBlockFields({
                     <FormItem className="flex-1">
                       <FormLabel required>Option name</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Hitam"
-                          autoComplete="off"
-                          {...field}
-                          onChange={(event) => {
-                            field.onChange(event);
-                            const skuPath =
-                              `variants.${index}.subvariants.${subIndex}.sku` as const;
-                            if (!form.getValues(skuPath).trim()) {
-                              form.setValue(
-                                skuPath,
-                                suggestVariantSku(
-                                  form.getValues(`variants.${index}.variantName`),
-                                  event.target.value,
-                                ),
-                              );
-                            }
-                          }}
-                        />
+                        <Input placeholder="Hitam" autoComplete="off" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -216,47 +188,38 @@ function VariantBlockFields({
                 <FormField
                   control={form.control}
                   name={`variants.${index}.subvariants.${subIndex}.sku`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel required>SKU</FormLabel>
-                      <div className="flex gap-1">
-                        <FormControl>
-                          <Input placeholder="IPHONE-16-HITAM" autoComplete="off" {...field} />
-                        </FormControl>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="shrink-0"
-                          title="Generate SKU"
-                          onClick={() =>
-                            form.setValue(
-                              `variants.${index}.subvariants.${subIndex}.sku`,
-                              suggestVariantSku(
-                                form.getValues(`variants.${index}.variantName`),
-                                form.getValues(`variants.${index}.subvariants.${subIndex}.name`),
-                              ),
-                            )
-                          }
-                        >
-                          <Wand2 className="size-4" />
-                          <span className="sr-only">Generate SKU</span>
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const optionName = form.watch(`variants.${index}.subvariants.${subIndex}.name`);
+                    return (
+                      <FormItem className="flex-1">
+                        <FormLabel required>SKU</FormLabel>
+                        <div className="flex gap-1">
+                          <FormControl>
+                            <Input placeholder="IPHN16-HTM" autoComplete="off" {...field} />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0"
+                            title="Generate SKU from the option name"
+                            disabled={!optionName.trim()}
+                            onClick={() =>
+                              form.setValue(
+                                `variants.${index}.subvariants.${subIndex}.sku`,
+                                suggestVariantSku(variantName, optionName),
+                              )
+                            }
+                          >
+                            <Wand2 className="size-4" />
+                            <span className="sr-only">Generate SKU</span>
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mt-6 shrink-0"
-                  onClick={() => subvariants.remove(subIndex)}
-                >
-                  <X className="size-4" />
-                  <span className="sr-only">Remove subvariant</span>
-                </Button>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-4">
@@ -338,19 +301,17 @@ function VariantBlockFields({
                 <FormLabel required>SKU</FormLabel>
                 <div className="flex gap-1">
                   <FormControl>
-                    <Input placeholder="IPHONE-16" autoComplete="off" {...field} />
+                    <Input placeholder="IPHN16" autoComplete="off" {...field} />
                   </FormControl>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     className="shrink-0"
-                    title="Generate SKU"
+                    title="Generate SKU from the variant name"
+                    disabled={!variantName.trim()}
                     onClick={() =>
-                      form.setValue(
-                        `variants.${index}.single.sku`,
-                        suggestVariantSku(form.getValues(`variants.${index}.variantName`)),
-                      )
+                      form.setValue(`variants.${index}.single.sku`, suggestVariantSku(variantName))
                     }
                   >
                     <Wand2 className="size-4" />

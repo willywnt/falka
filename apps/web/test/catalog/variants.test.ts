@@ -57,13 +57,14 @@ describe('buildVariantBlocks', () => {
 });
 
 describe('suggestVariantSku', () => {
-  it('slugs and joins parts into an uppercase SKU', () => {
-    expect(suggestVariantSku('iPhone', '16', 'Hitam')).toBe('IPHONE-16-HITAM');
-    expect(suggestVariantSku('Kaos Polos', 'Black', 'M')).toBe('KAOS-POLOS-BLACK-M');
+  it('compacts each part (first letter + consonants, numbers kept) joined by "-"', () => {
+    expect(suggestVariantSku('iPhone 16', 'Hitam')).toBe('IPHN16-HTM');
+    expect(suggestVariantSku('iPhone', '16', 'Hitam')).toBe('IPHN-16-HTM');
+    expect(suggestVariantSku('Kaos Polos', 'Black', 'M')).toBe('KSPLS-BLCK-M');
   });
 
   it('drops empty segments and odd separators', () => {
-    expect(suggestVariantSku('iPhone', '', ' 128 GB ')).toBe('IPHONE-128-GB');
+    expect(suggestVariantSku('iPhone', '', ' 128 GB ')).toBe('IPHN-128GB');
   });
 });
 

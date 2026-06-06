@@ -42,17 +42,26 @@ export function formatVariantLabel(variant: { variantGroup: string | null; name:
   return variant.variantGroup ? `${variant.variantGroup} · ${variant.name}` : variant.name;
 }
 
-function slugifyPart(value: string): string {
+/**
+ * Compact one name into a short SKU part: per word, keep the first letter and
+ * drop the rest of the vowels (numbers stay whole). "iPhone 16" → "IPHN16".
+ */
+function compactSkuPart(value: string): string {
   return value
     .trim()
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((word) =>
+      /^[0-9]+$/.test(word) ? word : (word[0] ?? '') + word.slice(1).replace(/[AEIOU]/g, ''),
+    )
+    .join('');
 }
 
-/** Suggest a SKU by slugging + joining parts, e.g. ("iPhone","16","Hitam") → "IPHONE-16-HITAM". */
+/** Suggest a short SKU from variant (+ option) names, e.g. ("iPhone 16","Hitam") → "IPHN16-HTM". */
 export function suggestVariantSku(...parts: string[]): string {
-  return parts.map(slugifyPart).filter(Boolean).join('-');
+  return parts.map(compactSkuPart).filter(Boolean).join('-');
 }
 
 /**

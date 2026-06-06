@@ -84,7 +84,7 @@ export function AddSubvariantsDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add subvariants</DialogTitle>
           <DialogDescription>
@@ -96,8 +96,20 @@ export function AddSubvariantsDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             {rows.fields.map((row, index) => (
-              <div key={row.id} className="space-y-3 rounded-md border p-3">
-                <div className="flex items-start gap-2">
+              <div key={row.id} className="relative space-y-3 rounded-md border p-3">
+                {rows.fields.length > 1 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1.5 right-1.5 size-7"
+                    onClick={() => rows.remove(index)}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Remove subvariant</span>
+                  </Button>
+                ) : null}
+                <div className={`flex items-start gap-2${rows.fields.length > 1 ? 'pr-8' : ''}`}>
                   <FormField
                     control={form.control}
                     name={`subvariants.${index}.name`}
@@ -105,20 +117,7 @@ export function AddSubvariantsDialog({
                       <FormItem className="flex-1">
                         <FormLabel required>Option name</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Merah"
-                            autoComplete="off"
-                            {...field}
-                            onChange={(event) => {
-                              field.onChange(event);
-                              if (!form.getValues(`subvariants.${index}.sku`).trim()) {
-                                form.setValue(
-                                  `subvariants.${index}.sku`,
-                                  suggestVariantSku(groupName, event.target.value),
-                                );
-                              }
-                            }}
-                          />
+                          <Input placeholder="Merah" autoComplete="off" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -127,49 +126,38 @@ export function AddSubvariantsDialog({
                   <FormField
                     control={form.control}
                     name={`subvariants.${index}.sku`}
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel required>SKU</FormLabel>
-                        <div className="flex gap-1">
-                          <FormControl>
-                            <Input placeholder="IPHONE-16-MERAH" autoComplete="off" {...field} />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="shrink-0"
-                            title="Generate SKU"
-                            onClick={() =>
-                              form.setValue(
-                                `subvariants.${index}.sku`,
-                                suggestVariantSku(
-                                  groupName,
-                                  form.getValues(`subvariants.${index}.name`),
-                                ),
-                              )
-                            }
-                          >
-                            <Wand2 className="size-4" />
-                            <span className="sr-only">Generate SKU</span>
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const optionName = form.watch(`subvariants.${index}.name`);
+                      return (
+                        <FormItem className="flex-1">
+                          <FormLabel required>SKU</FormLabel>
+                          <div className="flex gap-1">
+                            <FormControl>
+                              <Input placeholder="IPHN16-MRH" autoComplete="off" {...field} />
+                            </FormControl>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="shrink-0"
+                              title="Generate SKU from the option name"
+                              disabled={!optionName.trim()}
+                              onClick={() =>
+                                form.setValue(
+                                  `subvariants.${index}.sku`,
+                                  suggestVariantSku(groupName, optionName),
+                                )
+                              }
+                            >
+                              <Wand2 className="size-4" />
+                              <span className="sr-only">Generate SKU</span>
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
-                  {rows.fields.length > 1 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="mt-6 shrink-0"
-                      onClick={() => rows.remove(index)}
-                    >
-                      <X className="size-4" />
-                      <span className="sr-only">Remove subvariant</span>
-                    </Button>
-                  ) : null}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-4">
