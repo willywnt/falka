@@ -53,6 +53,7 @@ model User {
   returns                    Return[]
   sales                      Sale[]
   purchaseOrders             PurchaseOrder[]
+  recordingShareLinks        RecordingShareLink[]
 
   @@map("users")
 }
@@ -116,10 +117,31 @@ model Recording {
   updatedAt         DateTime        @updatedAt
   deletedAt         DateTime?
 
+  shareLinks RecordingShareLink[]
+
   @@index([userId])
   @@index([noResi])
   @@index([status])
   @@map("recordings")
+}
+
+model RecordingShareLink {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  recordingId  String
+  recording    Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  // Opaque share token, stored hashed (sha256) — the raw token lives only in the URL.
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([recordingId])
+  @@index([userId])
+  @@map("recording_share_links")
 }
 
 model MarketplaceConnection {
