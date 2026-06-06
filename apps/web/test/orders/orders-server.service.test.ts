@@ -10,7 +10,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type TxClient = {
   order: { upsert: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
-  orderItem: { deleteMany: ReturnType<typeof vi.fn>; createMany: ReturnType<typeof vi.fn> };
+  orderItem: {
+    deleteMany: ReturnType<typeof vi.fn>;
+    createMany: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
+  };
+  productVariant: { findMany: ReturnType<typeof vi.fn> };
 };
 
 const {
@@ -25,7 +30,8 @@ const {
 } = vi.hoisted(() => {
   const txMock: TxClient = {
     order: { upsert: vi.fn(), update: vi.fn() },
-    orderItem: { deleteMany: vi.fn(), createMany: vi.fn() },
+    orderItem: { deleteMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
+    productVariant: { findMany: vi.fn() },
   };
   return {
     state: {
@@ -133,6 +139,8 @@ beforeEach(() => {
   txMock.order.update.mockResolvedValue({});
   txMock.orderItem.deleteMany.mockResolvedValue({});
   txMock.orderItem.createMany.mockResolvedValue({});
+  txMock.orderItem.updateMany.mockResolvedValue({});
+  txMock.productVariant.findMany.mockResolvedValue([]);
   fetchOrdersMock.mockImplementation(() => Promise.resolve(state.orders));
 
   state.variantId = 'v1';

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
+import { prisma, type TransactionClient } from '@olshop/db';
 import { enqueuePropagateInventoryStock } from '@olshop/queue';
 import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
@@ -202,6 +202,7 @@ export class OrdersServerService {
             orderId: order.id,
           });
         }
+        await this.snapshotOrderItemCostsTx(tx, order.id, [variantId]);
         if (order.inventoryAppliedAt === null) {
           await tx.order.update({
             where: { id: order.id },
@@ -374,6 +375,7 @@ export class OrdersServerService {
       // first seen already SHIPPED (it reserves here, then ships just below).
       if (isPaidOrBeyond && !wasReserved && !wasReleased && hasResolvedItems) {
         await prisma.$transaction(async (tx) => {
+          const reservedVariantIds: string[] = [];
           for (const item of resolvedItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderReserveTx(tx, {
@@ -383,7 +385,9 @@ export class OrdersServerService {
               orderId: saved.id,
             });
             affectedVariantIds.add(item.productVariantId);
+            reservedVariantIds.push(item.productVariantId);
           }
+          await this.snapshotOrderItemCostsTx(tx, saved.id, reservedVariantIds);
           await tx.order.update({
             where: { id: saved.id },
             data: { inventoryAppliedAt: new Date() },
@@ -452,6 +456,32 @@ export class OrdersServerService {
   }
 
   /** Best-effort: push each decremented variant's new available stock to its other channels. */
+  /**
+   * Snapshots each resolved line's COGS — the variant's cost at reserve time —
+   * onto the order items, so margin is computed from the cost that applied then.
+   * Runs once, inside the reserve transaction; later pulls don't overwrite it.
+   */
+  private async snapshotOrderItemCostsTx(
+    tx: TransactionClient,
+    orderId: string,
+    variantIds: string[],
+  ): Promise<void> {
+    const uniqueIds = [...new Set(variantIds)];
+    if (uniqueIds.length === 0) return;
+
+    const variants = await tx.productVariant.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, cost: true },
+    });
+
+    for (const variant of variants) {
+      await tx.orderItem.updateMany({
+        where: { orderId, productVariantId: variant.id },
+        data: { unitCost: variant.cost },
+      });
+    }
+  }
+
   private async propagateAffected(
     userId: string,
     variantIds: Set<string>,
