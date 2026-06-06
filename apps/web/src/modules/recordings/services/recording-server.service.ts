@@ -147,7 +147,7 @@ export class RecordingServerService {
         noResi,
         generatedFilename: 'pending.webm',
         storageProvider: 'cloudflare-r2',
-        storageBucket: env.R2_BUCKET_NAME,
+        storageBucket: env.R2_RECORDINGS_BUCKET_NAME,
         storageKey: pendingKey,
         publicUrl: 'pending',
         mimeType: ALLOWED_UPLOAD_MIME_TYPES[0],

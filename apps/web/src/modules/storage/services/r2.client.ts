@@ -24,6 +24,11 @@ import type {
   StorageProviderConfig,
 } from '../types';
 
+/** A bucket's public base = the shared R2_PUBLIC_URL joined with the bucket name. */
+function bucketPublicBase(publicUrl: string, bucketName: string): string {
+  return `${publicUrl.replace(/\/$/, '')}/${bucketName}`;
+}
+
 function getStorageConfig(): StorageProviderConfig {
   const env = getServerEnv();
 
@@ -35,8 +40,8 @@ function getStorageConfig(): StorageProviderConfig {
     accountId: env.R2_ACCOUNT_ID,
     accessKeyId: env.R2_ACCESS_KEY_ID,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    bucketName: env.R2_BUCKET_NAME,
-    publicBaseUrl: env.R2_PUBLIC_URL,
+    bucketName: env.R2_RECORDINGS_BUCKET_NAME,
+    publicBaseUrl: bucketPublicBase(env.R2_PUBLIC_URL, env.R2_RECORDINGS_BUCKET_NAME),
     uploadExpirySeconds: PRESIGNED_UPLOAD_EXPIRY_SECONDS,
     accessExpirySeconds: PRESIGNED_ACCESS_EXPIRY_SECONDS,
   };
@@ -46,11 +51,11 @@ function getStorageConfig(): StorageProviderConfig {
 function getProductImageConfig(): StorageProviderConfig {
   const env = getServerEnv();
 
+  if (!env.R2_PUBLIC_URL) {
+    throw StorageError.unavailable('R2_PUBLIC_URL is not configured');
+  }
   if (!env.R2_PRODUCTS_BUCKET_NAME) {
     throw StorageError.unavailable('R2_PRODUCTS_BUCKET_NAME is not configured');
-  }
-  if (!env.R2_PRODUCTS_PUBLIC_URL) {
-    throw StorageError.unavailable('R2_PRODUCTS_PUBLIC_URL is not configured');
   }
 
   return {
@@ -58,7 +63,7 @@ function getProductImageConfig(): StorageProviderConfig {
     accessKeyId: env.R2_ACCESS_KEY_ID,
     secretAccessKey: env.R2_SECRET_ACCESS_KEY,
     bucketName: env.R2_PRODUCTS_BUCKET_NAME,
-    publicBaseUrl: env.R2_PRODUCTS_PUBLIC_URL,
+    publicBaseUrl: bucketPublicBase(env.R2_PUBLIC_URL, env.R2_PRODUCTS_BUCKET_NAME),
     uploadExpirySeconds: PRESIGNED_UPLOAD_EXPIRY_SECONDS,
     accessExpirySeconds: PRESIGNED_ACCESS_EXPIRY_SECONDS,
   };

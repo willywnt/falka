@@ -40,7 +40,7 @@ const { prismaMock, txMock, quotaMock } = vi.hoisted(() => {
 
 vi.mock('@olshop/db', () => ({ prisma: prismaMock, buildPaginatedResult: vi.fn() }));
 vi.mock('@olshop/config/env.server', () => ({
-  getServerEnv: () => ({ R2_BUCKET_NAME: 'test-bucket' }),
+  getServerEnv: () => ({ R2_RECORDINGS_BUCKET_NAME: 'test-bucket' }),
 }));
 vi.mock('@/modules/storage/services/quota.service', () => ({ quotaService: quotaMock }));
 vi.mock('@/modules/storage/services/storage.service', () => ({
