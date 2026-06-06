@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { ImageThumb } from '@/components/image-thumb';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
@@ -139,6 +140,7 @@ export function LabelStudio() {
                         >
                           {isSelected ? <Check className="size-3" /> : null}
                         </span>
+                        <ImageThumb src={variant.imageUrl} alt={variant.name} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">
                             {variant.productName} · {variant.name}

@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, type ChangeEvent } from 'react';
-import { Image as ImageIcon, Loader2, Trash2, Upload } from 'lucide-react';
+import { Loader2, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ImageThumb } from '@/components/image-thumb';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import {
@@ -60,18 +61,11 @@ export function VariantImage({
         <button
           type="button"
           title="Variant photo"
-          className="bg-muted hover:ring-primary/40 relative size-10 shrink-0 overflow-hidden rounded border transition hover:ring-2"
+          className="hover:ring-primary/40 relative shrink-0 rounded transition hover:ring-2"
         >
-          {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- user-uploaded R2 image on a dynamic host
-            <img src={imageUrl} alt="" className="size-full object-cover" />
-          ) : (
-            <span className="text-muted-foreground flex size-full items-center justify-center">
-              <ImageIcon className="size-4" />
-            </span>
-          )}
+          <ImageThumb src={imageUrl} alt={label} />
           {busy ? (
-            <span className="bg-background/60 absolute inset-0 flex items-center justify-center">
+            <span className="bg-background/60 absolute inset-0 flex items-center justify-center rounded">
               <Loader2 className="size-3.5 animate-spin" />
             </span>
           ) : null}

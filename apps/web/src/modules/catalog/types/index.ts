@@ -49,6 +49,8 @@ export type LabelVariant = {
   barcode: string | null;
   /** Decimal serialized as a string to avoid float precision loss. */
   price: string;
+  /** Variant photo public URL; null = none. */
+  imageUrl: string | null;
   /** When a label was last printed for this variant; null = never. */
   labelPrintedAt: string | null;
 };

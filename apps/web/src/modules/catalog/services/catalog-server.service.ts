@@ -184,6 +184,7 @@ export class CatalogServerService {
       sku: variant.sku,
       barcode: variant.barcode,
       price: variant.price.toString(),
+      imageUrl: variant.imageUrl,
       labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
     }));
 
