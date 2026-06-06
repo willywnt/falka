@@ -60,7 +60,13 @@ export class OrdersServerService {
           orderBy: { createdAt: 'asc' },
           include: {
             productVariant: {
-              select: { id: true, sku: true, name: true, product: { select: { name: true } } },
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                imageUrl: true,
+                product: { select: { name: true } },
+              },
             },
           },
         },
@@ -81,6 +87,7 @@ export class OrdersServerService {
             sku: item.productVariant.sku,
             name: item.productVariant.name,
             productName: item.productVariant.product.name,
+            imageUrl: item.productVariant.imageUrl,
           }
         : null,
     }));

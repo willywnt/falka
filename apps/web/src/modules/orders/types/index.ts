@@ -7,7 +7,13 @@ export type OrderItemDetail = {
   quantity: number;
   unitPrice: string | null;
   resolved: boolean;
-  variant: { id: string; sku: string; name: string; productName: string } | null;
+  variant: {
+    id: string;
+    sku: string;
+    name: string;
+    productName: string;
+    imageUrl: string | null;
+  } | null;
 };
 
 export type OrderListItem = {

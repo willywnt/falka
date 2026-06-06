@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ImageThumb } from '@/components/image-thumb';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordings-management';
@@ -132,10 +133,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                     </TableCell>
                     <TableCell>
                       {item.variant ? (
-                        <div>
-                          <Badge variant="secondary">{item.variant.sku}</Badge>
-                          <div className="text-muted-foreground text-xs">
-                            {item.variant.productName} / {item.variant.name}
+                        <div className="flex items-center gap-3">
+                          <ImageThumb src={item.variant.imageUrl} alt={item.variant.name} />
+                          <div className="min-w-0">
+                            <Badge variant="secondary">{item.variant.sku}</Badge>
+                            <div className="text-muted-foreground text-xs">
+                              {item.variant.productName} / {item.variant.name}
+                            </div>
                           </div>
                         </div>
                       ) : (
