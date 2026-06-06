@@ -451,6 +451,8 @@ model OrderItem {
   externalName      String
   quantity          Int
   unitPrice         Decimal?        @db.Decimal(12, 2)
+  /** COGS snapshot: the variant's cost at reserve time. null = unknown (pre-backfill). */
+  unitCost          Decimal?        @db.Decimal(12, 2)
   /**
    * Resolved internal variant (via marketplace mapping); null when unresolved.
    */
@@ -558,6 +560,8 @@ model SaleItem {
   name             String
   quantity         Int
   unitPrice        Decimal        @db.Decimal(12, 2)
+  /** COGS snapshot: the variant's cost at sale time. null = unknown (pre-backfill). */
+  unitCost         Decimal?       @db.Decimal(12, 2)
 
   @@index([saleId])
   @@index([productVariantId])
