@@ -148,6 +148,29 @@ describe('voidSale', () => {
     expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
   });
 
+  it('restocks components (not the bundle) when voiding a bundle sale', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue({
+      id: 's1',
+      code: 'S00001',
+      status: 'COMPLETED',
+      items: [{ productVariantId: 'v1', quantity: 2 }],
+    });
+    catalogMock.resolveBundles.mockResolvedValue(
+      new Map([['v1', { buildable: 0, components: [{ componentVariantId: 'c1', quantity: 2 }] }]]),
+    );
+
+    await service.voidSale(USER, 's1');
+
+    expect(inventoryMock.applyOfflineSaleReversalTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'c1', quantity: 4, saleId: 's1' }),
+    );
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1' }),
+    );
+  });
+
   it('is a no-op for an already-voided sale', async () => {
     prismaMock.sale.findFirst.mockResolvedValue({
       id: 's1',

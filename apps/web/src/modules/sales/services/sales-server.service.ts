@@ -186,22 +186,48 @@ export class SalesServerService {
     if (sale.status === 'VOID') return this.getSale(userId, saleId);
 
     const variantIds = [...new Set(sale.items.map((item) => item.productVariantId))];
+    // Mirror the sale: a bundle decremented its components, so the void restocks
+    // those components (using the current composition), not the bundle itself.
+    const bundles = await catalogServerService.resolveBundles(userId, variantIds);
 
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
-        await inventoryServerService.applyOfflineSaleReversalTx(tx, {
-          userId,
-          variantId: item.productVariantId,
-          quantity: item.quantity,
-          saleId: sale.id,
-        });
+        const bundle = bundles.get(item.productVariantId);
+        if (bundle) {
+          for (const component of bundle.components) {
+            await inventoryServerService.applyOfflineSaleReversalTx(tx, {
+              userId,
+              variantId: component.componentVariantId,
+              quantity: item.quantity * component.quantity,
+              saleId: sale.id,
+            });
+          }
+        } else {
+          await inventoryServerService.applyOfflineSaleReversalTx(tx, {
+            userId,
+            variantId: item.productVariantId,
+            quantity: item.quantity,
+            saleId: sale.id,
+          });
+        }
       }
       await tx.sale.update({ where: { id: sale.id }, data: { status: 'VOID' } });
     });
 
     appLogger.info('sales.voided', { userId, saleId: sale.id, code: sale.code });
 
-    await this.propagateAffected(userId, variantIds);
+    const affectedVariantIds = new Set<string>();
+    for (const item of sale.items) {
+      const bundle = bundles.get(item.productVariantId);
+      if (bundle) {
+        bundle.components.forEach((component) =>
+          affectedVariantIds.add(component.componentVariantId),
+        );
+      } else {
+        affectedVariantIds.add(item.productVariantId);
+      }
+    }
+    await this.propagateAffected(userId, [...affectedVariantIds]);
     return this.getSale(userId, saleId);
   }
 
