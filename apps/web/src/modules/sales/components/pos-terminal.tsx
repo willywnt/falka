@@ -22,6 +22,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { ImageThumb } from '@/components/image-thumb';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useScanSoundPref } from '@/hooks/use-scan-sound-pref';
 import { useSoundUnlock } from '@/hooks/use-sound-unlock';
@@ -68,6 +69,7 @@ type CartLine = {
   unitPrice: number;
   quantity: number;
   availableStock: number;
+  imageUrl: string | null;
 };
 
 const PAYMENT_OPTIONS: ReadonlyArray<{ value: SalePaymentMethod; label: string }> = [
@@ -123,6 +125,7 @@ export function PosTerminal() {
           unitPrice: Number(variant.price),
           quantity: 1,
           availableStock: variant.availableStock,
+          imageUrl: variant.imageUrl,
         },
       ];
     });
@@ -236,15 +239,18 @@ export function PosTerminal() {
                   key={variant.variantId}
                   className="flex items-center justify-between gap-3 px-3 py-2"
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">
-                      {variant.productName} · {variant.name}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {variant.sku} · {formatCurrency(variant.price)} ·{' '}
-                      <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
-                        {variant.availableStock} in stock
-                      </span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ImageThumb src={variant.imageUrl} alt={variant.name} />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {variant.productName} · {variant.name}
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        {variant.sku} · {formatCurrency(variant.price)} ·{' '}
+                        <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
+                          {variant.availableStock} in stock
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => addToCart(variant)}>
@@ -277,11 +283,14 @@ export function PosTerminal() {
                 return (
                   <div key={line.variantId} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">
-                          {line.productName} · {line.name}
+                      <div className="flex min-w-0 items-center gap-3">
+                        <ImageThumb src={line.imageUrl} alt={line.name} />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">
+                            {line.productName} · {line.name}
+                          </div>
+                          <div className="text-muted-foreground text-xs">{line.sku}</div>
                         </div>
-                        <div className="text-muted-foreground text-xs">{line.sku}</div>
                       </div>
                       <Button
                         size="icon"

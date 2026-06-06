@@ -84,6 +84,7 @@ export class SalesServerService {
       productName: variant.product.name,
       price: variant.price.toString(),
       availableStock: variant.inventory?.availableStock ?? 0,
+      imageUrl: variant.imageUrl,
     }));
   }
 
@@ -122,6 +123,7 @@ export class SalesServerService {
       productName: variant.product.name,
       price: variant.price.toString(),
       availableStock: variant.inventory?.availableStock ?? 0,
+      imageUrl: variant.imageUrl,
     };
   }
 

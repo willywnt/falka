@@ -10,6 +10,8 @@ export type SellableVariant = {
   productName: string;
   price: string;
   availableStock: number;
+  /** Variant photo public URL; null = none. */
+  imageUrl: string | null;
 };
 
 export type SaleItemDetail = {
