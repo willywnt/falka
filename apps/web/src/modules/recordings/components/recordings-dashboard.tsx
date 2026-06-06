@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   Download,
   Eye,
+  Link2,
   MoreHorizontal,
   Play,
   Search,
@@ -35,6 +36,7 @@ import { RECORDING_STATUS_FILTERS, type RecordingSortField } from '../validators
 import { RecordingDeleteDialog } from './recording-delete-dialog';
 import { RecordingDetailModal } from './recording-detail-modal';
 import { RecordingPlayerModal } from './recording-player-modal';
+import { ShareEvidenceDialog } from './share-evidence-dialog';
 import { OperationalStatusBadge } from './operational-status-badge';
 import { RecordingsEmptyState } from './recordings-empty-state';
 import { Button } from '@/components/ui/button';
@@ -94,6 +96,8 @@ export function RecordingsDashboard() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RecordingListItem | null>(null);
+  const [shareTarget, setShareTarget] = useState<RecordingListItem | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [pendingPlayerTarget, setPendingPlayerTarget] = useState<TemporaryRecording | null>(null);
   const [pendingDetailTarget, setPendingDetailTarget] = useState<TemporaryRecording | null>(null);
   const [pendingDiscardTarget, setPendingDiscardTarget] = useState<TemporaryRecording | null>(null);
@@ -346,6 +350,16 @@ export function RecordingsDashboard() {
                                 Download
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                disabled={!canPlay}
+                                onClick={() => {
+                                  setShareTarget(recording);
+                                  setShareOpen(true);
+                                }}
+                              >
+                                <Link2 className="size-4" />
+                                Share evidence
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => setDeleteTarget(recording)}
                               >
@@ -397,6 +411,15 @@ export function RecordingsDashboard() {
         recording={selectedRecording}
         open={playerOpen}
         onOpenChange={setPlayerOpen}
+      />
+
+      <ShareEvidenceDialog
+        recording={shareTarget}
+        open={shareOpen}
+        onOpenChange={(next) => {
+          setShareOpen(next);
+          if (!next) setShareTarget(null);
+        }}
       />
 
       <RecordingDetailModal
