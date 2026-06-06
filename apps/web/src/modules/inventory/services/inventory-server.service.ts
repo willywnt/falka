@@ -516,6 +516,42 @@ export class InventoryServerService {
   }
 
   /**
+   * Reverses an offline sale WITHIN the caller's transaction — used when a counter
+   * sale is voided: the goods come back, so available rises again. Records a
+   * positive `SALE` row (source `POS`) that nets the original sale out of demand
+   * velocity. Returns the new balance; the caller propagates after commit.
+   */
+  async applyOfflineSaleReversalTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; quantity: number; saleId: string },
+  ): Promise<number> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, lastAdjustedAt: now },
+    });
+
+    await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: params.quantity,
+        balanceAfter,
+        reason: 'SALE',
+        source: 'POS',
+        referenceId: params.saleId,
+        note: 'Sale voided',
+      },
+    });
+
+    return balanceAfter;
+  }
+
+  /**
    * Adjusts the incoming (on-order) bucket WITHIN the caller's transaction — used
    * when a purchase order is placed (positive delta) or cancelled (negative). No
    * ledger row: incoming is a forecast bucket and available is unchanged. Clamped at 0.

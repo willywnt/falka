@@ -8,15 +8,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 type TxClient = {
-  sale: { count: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  sale: {
+    count: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+  };
 };
 
 const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
-  const txMock: TxClient = { sale: { count: vi.fn(), create: vi.fn() } };
+  const txMock: TxClient = { sale: { count: vi.fn(), create: vi.fn(), update: vi.fn() } };
   return {
     txMock,
     enqueueMock: vi.fn(),
-    inventoryMock: { applyOfflineSaleTx: vi.fn().mockResolvedValue(0) },
+    inventoryMock: {
+      applyOfflineSaleTx: vi.fn().mockResolvedValue(0),
+      applyOfflineSaleReversalTx: vi.fn().mockResolvedValue(0),
+    },
     prismaMock: {
       productVariant: { findMany: vi.fn() },
       sale: { findMany: vi.fn(), findFirst: vi.fn() },
@@ -49,6 +56,7 @@ beforeEach(() => {
   prismaMock.inventory.findUnique.mockResolvedValue({ availableStock: -1 });
   txMock.sale.count.mockResolvedValue(0);
   txMock.sale.create.mockResolvedValue({ id: 's1', code: 'S00001' });
+  txMock.sale.update.mockResolvedValue({});
 });
 
 describe('createSale', () => {
@@ -88,6 +96,51 @@ describe('createSale', () => {
       code: 'VALIDATION_ERROR',
     });
     expect(inventoryMock.applyOfflineSaleTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('voidSale', () => {
+  it('restocks every line, marks the sale VOID, and propagates', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue({
+      id: 's1',
+      code: 'S00001',
+      status: 'COMPLETED',
+      items: [{ productVariantId: 'v1', quantity: 2 }],
+    });
+
+    await service.voidSale(USER, 's1');
+
+    expect(inventoryMock.applyOfflineSaleReversalTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', quantity: 2, saleId: 's1' }),
+    );
+    expect(txMock.sale.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 's1' }, data: { status: 'VOID' } }),
+    );
+    expect(enqueueMock).toHaveBeenCalledTimes(1);
+    expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+  });
+
+  it('is a no-op for an already-voided sale', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue({
+      id: 's1',
+      code: 'S00001',
+      status: 'VOID',
+      items: [{ productVariantId: 'v1', quantity: 2 }],
+    });
+
+    await service.voidSale(USER, 's1');
+
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
+    expect(txMock.sale.update).not.toHaveBeenCalled();
+    expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+  });
+
+  it('throws NOT_FOUND for an unknown sale', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue(null);
+
+    await expect(service.voidSale(USER, 'missing')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
   });
 });
 

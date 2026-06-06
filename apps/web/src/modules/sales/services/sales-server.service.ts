@@ -161,6 +161,40 @@ export class SalesServerService {
   }
 
   /**
+   * Voids a completed counter sale: restock every line (available+) and mark the
+   * sale VOID in one transaction, then propagate. Idempotent — an already-VOID sale
+   * is returned unchanged. Voided sales drop out of the profit report (which counts
+   * only COMPLETED sales).
+   */
+  async voidSale(userId: string, saleId: string): Promise<SaleDetail> {
+    const sale = await prisma.sale.findFirst({
+      where: { id: saleId, userId },
+      include: { items: { select: { productVariantId: true, quantity: true } } },
+    });
+    if (!sale) throw SaleError.notFound();
+    if (sale.status === 'VOID') return this.getSale(userId, saleId);
+
+    const variantIds = [...new Set(sale.items.map((item) => item.productVariantId))];
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of sale.items) {
+        await inventoryServerService.applyOfflineSaleReversalTx(tx, {
+          userId,
+          variantId: item.productVariantId,
+          quantity: item.quantity,
+          saleId: sale.id,
+        });
+      }
+      await tx.sale.update({ where: { id: sale.id }, data: { status: 'VOID' } });
+    });
+
+    appLogger.info('sales.voided', { userId, saleId: sale.id, code: sale.code });
+
+    await this.propagateAffected(userId, variantIds);
+    return this.getSale(userId, saleId);
+  }
+
+  /**
    * Ring up an offline sale: snapshot the variants, create the sale + lines, and
    * decrement each variant's available stock in ONE transaction (oversell allowed —
    * the goods are in hand). Propagates the new available to marketplaces afterwards.
