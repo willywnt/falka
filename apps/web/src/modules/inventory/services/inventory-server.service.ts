@@ -17,7 +17,7 @@ import type {
 import type { AdjustStockInput } from '../validators/adjust-stock';
 import type { ListStockOverviewQuery } from '../validators/list-stock-overview';
 import { computeMovingAverageCost } from '../utils/cost-math';
-import { computeBalanceAfter } from '../utils/stock-math';
+import { computeBalanceAfter, damagedBucketDelta } from '../utils/stock-math';
 
 const LEDGER_PAGE_SIZE = 50;
 /** Upper bound on variants scanned for the stock overview; logged if exceeded. */
@@ -195,10 +195,22 @@ export class InventoryServerService {
       }
 
       const now = new Date();
+      // Removing stock as DAMAGE turns a good unit into a damaged one: available
+      // drops (above) AND the damaged bucket rises by the same amount.
+      const damagedDelta = damagedBucketDelta(input.reason, input.delta);
       const inventory = await tx.inventory.upsert({
         where: { variantId },
-        create: { variantId, availableStock: balance.balanceAfter, lastAdjustedAt: now },
-        update: { availableStock: balance.balanceAfter, lastAdjustedAt: now },
+        create: {
+          variantId,
+          availableStock: balance.balanceAfter,
+          damagedStock: damagedDelta,
+          lastAdjustedAt: now,
+        },
+        update: {
+          availableStock: balance.balanceAfter,
+          ...(damagedDelta > 0 ? { damagedStock: { increment: damagedDelta } } : {}),
+          lastAdjustedAt: now,
+        },
       });
 
       const entry = await tx.stockLedger.create({

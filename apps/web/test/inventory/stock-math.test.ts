@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   computeBalanceAfter,
+  damagedBucketDelta,
   isManualStockReason,
   MANUAL_STOCK_REASONS,
 } from '@/modules/inventory/utils/stock-math';
@@ -30,6 +31,21 @@ describe('computeBalanceAfter', () => {
 
   it('rejects a zero delta as a no-op', () => {
     expect(computeBalanceAfter(10, 0)).toEqual({ ok: false, reason: 'zero_delta' });
+  });
+});
+
+describe('damagedBucketDelta', () => {
+  it('moves removed DAMAGE units into the damaged bucket', () => {
+    expect(damagedBucketDelta('DAMAGE', -3)).toBe(3);
+  });
+
+  it('is zero for non-DAMAGE reasons', () => {
+    expect(damagedBucketDelta('MANUAL_ADJUST', -3)).toBe(0);
+    expect(damagedBucketDelta('RESTOCK', 5)).toBe(0);
+  });
+
+  it('is zero when a DAMAGE adjustment adds stock (no good unit removed)', () => {
+    expect(damagedBucketDelta('DAMAGE', 4)).toBe(0);
   });
 });
 

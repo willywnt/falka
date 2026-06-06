@@ -34,3 +34,13 @@ export function computeBalanceAfter(currentAvailable: number, delta: number): St
 
   return { ok: true, balanceAfter };
 }
+
+/**
+ * Units a manual adjustment moves INTO the damaged bucket. Removing stock with
+ * reason DAMAGE turns good units into damaged ones — available drops AND damaged
+ * rises by the same amount; every other manual reason (or a positive delta)
+ * leaves the damaged bucket untouched.
+ */
+export function damagedBucketDelta(reason: StockLedgerReason, delta: number): number {
+  return reason === StockLedgerReason.DAMAGE && delta < 0 ? -delta : 0;
+}
