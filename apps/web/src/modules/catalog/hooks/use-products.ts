@@ -233,12 +233,12 @@ export function useDeleteVariantsMutation(productId: string) {
   });
 }
 
-/** Compress an image, presign + PUT it to R2, then save it as the product's photo. */
-export function useUploadProductImageMutation(productId: string) {
+/** Compress an image, presign + PUT it to R2, then save it as a variant's photo. */
+export function useUploadVariantImageMutation(productId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ variantId, file }: { variantId: string; file: File }) => {
       const blob = await compressImage(file);
 
       const presign = await apiFetch<{
@@ -261,10 +261,13 @@ export function useUploadProductImageMutation(productId: string) {
         throw new Error('Upload to storage failed. Check the R2 bucket CORS allows PUT.');
       }
 
-      const result = await apiFetch<ProductDetail>(`${apiRoutes.products}/${productId}/image`, {
-        method: 'PATCH',
-        body: { imageKey: presign.data.storageKey, imageUrl: presign.data.publicUrl },
-      });
+      const result = await apiFetch<ProductDetail>(
+        `${apiRoutes.products}/${productId}/variants/${variantId}/image`,
+        {
+          method: 'PATCH',
+          body: { imageKey: presign.data.storageKey, imageUrl: presign.data.publicUrl },
+        },
+      );
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
@@ -274,15 +277,16 @@ export function useUploadProductImageMutation(productId: string) {
   });
 }
 
-/** Remove the product's photo (clears the fields + deletes the R2 object). */
-export function useRemoveProductImageMutation(productId: string) {
+/** Remove a variant's photo (clears the fields + deletes the R2 object). */
+export function useRemoveVariantImageMutation(productId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      const result = await apiFetch<ProductDetail>(`${apiRoutes.products}/${productId}/image`, {
-        method: 'DELETE',
-      });
+    mutationFn: async (variantId: string) => {
+      const result = await apiFetch<ProductDetail>(
+        `${apiRoutes.products}/${productId}/variants/${variantId}/image`,
+        { method: 'DELETE' },
+      );
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },

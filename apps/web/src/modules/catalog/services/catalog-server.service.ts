@@ -22,10 +22,10 @@ import { archivedSku } from '../utils/variants';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
-import type { SetProductImageInput } from '../validators/product-image';
 import type { UpdateProductInput } from '../validators/update-product';
 import type { UpdateVariantInput } from '../validators/update-variant';
 import type { CreateVariantInput } from '../validators/variant';
+import type { SetVariantImageInput } from '../validators/variant-image';
 
 type VariantWithInventory = ProductVariant & { inventory: Inventory | null };
 type ProductWithVariants = Product & { variants: VariantWithInventory[] };
@@ -63,6 +63,7 @@ function mapVariant(
     sku: variant.sku,
     name: variant.name,
     variantGroup: variant.variantGroup,
+    imageUrl: variant.imageUrl,
     barcode: variant.barcode,
     price: variant.price.toString(),
     cost: variant.cost?.toString() ?? null,
@@ -97,7 +98,6 @@ function mapProductDetail(
     name: product.name,
     description: product.description,
     category: product.category,
-    imageUrl: product.imageUrl,
     isActive: product.isActive,
     variants: product.variants.map((variant) =>
       mapVariant(variant, mappingsByVariant.get(variant.id) ?? []),
@@ -417,50 +417,55 @@ export class CatalogServerService {
     return this.getProductById(userId, productId);
   }
 
-  /** Set/replace a product's photo from a just-uploaded R2 object; drops the old one. */
-  async setProductImage(
+  /** Set/replace a variant's photo from a just-uploaded R2 object; drops the old one. */
+  async setVariantImage(
     userId: string,
     productId: string,
-    input: SetProductImageInput,
+    variantId: string,
+    input: SetVariantImageInput,
   ): Promise<ProductDetail> {
-    const product = await prisma.product.findFirst({
-      where: { id: productId, userId, deletedAt: null },
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId, userId, deletedAt: null },
       select: { id: true, imageKey: true },
     });
-    if (!product) throw CatalogError.notFound();
+    if (!variant) throw CatalogError.notFound('Variant not found.');
     if (!storageService.ownsKey(input.imageKey, userId)) {
       throw CatalogError.validation('Invalid image reference.');
     }
 
-    await prisma.product.update({
-      where: { id: productId },
+    await prisma.productVariant.update({
+      where: { id: variantId },
       data: { imageKey: input.imageKey, imageUrl: input.imageUrl },
     });
 
-    if (product.imageKey && product.imageKey !== input.imageKey) {
-      await this.deleteStorageObject(product.imageKey);
+    if (variant.imageKey && variant.imageKey !== input.imageKey) {
+      await this.deleteStorageObject(variant.imageKey);
     }
 
-    appLogger.info('catalog.product.image.set', { userId, productId });
+    appLogger.info('catalog.variant.image.set', { userId, productId, variantId });
     return this.getProductById(userId, productId);
   }
 
-  /** Remove a product's photo (clears the fields + deletes the R2 object). */
-  async removeProductImage(userId: string, productId: string): Promise<ProductDetail> {
-    const product = await prisma.product.findFirst({
-      where: { id: productId, userId, deletedAt: null },
+  /** Remove a variant's photo (clears the fields + deletes the R2 object). */
+  async removeVariantImage(
+    userId: string,
+    productId: string,
+    variantId: string,
+  ): Promise<ProductDetail> {
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId, userId, deletedAt: null },
       select: { id: true, imageKey: true },
     });
-    if (!product) throw CatalogError.notFound();
+    if (!variant) throw CatalogError.notFound('Variant not found.');
 
-    await prisma.product.update({
-      where: { id: productId },
+    await prisma.productVariant.update({
+      where: { id: variantId },
       data: { imageKey: null, imageUrl: null },
     });
 
-    if (product.imageKey) await this.deleteStorageObject(product.imageKey);
+    if (variant.imageKey) await this.deleteStorageObject(variant.imageKey);
 
-    appLogger.info('catalog.product.image.removed', { userId, productId });
+    appLogger.info('catalog.variant.image.removed', { userId, productId, variantId });
     return this.getProductById(userId, productId);
   }
 

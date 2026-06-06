@@ -190,9 +190,6 @@ model Product {
   name        String
   description String?
   category    String?
-  // Product photo (one per product): R2 object key + its public URL. null = none.
-  imageKey    String?
-  imageUrl    String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -220,6 +217,9 @@ model ProductVariant {
   // Parent variant name (e.g. "iPhone 16") when this row is a subvariant under a
   // grouped variant; null when the variant stands alone. The variant stays the SKU.
   variantGroup      String?
+  // Per-variant photo: R2 object key + its public URL. null = none.
+  imageKey          String?
+  imageUrl          String?
   isActive          Boolean   @default(true)
   lowStockThreshold Int       @default(0)
   alertEnabled      Boolean   @default(true)
