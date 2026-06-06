@@ -169,7 +169,7 @@ export class SalesServerService {
     const variantIds = [...new Set(input.items.map((item) => item.variantId))];
     const variants = await prisma.productVariant.findMany({
       where: { id: { in: variantIds }, userId, deletedAt: null },
-      select: { id: true, sku: true, name: true },
+      select: { id: true, sku: true, name: true, cost: true },
     });
     const byId = new Map(variants.map((variant) => [variant.id, variant]));
 
@@ -201,6 +201,8 @@ export class SalesServerService {
                 name: variant.name,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
+                // COGS snapshot: the variant's cost at sale time (null = unknown).
+                unitCost: variant.cost,
               };
             }),
           },
