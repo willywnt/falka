@@ -23,7 +23,7 @@ import type { CreateProductInput } from '../validators/create-product';
 import type { CreateVariantInput } from '../validators/variant';
 import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateVariantInput } from '../validators/update-variant';
-import type { SetBundleInput } from '../validators/bundle';
+import type { CreateBundleInput, SetBundleInput } from '../validators/bundle';
 
 const LIST_PAGE_SIZE = 50;
 
@@ -73,6 +73,58 @@ export function useBundlesQuery(q: string, page: number, pageSize: number) {
       return result.data;
     },
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Variant-id-keyed bundle read for the dedicated Bundles edit page. */
+export function useBundleByVariantQuery(variantId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: catalogKeys.bundle(variantId ?? 'unknown'),
+    queryFn: async () => {
+      const result = await apiFetch<BundleDetail>(`${apiRoutes.bundles}/${variantId}`);
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    enabled: Boolean(variantId) && enabled,
+  });
+}
+
+export function useSetBundleByVariantMutation(variantId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: SetBundleInput) => {
+      const result = await apiFetch<BundleDetail>(`${apiRoutes.bundles}/${variantId}`, {
+        method: 'PUT',
+        body: input,
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.bundle(variantId) });
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+export function useCreateBundleMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateBundleInput) => {
+      const result = await apiFetch<{ bundleVariantId: string; productId: string }>(
+        apiRoutes.bundles,
+        { method: 'POST', body: input },
+      );
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
   });
 }
 

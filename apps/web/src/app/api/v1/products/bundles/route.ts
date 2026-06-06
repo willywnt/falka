@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
-import { listBundlesQuerySchema } from '@/modules/catalog/validators';
+import { createBundleSchema, listBundlesQuerySchema } from '@/modules/catalog/validators';
 import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
@@ -16,6 +16,18 @@ export const GET = withApiRoute(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const result = await catalogServerService.listBundles(user.id, parsed.data);
+    return apiSuccess(result);
+  },
+  { requireAuth: true },
+);
+
+export const POST = withApiRoute(
+  async (request, { user }) => {
+    const body: unknown = await request.json();
+    const parsed = createBundleSchema.safeParse(body);
+    if (!parsed.success) return apiValidationError(parsed.error);
+
+    const result = await catalogServerService.createBundle(user.id, parsed.data);
     return apiSuccess(result);
   },
   { requireAuth: true },

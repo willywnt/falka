@@ -24,7 +24,7 @@ import type {
 } from '../types';
 import { computeBuildableQty } from '../utils/bundle';
 import { archivedSku } from '../utils/variants';
-import type { ListBundlesQuery, SetBundleInput } from '../validators/bundle';
+import type { CreateBundleInput, ListBundlesQuery, SetBundleInput } from '../validators/bundle';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -562,7 +562,66 @@ export class CatalogServerService {
     input: SetBundleInput,
   ): Promise<BundleDetail> {
     await this.assertVariantInProduct(userId, productId, variantId);
+    return this.replaceBundleComponents(userId, variantId, input);
+  }
 
+  /** Variant-id-keyed bundle read for the dedicated Bundles UI (no productId needed). */
+  async getBundleByVariant(userId: string, variantId: string): Promise<BundleDetail> {
+    await this.assertVariantOwned(userId, variantId);
+    return this.buildBundleDetail(userId, variantId);
+  }
+
+  /** Variant-id-keyed bundle write for the dedicated Bundles UI. */
+  async setBundleComponentsByVariant(
+    userId: string,
+    variantId: string,
+    input: SetBundleInput,
+  ): Promise<BundleDetail> {
+    await this.assertVariantOwned(userId, variantId);
+    return this.replaceBundleComponents(userId, variantId, input);
+  }
+
+  /**
+   * Creates a bundle from scratch: mints a single-variant product (the bundle's
+   * SKU/price/name) then sets its components in one logical operation. Returns the
+   * new bundle variant id so the UI can navigate to its detail page.
+   */
+  async createBundle(
+    userId: string,
+    input: CreateBundleInput,
+  ): Promise<{ bundleVariantId: string; productId: string }> {
+    const product = await this.createProduct(userId, {
+      name: input.name,
+      description: undefined,
+      category: input.category,
+      variants: [
+        {
+          sku: input.sku,
+          name: input.name,
+          price: input.price,
+          lowStockThreshold: 0,
+          alertEnabled: true,
+          initialStock: 0,
+        },
+      ],
+    });
+    const bundleVariantId = product.variants[0]?.id;
+    if (!bundleVariantId) throw CatalogError.validation('Could not create the bundle.');
+
+    await this.replaceBundleComponents(userId, bundleVariantId, { components: input.components });
+    return { bundleVariantId, productId: product.id };
+  }
+
+  /**
+   * Validate + replace a variant's bundle components (empty array clears it). Shared
+   * by the product- and variant-keyed setters + create. Guards: components must be
+   * owned, distinct, not the bundle itself, and not bundles themselves (no nesting).
+   */
+  private async replaceBundleComponents(
+    userId: string,
+    variantId: string,
+    input: SetBundleInput,
+  ): Promise<BundleDetail> {
     const componentIds = input.components.map((component) => component.componentVariantId);
     if (componentIds.includes(variantId)) {
       throw CatalogError.validation('A bundle cannot contain itself.');
@@ -602,11 +661,9 @@ export class CatalogServerService {
 
     appLogger.info('catalog.bundle.set', {
       userId,
-      productId,
       variantId,
       components: input.components.length,
     });
-
     return this.buildBundleDetail(userId, variantId);
   }
 
@@ -707,6 +764,14 @@ export class CatalogServerService {
         })),
       ),
     };
+  }
+
+  private async assertVariantOwned(userId: string, variantId: string): Promise<void> {
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: variantId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!variant) throw CatalogError.notFound('Variant not found.');
   }
 
   private async assertVariantInProduct(

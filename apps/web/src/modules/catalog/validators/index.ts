@@ -32,7 +32,9 @@ export { productIdParamSchema, type ProductIdParam } from './product-id';
 export { setVariantImageSchema, type SetVariantImageInput } from './variant-image';
 export {
   setBundleSchema,
+  createBundleSchema,
   listBundlesQuerySchema,
   type SetBundleInput,
+  type CreateBundleInput,
   type ListBundlesQuery,
 } from './bundle';
