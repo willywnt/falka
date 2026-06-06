@@ -16,6 +16,7 @@ import type {
 } from '../types';
 import type { AdjustStockInput } from '../validators/adjust-stock';
 import type { ListStockOverviewQuery } from '../validators/list-stock-overview';
+import { computeMovingAverageCost } from '../utils/cost-math';
 import { computeBalanceAfter } from '../utils/stock-math';
 
 const LEDGER_PAGE_SIZE = 50;
@@ -541,10 +542,17 @@ export class InventoryServerService {
    */
   async applyPurchaseReceiveTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; purchaseOrderId: string },
+    params: {
+      userId: string;
+      variantId: string;
+      quantity: number;
+      purchaseOrderId: string;
+      unitCost?: number;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
-    const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
+    const onHandQty = existing?.availableStock ?? 0;
+    const balanceAfter = onHandQty + params.quantity;
     const incomingStock = Math.max(0, (existing?.incomingStock ?? 0) - params.quantity);
     const now = new Date();
 
@@ -553,6 +561,27 @@ export class InventoryServerService {
       create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
       update: { availableStock: balanceAfter, incomingStock, lastAdjustedAt: now },
     });
+
+    // Fold the received units' cost into the variant's moving-average cost (HPP),
+    // using on-hand BEFORE this receive. Skipped when the PO line carries no usable cost.
+    if (params.unitCost !== undefined) {
+      const variant = await tx.productVariant.findUnique({
+        where: { id: params.variantId },
+        select: { cost: true },
+      });
+      const newCost = computeMovingAverageCost({
+        onHandQty,
+        currentCost: variant?.cost != null ? Number(variant.cost) : null,
+        receivedQty: params.quantity,
+        receivedCost: params.unitCost,
+      });
+      if (newCost !== null) {
+        await tx.productVariant.update({
+          where: { id: params.variantId },
+          data: { cost: newCost },
+        });
+      }
+    }
 
     await tx.stockLedger.create({
       data: {

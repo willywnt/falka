@@ -291,6 +291,7 @@ export class PurchasingServerService {
           variantId: item.productVariantId,
           quantity: qty,
           purchaseOrderId: id,
+          unitCost: Number(item.unitCost),
         });
         affected.add(item.productVariantId);
       }
