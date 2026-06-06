@@ -34,6 +34,9 @@ const serverEnvSchema = z
     SHOPEE_PARTNER_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
     TOKOPEDIA_CLIENT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
     TOKOPEDIA_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+    LAZADA_APP_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+    LAZADA_APP_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+    LAZADA_API_BASE_URL: optionalUrl,
 
     MARKETPLACE_ENCRYPTION_SECRET: z.string().min(32),
 
