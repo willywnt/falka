@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Layers, Plus } from 'lucide-react';
+import { AlertTriangle, Boxes, Layers, Plus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ImageThumb } from '@/components/image-thumb';
+import { StatCard } from '@/components/stat-card';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
@@ -30,19 +31,69 @@ import { bundleBuildableDisplay } from '../utils/bundle-buildable-display';
 export function BundlesDashboard() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
+  const [status, setStatus] = useState<'all' | 'buildable' | 'unbuildable'>('all');
   const { page, setPage, pageSize, setPageSize } = usePagination(10);
-  const { data, isLoading, error } = useBundlesQuery(debouncedSearch, page, pageSize);
+  const { data, isLoading, error } = useBundlesQuery(debouncedSearch, status, page, pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, setPage]);
+  }, [debouncedSearch, status, setPage]);
 
   const bundles = data?.items ?? [];
   const meta = data?.meta;
+  const summary = data?.summary;
   const isEmpty = !isLoading && bundles.length === 0;
+  const isFiltered = Boolean(debouncedSearch) || status !== 'all';
 
   return (
     <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {(
+          [
+            {
+              key: 'all',
+              label: 'All bundles',
+              value: summary?.total ?? 0,
+              tone: 'muted',
+              icon: Layers,
+            },
+            {
+              key: 'buildable',
+              label: 'Buildable',
+              value: summary?.buildable ?? 0,
+              tone: 'emerald',
+              icon: Boxes,
+            },
+            {
+              key: 'unbuildable',
+              label: "Can't build",
+              value: summary?.unbuildable ?? 0,
+              tone: 'amber',
+              icon: AlertTriangle,
+            },
+          ] as const
+        ).map((card) => (
+          <button
+            key={card.key}
+            type="button"
+            onClick={() => setStatus(card.key)}
+            aria-pressed={status === card.key}
+            className="rounded-xl text-left focus-visible:outline-none"
+          >
+            <StatCard
+              label={card.label}
+              value={card.value}
+              icon={card.icon}
+              tone={card.tone}
+              className={cn(
+                'h-full transition-colors',
+                status === card.key ? 'ring-primary ring-2' : 'hover:border-primary/40',
+              )}
+            />
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Input
           value={searchInput}
@@ -73,14 +124,14 @@ export function BundlesDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Layers}
-          title={debouncedSearch ? 'No bundles match' : 'No bundles yet'}
+          title={isFiltered ? 'No bundles match' : 'No bundles yet'}
           description={
-            debouncedSearch
-              ? 'Try a different search.'
+            isFiltered
+              ? 'Try a different search or filter.'
               : 'A bundle sells as a kit and decrements its component stock — it keeps no stock of its own. Create one to get started.'
           }
           action={
-            debouncedSearch ? undefined : (
+            isFiltered ? undefined : (
               <Button asChild>
                 <Link href="/dashboard/bundles/new">
                   <Plus className="size-4" />

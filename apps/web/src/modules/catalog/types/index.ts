@@ -119,6 +119,13 @@ export type BundleResolution = {
   components: { componentVariantId: string; quantity: number }[];
 };
 
+/** Triage counts for the Bundles list (within the active search, ignoring the status filter). */
+export type BundleListSummary = {
+  total: number;
+  buildable: number;
+  unbuildable: number;
+};
+
 /** A bundle row in the dedicated Bundles list. */
 export type BundleListItem = {
   bundleVariantId: string;

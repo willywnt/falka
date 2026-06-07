@@ -14,6 +14,7 @@ import type {
   BundleComponentItem,
   BundleDetail,
   BundleListItem,
+  BundleListSummary,
   BundleResolution,
   DeletionBlockers,
   LabelVariant,
@@ -493,7 +494,7 @@ export class CatalogServerService {
   async listBundles(
     userId: string,
     query: ListBundlesQuery,
-  ): Promise<PaginatedResult<BundleListItem>> {
+  ): Promise<PaginatedResult<BundleListItem> & { summary: BundleListSummary }> {
     const term = query.q.trim();
     const where: Prisma.ProductVariantWhereInput = {
       userId,
@@ -510,28 +511,26 @@ export class CatalogServerService {
         : {}),
     };
 
-    const [variants, total] = await Promise.all([
-      prisma.productVariant.findMany({
-        where,
-        include: {
-          product: { select: { name: true } },
-          bundleComponents: {
-            select: {
-              quantity: true,
-              componentVariant: {
-                select: { deletedAt: true, inventory: { select: { availableStock: true } } },
-              },
+    // Bundles are few — load all matched (search applied), compute buildable, then derive
+    // the triage summary, apply the status filter, and paginate in memory so the counts and
+    // the filter stay accurate across pages (buildable is computed, not a column).
+    const variants = await prisma.productVariant.findMany({
+      where,
+      include: {
+        product: { select: { name: true } },
+        bundleComponents: {
+          select: {
+            quantity: true,
+            componentVariant: {
+              select: { deletedAt: true, inventory: { select: { availableStock: true } } },
             },
           },
         },
-        orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-      prisma.productVariant.count({ where }),
-    ]);
+      },
+      orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
+    });
 
-    const items: BundleListItem[] = variants.map((variant) => ({
+    const all: BundleListItem[] = variants.map((variant) => ({
       bundleVariantId: variant.id,
       productId: variant.productId,
       productName: variant.product.name,
@@ -550,7 +549,26 @@ export class CatalogServerService {
       ),
     }));
 
-    return buildPaginatedResult(items, total, query.page, query.pageSize);
+    const summary: BundleListSummary = {
+      total: all.length,
+      buildable: all.filter((bundle) => bundle.buildable > 0).length,
+      unbuildable: all.filter((bundle) => bundle.buildable <= 0).length,
+    };
+
+    const filtered =
+      query.status === 'buildable'
+        ? all.filter((bundle) => bundle.buildable > 0)
+        : query.status === 'unbuildable'
+          ? all.filter((bundle) => bundle.buildable <= 0)
+          : all;
+
+    const start = (query.page - 1) * query.pageSize;
+    const pageItems = filtered.slice(start, start + query.pageSize);
+
+    return {
+      ...buildPaginatedResult(pageItems, filtered.length, query.page, query.pageSize),
+      summary,
+    };
   }
 
   /** Variant-id-keyed bundle read for the dedicated Bundles UI (no productId needed). */

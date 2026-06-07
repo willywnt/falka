@@ -37,6 +37,8 @@ export type CreateBundleInput = z.infer<typeof createBundleSchema>;
 /** Filter + paginate the bundles list (matches the bundle's SKU / name / product name). */
 export const listBundlesQuerySchema = z.object({
   q: z.string().trim().max(100).optional().default(''),
+  /** Triage filter on buildable count (the summary counts ignore this). */
+  status: z.enum(['all', 'buildable', 'unbuildable']).default('all'),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });

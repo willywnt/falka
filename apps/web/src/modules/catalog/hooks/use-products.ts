@@ -13,6 +13,7 @@ import { catalogKeys } from './catalog-keys';
 import type {
   BundleDetail,
   BundleListItem,
+  BundleListSummary,
   DeletionBlockers,
   LabelVariant,
   ProductDetail,
@@ -33,10 +34,11 @@ export type LabelVariantsPage = {
   meta: PageMeta;
 };
 
-/** A page of bundles for the dedicated Bundles list. */
+/** A page of bundles for the dedicated Bundles list + triage summary counts. */
 export type BundlesPage = {
   items: BundleListItem[];
   meta: PageMeta;
+  summary: BundleListSummary;
 };
 
 function listQuery(search?: string): ListProductsQuery {
@@ -60,14 +62,19 @@ export function useProductsQuery(search?: string) {
   });
 }
 
-/** Paginated list of bundles (debounced search by SKU / name / product name). */
-export function useBundlesQuery(q: string, page: number, pageSize: number) {
+/** Paginated list of bundles (debounced search) + a status triage filter. */
+export function useBundlesQuery(
+  q: string,
+  status: 'all' | 'buildable' | 'unbuildable',
+  page: number,
+  pageSize: number,
+) {
   const trimmed = q.trim();
   return useQuery({
-    queryKey: catalogKeys.bundles(trimmed, page, pageSize),
+    queryKey: catalogKeys.bundles(trimmed, status, page, pageSize),
     queryFn: async () => {
       const result = await apiFetch<BundlesPage>(apiRoutes.bundles, {
-        params: { page, pageSize, ...(trimmed ? { q: trimmed } : {}) },
+        params: { page, pageSize, status, ...(trimmed ? { q: trimmed } : {}) },
       });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
