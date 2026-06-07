@@ -44,7 +44,6 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
 
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
-  const [barcode, setBarcode] = useState('');
   const [price, setPrice] = useState(0);
   const [components, setComponents] = useState<BundleComponentDraft[]>([]);
 
@@ -52,7 +51,6 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
     if (!data) return;
     setName(data.name);
     setSku(data.sku);
-    setBarcode(data.barcode ?? '');
     setPrice(Number(data.price));
     setComponents(
       data.components.map((component) => ({
@@ -77,7 +75,6 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
       await updateBundle.mutateAsync({
         name: name.trim(),
         sku: sku.trim(),
-        barcode: barcode.trim() || undefined,
         price,
         items: components.map((component) => ({
           productVariantId: component.productVariantId,
@@ -191,15 +188,6 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                     <span className="sr-only">Generate SKU</span>
                   </Button>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="bundle-barcode">Barcode (optional)</Label>
-                <Input
-                  id="bundle-barcode"
-                  value={barcode}
-                  onChange={(event) => setBarcode(event.target.value)}
-                  placeholder="Scan or type a barcode"
-                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bundle-price">Price</Label>

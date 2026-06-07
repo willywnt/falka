@@ -70,7 +70,7 @@ export function BundleComponentsField({
         />
       </div>
 
-      {debounced ? (
+      {search.trim() ? (
         <div className="max-h-44 overflow-y-auto rounded-lg border">
           {isLoading ? (
             <p className="text-muted-foreground p-3 text-sm">Searching…</p>

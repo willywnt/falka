@@ -20,7 +20,6 @@ export function BundleForm() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
-  const [barcode, setBarcode] = useState('');
   const [price, setPrice] = useState(0);
   const [components, setComponents] = useState<BundleComponentDraft[]>([]);
   const createBundle = useCreateBundleMutation();
@@ -37,7 +36,6 @@ export function BundleForm() {
       const result = await createBundle.mutateAsync({
         name: name.trim(),
         sku: sku.trim(),
-        barcode: barcode.trim() || undefined,
         price,
         items: components.map((component) => ({
           productVariantId: component.productVariantId,
@@ -91,15 +89,6 @@ export function BundleForm() {
                 <span className="sr-only">Generate SKU</span>
               </Button>
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="bundle-barcode">Barcode (optional)</Label>
-            <Input
-              id="bundle-barcode"
-              value={barcode}
-              onChange={(event) => setBarcode(event.target.value)}
-              placeholder="Scan or type a barcode"
-            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="bundle-price">Price</Label>
