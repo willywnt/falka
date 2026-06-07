@@ -2,8 +2,12 @@
 
 > Status: **Phases 0–5 shipped (stub-backed)** + **POS (offline sales), Purchasing/POs, and QR-scan
 > (labels + mobile scan-to-cart/order) shipped** as counter/restock verticals + **catalog
-> variants/subvariants & per-variant photos shipped** (branch `feat/variant-options`, unpushed — §11) ·
-> Started 2026-06-03 · Owner: @willywnt · Next: **Phase 6 (automation/reporting)** still open.
+> variants/subvariants & per-variant photos shipped** (§11) + **finance foundation (moving-average HPP,
+> COGS snapshots, profit/margin report), VOID/refund, bundles/kits** shipped + **operations & finance
+> hardening (2026-06-07)** shipped (§13: list pagination, marketplace token-expiry guard, returns-netting
+> in profit, inventory-valuation report, share-evidence on dispute panels, manual order actions, DAMAGE
+> write-off) · Started 2026-06-03 · Owner: @willywnt · Next: see [`backlog.md`](./backlog.md) ·
+> Phase 6 (automation/reporting) still partly open.
 >
 > This is the working reference for the next big MVP: an **internal inventory system
 > that is the source of truth**, integrating stock across marketplaces (Shopee,
@@ -105,6 +109,24 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
     stays private), client-compressed to WebP, shown in a `VariantImage` popover by the variant name.
     Grouping is **display-only** — inventory/ledger/orders/sales/PO/marketplace are untouched (no deeper
     stock-bearing level). Full detail in §11.
+  - **Operations & finance hardening (2026-06-07, all on `main`)** — see §13:
+    - **List pagination** — `orders` + `returns` lists dropped a silent 100-row cap for real server
+      pagination (`PaginatedResult` skip/take+count) + `TablePagination` ("N of M").
+    - **Marketplace token-expiry guard** — `marketplace-sync` rejects an expired `tokenExpiresAt`
+      non-retryably (INVALID_TOKEN) BEFORE calling the provider (fails, doesn't disable → re-syncs
+      after refresh).
+    - **Returns-netting in the profit report** — processed returns (RECEIVED, by `processedAt`, only
+      on still-SHIPPED/COMPLETED orders) net revenue+COGS back out as negative-qty lines; a `returns`
+      block surfaces the deduction ("Net revenue").
+    - **Inventory-valuation report** (`reporting`) — on-hand stock × moving-average cost, per-product
+      rollup, cost-unknown flagged; `/dashboard/reports/inventory-value` + CSV (Insights sidebar).
+    - **Share-evidence on dispute panels** — `ShareEvidenceControl` (recordings) mounts the share dialog
+      on order-detail + return-detail (one-vs-many video picker); reuses the existing share hooks.
+    - **Manual order actions** (`orders`) — mark-shipped / edit tracking no. / cancel-with-reason, each
+      driving the existing reserve/ship/release lifecycle; **`Order.cancelReason`** added; cancel blocked
+      post-ship (→ return). `OrderActionsMenu` on the order header.
+    - **DAMAGE write-off** (`inventory`) — dispose units from the damaged bucket (available unchanged);
+      **`StockLedgerReason.DAMAGE_WRITE_OFF`** added, ledger delta 0; "Write off damaged" row action.
 - **Then** — full visual UI/UX redesign, once the domain is stable.
 
 ## 5. Phase 1 schema draft — **APPLIED (+ evolved since)**
