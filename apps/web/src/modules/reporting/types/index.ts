@@ -64,3 +64,34 @@ export type ProfitReport = {
   bottomSku: ProfitBySku[];
   belowCost: BelowCostItem[];
 };
+
+/**
+ * Inventory valuation = on-hand stock valued at the variant's moving-average cost
+ * (the same formula behind the dashboard's totalStockValue KPI). Money is an
+ * integer-rupiah string. A variant with stock but no cost is counted in
+ * `costUnknownVariants` and contributes 0 — never silently invents a value.
+ */
+export type InventoryValuationSummary = {
+  totalStockValue: string;
+  /** In-stock variants that have a known cost (contribute real value). */
+  valuedVariants: number;
+  /** In-stock variants missing a cost — their value is excluded from the total. */
+  costUnknownVariants: number;
+  totalVariants: number;
+  availableUnits: number;
+};
+
+export type InventoryValuationProduct = {
+  productId: string;
+  productName: string;
+  category: string | null;
+  variantCount: number;
+  costUnknownVariants: number;
+  availableUnits: number;
+  stockValue: string;
+};
+
+export type InventoryValuationReport = {
+  summary: InventoryValuationSummary;
+  byProduct: InventoryValuationProduct[];
+};

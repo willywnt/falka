@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Boxes,
   ChevronRight,
+  Coins,
   Layers,
   LayoutDashboard,
   Library,
@@ -68,7 +69,10 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
   },
   {
     label: 'Insights',
-    items: [{ title: 'Profit', href: '/dashboard/reports/profit', icon: LineChart }],
+    items: [
+      { title: 'Profit', href: '/dashboard/reports/profit', icon: LineChart },
+      { title: 'Stock value', href: '/dashboard/reports/inventory-value', icon: Coins },
+    ],
   },
   {
     label: 'System',
