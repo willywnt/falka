@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban } from 'lucide-react';
+import { ArrowLeft, Ban, Boxes } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -32,6 +32,30 @@ import { ImageThumb } from '@/components/image-thumb';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
+import type { SaleItemDetail } from '../types';
+
+/** A run of consecutive items sharing a bundle origin, or a single standalone item. */
+type ItemGroup =
+  | { kind: 'bundle'; bundleName: string; items: SaleItemDetail[] }
+  | { kind: 'standalone'; item: SaleItemDetail };
+
+/** Fold the flat item list into display groups — consecutive lines from one bundle collapse. */
+function groupItems(items: SaleItemDetail[]): ItemGroup[] {
+  const groups: ItemGroup[] = [];
+  for (const item of items) {
+    if (item.bundleName) {
+      const last = groups.at(-1);
+      if (last?.kind === 'bundle' && last.bundleName === item.bundleName) {
+        last.items.push(item);
+      } else {
+        groups.push({ kind: 'bundle', bundleName: item.bundleName, items: [item] });
+      }
+    } else {
+      groups.push({ kind: 'standalone', item });
+    }
+  }
+  return groups;
+}
 
 export function SaleDetail({ saleId }: { saleId: string }) {
   const { data, isLoading, error } = useSaleQuery(saleId);
@@ -75,6 +99,27 @@ export function SaleDetail({ saleId }: { saleId: string }) {
     );
   }
 
+  const groups = groupItems(data.items);
+
+  const renderSaleItemRow = (item: SaleItemDetail, indented: boolean) => (
+    <TableRow key={item.id}>
+      <TableCell className={indented ? 'pl-8' : undefined}>
+        <div className="flex items-center gap-3">
+          <ImageThumb src={item.imageUrl} alt={item.name} />
+          <div className="min-w-0">
+            <div className="font-medium">{item.name}</div>
+            <div className="text-muted-foreground text-xs">{item.sku}</div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+      <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice)}</TableCell>
+      <TableCell className="text-right font-medium tabular-nums">
+        {formatCurrency(item.lineTotal)}
+      </TableCell>
+    </TableRow>
+  );
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2">
@@ -106,33 +151,23 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <ImageThumb src={item.imageUrl} alt={item.name} />
-                        <div className="min-w-0">
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {item.sku}
-                            {item.bundleName ? (
-                              <span className="text-violet-600 dark:text-violet-400">
-                                {' · '}part of {item.bundleName}
-                              </span>
-                            ) : null}
+                {groups.map((group) =>
+                  group.kind === 'bundle' ? (
+                    <Fragment key={`bundle-${group.bundleName}-${group.items[0]?.id}`}>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={4} className="bg-muted/30 py-2">
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                            <Boxes className="size-3.5 text-violet-500" />
+                            Bundle · {group.bundleName}
                           </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(item.unitPrice)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatCurrency(item.lineTotal)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </TableCell>
+                      </TableRow>
+                      {group.items.map((item) => renderSaleItemRow(item, true))}
+                    </Fragment>
+                  ) : (
+                    renderSaleItemRow(group.item, false)
+                  ),
+                )}
               </TableBody>
             </Table>
           </div>
