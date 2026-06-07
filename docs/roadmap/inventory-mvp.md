@@ -180,7 +180,9 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
   entity + per-supplier lead time) + auto cost-update on receive remain parked.
 - ✅ **Offline sales / POS** — done (`sales` module: counter sale → `SALE`/`POS`, propagate to all
   channels). Printable receipt/nota, VOID/refund, discount/tax remain parked.
-- Bundles / kits (one listing = many SKUs) — a classic oversell trap.
+- ✅ **Bundles / kits** — done. A `Bundle` is a buy/sell shortcut (its own SKU/QR) that explodes into
+  per-component sale/PO rows with proportional price/cost allocation; it is NOT a stock variant. Marketplace-order
+  bundle decrement still parked.
 - Multi-warehouse / location stock.
 - Analytics / reporting (profit/channel-performance — partly Phase 6).
 - Recording thumbnail generation (`thumbnailGeneration` placeholder reserved).

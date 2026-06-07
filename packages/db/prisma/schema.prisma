@@ -54,7 +54,6 @@ model User {
   sales                      Sale[]
   purchaseOrders             PurchaseOrder[]
   recordingShareLinks        RecordingShareLink[]
-  bundleComponents           BundleComponent[]
   bundles                    Bundle[]
 
   @@map("users")
@@ -261,8 +260,6 @@ model ProductVariant {
   orderItems          OrderItem[]
   saleItems           SaleItem[]
   purchaseOrderItems  PurchaseOrderItem[]
-  bundleComponents    BundleComponent[]           @relation("BundleComponents")
-  usedInBundles       BundleComponent[]           @relation("UsedInBundles")
   bundleItems         BundleItem[]
 
   @@unique([userId, sku])
@@ -270,29 +267,6 @@ model ProductVariant {
   @@index([productId])
   @@index([barcode])
   @@map("product_variants")
-}
-
-/**
- * DEPRECATED (being removed): the old variant-keyed bundle model. Superseded by the
- * dedicated `Bundle`/`BundleItem` below. Kept temporarily so old code compiles while
- * the rework lands; dropped in the final cleanup migration.
- */
-model BundleComponent {
-  id                 String         @id @default(cuid())
-  userId             String
-  user               User           @relation(fields: [userId], references: [id])
-  bundleVariantId    String
-  bundleVariant      ProductVariant @relation("BundleComponents", fields: [bundleVariantId], references: [id], onDelete: Cascade)
-  componentVariantId String
-  componentVariant   ProductVariant @relation("UsedInBundles", fields: [componentVariantId], references: [id], onDelete: Cascade)
-  quantity           Int
-  createdAt          DateTime       @default(now())
-
-  @@unique([bundleVariantId, componentVariantId])
-  @@index([bundleVariantId])
-  @@index([componentVariantId])
-  @@index([userId])
-  @@map("bundle_components")
 }
 
 /**

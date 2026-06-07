@@ -185,8 +185,24 @@ Inventory overview, the label picker, and the New-PO product picker use `usePagi
 **server-paginated** (service returns `PaginatedResult`, route forwards `page`/`pageSize`); inventory
 paginates client-side over its capped overview. See `50-ui-design-system.mdc`.
 
+## Bundles (a shortcut, NOT a stock variant)
+A **`Bundle`** (`Bundle`/`BundleItem` tables; own sku/barcode/price/image/labelPrintedAt) groups several
+variants for buy/sell — it is NOT a `ProductVariant`, holds NO stock, and never appears in product/inventory
+lists. Stock + accounting stay per component variant; the bundle is only a one-line / one-scan shortcut in
+**New Sale (POS)** and **New PO**. Catalog owns it: CRUD + `resolveBundles(bundleIds)` / `resolveBundleByCode`
++ image + `listBundleLabels`/`markBundleLabelsPrinted`; sales/purchasing call those (never the tables).
+**Selling/buying explodes a bundle into per-component `SaleItem`/`PurchaseOrderItem` rows at create time**
+(`quantity = bundleQty × perBundleQty`), each tagged with `bundleName`, so receive / partial-receive / incoming
+/ void / propagate reuse the existing per-row paths unchanged. The single bundle price (POS) / cost (entered
+per-PO) is **allocated across components proportional to each component's standard price/cost** (pure
+`allocateBundleUnitAmounts`, integer minor units) so per-variant revenue/COGS stay correct. `available` =
+`computeBuildableQty` = min(floor(component.available / per-bundle qty)). SKU is unique across **bundles AND
+variants** (shared scan namespace; resolver tries variant then bundle). POS oversell warnings accumulate per
+variant across the cart. Bundles have their own QR labels (labels studio "Bundles" tab). Marketplace orders are
+NOT bundle-aware (deferred). UI: `/dashboard/bundles` pages + `BundleComponentsField` + `BundleImage`.
+
 ## Deferred (raise as separate suggestions)
-ProviderHealth + reconciliation/drift; bundles/kits; multi-warehouse; per-order re-pull (pull is
+ProviderHealth + reconciliation/drift; marketplace-order bundle decrement; multi-warehouse; per-order re-pull (pull is
 store-level only); PENDING-order reservation (needs expiry/auto-release); within returns: per-line
 split (part restock + part damaged), partial-quantity returns, refund/money tracking, marketplace
 return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed at scale (the
