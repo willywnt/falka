@@ -26,7 +26,7 @@ export function CameraHealthIndicator() {
     return (
       <div className="text-muted-foreground flex items-center gap-2 text-sm">
         <Circle className="size-2.5 fill-current text-zinc-400" />
-        Camera idle
+        Kamera siaga
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function CameraHealthIndicator() {
       <Circle
         className={`size-2.5 fill-current ${connected ? 'text-emerald-500' : 'text-destructive'}`}
       />
-      {connected ? 'Camera connected' : 'Camera disconnected'}
+      {connected ? 'Kamera terhubung' : 'Kamera terputus'}
     </div>
   );
 }

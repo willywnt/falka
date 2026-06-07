@@ -47,12 +47,12 @@ function HeadWithHint({ label, hint }: { label: string; hint: string }) {
 }
 
 function formatVelocity(value: number): string {
-  return value > 0 ? `${value.toFixed(1)}/day` : '—';
+  return value > 0 ? `${value.toFixed(1)}/hari` : '—';
 }
 
 function formatDaysOfCover(value: number | null): string {
   if (value === null) return '∞';
-  return `${Math.round(value)}d`;
+  return `${Math.round(value)}h`;
 }
 
 export function ReorderReport() {
@@ -76,33 +76,33 @@ export function ReorderReport() {
       {data ? (
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard
-            label="Needs reorder"
+            label="Perlu restok"
             value={data.summary.reorderCount}
             icon={ShoppingCart}
             tone="amber"
             accentClassName={data.summary.reorderCount > 0 ? 'text-amber-600' : undefined}
-            hint={`${data.summary.urgentCount} urgent`}
+            hint={`${data.summary.urgentCount} mendesak`}
           />
           <StatCard
-            label="Dead stock"
+            label="Stok mati"
             value={data.summary.deadStockCount}
             icon={PackageX}
             tone="rose"
-            hint={`${formatCurrency(data.summary.deadStockValue)} tied up`}
+            hint={`${formatCurrency(data.summary.deadStockValue)} mengendap`}
           />
           <StatCard
-            label="Sales window"
-            value={`${data.summary.windowDays}d`}
+            label="Periode penjualan"
+            value={`${data.summary.windowDays}h`}
             icon={CalendarRange}
             tone="violet"
-            hint={`${data.summary.leadTimeDays}d lead · ${data.summary.targetCoverDays}d target cover`}
+            hint={`Lead time ${data.summary.leadTimeDays}h · target ketahanan ${data.summary.targetCoverDays}h`}
           />
         </div>
       ) : null}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1">
-          <span className="text-muted-foreground mr-1 text-sm">Window</span>
+          <span className="text-muted-foreground mr-1 text-sm">Periode</span>
           {WINDOW_OPTIONS.map((option) => (
             <Button
               key={option}
@@ -110,7 +110,7 @@ export function ReorderReport() {
               size="sm"
               onClick={() => setWindowDays(option)}
             >
-              {option}d
+              {option}h
             </Button>
           ))}
         </div>
@@ -122,13 +122,13 @@ export function ReorderReport() {
               onCheckedChange={setReorderOnly}
             />
             <Label htmlFor="needs-reorder-only" className="text-sm font-normal">
-              Needs reorder only
+              Hanya yang perlu restok
             </Label>
           </div>
           <Button size="sm" asChild>
             <Link href="/dashboard/purchasing/new">
               <Truck className="size-4" />
-              Create PO
+              Buat PO
             </Link>
           </Button>
         </div>
@@ -136,8 +136,7 @@ export function ReorderReport() {
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load the reorder report.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat laporan restok. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -150,11 +149,11 @@ export function ReorderReport() {
       ) : isEmpty ? (
         <EmptyState
           icon={PackageSearch}
-          title="Nothing to show"
+          title="Tidak ada yang ditampilkan"
           description={
             reorderOnly
-              ? 'No variants need reordering right now.'
-              : 'Add products and record some sales to see reorder suggestions.'
+              ? 'Tidak ada varian yang perlu direstok sekarang.'
+              : 'Tambah produk dan catat beberapa penjualan untuk melihat saran restok.'
           }
         />
       ) : (
@@ -162,36 +161,36 @@ export function ReorderReport() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Variant</TableHead>
+                <TableHead>Varian</TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
-                    label="Velocity"
-                    hint="Average units sold per day over the selected sales window."
+                    label="Kecepatan jual"
+                    hint="Rata-rata unit terjual per hari selama periode penjualan yang dipilih."
                   />
                 </TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
-                    label="Cover"
-                    hint="How many days your current stock will last at the current sales velocity."
+                    label="Ketahanan"
+                    hint="Berapa hari stok kamu saat ini akan bertahan pada kecepatan jual sekarang."
                   />
                 </TableHead>
-                <TableHead className="text-right">In stock</TableHead>
+                <TableHead className="text-right">Stok</TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
                     label="Lead time"
-                    hint="Days until a restock arrives after you place a reorder."
+                    hint="Jumlah hari sampai restok datang setelah kamu memesan ulang."
                   />
                 </TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
                     label="MOQ"
-                    hint="Minimum order quantity: the smallest amount your supplier will accept per order."
+                    hint="Minimum order quantity: jumlah terkecil yang diterima pemasok per pesanan."
                   />
                 </TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
-                    label="Reorder"
-                    hint="Suggested quantity to buy: enough to cover your lead time plus the target days of cover, and at least the supplier MOQ."
+                    label="Restok"
+                    hint="Saran jumlah yang dibeli: cukup untuk menutup lead time plus target hari ketahanan, dan minimal sesuai MOQ pemasok."
                   />
                 </TableHead>
                 <TableHead className="text-right">Status</TableHead>
@@ -230,25 +229,23 @@ function ReorderRow({ item }: { item: ReorderItem }) {
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground text-right text-sm tabular-nums">
+      <TableCell className="text-muted-foreground num text-right text-sm">
         {formatVelocity(item.dailyVelocity)}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {formatDaysOfCover(item.daysOfCover)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="num text-right">{formatDaysOfCover(item.daysOfCover)}</TableCell>
+      <TableCell className="num text-right">
         <span className={cn('font-medium', item.availableStock <= 0 && 'text-destructive')}>
           {item.availableStock}
         </span>
         {item.incomingStock > 0 ? (
-          <div className="text-muted-foreground text-xs">+{item.incomingStock} incoming</div>
+          <div className="text-muted-foreground text-xs">+{item.incomingStock} akan datang</div>
         ) : null}
       </TableCell>
-      <TableCell className="text-right tabular-nums">{item.leadTimeDays}d</TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="num text-right">{item.leadTimeDays}h</TableCell>
+      <TableCell className="num text-right">
         {item.minOrderQty ?? <span className="text-muted-foreground">—</span>}
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="num text-right">
         {item.suggestedReorderQty > 0 ? (
           <span className="text-foreground inline-flex items-center gap-1 font-semibold">
             <ShoppingCart className="size-3.5" />

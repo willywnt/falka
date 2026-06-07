@@ -53,12 +53,12 @@ export function QrCodeDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-8">
             <div className="min-w-0 space-y-1 text-left">
-              <DialogTitle>QR label</DialogTitle>
+              <DialogTitle>Label QR</DialogTitle>
               <DialogDescription className="truncate">{title}</DialogDescription>
             </div>
             <Button type="button" size="sm" onClick={handlePrint} className="shrink-0">
               <Printer className="size-4" />
-              {lastPrintedAt ? 'Print again' : 'Print'}
+              {lastPrintedAt ? 'Cetak lagi' : 'Cetak'}
             </Button>
           </div>
         </DialogHeader>
@@ -74,7 +74,9 @@ export function QrCodeDialog({
         </div>
 
         <p className="text-muted-foreground text-center text-xs" suppressHydrationWarning>
-          {lastPrintedAt ? `Last printed ${formatRelativeTime(lastPrintedAt)}` : 'Not printed yet'}
+          {lastPrintedAt
+            ? `Terakhir dicetak ${formatRelativeTime(lastPrintedAt)}`
+            : 'Belum dicetak'}
         </p>
       </DialogContent>
     </Dialog>

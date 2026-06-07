@@ -69,11 +69,11 @@ export function EditVariantDialog({
           minOrderQty: values.minOrderQty,
         },
       });
-      toast.success('Variant updated', { description: `${variant.name} planning saved.` });
+      toast.success('Varian diperbarui', { description: `Perencanaan ${variant.name} disimpan.` });
       onOpenChange(false);
     } catch (error) {
-      toast.error('Could not update variant', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal memperbarui varian', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -82,7 +82,7 @@ export function EditVariantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit {variant.variantGroup ? 'subvariant' : 'variant'}</DialogTitle>
+          <DialogTitle>Ubah {variant.variantGroup ? 'subvarian' : 'varian'}</DialogTitle>
           <DialogDescription>{formatVariantLabel(variant)}</DialogDescription>
         </DialogHeader>
 
@@ -94,11 +94,11 @@ export function EditVariantDialog({
                 name="leadTimeDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lead time (days)</FormLabel>
+                    <FormLabel>Lead time (hari)</FormLabel>
                     <FormControl>
                       <NumberInput min={0} step={1} {...field} />
                     </FormControl>
-                    <FormDescription>0 = use the global default.</FormDescription>
+                    <FormDescription>0 = pakai default global.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -109,11 +109,11 @@ export function EditVariantDialog({
                 name="minOrderQty"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Min order qty</FormLabel>
+                    <FormLabel>Min. qty pesan</FormLabel>
                     <FormControl>
                       <NumberInput min={0} step={1} {...field} />
                     </FormControl>
-                    <FormDescription>MOQ — 0 = no minimum.</FormDescription>
+                    <FormDescription>MOQ — 0 = tanpa minimum.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -124,7 +124,7 @@ export function EditVariantDialog({
                 name="lowStockThreshold"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Low-stock at</FormLabel>
+                    <FormLabel>Stok menipis di</FormLabel>
                     <FormControl>
                       <NumberInput min={0} step={1} {...field} />
                     </FormControl>
@@ -138,7 +138,7 @@ export function EditVariantDialog({
                 name="alertEnabled"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Low-stock alert</FormLabel>
+                    <FormLabel>Peringatan stok menipis</FormLabel>
                     <div className="flex items-center gap-2">
                       <Switch
                         id="alert-enabled"
@@ -146,7 +146,7 @@ export function EditVariantDialog({
                         onCheckedChange={(checked) => field.onChange(checked)}
                       />
                       <Label htmlFor="alert-enabled" className="text-sm font-normal">
-                        {field.value ? 'Enabled' : 'Disabled'}
+                        {field.value ? 'Aktif' : 'Nonaktif'}
                       </Label>
                     </div>
                     <FormMessage />
@@ -157,10 +157,10 @@ export function EditVariantDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Saving...' : 'Save changes'}
+                {updateMutation.isPending ? 'Menyimpan...' : 'Simpan perubahan'}
               </Button>
             </DialogFooter>
           </form>

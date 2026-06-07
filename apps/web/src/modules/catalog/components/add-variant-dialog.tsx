@@ -41,14 +41,14 @@ export function AddVariantDialog({
   async function onSubmit(values: AddVariantFormInput) {
     try {
       const created = await addMutation.mutateAsync(variantBlocksToLeaves(values.variants));
-      toast.success('Variant added', {
-        description: `${created.length} ${created.length === 1 ? 'item' : 'items'} added.`,
+      toast.success('Varian ditambahkan', {
+        description: `${created.length} ${created.length === 1 ? 'item' : 'item'} ditambahkan.`,
       });
       form.reset(DEFAULT_VALUES);
       onOpenChange(false);
     } catch (error) {
-      toast.error('Could not add variant', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menambahkan varian', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -63,22 +63,22 @@ export function AddVariantDialog({
     >
       <DialogContent className="max-h-[90vh] !max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add variant</DialogTitle>
+          <DialogTitle>Tambah varian</DialogTitle>
           <DialogDescription>
-            A variant can stand on its own, or hold several subvariants (e.g. colors or sizes).
+            Varian bisa berdiri sendiri, atau menampung beberapa subvarian (mis. warna atau ukuran).
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <VariantBlocksField minBlocks={1} addLabel="Add another variant" />
+            <VariantBlocksField minBlocks={1} addLabel="Tambah varian lain" />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={addMutation.isPending}>
-                {addMutation.isPending ? 'Adding...' : 'Add variant'}
+                {addMutation.isPending ? 'Menambahkan...' : 'Tambah varian'}
               </Button>
             </DialogFooter>
           </form>

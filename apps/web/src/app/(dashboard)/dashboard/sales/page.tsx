@@ -4,16 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import { SalesDashboard } from '@/modules/sales/components/sales-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Sales',
+  title: 'Penjualan',
 };
 
 export default function SalesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Sales channels"
-        title="Sales (POS)"
-        description="In-store sales that draw from the same stock as your marketplaces — no double selling."
+        eyebrow="Channel penjualan"
+        title="Penjualan (Kasir)"
+        description="Penjualan di toko yang menarik dari stok yang sama dengan marketplace kamu — tanpa jual dobel."
       />
       <SalesDashboard />
     </div>

@@ -61,14 +61,14 @@ export function AddSubvariantsDialog({
 
     try {
       const created = await addMutation.mutateAsync(leaves);
-      toast.success('Subvariants added', {
-        description: `${created.length} added to ${groupName}.`,
+      toast.success('Subvarian ditambahkan', {
+        description: `${created.length} ditambahkan ke ${groupName}.`,
       });
       form.reset(DEFAULT_VALUES);
       onOpenChange(false);
     } catch (error) {
-      toast.error('Could not add subvariants', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menambahkan subvarian', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -86,10 +86,10 @@ export function AddSubvariantsDialog({
     >
       <DialogContent className="max-h-[90vh] !max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add subvariants</DialogTitle>
+          <DialogTitle>Tambah subvarian</DialogTitle>
           <DialogDescription>
-            New options under <span className="font-medium">{groupName}</span>, each with its own
-            SKU & stock.
+            Opsi baru di bawah <span className="font-medium">{groupName}</span>, masing-masing punya
+            SKU & stok sendiri.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,7 +106,7 @@ export function AddSubvariantsDialog({
                     onClick={() => rows.remove(index)}
                   >
                     <X className="size-4" />
-                    <span className="sr-only">Remove subvariant</span>
+                    <span className="sr-only">Hapus subvarian</span>
                   </Button>
                 ) : null}
                 <div className="flex items-start gap-2">
@@ -115,7 +115,7 @@ export function AddSubvariantsDialog({
                     name={`subvariants.${index}.name`}
                     render={({ field }) => (
                       <FormItem className="flex-1">
-                        <FormLabel required>Option name</FormLabel>
+                        <FormLabel required>Nama opsi</FormLabel>
                         <FormControl>
                           <Input placeholder="Merah" autoComplete="off" {...field} />
                         </FormControl>
@@ -140,7 +140,7 @@ export function AddSubvariantsDialog({
                               variant="outline"
                               size="icon"
                               className="shrink-0"
-                              title="Generate SKU from the option name"
+                              title="Buat SKU dari nama opsi"
                               disabled={!optionName.trim()}
                               onClick={() =>
                                 form.setValue(
@@ -150,7 +150,7 @@ export function AddSubvariantsDialog({
                               }
                             >
                               <Wand2 className="size-4" />
-                              <span className="sr-only">Generate SKU</span>
+                              <span className="sr-only">Buat SKU</span>
                             </Button>
                           </div>
                           <FormMessage />
@@ -166,7 +166,7 @@ export function AddSubvariantsDialog({
                     name={`subvariants.${index}.price`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price</FormLabel>
+                        <FormLabel>Harga</FormLabel>
                         <FormControl>
                           <NumberInput min={0} step={1} {...field} />
                         </FormControl>
@@ -179,7 +179,7 @@ export function AddSubvariantsDialog({
                     name={`subvariants.${index}.cost`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cost</FormLabel>
+                        <FormLabel>Modal</FormLabel>
                         <FormControl>
                           <NumberInput min={0} step={1} {...field} />
                         </FormControl>
@@ -192,7 +192,7 @@ export function AddSubvariantsDialog({
                     name={`subvariants.${index}.initialStock`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Initial stock</FormLabel>
+                        <FormLabel>Stok awal</FormLabel>
                         <FormControl>
                           <NumberInput min={0} step={1} {...field} />
                         </FormControl>
@@ -205,7 +205,7 @@ export function AddSubvariantsDialog({
                     name={`subvariants.${index}.lowStockThreshold`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Low-stock at</FormLabel>
+                        <FormLabel>Stok menipis di</FormLabel>
                         <FormControl>
                           <NumberInput min={0} step={1} {...field} />
                         </FormControl>
@@ -226,15 +226,15 @@ export function AddSubvariantsDialog({
               onClick={() => rows.append({ ...EMPTY_ROW })}
             >
               <Plus className="size-4" />
-              Add option
+              Tambah opsi
             </Button>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={addMutation.isPending}>
-                {addMutation.isPending ? 'Adding...' : 'Add subvariants'}
+                {addMutation.isPending ? 'Menambahkan...' : 'Tambah subvarian'}
               </Button>
             </DialogFooter>
           </form>

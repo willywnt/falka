@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { SaleDetail } from '@/modules/sales/components/sale-detail';
 
 export const metadata: Metadata = {
-  title: 'Sale',
+  title: 'Penjualan',
 };
 
 export default async function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {

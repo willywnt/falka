@@ -4,16 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import { BundlesDashboard } from '@/modules/catalog/components/bundles-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Bundles',
+  title: 'Bundel',
 };
 
 export default function BundlesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Catalog"
-        title="Bundles"
-        description="Kits sold as one SKU that decrement their component variants. They keep no stock of their own — sellable quantity is built from components."
+        eyebrow="Katalog"
+        title="Bundel"
+        description="Paket yang dijual sebagai satu SKU dan mengurangi varian komponennya. Bundel tidak menyimpan stok sendiri — jumlah yang bisa dijual dihitung dari komponennya."
       />
       <BundlesDashboard />
     </div>

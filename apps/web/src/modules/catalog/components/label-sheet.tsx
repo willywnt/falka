@@ -38,7 +38,7 @@ function LabelCell({ label, qr }: { label: PrintableLabel; qr: string | undefine
         {label.productName ? `${label.productName} · ${label.name}` : label.name}
       </div>
       <div className="text-muted-foreground font-mono text-[10px]">{code}</div>
-      <div className="text-xs font-semibold tabular-nums">{formatCurrency(label.price)}</div>
+      <div className="num text-xs font-semibold">{formatCurrency(label.price)}</div>
     </div>
   );
 }

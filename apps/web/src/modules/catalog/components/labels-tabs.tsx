@@ -13,8 +13,8 @@ export function LabelsTabs() {
   return (
     <Tabs defaultValue="products" className="gap-6">
       <TabsList className="print:hidden">
-        <TabsTrigger value="products">Products</TabsTrigger>
-        <TabsTrigger value="bundles">Bundles</TabsTrigger>
+        <TabsTrigger value="products">Produk</TabsTrigger>
+        <TabsTrigger value="bundles">Bundel</TabsTrigger>
       </TabsList>
       <TabsContent value="products">
         <LabelStudio />

@@ -33,10 +33,10 @@ export function RecordingCountdownModal({ onCancel, onStartNow }: RecordingCount
       >
         <DialogHeader className="space-y-1 px-6 pt-6 text-center">
           <DialogTitle className="text-base">
-            {blockReason ? 'Cannot start recording' : 'Starting recording'}
+            {blockReason ? 'Tidak bisa memulai rekaman' : 'Memulai rekaman'}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Countdown before recording starts for scanned tracking number
+            Hitung mundur sebelum rekaman dimulai untuk no. resi yang dipindai
           </DialogDescription>
         </DialogHeader>
 
@@ -46,10 +46,7 @@ export function RecordingCountdownModal({ onCancel, onStartNow }: RecordingCount
           {blockReason ? (
             <p className="text-destructive mt-4 text-sm">{blockReason}</p>
           ) : (
-            <p
-              className="text-primary mt-4 text-7xl leading-none font-bold tabular-nums"
-              key={seconds}
-            >
+            <p className="text-primary num mt-4 text-7xl leading-none font-bold" key={seconds}>
               {seconds}
             </p>
           )}
@@ -58,11 +55,11 @@ export function RecordingCountdownModal({ onCancel, onStartNow }: RecordingCount
         <DialogFooter className="flex-col gap-2 border-t px-6 py-4 sm:flex-col">
           {canStart ? (
             <Button type="button" className="w-full" onClick={onStartNow}>
-              Start now
+              Mulai sekarang
             </Button>
           ) : null}
           <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
-            Cancel
+            Batal
           </Button>
         </DialogFooter>
       </DialogContent>

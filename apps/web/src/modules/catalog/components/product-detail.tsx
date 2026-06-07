@@ -78,15 +78,15 @@ export function ProductDetail({
     if (!deleteTarget) return;
     try {
       await deleteVariants.mutateAsync(deleteTarget.variantIds);
-      toast.success('Deleted', {
+      toast.success('Dihapus', {
         description: `${deleteTarget.variantIds.length} ${
-          deleteTarget.variantIds.length === 1 ? 'variant' : 'variants'
-        } archived.`,
+          deleteTarget.variantIds.length === 1 ? 'varian' : 'varian'
+        } diarsipkan.`,
       });
       setDeleteTarget(null);
     } catch (error) {
-      toast.error('Could not delete', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menghapus', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -106,11 +106,11 @@ export function ProductDetail({
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/products">
             <ArrowLeft className="size-4" />
-            Back to products
+            Kembali ke produk
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'Product not found.'}
+          {error instanceof Error ? error.message : 'Produk tidak ditemukan.'}
         </div>
       </div>
     );
@@ -142,9 +142,9 @@ export function ProductDetail({
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-right tabular-nums">{formatCurrency(variant.price)}</TableCell>
+        <TableCell className="num text-right">{formatCurrency(variant.price)}</TableCell>
         <TableCell className="text-right">
-          <span className="font-medium tabular-nums">{variant.availableStock}</span>
+          <span className="num font-medium">{variant.availableStock}</span>
           {variant.isLowStock ? (
             <LowStockBadge threshold={variant.lowStockThreshold} className="ml-2" />
           ) : null}
@@ -156,30 +156,30 @@ export function ProductDetail({
           <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => onAdjustVariant(variant)}>
               <SlidersHorizontal className="size-4" />
-              Adjust
+              Sesuaikan
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <MoreHorizontal className="size-4" />
-                  <span className="sr-only">More actions</span>
+                  <span className="sr-only">Aksi lainnya</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setQrTarget(variant)}>
                   <QrCode className="size-4" />
-                  Show QR code
+                  Tampilkan QR code
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEditTarget(variant)}>
                   <Pencil className="size-4" />
-                  {grouped ? 'Edit subvariant' : 'Edit variant'}
+                  {grouped ? 'Ubah subvarian' : 'Ubah varian'}
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
                     href={`/dashboard/inventory/activity?search=${encodeURIComponent(variant.sku)}`}
                   >
                     <ScrollText className="size-4" />
-                    View activity
+                    Lihat aktivitas
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -193,7 +193,7 @@ export function ProductDetail({
                   }
                 >
                   <Trash2 className="size-4" />
-                  {grouped ? 'Delete subvariant' : 'Delete variant'}
+                  {grouped ? 'Hapus subvarian' : 'Hapus varian'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -215,7 +215,7 @@ export function ProductDetail({
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold tracking-tight">{data.name}</h2>
         <Badge variant={data.isActive ? 'default' : 'secondary'}>
-          {data.isActive ? 'Active' : 'Inactive'}
+          {data.isActive ? 'Aktif' : 'Nonaktif'}
         </Badge>
       </div>
 
@@ -223,22 +223,22 @@ export function ProductDetail({
         <div className="space-y-3 lg:col-span-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">
-              Variants <span className="text-muted-foreground">· {data.variants.length}</span>
+              Varian <span className="text-muted-foreground">· {data.variants.length}</span>
             </p>
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <Plus className="size-4" />
-              Add variant
+              Tambah varian
             </Button>
           </div>
           {data.variants.length === 0 ? (
             <EmptyState
               icon={Package}
-              title="No variants yet"
-              description="Add a variant to start tracking stock and pricing. A variant can stand alone or hold several subvariants (e.g. colors)."
+              title="Belum ada varian"
+              description="Tambahkan varian untuk mulai melacak stok dan harga. Varian bisa berdiri sendiri atau menampung beberapa subvarian (mis. warna)."
               action={
                 <Button size="sm" onClick={() => setAddOpen(true)}>
                   <Plus className="size-4" />
-                  Add variant
+                  Tambah varian
                 </Button>
               }
             />
@@ -247,11 +247,11 @@ export function ProductDetail({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Variant</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">In stock</TableHead>
-                    <TableHead>Connections</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Varian</TableHead>
+                    <TableHead className="text-right">Harga</TableHead>
+                    <TableHead className="text-right">Tersedia</TableHead>
+                    <TableHead>Koneksi</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,26 +268,26 @@ export function ProductDetail({
                                 <EllipsisTooltip text={block.name} className="font-semibold" />
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground text-xs tabular-nums">
+                                <span className="text-muted-foreground num text-xs">
                                   {block.variants.length}{' '}
-                                  {block.variants.length === 1 ? 'subvariant' : 'subvariants'} ·{' '}
+                                  {block.variants.length === 1 ? 'subvarian' : 'subvarian'} ·{' '}
                                   {block.variants.reduce(
                                     (sum, variant) => sum + variant.availableStock,
                                     0,
                                   )}{' '}
-                                  in stock
+                                  tersedia
                                 </span>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="size-7">
                                       <MoreHorizontal className="size-4" />
-                                      <span className="sr-only">Group actions</span>
+                                      <span className="sr-only">Aksi grup</span>
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => setAddSubGroup(block.name)}>
                                       <Plus className="size-4" />
-                                      Add subvariant
+                                      Tambah subvarian
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="text-destructive focus:text-destructive"
@@ -300,7 +300,7 @@ export function ProductDetail({
                                       }
                                     >
                                       <Trash2 className="size-4" />
-                                      Delete variant
+                                      Hapus varian
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -321,26 +321,26 @@ export function ProductDetail({
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Product</CardTitle>
+              <CardTitle className="text-base">Produk</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Total in stock</span>
-                <span className="font-medium tabular-nums">{totalAvailable}</span>
+                <span className="text-muted-foreground">Total tersedia</span>
+                <span className="num font-medium">{totalAvailable}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Variants</span>
-                <span className="font-medium tabular-nums">{data.variants.length}</span>
+                <span className="text-muted-foreground">Varian</span>
+                <span className="num font-medium">{data.variants.length}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Status</span>
                 <Badge variant={data.isActive ? 'default' : 'secondary'}>
-                  {data.isActive ? 'Active' : 'Inactive'}
+                  {data.isActive ? 'Aktif' : 'Nonaktif'}
                 </Badge>
               </div>
               {data.category ? (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Category</span>
+                  <span className="text-muted-foreground">Kategori</span>
                   <span className="truncate text-right font-medium">{data.category}</span>
                 </div>
               ) : null}

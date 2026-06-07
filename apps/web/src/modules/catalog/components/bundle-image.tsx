@@ -21,7 +21,7 @@ export function BundleImage({
     <ImageUploadPopover
       imageUrl={imageUrl}
       label={label}
-      title="Bundle photo"
+      title="Foto bundel"
       busy={upload.isPending || remove.isPending}
       onUpload={async (file) => {
         await upload.mutateAsync(file);

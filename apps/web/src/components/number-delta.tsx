@@ -35,7 +35,7 @@ export function NumberDelta({
   return (
     <span
       className={cn(
-        'num inline-flex items-center gap-0.5 tabular-nums',
+        'num inline-flex items-center gap-0.5',
         up && 'text-signed-up',
         down && 'text-signed-down',
         !up && !down && 'text-muted-foreground',

@@ -59,7 +59,7 @@ export function WebcamPreview({
       />
       {showPlaceholder ? (
         <div className="text-muted-foreground absolute inset-0 flex items-center justify-center bg-black/80 text-sm">
-          Webcam preview will appear here
+          Pratinjau webcam akan muncul di sini
         </div>
       ) : null}
       {isRecording ? (

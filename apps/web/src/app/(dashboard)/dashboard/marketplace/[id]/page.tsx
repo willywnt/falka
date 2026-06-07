@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { MarketplaceConnectionDetail } from '@/modules/marketplace/components/marketplace-connection-detail';
 
 export const metadata: Metadata = {
-  title: 'Marketplace store',
+  title: 'Toko marketplace',
 };
 
 export default async function MarketplaceConnectionPage({

@@ -4,16 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import { PurchasingDashboard } from '@/modules/purchasing/components/purchasing-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Purchasing',
+  title: 'Pembelian',
 };
 
 export default function PurchasingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Catalog"
-        title="Purchasing"
-        description="Order stock from suppliers. Ordered units show as incoming, then become available on receipt."
+        eyebrow="Katalog"
+        title="Pembelian"
+        description="Pesan stok dari pemasok. Unit yang dipesan tampil sebagai akan datang, lalu jadi tersedia saat diterima."
       />
       <PurchasingDashboard />
     </div>

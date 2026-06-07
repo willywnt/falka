@@ -92,19 +92,19 @@ export function BundleLabelStudio() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search bundle SKU, barcode, or name..."
+          placeholder="Cari SKU, barcode, atau nama bundel..."
           className="sm:max-w-xs"
         />
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={selectPage} disabled={bundles.length === 0}>
-            Select page
+            Pilih halaman ini
           </Button>
           <Button variant="outline" onClick={clearAll} disabled={selected.size === 0}>
-            Clear ({selected.size})
+            Bersihkan ({selected.size})
           </Button>
           <Button onClick={handlePrint} disabled={labels.length === 0 || !qrReady}>
             <Printer className="size-4" />
-            Print
+            Cetak
           </Button>
         </div>
       </div>
@@ -113,7 +113,7 @@ export function BundleLabelStudio() {
         <Card className="print:hidden">
           <CardHeader>
             <CardTitle className="text-base">
-              Bundles
+              Bundel
               {meta ? (
                 <span className="text-muted-foreground font-normal"> · {meta.total}</span>
               ) : null}
@@ -128,7 +128,9 @@ export function BundleLabelStudio() {
               </div>
             ) : bundles.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">
-                {debouncedSearch ? 'No matching bundles.' : 'No bundles to label.'}
+                {debouncedSearch
+                  ? 'Tidak ada bundel yang cocok.'
+                  : 'Tidak ada bundel untuk dilabeli.'}
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">
@@ -163,7 +165,7 @@ export function BundleLabelStudio() {
                               className="block truncate text-[11px] text-amber-600"
                               suppressHydrationWarning
                             >
-                              Printed {formatRelativeTime(bundle.labelPrintedAt)}
+                              Dicetak {formatRelativeTime(bundle.labelPrintedAt)}
                             </span>
                           ) : null}
                         </span>
@@ -190,8 +192,8 @@ export function BundleLabelStudio() {
           {labels.length === 0 ? (
             <EmptyState
               icon={QrCode}
-              title="No labels selected"
-              description="Pick bundles on the left to build a printable label sheet."
+              title="Belum ada label dipilih"
+              description="Pilih bundel di sebelah kiri untuk menyusun lembar label yang bisa dicetak."
               className="print:hidden"
             />
           ) : (

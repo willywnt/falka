@@ -65,7 +65,7 @@ export function BundleComponentsField({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search a variant to add as a component…"
+          placeholder="Cari varian untuk ditambahkan sebagai komponen…"
           className="pl-8"
         />
       </div>
@@ -73,9 +73,9 @@ export function BundleComponentsField({
       {search.trim() ? (
         <div className="max-h-44 overflow-y-auto rounded-lg border">
           {isLoading ? (
-            <p className="text-muted-foreground p-3 text-sm">Searching…</p>
+            <p className="text-muted-foreground p-3 text-sm">Mencari…</p>
           ) : results.length === 0 ? (
-            <p className="text-muted-foreground p-3 text-sm">No matching variants.</p>
+            <p className="text-muted-foreground p-3 text-sm">Tidak ada varian yang cocok.</p>
           ) : (
             <ul className="divide-y">
               {results.map((item) => (
@@ -103,7 +103,7 @@ export function BundleComponentsField({
 
       {value.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
-          No components yet. Search above to add what this bundle is made of.
+          Belum ada komponen. Cari di atas untuk menambahkan isi bundel ini.
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">
@@ -117,7 +117,7 @@ export function BundleComponentsField({
                 <div className="text-muted-foreground truncate text-xs">
                   {component.sku}
                   {component.availableStock !== undefined
-                    ? ` · ${component.availableStock} avail`
+                    ? ` · ${component.availableStock} tersedia`
                     : ''}
                 </div>
               </div>
@@ -136,7 +136,7 @@ export function BundleComponentsField({
                   onClick={() => remove(component.productVariantId)}
                 >
                   <Trash2 className="size-4" />
-                  <span className="sr-only">Remove</span>
+                  <span className="sr-only">Hapus</span>
                 </Button>
               </div>
             </li>

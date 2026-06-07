@@ -63,7 +63,7 @@ export function VariantPickerDialog({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search SKU or variant..."
+          placeholder="Cari SKU atau varian..."
           autoFocus
         />
 
@@ -73,7 +73,7 @@ export function VariantPickerDialog({
               <Skeleton key={index} className="h-11 w-full" />
             ))
           ) : variants.length === 0 ? (
-            <p className="text-muted-foreground p-3 text-sm">No variants found.</p>
+            <p className="text-muted-foreground p-3 text-sm">Varian tidak ditemukan.</p>
           ) : (
             variants.map((variant) => (
               <button
@@ -91,7 +91,7 @@ export function VariantPickerDialog({
                   </span>
                 </span>
                 <span className="text-muted-foreground num shrink-0 text-xs">
-                  {variant.availableStock} in stock
+                  {variant.availableStock} tersedia
                 </span>
               </button>
             ))

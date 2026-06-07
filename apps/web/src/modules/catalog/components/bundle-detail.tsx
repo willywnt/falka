@@ -85,10 +85,10 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
           quantity: component.quantity,
         })),
       });
-      toast.success('Bundle saved');
+      toast.success('Bundel disimpan');
     } catch (saveError) {
-      toast.error('Could not save the bundle', {
-        description: saveError instanceof Error ? saveError.message : 'Please try again.',
+      toast.error('Gagal menyimpan bundel', {
+        description: saveError instanceof Error ? saveError.message : 'Coba lagi.',
       });
     }
   }
@@ -96,11 +96,11 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
   async function handleDelete() {
     try {
       await deleteBundle.mutateAsync(bundleId);
-      toast.success('Bundle deleted');
+      toast.success('Bundel dihapus');
       router.push('/dashboard/bundles');
     } catch (deleteError) {
-      toast.error('Could not delete the bundle', {
-        description: deleteError instanceof Error ? deleteError.message : 'Please try again.',
+      toast.error('Gagal menghapus bundel', {
+        description: deleteError instanceof Error ? deleteError.message : 'Coba lagi.',
       });
     }
   }
@@ -120,11 +120,11 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/dashboard/bundles">
             <ArrowLeft className="size-4" />
-            Bundles
+            Bundel
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'This bundle could not be found.'}
+          {error instanceof Error ? error.message : 'Bundel ini tidak ditemukan.'}
         </div>
       </div>
     );
@@ -136,7 +136,7 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/dashboard/bundles">
             <ArrowLeft className="size-4" />
-            Bundles
+            Bundel
           </Link>
         </Button>
         <div className="mt-2 flex items-center gap-3">
@@ -145,7 +145,7 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
             <div className="flex items-center gap-2">
               <h1 className="truncate text-2xl font-semibold tracking-tight">{data.name}</h1>
               <Badge className="border-transparent bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                Bundle
+                Bundel
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -159,16 +159,16 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Details</CardTitle>
+              <CardTitle className="text-base">Detail</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="bundle-name">Name</Label>
+                <Label htmlFor="bundle-name">Nama</Label>
                 <Input
                   id="bundle-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="e.g. Paket Hemat"
+                  placeholder="mis. Paket Hemat"
                 />
               </div>
               <div className="space-y-1.5">
@@ -178,7 +178,7 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                     id="bundle-sku"
                     value={sku}
                     onChange={(event) => setSku(event.target.value)}
-                    placeholder="e.g. PAKET-HEMAT"
+                    placeholder="mis. PAKET-HEMAT"
                   />
                   <Button
                     type="button"
@@ -186,15 +186,15 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                     size="icon"
                     disabled={!name.trim()}
                     onClick={() => setSku(suggestVariantSku(name))}
-                    title="Generate SKU from the name"
+                    title="Buat SKU dari nama"
                   >
                     <Wand2 className="size-4" />
-                    <span className="sr-only">Generate SKU</span>
+                    <span className="sr-only">Buat SKU</span>
                   </Button>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bundle-price">Price</Label>
+                <Label htmlFor="bundle-price">Harga</Label>
                 <NumberInput
                   id="bundle-price"
                   value={price}
@@ -203,10 +203,10 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
               </div>
               <div className="flex items-center justify-between gap-3 sm:col-span-2">
                 <div>
-                  <Label htmlFor="bundle-active">Active</Label>
+                  <Label htmlFor="bundle-active">Aktif</Label>
                   <p className="text-muted-foreground text-xs">
-                    Inactive bundles can&apos;t be sold or bought (hidden from POS, New PO, and
-                    scan).
+                    Bundel nonaktif tidak bisa dijual atau dibeli (disembunyikan dari Kasir, PO
+                    baru, dan scan).
                   </p>
                 </div>
                 <Switch id="bundle-active" checked={isActive} onCheckedChange={setIsActive} />
@@ -216,14 +216,14 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Components</CardTitle>
+              <CardTitle className="text-base">Komponen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <BundleComponentsField value={components} onChange={setComponents} />
               <div className="flex justify-end">
                 <Button onClick={() => void handleSave()} disabled={!canSave}>
                   <Save className="size-4" />
-                  {updateBundle.isPending ? 'Saving…' : 'Save changes'}
+                  {updateBundle.isPending ? 'Menyimpan…' : 'Simpan perubahan'}
                 </Button>
               </div>
             </CardContent>
@@ -232,20 +232,20 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
 
         <div className="space-y-6">
           <StatCard
-            label="Available"
+            label="Tersedia"
             value={data.available}
             icon={Boxes}
             tone={data.available > 0 ? 'emerald' : 'amber'}
-            hint="The most you can sell, from component stock. Updates after you save."
+            hint="Jumlah maksimal yang bisa kamu jual, dari stok komponen. Diperbarui setelah kamu simpan."
           />
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Delete bundle</CardTitle>
+              <CardTitle className="text-base">Hapus bundel</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground text-sm">
-                Removes the bundle. Its component variants and their stock are untouched.
+                Menghapus bundel. Varian komponen dan stoknya tidak terpengaruh.
               </p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -255,22 +255,20 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                     disabled={deleteBundle.isPending}
                   >
                     <Trash2 className="size-4" />
-                    Delete bundle
+                    Hapus bundel
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Delete “{data.name}”?</AlertDialogTitle>
+                    <AlertDialogTitle>Hapus “{data.name}”?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This removes the bundle. Its component variants and their stock are untouched.
-                      This can&apos;t be undone.
+                      Ini menghapus bundel. Varian komponen dan stoknya tidak terpengaruh. Tindakan
+                      ini tidak bisa dibatalkan.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void handleDelete()}>
-                      Delete
-                    </AlertDialogAction>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void handleDelete()}>Hapus</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

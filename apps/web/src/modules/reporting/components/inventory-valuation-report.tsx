@@ -31,15 +31,14 @@ export function InventoryValuationReport() {
         <Button variant="outline" size="sm" asChild>
           <a href={inventoryValuationExportUrl()} download>
             <Download className="size-4" />
-            Export CSV
+            Ekspor CSV
           </a>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load the inventory valuation.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat valuasi inventaris. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -52,34 +51,34 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
   const { summary, byProduct } = data;
   const costUnknownHint =
     summary.costUnknownVariants > 0
-      ? `${summary.costUnknownVariants} in-stock SKU(s) have no cost — excluded from the value`
-      : 'Every in-stock SKU has a known cost';
+      ? `${summary.costUnknownVariants} SKU bersisa stok belum ada modal — dikecualikan dari nilai`
+      : 'Setiap SKU bersisa stok sudah ada modalnya';
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total stock value"
+          label="Total nilai stok"
           value={formatCurrency(summary.totalStockValue)}
           icon={Coins}
           tone="emerald"
-          hint="On-hand stock at moving-average cost"
+          hint="Stok di tangan dengan modal rata-rata bergerak"
         />
         <StatCard
-          label="Units on hand"
+          label="Unit di tangan"
           value={summary.availableUnits.toLocaleString()}
           icon={Warehouse}
           tone="sky"
         />
         <StatCard
-          label="Valued SKUs"
+          label="SKU bernilai"
           value={summary.valuedVariants.toLocaleString()}
           icon={Boxes}
           tone="violet"
-          hint={`of ${summary.totalVariants.toLocaleString()} total variants`}
+          hint={`dari ${summary.totalVariants.toLocaleString()} total varian`}
         />
         <StatCard
-          label="Missing cost"
+          label="Belum ada modal"
           value={summary.costUnknownVariants.toLocaleString()}
           icon={PackageSearch}
           tone="amber"
@@ -95,24 +94,24 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">By product</CardTitle>
+          <CardTitle className="text-base">Per produk</CardTitle>
         </CardHeader>
         <CardContent>
           {byProduct.length === 0 ? (
             <EmptyState
               icon={Warehouse}
-              title="No stock on hand"
-              description="Once products carry available stock with a cost, their value shows up here."
+              title="Tidak ada stok di tangan"
+              description="Begitu produk punya stok tersedia beserta modalnya, nilainya muncul di sini."
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Variants</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Stock value</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead className="text-right">Varian</TableHead>
+                  <TableHead className="text-right">Unit</TableHead>
+                  <TableHead className="text-right">Nilai stok</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,7 +126,7 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
                       </Link>
                       {row.costUnknownVariants > 0 ? (
                         <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
-                          {row.costUnknownVariants} no cost
+                          {row.costUnknownVariants} tanpa modal
                         </Badge>
                       ) : null}
                     </TableCell>

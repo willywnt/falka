@@ -16,33 +16,33 @@ import { Button } from '@/components/ui/button';
 const FEATURES = [
   {
     icon: Boxes,
-    title: 'One reliable stock count',
-    text: 'A single accurate count behind every store — no more guessing what you have.',
+    title: 'Satu hitungan stok yang akurat',
+    text: 'Satu angka stok yang tepat di balik setiap toko — nggak perlu nebak-nebak lagi.',
   },
   {
     icon: RefreshCw,
-    title: 'Synced across stores',
-    text: 'Match your listings once, then keep stock in sync across Shopee, Tokopedia and more.',
+    title: 'Sinkron di semua toko',
+    text: 'Cocokkan listing sekali, lalu stok tetap sinkron di Shopee, Tokopedia, dan lainnya.',
   },
   {
     icon: ShoppingCart,
-    title: 'Orders that update stock',
-    text: 'Paid orders come in, reduce your stock, and update your other stores automatically.',
+    title: 'Pesanan yang langsung memperbarui stok',
+    text: 'Pesanan dibayar masuk, stok berkurang, dan toko lain ikut diperbarui otomatis.',
   },
   {
     icon: PackageCheck,
-    title: 'A packing video per order',
-    text: 'Scan, record, ship — a video that settles “barang tidak sesuai” disputes.',
+    title: 'Satu video packing per pesanan',
+    text: 'Scan, rekam, kirim — video yang menyelesaikan komplain “barang tidak sesuai”.',
   },
   {
     icon: LineChart,
-    title: 'Smart reorder tips',
-    text: 'See how fast items sell and how much to buy again — worked out for you.',
+    title: 'Saran restok yang pintar',
+    text: 'Lihat seberapa cepat barang terjual dan berapa banyak harus dibeli lagi — sudah dihitung buat kamu.',
   },
   {
     icon: ScrollText,
-    title: 'Full stock history',
-    text: 'Every stock change, searchable and exportable — a clean record for accounting.',
+    title: 'Riwayat stok lengkap',
+    text: 'Setiap perubahan stok, bisa dicari dan diekspor — catatan rapi buat pembukuan.',
   },
 ];
 
@@ -64,17 +64,17 @@ export default async function HomePage() {
             {isLoggedIn ? (
               <Button asChild>
                 <Link href="/dashboard">
-                  Open app
+                  Buka aplikasi
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
             ) : (
               <>
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Sign in</Link>
+                  <Link href="/login">Masuk</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/register">Create account</Link>
+                  <Link href="/register">Buat akun</Link>
                 </Button>
               </>
             )}
@@ -91,17 +91,17 @@ export default async function HomePage() {
             Stok · Marketplace · Packing
           </span>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Keep your stock accurate across every marketplace.
+            Jaga stok kamu tetap akurat di semua marketplace.
           </h1>
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
-            {APP_NAME} keeps your stock right from end to end: orders from every store come in,
-            stock stays in sync, and you get a packing video for every order.
+            {APP_NAME} menjaga stok kamu tetap benar dari hulu ke hilir: pesanan dari setiap toko
+            masuk, stok tetap sinkron, dan kamu dapat video packing untuk setiap pesanan.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
             {isLoggedIn ? (
               <Button size="lg" asChild>
                 <Link href="/dashboard">
-                  Go to dashboard
+                  Ke dashboard
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
@@ -109,12 +109,12 @@ export default async function HomePage() {
               <>
                 <Button size="lg" asChild>
                   <Link href="/register">
-                    Get started
+                    Mulai sekarang
                     <ArrowRight className="size-4" />
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/login">Sign in</Link>
+                  <Link href="/login">Masuk</Link>
                 </Button>
               </>
             )}
@@ -149,19 +149,19 @@ export default async function HomePage() {
 
       <footer className="border-t">
         <div className="text-muted-foreground mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-6 text-sm sm:flex-row">
-          <span>{APP_NAME} — inventory &amp; fulfillment for Indonesian sellers.</span>
+          <span>{APP_NAME} — inventaris &amp; fulfillment buat seller Indonesia.</span>
           <div className="flex items-center gap-4">
             {isLoggedIn ? (
               <Link href="/dashboard" className="hover:text-foreground">
-                Open app
+                Buka aplikasi
               </Link>
             ) : (
               <>
                 <Link href="/login" className="hover:text-foreground">
-                  Sign in
+                  Masuk
                 </Link>
                 <Link href="/register" className="hover:text-foreground">
-                  Create account
+                  Buat akun
                 </Link>
               </>
             )}

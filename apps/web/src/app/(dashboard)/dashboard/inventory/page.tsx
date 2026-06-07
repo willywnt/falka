@@ -8,27 +8,27 @@ import { Button } from '@/components/ui/button';
 import { InventoryOverview } from '@/modules/inventory/components/inventory-overview';
 
 export const metadata: Metadata = {
-  title: 'Inventory',
+  title: 'Inventaris',
 };
 
 export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Catalog"
-        title="Inventory"
-        description="How much you have of every item, kept in sync across all your sales channels."
+        eyebrow="Katalog"
+        title="Inventaris"
+        description="Berapa banyak stok tiap item kamu, selalu sinkron di semua channel penjualan."
       >
         <Button asChild variant="outline">
           <Link href="/dashboard/inventory/activity">
             <ScrollText className="size-4" />
-            Activity
+            Aktivitas
           </Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/dashboard/inventory/reorder">
             <LineChart className="size-4" />
-            Reorder suggestions
+            Saran restok
           </Link>
         </Button>
       </PageHeader>

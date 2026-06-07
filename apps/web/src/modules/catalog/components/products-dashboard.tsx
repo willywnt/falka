@@ -51,11 +51,11 @@ export function ProductsDashboard() {
 
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Product deleted', { description: `${deleteTarget.name} was archived.` });
+      toast.success('Produk dihapus', { description: `${deleteTarget.name} telah diarsipkan.` });
       setDeleteTarget(null);
     } catch (deleteError) {
-      toast.error('Delete failed', {
-        description: deleteError instanceof Error ? deleteError.message : 'Unknown error',
+      toast.error('Gagal menghapus', {
+        description: deleteError instanceof Error ? deleteError.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -69,18 +69,18 @@ export function ProductsDashboard() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search products..."
+          placeholder="Cari produk..."
           className="sm:max-w-xs"
         />
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
-          New product
+          Produk baru
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load products. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat produk. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -93,17 +93,17 @@ export function ProductsDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Package}
-          title="No products yet"
+          title="Belum ada produk"
           description={
             filters.search
-              ? 'No products match your search.'
-              : 'Create your first product to start tracking stock.'
+              ? 'Tidak ada produk yang cocok dengan pencarian kamu.'
+              : 'Buat produk pertama kamu untuk mulai melacak stok.'
           }
           action={
             filters.search ? null : (
               <Button onClick={() => setCreateOpen(true)} variant="outline">
                 <Plus className="size-4" />
-                New product
+                Produk baru
               </Button>
             )
           }
@@ -113,11 +113,11 @@ export function ProductsDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-right">Variants</TableHead>
-                <TableHead className="text-right">In stock</TableHead>
+                <TableHead>Produk</TableHead>
+                <TableHead className="text-right">Varian</TableHead>
+                <TableHead className="text-right">Tersedia</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,18 +140,16 @@ export function ProductsDashboard() {
                         variant="outline"
                         className="border-amber-300 bg-amber-50 font-normal text-amber-700"
                       >
-                        No variants
+                        Tanpa varian
                       </Badge>
                     ) : (
-                      <span className="tabular-nums">{product.variantCount}</span>
+                      <span className="num">{product.variantCount}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {product.totalAvailableStock}
-                  </TableCell>
+                  <TableCell className="num text-right">{product.totalAvailableStock}</TableCell>
                   <TableCell>
                     <Badge variant={product.isActive ? 'default' : 'secondary'}>
-                      {product.isActive ? 'Active' : 'Inactive'}
+                      {product.isActive ? 'Aktif' : 'Nonaktif'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -159,7 +157,7 @@ export function ProductsDashboard() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
                           <MoreHorizontal className="size-4" />
-                          <span className="sr-only">Open actions</span>
+                          <span className="sr-only">Buka aksi</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -169,7 +167,7 @@ export function ProductsDashboard() {
                           onClick={() => setDeleteTarget(product)}
                         >
                           <Trash2 className="size-4" />
-                          Delete
+                          Hapus
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

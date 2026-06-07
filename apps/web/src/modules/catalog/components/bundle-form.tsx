@@ -42,11 +42,11 @@ export function BundleForm() {
           quantity: component.quantity,
         })),
       });
-      toast.success('Bundle created');
+      toast.success('Bundel dibuat');
       router.push(`/dashboard/bundles/${result.id}`);
     } catch (error) {
-      toast.error('Could not create the bundle', {
-        description: error instanceof Error ? error.message : 'Please try again.',
+      toast.error('Gagal membuat bundel', {
+        description: error instanceof Error ? error.message : 'Coba lagi.',
       });
     }
   }
@@ -55,16 +55,16 @@ export function BundleForm() {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Bundle details</CardTitle>
+          <CardTitle className="text-base">Detail bundel</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="bundle-name">Name</Label>
+            <Label htmlFor="bundle-name">Nama</Label>
             <Input
               id="bundle-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Paket Hemat"
+              placeholder="mis. Paket Hemat"
               autoFocus
             />
           </div>
@@ -75,7 +75,7 @@ export function BundleForm() {
                 id="bundle-sku"
                 value={sku}
                 onChange={(event) => setSku(event.target.value)}
-                placeholder="e.g. PAKET-HEMAT"
+                placeholder="mis. PAKET-HEMAT"
               />
               <Button
                 type="button"
@@ -83,15 +83,15 @@ export function BundleForm() {
                 size="icon"
                 disabled={!name.trim()}
                 onClick={() => setSku(suggestVariantSku(name))}
-                title="Generate SKU from the name"
+                title="Buat SKU dari nama"
               >
                 <Wand2 className="size-4" />
-                <span className="sr-only">Generate SKU</span>
+                <span className="sr-only">Buat SKU</span>
               </Button>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bundle-price">Price</Label>
+            <Label htmlFor="bundle-price">Harga</Label>
             <NumberInput
               id="bundle-price"
               value={price}
@@ -99,15 +99,15 @@ export function BundleForm() {
             />
           </div>
           <p className="text-muted-foreground text-xs">
-            A bundle keeps no stock of its own — selling one decrements its component variants. How
-            many you can sell is computed from component stock.
+            Bundel tidak menyimpan stok sendiri — menjual satu akan mengurangi varian komponennya.
+            Berapa yang bisa kamu jual dihitung dari stok komponen.
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Components</CardTitle>
+          <CardTitle className="text-base">Komponen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <BundleComponentsField value={components} onChange={setComponents} />
@@ -118,7 +118,7 @@ export function BundleForm() {
             disabled={!canSubmit}
           >
             <Layers className="size-4" />
-            {createBundle.isPending ? 'Creating…' : 'Create bundle'}
+            {createBundle.isPending ? 'Membuat…' : 'Buat bundel'}
           </Button>
         </CardContent>
       </Card>

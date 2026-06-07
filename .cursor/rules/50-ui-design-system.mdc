@@ -6,11 +6,28 @@ alwaysApply: false
 
 # UI / Design system
 
-Single locked theme **"Ombak"**: clean airy neutral surfaces, **teal** brand accent, neutral
-charcoal sidebar whose brand mark + active markers pick up the accent, **Plus Jakarta Sans** font
+Single locked theme **"Ombak — Ledger on Paper"**: a faintly-**warm paper** canvas, **hairline**
+structure (borders over shadows), the **teal** brand accent kept verbatim, a neutral charcoal sidebar
+whose brand mark + active markers pick up the accent, **Plus Jakarta Sans** font
 (`@fontsource-variable/plus-jakarta-sans`), `--radius: 0.875rem`. Tokens (OKLch) live in
 `apps/web/src/styles/globals.css` — light + dark via `next-themes`. There is **no palette switcher**
 (removed); change the accent only by editing `--primary`/`--ring`/`--sidebar-*`.
+
+**Ledger on Paper specifics (the look that makes it not generic):**
+
+- **Neutrals are split** — `--secondary` (chips/secondary btn), `--muted` (zebra/subtle bg), `--accent`
+  (hover/active) are three distinct warm paper-greys; `--border` (hairline) ≠ `--input` (a notch darker,
+  recessed wells). Don't collapse them back.
+- **Signed numerics**: `--signed-up` (calm green) / `--signed-down` (ember, hue-separated from
+  `--destructive` red so a negative delta ≠ an error) → `text-signed-up`/`text-signed-down`,
+  `bg-signed-*`. Use the **`NumberDelta`** component for every signed +/- value, never ad-hoc
+  emerald/destructive coloring.
+- **`num` utility** (`@utility` in globals.css = Geist Mono + tabular figures): put it on EVERY number
+  the user reads — stock, qty, price, money, counts, KPI values. Replaces `tabular-nums`.
+- **`eyebrow` utility**: micro-caps "instrument" label (section eyebrows, StatCard labels, sidebar
+  section headings). Don't pair it with a conflicting `text-*` size on the same element.
+- **Elevation = hairline**: cards are `rounded-lg` + border, **no shadow**; reserve shadows for true
+  overlays (popover/dialog/dropdown/sheet). Tables get a warm muted header band + gentle zebra.
 
 ## Reuse these primitives — don't rebuild
 - `components/ui/`: `button card input textarea label select(native, styled) switch popover calendar
@@ -20,7 +37,11 @@ charcoal sidebar whose brand mark + active markers pick up the accent, **Plus Ja
   (KPI + tinted icon chip via `tone`, palette `STAT_TONES`), **`EmptyState`**, **`LowStockBadge`**
   (tooltip shows the threshold), **`DateRangePicker`** (single popover, commits on an **Apply**
   button — not on each day click), **`TablePagination`** (rows-per-page select + page nav),
-  **`QrImage`** (client PNG QR) + **`QrCodeDialog`** (enlarged, printable label).
+  **`QrImage`** (client PNG QR) + **`QrCodeDialog`** (enlarged, printable label),
+  **`NumberDelta`** (signed +/- in green/ember, mono — the reusable signed-number unit),
+  **`VariantPickerDialog`** (search→pick an internal variant; used by order-item + listing mapping —
+  pass the mutation via `onSelect`), **`ImageUploadPopover`** (thumbnail→upload/replace/remove popover;
+  pass `onUpload`/`onRemove`/`busy` — VariantImage + BundleImage are thin wrappers over it).
 - `hooks/`: **`useUrlFilters`** (flat string filters ↔ URL query; defaults dropped),
   **`useDebouncedValue`**, **`usePagination`** (`page`/`pageSize`, resets to 1 on size change;
   `PAGE_SIZE_OPTIONS` 10/20/50/100, `PageMeta`), **`useSoundUnlock`** + **`useScanSoundPref`**
@@ -49,8 +70,14 @@ charcoal sidebar whose brand mark + active markers pick up the accent, **Plus Ja
   reason options change; live "current → result" preview).
 - **Colour variety**: vary KPI/action chips with `STAT_TONES` (primary/amber/rose/sky/violet/emerald)
   — don't render a wall of one colour.
-- **Wording**: plain language, no internal jargon ("source of truth" → "accurate/master stock",
-  "decrement" → "reduce"). English for now, written to be translatable later.
+- **Wording**: user-facing copy is **Bahasa Indonesia** (informal seller idiom, "kamu"); **code stays
+  English** (identifiers, enums, routes, logger events, comments). No i18n framework — strings are
+  hardcoded ID (single market). Plain language, no internal jargon. Canonical glossary (use verbatim):
+  Stok/Tersedia/Dipesan/Rusak/Akan datang · Inventaris · Produk/Varian/Bundel · Pesanan/Pembeli/Toko/
+  No. resi/Terkirim/Batalkan · Penjualan(Kasir)/Keranjang/Tunai · Pembelian(PO)/Pemasok/Terima/Modal ·
+  Retur/Restok · Rekaman/video packing · Laporan/Omzet/Laba/Margin/HPP · Pengaturan/Akun/Masuk/Keluar/
+  Cari/Simpan/Batal/Buat/Tambah/Ubah/Hapus · Aktif/Nonaktif/opsional/wajib. Keep verbatim: SKU, barcode,
+  codes (S00001), brand "Olshop", "marketplace", provider names (Shopee/Tokopedia/Lazada).
 
 ## Shell & auth
 - `components/layout/`: `AppSidebar` (collapses to a 64px **icon rail** via `useUiStore.sidebarOpen`;

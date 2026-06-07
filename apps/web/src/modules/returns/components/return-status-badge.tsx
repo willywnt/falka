@@ -9,12 +9,12 @@ const STATUS_CONFIG: Record<
   { label: string; variant?: BadgeVariant; className?: string }
 > = {
   PENDING: {
-    label: 'Awaiting goods',
+    label: 'Menunggu barang',
     variant: 'outline',
     className: 'border-amber-500 text-amber-600',
   },
-  RECEIVED: { label: 'Received', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
-  REJECTED: { label: 'Rejected', variant: 'destructive' },
+  RECEIVED: { label: 'Diterima', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
+  REJECTED: { label: 'Ditolak', variant: 'destructive' },
 };
 
 export function ReturnStatusBadge({ status }: { status: ReturnStatus }) {

@@ -65,11 +65,11 @@ export function SaleDetail({ saleId }: { saleId: string }) {
   async function handleVoid() {
     try {
       await voidMutation.mutateAsync(saleId);
-      toast.success('Sale voided', { description: 'All items were restocked.' });
+      toast.success('Penjualan dibatalkan', { description: 'Semua item telah direstok.' });
       setVoidOpen(false);
     } catch (caught) {
-      toast.error('Could not void sale', {
-        description: caught instanceof Error ? caught.message : 'Please try again.',
+      toast.error('Gagal membatalkan penjualan', {
+        description: caught instanceof Error ? caught.message : 'Coba lagi.',
       });
     }
   }
@@ -89,11 +89,11 @@ export function SaleDetail({ saleId }: { saleId: string }) {
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/sales">
             <ArrowLeft className="size-4" />
-            Back to sales
+            Kembali ke penjualan
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'Sale not found.'}
+          {error instanceof Error ? error.message : 'Penjualan tidak ditemukan.'}
         </div>
       </div>
     );
@@ -112,11 +112,9 @@ export function SaleDetail({ saleId }: { saleId: string }) {
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-      <TableCell className="text-right tabular-nums">{formatCurrency(item.unitPrice)}</TableCell>
-      <TableCell className="text-right font-medium tabular-nums">
-        {formatCurrency(item.lineTotal)}
-      </TableCell>
+      <TableCell className="num text-right">{item.quantity}</TableCell>
+      <TableCell className="num text-right">{formatCurrency(item.unitPrice)}</TableCell>
+      <TableCell className="num text-right font-medium">{formatCurrency(item.lineTotal)}</TableCell>
     </TableRow>
   );
 
@@ -130,15 +128,15 @@ export function SaleDetail({ saleId }: { saleId: string }) {
       </Button>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">Sale {data.code}</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Penjualan {data.code}</h2>
         <Badge variant="secondary">{data.paymentMethod}</Badge>
-        {data.status === 'VOID' ? <Badge variant="destructive">Voided</Badge> : null}
+        {data.status === 'VOID' ? <Badge variant="destructive">Dibatalkan</Badge> : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Items <span className="text-muted-foreground">· {data.items.length}</span>
+            Item <span className="text-muted-foreground">· {data.items.length}</span>
           </p>
           <div className="rounded-xl border">
             <Table>
@@ -146,8 +144,8 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit price</TableHead>
-                  <TableHead className="text-right">Line total</TableHead>
+                  <TableHead className="text-right">Harga satuan</TableHead>
+                  <TableHead className="text-right">Total baris</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,7 +156,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                         <TableCell colSpan={4} className="bg-muted/30 py-2">
                           <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                             <Boxes className="size-3.5 text-violet-500" />
-                            Bundle · {group.bundleName}
+                            Bundel · {group.bundleName}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -176,32 +174,34 @@ export function SaleDetail({ saleId }: { saleId: string }) {
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Sale</CardTitle>
+              <CardTitle className="text-base">Penjualan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Total</span>
-                <span className="text-right font-semibold">{formatCurrency(data.totalAmount)}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Payment</span>
-                <span className="text-right font-medium">{data.paymentMethod}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Customer</span>
-                <span className="truncate text-right font-medium">
-                  {data.customerName ?? 'Walk-in'}
+                <span className="num text-right font-semibold">
+                  {formatCurrency(data.totalAmount)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">When</span>
+                <span className="text-muted-foreground">Pembayaran</span>
+                <span className="text-right font-medium">{data.paymentMethod}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Pelanggan</span>
+                <span className="truncate text-right font-medium">
+                  {data.customerName ?? 'Pelanggan langsung'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Waktu</span>
                 <span className="text-right font-medium" suppressHydrationWarning>
                   {formatDateTime(data.createdAt)}
                 </span>
               </div>
               {data.note ? (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Note</span>
+                  <span className="text-muted-foreground">Catatan</span>
                   <span className="truncate text-right font-medium">{data.note}</span>
                 </div>
               ) : null}
@@ -216,19 +216,19 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                   className="text-destructive hover:text-destructive w-full"
                 >
                   <Ban className="size-4" />
-                  Void sale
+                  Batalkan penjualan
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Void sale {data.code}?</AlertDialogTitle>
+                  <AlertDialogTitle>Batalkan penjualan {data.code}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Every item is restocked to available and the sale is removed from profit
-                    reports. This can&apos;t be undone.
+                    Setiap item direstok ke stok tersedia dan penjualan dikeluarkan dari laporan
+                    laba. Tindakan ini tidak bisa dibatalkan.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel disabled={voidMutation.isPending}>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel disabled={voidMutation.isPending}>Batal</AlertDialogCancel>
                   <AlertDialogAction
                     disabled={voidMutation.isPending}
                     onClick={(event) => {
@@ -237,7 +237,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                     }}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    {voidMutation.isPending ? 'Voiding…' : 'Void sale'}
+                    {voidMutation.isPending ? 'Membatalkan…' : 'Batalkan penjualan'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

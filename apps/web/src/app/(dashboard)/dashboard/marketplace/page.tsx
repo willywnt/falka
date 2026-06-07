@@ -4,16 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import { MarketplaceDashboard } from '@/modules/marketplace/components/marketplace-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Marketplace Connections',
+  title: 'Koneksi Marketplace',
 };
 
 export default function DashboardMarketplacePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Sales channels"
-        title="Marketplace connections"
-        description="Connect your Shopee and Tokopedia stores. Login details are stored encrypted."
+        eyebrow="Channel penjualan"
+        title="Koneksi marketplace"
+        description="Hubungkan toko Shopee dan Tokopedia kamu. Data login disimpan terenkripsi."
       />
       <MarketplaceDashboard />
     </div>

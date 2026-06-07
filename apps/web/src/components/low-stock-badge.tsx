@@ -10,10 +10,10 @@ export function LowStockBadge({ threshold, className }: { threshold: number; cla
     <Tooltip>
       <TooltipTrigger asChild>
         <Badge variant="destructive" className={className}>
-          Low
+          Menipis
         </Badge>
       </TooltipTrigger>
-      <TooltipContent>At or below the low-stock level of {threshold}.</TooltipContent>
+      <TooltipContent>Sama dengan atau di bawah batas stok menipis {threshold}.</TooltipContent>
     </Tooltip>
   );
 }

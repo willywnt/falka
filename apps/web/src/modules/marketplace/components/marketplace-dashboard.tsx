@@ -31,13 +31,14 @@ export function MarketplaceDashboard() {
 
     try {
       await disconnectMutation.mutateAsync(disconnectTarget.id);
-      toast.success('Marketplace disconnected', {
-        description: `${disconnectTarget.shopName} has been deactivated.`,
+      toast.success('Koneksi marketplace diputus', {
+        description: `${disconnectTarget.shopName} sudah dinonaktifkan.`,
       });
       setDisconnectTarget(null);
     } catch (disconnectError) {
-      toast.error('Disconnect failed', {
-        description: disconnectError instanceof Error ? disconnectError.message : 'Unknown error',
+      toast.error('Gagal memutuskan koneksi', {
+        description:
+          disconnectError instanceof Error ? disconnectError.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -51,20 +52,20 @@ export function MarketplaceDashboard() {
         <div>
           <p className="text-muted-foreground text-sm">
             {isLoading
-              ? 'Loading connected stores...'
-              : `${activeCount} active store${activeCount === 1 ? '' : 's'} · ${data?.length ?? 0} total`}
+              ? 'Memuat toko terhubung...'
+              : `${activeCount} toko aktif · ${data?.length ?? 0} total`}
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
           <Plus className="size-4" />
-          Connect store
+          Hubungkan toko
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load marketplace connections.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat koneksi marketplace.{' '}
+          {error instanceof Error ? error.message : 'Silakan coba lagi.'}
         </div>
       ) : null}
 
@@ -77,8 +78,8 @@ export function MarketplaceDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={ShoppingBag}
-          title="No marketplace stores connected"
-          description="Connect Shopee or Tokopedia stores to prepare for inventory and order synchronization."
+          title="Belum ada toko marketplace terhubung"
+          description="Hubungkan toko Shopee atau Tokopedia untuk menyiapkan sinkronisasi inventaris dan pesanan."
         />
       ) : (
         <MarketplaceTable

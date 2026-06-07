@@ -223,9 +223,9 @@ export function RecordingPreviewShell({
           '[&>button]:focus:ring-white/30',
         )}
       >
-        <DialogTitle className="sr-only">Preview recording {meta.noResi}</DialogTitle>
+        <DialogTitle className="sr-only">Pratinjau rekaman {meta.noResi}</DialogTitle>
         <DialogDescription className="sr-only">
-          Video preview for tracking number {meta.noResi}
+          Pratinjau video untuk no. resi {meta.noResi}
         </DialogDescription>
 
         {/* Video stage — grows on desktop; fixed share of viewport on mobile */}
@@ -242,8 +242,8 @@ export function RecordingPreviewShell({
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-zinc-950">
                 <div className="border-primary/30 border-t-primary size-12 animate-spin rounded-full border-[3px]" />
                 <div className="space-y-1 text-center">
-                  <p className="text-sm font-medium text-zinc-200">Preparing preview</p>
-                  <p className="text-xs text-zinc-500">Loading video from storage…</p>
+                  <p className="text-sm font-medium text-zinc-200">Menyiapkan pratinjau</p>
+                  <p className="text-xs text-zinc-500">Memuat video dari penyimpanan…</p>
                 </div>
               </div>
             ) : null}
@@ -254,12 +254,12 @@ export function RecordingPreviewShell({
                   <Film className="size-6 text-zinc-400" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-zinc-100">Preview unavailable</p>
+                  <p className="text-sm font-medium text-zinc-100">Pratinjau tidak tersedia</p>
                   <p className="text-sm text-zinc-400">{errorMessage}</p>
                 </div>
                 {onRetry ? (
                   <Button size="sm" variant="secondary" onClick={onRetry}>
-                    Try again
+                    Coba lagi
                   </Button>
                 ) : null}
               </div>
@@ -282,17 +282,17 @@ export function RecordingPreviewShell({
                 <source src={videoSrc} type={mimeType} />
               </video>
             ) : (
-              <p className="text-sm text-zinc-500">No preview available.</p>
+              <p className="text-sm text-zinc-500">Tidak ada pratinjau.</p>
             )}
           </div>
 
           {canControlVideo ? (
             <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-t border-white/10 bg-black/40 px-3 py-2 backdrop-blur-sm sm:px-6 lg:hidden">
-              <span className="text-[11px] text-zinc-300 tabular-nums sm:text-xs">
+              <span className="num text-[11px] text-zinc-300 sm:text-xs">
                 {formatPlaybackTime(currentTime)} / {formatPlaybackTime(displayDuration)}
               </span>
               <span className="text-[11px] text-zinc-500 sm:text-xs">
-                {isPlaying ? 'Playing' : 'Paused'}
+                {isPlaying ? 'Memutar' : 'Jeda'}
               </span>
             </div>
           ) : null}
@@ -312,7 +312,7 @@ export function RecordingPreviewShell({
               <OperationalStatusBadge status={meta.status} />
             </div>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              Operational recording preview
+              Pratinjau rekaman operasional
             </p>
           </div>
 
@@ -320,33 +320,31 @@ export function RecordingPreviewShell({
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-1">
               <InspectorRow
                 icon={Clock}
-                label="Duration"
+                label="Durasi"
                 value={formatRecordingDuration(meta.durationSeconds)}
               />
               <InspectorRow
                 icon={HardDrive}
-                label="File size"
+                label="Ukuran file"
                 value={formatRecoveryFileSize(meta.fileSizeBytes)}
               />
               <InspectorRow
                 icon={Film}
-                label="Recorded"
+                label="Direkam"
                 value={formatOperationalDateTime(meta.recordedAt)}
               />
               {meta.uploadedAt !== undefined ? (
                 <InspectorRow
                   icon={Upload}
-                  label="Uploaded"
+                  label="Diunggah"
                   value={
-                    meta.uploadedAt
-                      ? formatOperationalDateTime(meta.uploadedAt)
-                      : 'Not uploaded yet'
+                    meta.uploadedAt ? formatOperationalDateTime(meta.uploadedAt) : 'Belum diunggah'
                   }
                 />
               ) : (
                 <InspectorRow
                   icon={Upload}
-                  label="Upload attempts"
+                  label="Percobaan unggah"
                   value={String(meta.retryCount ?? 0)}
                 />
               )}
@@ -357,9 +355,9 @@ export function RecordingPreviewShell({
                 <Separator className="col-span-full" />
                 <div className="col-span-full space-y-1 sm:space-y-2">
                   <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                    Progress
+                    Progres
                   </p>
-                  <p className="text-xl font-semibold tracking-tight tabular-nums sm:text-2xl">
+                  <p className="num text-xl font-semibold tracking-tight sm:text-2xl">
                     {formatPlaybackTime(currentTime)}
                     <span className="text-muted-foreground text-sm font-normal sm:text-base">
                       {' '}
@@ -374,7 +372,7 @@ export function RecordingPreviewShell({
 
             <div className="col-span-full space-y-2 sm:space-y-3">
               <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                Playback speed
+                Kecepatan putar
               </p>
               <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-5 sm:gap-1.5">
                 {PLAYBACK_SPEEDS.map((speed) => (
@@ -394,7 +392,7 @@ export function RecordingPreviewShell({
 
             <div className="col-span-full space-y-2">
               <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                Actions
+                Aksi
               </p>
               <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
                 <Button
@@ -405,8 +403,8 @@ export function RecordingPreviewShell({
                   onClick={enterFullscreen}
                 >
                   <Maximize2 className="size-4 shrink-0" />
-                  <span className="hidden sm:inline">Fullscreen</span>
-                  <span className="sm:hidden">Full</span>
+                  <span className="hidden sm:inline">Layar penuh</span>
+                  <span className="sm:hidden">Penuh</span>
                   <kbd className="text-muted-foreground ml-auto hidden rounded border px-1.5 py-0.5 font-mono text-[10px] lg:inline">
                     F
                   </kbd>
@@ -431,7 +429,7 @@ export function RecordingPreviewShell({
                   onClick={restartPlayback}
                 >
                   <RotateCcw className="size-4 shrink-0" />
-                  <span className="truncate">Restart</span>
+                  <span className="truncate">Ulang</span>
                   <kbd className="text-muted-foreground ml-auto hidden rounded border px-1.5 py-0.5 font-mono text-[10px] lg:inline">
                     R
                   </kbd>
@@ -441,10 +439,10 @@ export function RecordingPreviewShell({
           </div>
 
           <div className="text-muted-foreground hidden shrink-0 border-t px-5 py-3 text-[11px] leading-relaxed lg:block">
-            <kbd className="rounded border px-1 font-mono">Space</kbd> play/pause ·{' '}
+            <kbd className="rounded border px-1 font-mono">Space</kbd> putar/jeda ·{' '}
             <kbd className="rounded border px-1 font-mono">←</kbd>
-            <kbd className="rounded border px-1 font-mono">→</kbd> seek 5s ·{' '}
-            <kbd className="rounded border px-1 font-mono">F</kbd> fullscreen
+            <kbd className="rounded border px-1 font-mono">→</kbd> geser 5d ·{' '}
+            <kbd className="rounded border px-1 font-mono">F</kbd> layar penuh
           </div>
         </aside>
       </DialogContent>

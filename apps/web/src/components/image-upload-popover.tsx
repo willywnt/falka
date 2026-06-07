@@ -39,10 +39,10 @@ export function ImageUploadPopover({
     if (!file) return;
     try {
       await onUpload(file);
-      toast.success('Photo updated');
+      toast.success('Foto diperbarui');
     } catch (error) {
-      toast.error('Could not upload photo', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal mengunggah foto', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -50,10 +50,10 @@ export function ImageUploadPopover({
   async function handleRemove() {
     try {
       await onRemove();
-      toast.success('Photo removed');
+      toast.success('Foto dihapus');
     } catch (error) {
-      toast.error('Could not remove photo', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menghapus foto', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -97,7 +97,7 @@ export function ImageUploadPopover({
           />
         ) : (
           <div className="bg-muted/30 text-muted-foreground flex aspect-square w-full items-center justify-center rounded-md border border-dashed text-xs">
-            No photo
+            Belum ada foto
           </div>
         )}
 
@@ -111,7 +111,7 @@ export function ImageUploadPopover({
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="size-4" />
-            {imageUrl ? 'Replace' : 'Upload'}
+            {imageUrl ? 'Ganti' : 'Unggah'}
           </Button>
           {imageUrl ? (
             <Button
@@ -121,10 +121,10 @@ export function ImageUploadPopover({
               className="text-destructive"
               disabled={busy}
               onClick={() => void handleRemove()}
-              title="Delete photo"
+              title="Hapus foto"
             >
               <Trash2 className="size-4" />
-              <span className="sr-only">Delete photo</span>
+              <span className="sr-only">Hapus foto</span>
             </Button>
           ) : null}
         </div>

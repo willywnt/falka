@@ -37,12 +37,12 @@ export function RecordingControls({
         {status === 'REQUESTING_PERMISSION' ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Requesting access...
+            Meminta akses...
           </>
         ) : (
           <>
             <Video className="size-4" />
-            Start recording
+            Mulai rekam
           </>
         )}
       </Button>
@@ -56,32 +56,32 @@ export function RecordingControls({
         {status === 'STOPPING' ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            Stopping...
+            Menghentikan...
           </>
         ) : (
           <>
             <Square className="size-4" />
-            Stop recording
+            Stop rekam
           </>
         )}
       </Button>
 
       {isUploading ? (
         <Button variant="outline" onClick={onCancelUpload}>
-          Cancel upload
+          Batalkan unggahan
         </Button>
       ) : null}
 
       {isFailed ? (
         <Button variant="outline" onClick={onRetryPermission}>
           <RotateCcw className="size-4" />
-          Retry
+          Coba lagi
         </Button>
       ) : null}
 
       {(isFailed || isCompleted) && !isBusy ? (
         <Button variant="ghost" onClick={onReset}>
-          New recording
+          Rekaman baru
         </Button>
       ) : null}
     </div>

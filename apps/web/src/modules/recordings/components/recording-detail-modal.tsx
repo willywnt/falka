@@ -54,8 +54,8 @@ export function RecordingDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{recording?.noResi ?? 'Recording details'}</DialogTitle>
-          <DialogDescription>Operational recording information</DialogDescription>
+          <DialogTitle>{recording?.noResi ?? 'Detail rekaman'}</DialogTitle>
+          <DialogDescription>Informasi rekaman operasional</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -75,10 +75,10 @@ export function RecordingDetailModal({
             <Separator />
 
             <div className="space-y-3">
-              <DetailRow label="Tracking number" value={recording.noResi} />
+              <DetailRow label="No. resi" value={recording.noResi} />
               {linkedOrder ? (
                 <div className="flex items-start justify-between gap-4 text-sm">
-                  <span className="text-muted-foreground">Linked order</span>
+                  <span className="text-muted-foreground">Pesanan terkait</span>
                   <Link
                     href={`/dashboard/orders/${linkedOrder.id}`}
                     onClick={() => onOpenChange(false)}
@@ -89,33 +89,33 @@ export function RecordingDetailModal({
                 </div>
               ) : null}
               <DetailRow
-                label="Duration"
+                label="Durasi"
                 value={formatRecordingDuration(recording.durationSeconds)}
               />
               <DetailRow
-                label="File size"
+                label="Ukuran file"
                 value={formatRecordingFileSize(recording.fileSizeBytes)}
               />
-              <DetailRow label="Created" value={formatRecordingDate(recording.createdAt)} />
+              <DetailRow label="Dibuat" value={formatRecordingDate(recording.createdAt)} />
               <DetailRow
-                label="Uploaded"
+                label="Diunggah"
                 value={
                   recording.uploadedAt
                     ? formatRecordingDate(recording.uploadedAt)
-                    : 'Not uploaded yet'
+                    : 'Belum diunggah'
                 }
               />
               <DetailRow
-                label="Upload status"
+                label="Status unggahan"
                 value={
                   recording.uploadedAt
-                    ? 'Uploaded to storage'
+                    ? 'Sudah diunggah ke penyimpanan'
                     : recording.status === 'FAILED'
-                      ? 'Failed'
-                      : 'In progress'
+                      ? 'Gagal'
+                      : 'Sedang berlangsung'
                 }
               />
-              {failureDetail ? <DetailRow label="Failure reason" value={failureDetail} /> : null}
+              {failureDetail ? <DetailRow label="Alasan gagal" value={failureDetail} /> : null}
             </div>
           </div>
         ) : null}

@@ -4,16 +4,16 @@ import { PageHeader } from '@/components/page-header';
 import { OrdersDashboard } from '@/modules/orders/components/orders-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Orders',
+  title: 'Pesanan',
 };
 
 export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Sales channels"
-        title="Orders"
-        description="Orders from your stores. Paid orders automatically reduce your stock."
+        eyebrow="Channel penjualan"
+        title="Pesanan"
+        description="Pesanan dari toko kamu. Pesanan yang sudah dibayar otomatis mengurangi stok."
       />
       <OrdersDashboard />
     </div>

@@ -25,7 +25,7 @@ export function DateRangePicker({
   value,
   onChange,
   className,
-  placeholder = 'Date range',
+  placeholder = 'Rentang tanggal',
 }: {
   value: DateRange | undefined;
   onChange: (range: DateRange | undefined) => void;
@@ -71,14 +71,14 @@ export function DateRangePicker({
         <Calendar mode="range" selected={draft} onSelect={setDraft} numberOfMonths={2} autoFocus />
         <div className="flex items-center justify-between gap-3 border-t p-2.5">
           <span className="text-muted-foreground px-1 text-xs">
-            {draft?.from ? formatRange(draft, '') : 'Select a range'}
+            {draft?.from ? formatRange(draft, '') : 'Pilih rentang'}
           </span>
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="sm" onClick={clear} disabled={!draft?.from}>
-              Clear
+              Bersihkan
             </Button>
             <Button size="sm" onClick={apply} disabled={!draft?.from}>
-              Apply
+              Terapkan
             </Button>
           </div>
         </div>

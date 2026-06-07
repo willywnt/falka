@@ -51,21 +51,21 @@ const SCAN_STATUS_META: Record<
   { dot: string; cta: string; hint: string | null }
 > = {
   off: { dot: '', cta: '', hint: null },
-  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan with phone', hint: null },
+  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan pakai HP', hint: null },
   waiting: {
     dot: 'bg-amber-500',
-    cta: 'Show QR',
-    hint: 'Waiting for your phone to connect…',
+    cta: 'Tampilkan QR',
+    hint: 'Menunggu HP kamu terhubung…',
   },
   connected: {
     dot: 'bg-emerald-500',
-    cta: 'Phone connected',
-    hint: 'Phone connected — scan a product label to add it to the cart.',
+    cta: 'HP terhubung',
+    hint: 'HP terhubung — scan label produk untuk menambahkannya ke keranjang.',
   },
   disconnected: {
     dot: 'bg-destructive',
-    cta: 'Reconnect',
-    hint: 'Phone disconnected. Tap Reconnect to show a fresh QR.',
+    cta: 'Hubungkan ulang',
+    hint: 'HP terputus. Ketuk Hubungkan ulang untuk menampilkan QR baru.',
   },
 };
 
@@ -103,11 +103,11 @@ type BundleCartLine = {
 type CartLine = VariantCartLine | BundleCartLine;
 
 const PAYMENT_OPTIONS: ReadonlyArray<{ value: SalePaymentMethod; label: string }> = [
-  { value: 'CASH', label: 'Cash' },
+  { value: 'CASH', label: 'Tunai' },
   { value: 'QRIS', label: 'QRIS' },
   { value: 'TRANSFER', label: 'Transfer' },
-  { value: 'CARD', label: 'Card' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'CARD', label: 'Kartu' },
+  { value: 'OTHER', label: 'Lainnya' },
 ];
 
 /** Fetch a bundle's components on demand (Bundling-tab "Add" needs the full composition). */
@@ -279,8 +279,8 @@ export function PosTerminal() {
         components: bundleResolutionToComponents(detail),
       });
     } catch (error) {
-      toast.error('Could not add bundle', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menambahkan bundel', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -357,15 +357,15 @@ export function PosTerminal() {
         paymentMethod,
         customerName: customerName.trim() || undefined,
       });
-      toast.success(`Sale ${sale.code} recorded`, {
-        description: `${formatCurrency(sale.totalAmount)} · stock updated`,
+      toast.success(`Penjualan ${sale.code} tercatat`, {
+        description: `${formatCurrency(sale.totalAmount)} · stok diperbarui`,
       });
       setCart([]);
       setCustomerName('');
       setSearchInput('');
     } catch (error) {
-      toast.error('Checkout failed', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Checkout gagal', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -376,7 +376,7 @@ export function PosTerminal() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base">Find product</CardTitle>
+            <CardTitle className="text-base">Cari produk</CardTitle>
             {scannerEnabled ? (
               <div className="flex items-center gap-1.5">
                 <Button
@@ -384,8 +384,8 @@ export function PosTerminal() {
                   size="icon"
                   className="size-8"
                   onClick={toggleSound}
-                  aria-label={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
-                  title={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
+                  aria-label={soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}
+                  title={soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}
                 >
                   {soundOn ? (
                     <Volume2 className="size-4" />
@@ -406,7 +406,7 @@ export function PosTerminal() {
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search SKU or product name..."
+            placeholder="Cari SKU atau nama produk..."
             autoFocus
           />
           {scannerEnabled && scanMeta.hint ? (
@@ -424,10 +424,10 @@ export function PosTerminal() {
             <Tabs defaultValue="products">
               <TabsList className="w-full">
                 <TabsTrigger value="products" className="flex-1">
-                  Products
+                  Produk
                 </TabsTrigger>
                 <TabsTrigger value="bundling" className="flex-1">
-                  Bundling
+                  Bundel
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="products" className="mt-3">
@@ -462,14 +462,14 @@ export function PosTerminal() {
       {/* Cart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Cart</CardTitle>
+          <CardTitle className="text-base">Keranjang</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {cart.length === 0 ? (
             <EmptyState
               icon={ShoppingCart}
-              title="Cart is empty"
-              description="Search a product and add it to start a sale."
+              title="Keranjang kosong"
+              description="Cari produk dan tambahkan untuk memulai penjualan."
             />
           ) : (
             <div className="space-y-3">
@@ -498,7 +498,7 @@ export function PosTerminal() {
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label htmlFor="payment">Payment</Label>
+                <Label htmlFor="payment">Pembayaran</Label>
                 <Select
                   id="payment"
                   value={paymentMethod}
@@ -512,19 +512,19 @@ export function PosTerminal() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="customer">Customer (optional)</Label>
+                <Label htmlFor="customer">Pelanggan (opsional)</Label>
                 <Input
                   id="customer"
                   value={customerName}
                   onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Walk-in"
+                  placeholder="Pelanggan langsung"
                 />
               </div>
             </div>
 
             <div className="flex items-center justify-between border-t pt-3">
               <span className="text-muted-foreground text-sm">Total</span>
-              <span className="text-lg font-semibold tabular-nums">{formatCurrency(total)}</span>
+              <span className="num text-lg font-semibold">{formatCurrency(total)}</span>
             </div>
 
             <Button
@@ -534,7 +534,7 @@ export function PosTerminal() {
               disabled={cart.length === 0 || createSale.isPending}
             >
               <PackageSearch className="size-4" />
-              {createSale.isPending ? 'Processing...' : 'Checkout'}
+              {createSale.isPending ? 'Memproses...' : 'Checkout'}
             </Button>
           </div>
         </CardContent>
@@ -570,7 +570,7 @@ function ProductResults({
   if ((variants?.length ?? 0) === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'No matching products.' : 'Type to search products.'}
+        {hasSearch ? 'Tidak ada produk yang cocok.' : 'Ketik untuk mencari produk.'}
       </p>
     );
   }
@@ -588,14 +588,14 @@ function ProductResults({
               <div className="text-muted-foreground text-xs">
                 {variant.sku} · {formatCurrency(variant.price)} ·{' '}
                 <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
-                  {variant.availableStock} in stock
+                  {variant.availableStock} tersedia
                 </span>
               </div>
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => onAdd(variant)}>
             <Plus className="size-4" />
-            Add
+            Tambah
           </Button>
         </li>
       ))}
@@ -630,7 +630,7 @@ function BundleResults({
   if ((bundles?.length ?? 0) === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'No matching bundles.' : 'No bundles yet.'}
+        {hasSearch ? 'Tidak ada bundel yang cocok.' : 'Belum ada bundel.'}
       </p>
     );
   }
@@ -648,20 +648,20 @@ function BundleResults({
                   variant="outline"
                   className="border-violet-500/40 text-violet-600 dark:text-violet-400"
                 >
-                  Bundle
+                  Bundel
                 </Badge>
               </div>
               <div className="text-muted-foreground text-xs">
-                {bundle.sku} · {formatCurrency(bundle.price)} · {bundle.totalVariant} items ·{' '}
+                {bundle.sku} · {formatCurrency(bundle.price)} · {bundle.totalVariant} item ·{' '}
                 <span className={bundle.available <= 0 ? 'text-destructive' : ''}>
-                  {bundle.available} buildable
+                  {bundle.available} bisa dirakit
                 </span>
               </div>
             </div>
           </div>
           <Button size="sm" variant="outline" disabled={isAdding} onClick={() => onAdd(bundle)}>
             <Plus className="size-4" />
-            Add
+            Tambah
           </Button>
         </li>
       ))}
@@ -693,7 +693,7 @@ function VariantCartRow({
             <div className="text-muted-foreground text-xs">{line.sku}</div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Remove">
+        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
           <Trash2 className="size-4" />
         </Button>
       </div>
@@ -706,22 +706,20 @@ function VariantCartRow({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Unit price</Label>
+          <Label>Harga satuan</Label>
           <NumberInput
             value={line.unitPrice}
             onChange={(value) => onPatch({ unitPrice: Math.max(0, value) })}
           />
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs">Line</div>
-          <div className="font-medium tabular-nums">
-            {formatCurrency(line.unitPrice * line.quantity)}
-          </div>
+          <div className="text-muted-foreground text-xs">Baris</div>
+          <div className="num font-medium">{formatCurrency(line.unitPrice * line.quantity)}</div>
         </div>
       </div>
       {oversold ? (
         <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
-          Oversell — only {line.availableStock} in stock
+          Lebih dari stok (boleh — barang di tangan) · hanya {line.availableStock} tersedia
         </Badge>
       ) : null}
     </div>
@@ -753,13 +751,13 @@ function BundleCartRow({
                 className="border-violet-500/40 text-violet-600 dark:text-violet-400"
               >
                 <Boxes className="size-3" />
-                Bundle
+                Bundel
               </Badge>
             </div>
             <div className="text-muted-foreground text-xs">{line.sku}</div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Remove">
+        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
           <Trash2 className="size-4" />
         </Button>
       </div>
@@ -771,9 +769,7 @@ function BundleCartRow({
             className="text-muted-foreground flex items-center justify-between gap-2 text-xs"
           >
             <span className="truncate">{component.name}</span>
-            <span className="whitespace-nowrap tabular-nums">
-              {line.quantity * component.quantity}×
-            </span>
+            <span className="num whitespace-nowrap">{line.quantity * component.quantity}×</span>
           </li>
         ))}
       </ul>
@@ -787,22 +783,20 @@ function BundleCartRow({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Bundle price</Label>
+          <Label>Harga bundel</Label>
           <NumberInput
             value={line.unitPrice}
             onChange={(value) => onPatch({ unitPrice: Math.max(0, value) })}
           />
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs">Line</div>
-          <div className="font-medium tabular-nums">
-            {formatCurrency(line.unitPrice * line.quantity)}
-          </div>
+          <div className="text-muted-foreground text-xs">Baris</div>
+          <div className="num font-medium">{formatCurrency(line.unitPrice * line.quantity)}</div>
         </div>
       </div>
       {oversold ? (
         <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
-          Oversell — a component is short on stock
+          Lebih dari stok (boleh — barang di tangan) · salah satu komponen kurang
         </Badge>
       ) : null}
     </div>

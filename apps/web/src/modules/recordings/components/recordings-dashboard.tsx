@@ -135,8 +135,9 @@ export function RecordingsDashboard() {
     try {
       await downloadMutation.mutateAsync(recording.id);
     } catch (downloadError) {
-      toast.error('Download failed', {
-        description: downloadError instanceof Error ? downloadError.message : 'Unknown error',
+      toast.error('Unduhan gagal', {
+        description:
+          downloadError instanceof Error ? downloadError.message : 'Kesalahan tidak diketahui',
       });
     }
   }
@@ -146,11 +147,12 @@ export function RecordingsDashboard() {
 
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast.success('Recording deleted');
+      toast.success('Rekaman dihapus');
       setDeleteTarget(null);
     } catch (deleteError) {
-      toast.error('Delete failed', {
-        description: deleteError instanceof Error ? deleteError.message : 'Unknown error',
+      toast.error('Gagal menghapus', {
+        description:
+          deleteError instanceof Error ? deleteError.message : 'Kesalahan tidak diketahui',
       });
     }
   }
@@ -205,7 +207,7 @@ export function RecordingsDashboard() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by resi number..."
+              placeholder="Cari berdasarkan no. resi..."
               className="pl-9"
             />
           </div>
@@ -227,14 +229,14 @@ export function RecordingsDashboard() {
         <Button asChild>
           <Link href="/recordings">
             <Video className="size-4" />
-            New recording
+            Rekaman baru
           </Link>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load recordings. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat rekaman. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -247,11 +249,11 @@ export function RecordingsDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Video}
-          title={hasSearch ? 'No matching recordings' : 'No recordings yet'}
+          title={hasSearch ? 'Tidak ada rekaman yang cocok' : 'Belum ada rekaman'}
           description={
             hasSearch
-              ? 'Try a different resi number or clear your filters.'
-              : 'Create your first operational recording to see it listed here.'
+              ? 'Coba no. resi lain atau hapus filter kamu.'
+              : 'Buat rekaman operasional pertama kamu untuk melihatnya di sini.'
           }
         />
       ) : (
@@ -270,7 +272,7 @@ export function RecordingsDashboard() {
                   <TableRow>
                     <TableHead>
                       <SortButton
-                        label="Resi"
+                        label="No. resi"
                         field="noResi"
                         sortBy={query.sortBy}
                         sortOrder={query.sortOrder}
@@ -280,7 +282,7 @@ export function RecordingsDashboard() {
                     <TableHead>Status</TableHead>
                     <TableHead>
                       <SortButton
-                        label="Duration"
+                        label="Durasi"
                         field="durationSeconds"
                         sortBy={query.sortBy}
                         sortOrder={query.sortOrder}
@@ -289,7 +291,7 @@ export function RecordingsDashboard() {
                     </TableHead>
                     <TableHead>
                       <SortButton
-                        label="File size"
+                        label="Ukuran file"
                         field="fileSizeBytes"
                         sortBy={query.sortBy}
                         sortOrder={query.sortOrder}
@@ -298,14 +300,14 @@ export function RecordingsDashboard() {
                     </TableHead>
                     <TableHead>
                       <SortButton
-                        label="Created"
+                        label="Dibuat"
                         field="createdAt"
                         sortBy={query.sortBy}
                         sortOrder={query.sortOrder}
                         onSort={handleSort}
                       />
                     </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -328,7 +330,7 @@ export function RecordingsDashboard() {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
                                 <MoreHorizontal className="size-4" />
-                                <span className="sr-only">Open actions</span>
+                                <span className="sr-only">Buka aksi</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -337,18 +339,18 @@ export function RecordingsDashboard() {
                                 onClick={() => openPlayer(recording)}
                               >
                                 <Play className="size-4" />
-                                Preview
+                                Pratinjau
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openDetail(recording)}>
                                 <Eye className="size-4" />
-                                View details
+                                Lihat detail
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 disabled={!canPlay || downloadMutation.isPending}
                                 onClick={() => void handleDownload(recording)}
                               >
                                 <Download className="size-4" />
-                                Download
+                                Unduh
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 disabled={!canPlay}
@@ -358,14 +360,14 @@ export function RecordingsDashboard() {
                                 }}
                               >
                                 <Link2 className="size-4" />
-                                Share evidence
+                                Bagikan bukti
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => setDeleteTarget(recording)}
                               >
                                 <Trash2 className="size-4" />
-                                Delete
+                                Hapus
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -381,9 +383,9 @@ export function RecordingsDashboard() {
           {visibleServerRecordings.length > 0 ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground text-sm">
-                Page {data?.meta.page ?? 1} of {data?.meta.totalPages ?? 1} ·{' '}
-                {data?.meta.total ?? 0} recordings
-                {isFetching ? ' · Updating...' : ''}
+                Halaman {data?.meta.page ?? 1} dari {data?.meta.totalPages ?? 1} ·{' '}
+                {data?.meta.total ?? 0} rekaman
+                {isFetching ? ' · Memperbarui...' : ''}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -392,7 +394,7 @@ export function RecordingsDashboard() {
                   disabled={!data?.meta.hasPreviousPage}
                   onClick={() => setQuery((current) => ({ ...current, page: current.page - 1 }))}
                 >
-                  Previous
+                  Sebelumnya
                 </Button>
                 <Button
                   variant="outline"
@@ -400,7 +402,7 @@ export function RecordingsDashboard() {
                   disabled={!data?.meta.hasNextPage}
                   onClick={() => setQuery((current) => ({ ...current, page: current.page + 1 }))}
                 >
-                  Next
+                  Berikutnya
                 </Button>
               </div>
             </div>

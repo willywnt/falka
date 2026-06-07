@@ -33,16 +33,15 @@ export function DisconnectMarketplaceDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Disconnect marketplace store?</AlertDialogTitle>
+          <AlertDialogTitle>Putuskan koneksi toko marketplace?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will deactivate{' '}
-            <span className="font-medium">{connection.shopName}</span> (
-            {getMarketplaceProviderLabel(connection.provider)}). Credentials stay encrypted in your
-            account and can be reconnected later.
+            Ini akan menonaktifkan <span className="font-medium">{connection.shopName}</span> (
+            {getMarketplaceProviderLabel(connection.provider)}). Kredensial tetap terenkripsi di
+            akun kamu dan bisa dihubungkan lagi nanti.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDisconnecting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDisconnecting}>Batal</AlertDialogCancel>
           <AlertDialogAction
             disabled={isDisconnecting}
             onClick={(event) => {
@@ -51,7 +50,7 @@ export function DisconnectMarketplaceDialog({
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDisconnecting ? 'Disconnecting...' : 'Disconnect store'}
+            {isDisconnecting ? 'Memutuskan...' : 'Putuskan koneksi'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

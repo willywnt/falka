@@ -22,36 +22,36 @@ function SidebarCreate({ collapsed }: { collapsed: boolean }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {collapsed ? (
-          <Button size="icon" className="mx-auto" title="Create">
+          <Button size="icon" className="mx-auto" title="Buat">
             <Plus className="size-4" />
-            <span className="sr-only">Create</span>
+            <span className="sr-only">Buat</span>
           </Button>
         ) : (
           <Button className="w-full justify-start gap-2">
             <Plus className="size-4" />
-            Create
+            Buat
           </Button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-52">
-        <DropdownMenuLabel>Create</DropdownMenuLabel>
+        <DropdownMenuLabel>Buat</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/dashboard/products">
             <Boxes className="size-4" />
-            New product
+            Produk baru
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/dashboard/marketplace">
             <ShoppingBag className="size-4" />
-            Connect store
+            Hubungkan toko
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/recordings">
             <Video className="size-4" />
-            Record packing
+            Rekam packing
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -96,7 +96,7 @@ export function AppSidebar({ className }: { className?: string }) {
 
       {collapsed ? null : (
         <div className="border-sidebar-border text-sidebar-foreground/45 border-t px-5 py-3 text-xs">
-          Inventory &amp; fulfillment
+          Inventaris &amp; pengemasan
         </div>
       )}
     </aside>

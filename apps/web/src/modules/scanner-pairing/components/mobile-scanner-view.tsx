@@ -77,7 +77,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
   metaRef.current = meta;
 
   const handleScanSuccess = useCallback((barcode: string) => {
-    toast.success('Barcode sent', {
+    toast.success('Barcode terkirim', {
       description: metaRef.current.mobileScanSuccess(barcode),
     });
   }, []);
@@ -105,8 +105,8 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<ScanLine className="text-muted-foreground size-10" />}
-        title="Invalid link"
-        description="Scan the QR code shown on the desktop to pair this phone."
+        title="Link tidak valid"
+        description="Pindai kode QR yang ditampilkan di desktop untuk memasangkan ponsel ini."
       />
     );
   }
@@ -115,8 +115,8 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<Loader2 className="text-primary size-10 animate-spin" />}
-        title="Signing in"
-        description="Using your desktop station account…"
+        title="Sedang masuk"
+        description="Memakai akun stasiun desktop kamu…"
       />
     );
   }
@@ -125,22 +125,22 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<ScanLine className="text-primary size-10" />}
-        title="Sign in required"
+        title="Perlu masuk"
         description={
           claimError ??
           (pairingCode
-            ? 'Scan a fresh QR code from the desktop, or sign in manually.'
-            : 'This link is missing a code. Sign in or scan a new QR from desktop.')
+            ? 'Pindai kode QR baru dari desktop, atau masuk manual.'
+            : 'Link ini tidak punya kode. Masuk atau pindai QR baru dari desktop.')
         }
         action={
           <div className="flex w-full max-w-xs flex-col gap-2">
             {pairingCode ? (
               <Button type="button" className="w-full" onClick={retryClaim}>
-                Try again
+                Coba lagi
               </Button>
             ) : null}
             <Button asChild variant="outline" className="w-full">
-              <Link href={loginHref as Route}>Sign in</Link>
+              <Link href={loginHref as Route}>Masuk</Link>
             </Button>
           </div>
         }
@@ -152,7 +152,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<Loader2 className="text-primary size-10 animate-spin" />}
-        title="Connecting"
+        title="Menyambungkan"
         description={meta.connectingLabel}
       />
     );
@@ -162,8 +162,8 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<ScanLine className="text-muted-foreground size-10" />}
-        title="Session expired"
-        description={errorMessage ?? 'Ask for a new QR code on desktop.'}
+        title="Sesi kedaluwarsa"
+        description={errorMessage ?? 'Minta kode QR baru di desktop.'}
       />
     );
   }
@@ -172,11 +172,11 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<WifiOff className="text-destructive size-10" />}
-        title="Not connected"
+        title="Tidak terhubung"
         description={errorMessage ?? meta.unreachableLabel}
         action={
           <Button className="w-full max-w-xs" type="button" onClick={retry}>
-            Try again
+            Coba lagi
           </Button>
         }
       />
@@ -185,16 +185,16 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
 
   const statusLabel = stationBusy
     ? stationPhase === 'countdown'
-      ? 'Starting…'
+      ? 'Memulai…'
       : stationPhase === 'recording'
-        ? 'Recording'
-        : 'Uploading'
+        ? 'Merekam'
+        : 'Mengunggah'
     : isReady
-      ? 'Ready'
+      ? 'Siap'
       : isReconnecting
-        ? 'Reconnecting…'
+        ? 'Menyambung kembali…'
         : isSessionConnected
-          ? 'Linking…'
+          ? 'Menautkan…'
           : 'Offline';
 
   const statusClass = stationBusy
@@ -256,7 +256,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
           <p className="text-destructive text-xs">{cameraError}</p>
           {secureOrigin ? (
             <Button asChild size="sm" className="w-full">
-              <a href={secureOrigin}>Open HTTPS link</a>
+              <a href={secureOrigin}>Buka link HTTPS</a>
             </Button>
           ) : null}
           <Button
@@ -266,7 +266,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
             className="w-full"
             onClick={retryCamera}
           >
-            Retry camera
+            Coba lagi kamera
           </Button>
         </div>
       ) : null}

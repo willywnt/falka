@@ -22,11 +22,11 @@ export function isStorageQuotaExceeded(quota: {
 export function getStorageQuotaWarningMessage(level: StorageQuotaLevel): string | null {
   switch (level) {
     case 'full':
-      return 'Storage quota is full. Delete recordings or contact your administrator to increase quota.';
+      return 'Kuota penyimpanan penuh. Hapus rekaman atau hubungi admin kamu untuk menambah kuota.';
     case 'critical':
-      return 'Storage is almost full. Delete old recordings to avoid upload failures.';
+      return 'Penyimpanan hampir penuh. Hapus rekaman lama supaya unggahan tidak gagal.';
     case 'warning':
-      return 'Storage usage is getting high. Consider deleting old recordings to free space.';
+      return 'Pemakaian penyimpanan mulai tinggi. Pertimbangkan hapus rekaman lama untuk melegakan ruang.';
     default:
       return null;
   }

@@ -26,7 +26,7 @@ export function VariantImage({
     <ImageUploadPopover
       imageUrl={imageUrl}
       label={label}
-      title="Variant photo"
+      title="Foto varian"
       busy={upload.isPending || remove.isPending}
       onUpload={async (file) => {
         await upload.mutateAsync({ variantId, file });

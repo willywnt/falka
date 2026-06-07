@@ -42,41 +42,41 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
     items: [{ title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
-    label: 'Catalog',
+    label: 'Katalog',
     items: [
-      { title: 'Products', href: '/dashboard/products', icon: Boxes },
-      { title: 'Bundles', href: '/dashboard/bundles', icon: Layers },
-      { title: 'Inventory', href: '/dashboard/inventory', icon: Warehouse },
-      { title: 'Purchasing', href: '/dashboard/purchasing', icon: Truck },
-      { title: 'Labels', href: '/dashboard/labels', icon: QrCode },
+      { title: 'Produk', href: '/dashboard/products', icon: Boxes },
+      { title: 'Bundel', href: '/dashboard/bundles', icon: Layers },
+      { title: 'Inventaris', href: '/dashboard/inventory', icon: Warehouse },
+      { title: 'Pembelian', href: '/dashboard/purchasing', icon: Truck },
+      { title: 'Label', href: '/dashboard/labels', icon: QrCode },
     ],
   },
   {
-    label: 'Sales channels',
+    label: 'Kanal penjualan',
     items: [
-      { title: 'Marketplaces', href: '/dashboard/marketplace', icon: ShoppingBag },
-      { title: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
-      { title: 'Sales (POS)', href: '/dashboard/sales', icon: Store },
+      { title: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
+      { title: 'Pesanan', href: '/dashboard/orders', icon: ShoppingCart },
+      { title: 'Penjualan (Kasir)', href: '/dashboard/sales', icon: Store },
     ],
   },
   {
-    label: 'Fulfillment',
+    label: 'Pengemasan',
     items: [
-      { title: 'Record', href: '/recordings', icon: Video },
-      { title: 'Library', href: '/dashboard/recordings', icon: Library },
-      { title: 'Returns', href: '/dashboard/returns', icon: Undo2 },
+      { title: 'Rekam', href: '/recordings', icon: Video },
+      { title: 'Pustaka', href: '/dashboard/recordings', icon: Library },
+      { title: 'Retur', href: '/dashboard/returns', icon: Undo2 },
     ],
   },
   {
-    label: 'Insights',
+    label: 'Insight',
     items: [
-      { title: 'Profit', href: '/dashboard/reports/profit', icon: LineChart },
-      { title: 'Stock value', href: '/dashboard/reports/inventory-value', icon: Coins },
+      { title: 'Laba', href: '/dashboard/reports/profit', icon: LineChart },
+      { title: 'Nilai stok', href: '/dashboard/reports/inventory-value', icon: Coins },
     ],
   },
   {
-    label: 'System',
-    items: [{ title: 'Settings', href: '/settings', icon: Settings }],
+    label: 'Sistem',
+    items: [{ title: 'Pengaturan', href: '/settings', icon: Settings }],
   },
 ];
 

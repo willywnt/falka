@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageThumb } from '@/components/image-thumb';
+import { NumberDelta } from '@/components/number-delta';
 import { StatCard, type StatTone } from '@/components/stat-card';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
@@ -46,7 +47,7 @@ export function InventoryDashboard() {
   if (error || !data) {
     return (
       <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-        {error instanceof Error ? error.message : 'Failed to load the dashboard.'}
+        {error instanceof Error ? error.message : 'Gagal memuat dashboard.'}
       </div>
     );
   }
@@ -63,31 +64,31 @@ export function InventoryDashboard() {
     accentClassName?: string;
   }> = [
     {
-      label: 'Stock value',
+      label: 'Nilai stok',
       value: formatCurrency(summary.totalStockValue),
       icon: Wallet,
       tone: 'primary',
       hint:
         summary.totalReservedUnits > 0 || summary.totalDamagedUnits > 0
           ? [
-              `${summary.totalAvailableUnits} available`,
-              summary.totalReservedUnits > 0 ? `${summary.totalReservedUnits} reserved` : null,
-              summary.totalDamagedUnits > 0 ? `${summary.totalDamagedUnits} damaged` : null,
+              `${summary.totalAvailableUnits} tersedia`,
+              summary.totalReservedUnits > 0 ? `${summary.totalReservedUnits} dipesan` : null,
+              summary.totalDamagedUnits > 0 ? `${summary.totalDamagedUnits} rusak` : null,
             ]
               .filter(Boolean)
               .join(' · ')
-          : `${summary.totalAvailableUnits} units in stock`,
+          : `${summary.totalAvailableUnits} unit dalam stok`,
     },
-    { label: 'Products (SKUs)', value: String(summary.variantCount), icon: Boxes, tone: 'sky' },
+    { label: 'Produk (SKU)', value: String(summary.variantCount), icon: Boxes, tone: 'sky' },
     {
-      label: 'Low stock',
+      label: 'Stok menipis',
       value: String(summary.lowStockCount),
       icon: AlertTriangle,
       tone: 'amber',
       accentClassName: summary.lowStockCount > 0 ? 'text-amber-600' : undefined,
     },
     {
-      label: 'Out of stock',
+      label: 'Stok habis',
       value: String(summary.outOfStockCount),
       icon: PackageX,
       tone: 'rose',
@@ -100,8 +101,8 @@ export function InventoryDashboard() {
       {summary.oversoldCount > 0 ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
           <AlertTriangle className="size-4 shrink-0" />
-          {summary.oversoldCount} item(s) are oversold (stock dropped below zero) — restock or fix
-          the count soon.
+          {summary.oversoldCount} item oversell (stok di bawah nol) — segera restok atau perbaiki
+          jumlahnya.
         </div>
       ) : null}
 
@@ -131,14 +132,14 @@ export function InventoryDashboard() {
             <div>
               <div className="font-medium">
                 {reorder.reorderCount > 0
-                  ? `${reorder.reorderCount} variant(s) need reordering`
-                  : 'No reorders needed right now'}
+                  ? `${reorder.reorderCount} varian perlu direstok`
+                  : 'Tidak ada yang perlu direstok sekarang'}
               </div>
               <div className="text-muted-foreground text-xs">
-                {reorder.urgentCount > 0 ? `${reorder.urgentCount} urgent · ` : ''}
+                {reorder.urgentCount > 0 ? `${reorder.urgentCount} mendesak · ` : ''}
                 {reorder.deadStockCount > 0
-                  ? `${reorder.deadStockCount} dead stock (${formatCurrency(reorder.deadStockValue)})`
-                  : 'View reorder suggestions'}
+                  ? `${reorder.deadStockCount} stok mati (${formatCurrency(reorder.deadStockValue)})`
+                  : 'Lihat saran restok'}
               </div>
             </div>
           </div>
@@ -149,13 +150,13 @@ export function InventoryDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Needs restock</CardTitle>
-            <CardDescription>Lowest available first</CardDescription>
+            <CardTitle className="text-base">Perlu restok</CardTitle>
+            <CardDescription>Stok tersedia paling sedikit di atas</CardDescription>
           </CardHeader>
           <CardContent>
             {lowStock.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                Everything is above its low-stock threshold.
+                Semua masih di atas batas stok menipis.
               </p>
             ) : (
               <div className="space-y-2">
@@ -177,14 +178,14 @@ export function InventoryDashboard() {
                     <div className="text-right">
                       <span
                         className={cn(
-                          'font-medium tabular-nums',
+                          'num font-medium',
                           item.availableStock <= 0 ? 'text-destructive' : 'text-amber-600',
                         )}
                       >
                         {item.availableStock}
                       </span>
                       <div className="text-muted-foreground text-xs">
-                        of {item.lowStockThreshold}
+                        dari {item.lowStockThreshold}
                       </div>
                     </div>
                   </Link>
@@ -197,19 +198,19 @@ export function InventoryDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Recent stock movements</CardTitle>
+              <CardTitle className="text-base">Pergerakan stok terbaru</CardTitle>
               <Link
                 href="/dashboard/inventory/activity"
                 className="text-muted-foreground hover:text-foreground text-xs font-medium"
               >
-                View all →
+                Lihat semua →
               </Link>
             </div>
-            <CardDescription>Latest ledger entries</CardDescription>
+            <CardDescription>Entri ledger terbaru</CardDescription>
           </CardHeader>
           <CardContent>
             {recentMovements.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No stock movements yet.</p>
+              <p className="text-muted-foreground text-sm">Belum ada pergerakan stok.</p>
             ) : (
               <div className="space-y-1">
                 {recentMovements.map((movement) => (
@@ -217,16 +218,8 @@ export function InventoryDashboard() {
                     key={movement.id}
                     className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                   >
-                    <div>
-                      <span
-                        className={cn(
-                          'font-medium tabular-nums',
-                          movement.delta >= 0 ? 'text-emerald-600' : 'text-destructive',
-                        )}
-                      >
-                        {movement.delta >= 0 ? '+' : ''}
-                        {movement.delta}
-                      </span>
+                    <div className="flex items-center">
+                      <NumberDelta value={movement.delta} showZero className="font-medium" />
                       <span className="text-muted-foreground ml-2">
                         {stockReasonLabel(movement.reason)}
                       </span>

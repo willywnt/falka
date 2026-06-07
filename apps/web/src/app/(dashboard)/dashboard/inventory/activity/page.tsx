@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { StockActivity } from '@/modules/inventory/components/stock-activity';
 
 export const metadata: Metadata = {
-  title: 'Stock activity',
+  title: 'Aktivitas stok',
 };
 
 export default function StockActivityPage() {
@@ -17,13 +17,13 @@ export default function StockActivityPage() {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/inventory">
           <ArrowLeft className="size-4" />
-          Back to inventory
+          Kembali ke inventaris
         </Link>
       </Button>
       <PageHeader
-        eyebrow="Inventory"
-        title="Stock activity"
-        description="Every stock change, newest first — search and export the full history."
+        eyebrow="Inventaris"
+        title="Aktivitas stok"
+        description="Setiap perubahan stok, terbaru di atas — cari dan ekspor seluruh riwayatnya."
       />
       <Suspense fallback={null}>
         <StockActivity />

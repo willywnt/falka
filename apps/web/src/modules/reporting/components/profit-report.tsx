@@ -35,13 +35,13 @@ import type {
 } from '../types';
 
 const GROUP_OPTIONS: { value: ProfitPeriodGranularity; label: string }[] = [
-  { value: 'day', label: 'Day' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
+  { value: 'day', label: 'Harian' },
+  { value: 'week', label: 'Mingguan' },
+  { value: 'month', label: 'Bulanan' },
 ];
 
 const CHANNEL_LABELS: Record<string, string> = {
-  POS: 'POS / counter',
+  POS: 'Kasir',
   SHOPEE: 'Shopee',
   TOKOPEDIA: 'Tokopedia',
   LAZADA: 'Lazada',
@@ -99,11 +99,11 @@ function MetricCells({ metrics }: { metrics: ProfitMetrics }) {
 function MetricHeadCells() {
   return (
     <>
-      <TableHead className="text-right">Revenue</TableHead>
-      <TableHead className="text-right">COGS</TableHead>
-      <TableHead className="text-right">Profit</TableHead>
+      <TableHead className="text-right">Omzet</TableHead>
+      <TableHead className="text-right">HPP</TableHead>
+      <TableHead className="text-right">Laba</TableHead>
       <TableHead className="text-right">Margin</TableHead>
-      <TableHead className="text-right">Units</TableHead>
+      <TableHead className="text-right">Unit</TableHead>
     </>
   );
 }
@@ -129,8 +129,8 @@ function SkuTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Variant</TableHead>
-                <TableHead className="text-right">Profit</TableHead>
+                <TableHead>Varian</TableHead>
+                <TableHead className="text-right">Laba</TableHead>
                 <TableHead className="text-right">Margin</TableHead>
               </TableRow>
             </TableHeader>
@@ -168,7 +168,7 @@ export function ProfitReport() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <DateRangePicker value={range} onChange={setRange} placeholder="Last 30 days" />
+          <DateRangePicker value={range} onChange={setRange} placeholder="30 hari terakhir" />
           <div className="flex items-center gap-1">
             {GROUP_OPTIONS.map((option) => (
               <Button
@@ -185,15 +185,14 @@ export function ProfitReport() {
         <Button variant="outline" size="sm" asChild>
           <a href={profitExportUrl(params)} download>
             <Download className="size-4" />
-            Export CSV
+            Ekspor CSV
           </a>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load the profit report.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat laporan laba. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -206,33 +205,33 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
   const { summary, returns } = data;
   const costUnknownHint =
     summary.costUnknownLines > 0
-      ? `${summary.costUnknownLines} line(s) have no cost yet — excluded from margin`
-      : 'All sold lines have a known cost';
+      ? `${summary.costUnknownLines} baris belum ada modal — dikecualikan dari margin`
+      : 'Semua baris terjual sudah ada modalnya';
   const revenueHint =
     returns.lineCount > 0
-      ? `${summary.unitsSold} units · net of ${formatCurrency(returns.refundedRevenue)} returned`
-      : `${summary.unitsSold} units sold`;
+      ? `${summary.unitsSold} unit · bersih dari retur ${formatCurrency(returns.refundedRevenue)}`
+      : `${summary.unitsSold} unit terjual`;
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Net revenue"
+          label="Omzet bersih"
           value={formatCurrency(summary.grossRevenue)}
           icon={Banknote}
           tone="sky"
           hint={revenueHint}
         />
-        <StatCard label="COGS" value={formatCurrency(summary.cogs)} icon={Coins} tone="amber" />
+        <StatCard label="HPP" value={formatCurrency(summary.cogs)} icon={Coins} tone="amber" />
         <StatCard
-          label="Gross profit"
+          label="Laba kotor"
           value={formatCurrency(summary.grossProfit)}
           icon={Wallet}
           tone="emerald"
           accentClassName={Number(summary.grossProfit) < 0 ? 'text-destructive' : undefined}
         />
         <StatCard
-          label="Gross margin"
+          label="Margin kotor"
           value={formatPct(summary.grossMarginPct)}
           icon={Percent}
           tone="violet"
@@ -247,14 +246,14 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">By channel</CardTitle>
+          <CardTitle className="text-base">Per channel</CardTitle>
         </CardHeader>
         <CardContent>
           {data.byChannel.length === 0 ? (
             <EmptyState
               icon={TrendingDown}
-              title="No sales in this range"
-              description="Once POS sales or shipped marketplace orders land in this period, profit shows up here."
+              title="Belum ada penjualan di rentang ini"
+              description="Begitu ada penjualan kasir atau pesanan marketplace yang terkirim di periode ini, labanya muncul di sini."
             />
           ) : (
             <Table>
@@ -280,13 +279,13 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
       {data.byPeriod.length > 0 ? (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">By period</CardTitle>
+            <CardTitle className="text-base">Per periode</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Period</TableHead>
+                  <TableHead>Periode</TableHead>
                   <MetricHeadCells />
                 </TableRow>
               </TableHeader>
@@ -305,14 +304,14 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SkuTable
-          title="Top margin SKUs"
+          title="SKU margin tertinggi"
           rows={data.topSku}
-          emptyHint="No sales with a known cost yet."
+          emptyHint="Belum ada penjualan dengan modal yang diketahui."
         />
         <SkuTable
-          title="Lowest margin SKUs"
+          title="SKU margin terendah"
           rows={data.bottomSku}
-          emptyHint="Not enough variants to rank yet."
+          emptyHint="Belum cukup varian untuk diperingkat."
         />
       </div>
 
@@ -321,19 +320,19 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
           <CardHeader className="pb-3">
             <CardTitle className="text-destructive flex items-center gap-2 text-base">
               <TrendingDown className="size-4" />
-              Sold below cost
+              Terjual di bawah modal
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Variant</TableHead>
+                  <TableHead>Varian</TableHead>
                   <TableHead>Channel</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  <TableHead className="text-right">Loss/unit</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
+                  <TableHead className="text-right">Harga</TableHead>
+                  <TableHead className="text-right">Modal</TableHead>
+                  <TableHead className="text-right">Rugi/unit</TableHead>
+                  <TableHead className="text-right">Unit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

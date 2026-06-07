@@ -47,13 +47,13 @@ export function WriteOffDamagedDialog({
     if (!isValid) return;
     try {
       await dispose.mutateAsync({ quantity: parsed, note: note.trim() || undefined });
-      toast.success('Damaged stock written off', {
-        description: `Wrote off ${parsed} unit(s).`,
+      toast.success('Stok rusak dihapus', {
+        description: `Menghapus ${parsed} unit.`,
       });
       onOpenChange(false);
     } catch (error) {
-      toast.error('Write-off failed', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Penghapusan gagal', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -62,18 +62,18 @@ export function WriteOffDamagedDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Write off damaged stock</DialogTitle>
+          <DialogTitle>Hapus stok rusak</DialogTitle>
           <DialogDescription>{variantLabel}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm">
-            <span className="text-muted-foreground">In the damaged bucket</span>
-            <span className="font-semibold tabular-nums">{damagedStock}</span>
+            <span className="text-muted-foreground">Stok rusak saat ini</span>
+            <span className="num font-semibold">{damagedStock}</span>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="writeoff-qty">Quantity to dispose</Label>
+            <Label htmlFor="writeoff-qty">Jumlah yang dibuang</Label>
             <Input
               id="writeoff-qty"
               type="number"
@@ -84,16 +84,16 @@ export function WriteOffDamagedDialog({
               onChange={(event) => setQuantity(event.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              Removes from the damaged bucket only — available stock is unchanged.
+              Hanya mengurangi stok rusak — stok tersedia tidak berubah.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="writeoff-note">Note (optional)</Label>
+            <Label htmlFor="writeoff-note">Catatan (opsional)</Label>
             <Textarea
               id="writeoff-note"
               rows={2}
-              placeholder="e.g. binned, beyond repair"
+              placeholder="mis. dibuang, tidak bisa diperbaiki"
               value={note}
               maxLength={500}
               onChange={(event) => setNote(event.target.value)}
@@ -107,7 +107,7 @@ export function WriteOffDamagedDialog({
             onClick={() => onOpenChange(false)}
             disabled={dispose.isPending}
           >
-            Cancel
+            Batal
           </Button>
           <Button
             variant="destructive"
@@ -115,7 +115,7 @@ export function WriteOffDamagedDialog({
             disabled={!isValid || dispose.isPending}
           >
             <Trash2 className="size-4" />
-            {dispose.isPending ? 'Writing off...' : 'Write off'}
+            {dispose.isPending ? 'Menghapus...' : 'Hapus'}
           </Button>
         </DialogFooter>
       </DialogContent>

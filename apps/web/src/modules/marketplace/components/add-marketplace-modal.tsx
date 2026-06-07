@@ -65,14 +65,15 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         ...values,
         refreshToken: values.refreshToken?.trim() || undefined,
       });
-      toast.success('Marketplace connected', {
-        description: `${values.shopName} is ready for future sync workflows.`,
+      toast.success('Toko marketplace terhubung', {
+        description: `${values.shopName} siap untuk alur sinkron berikutnya.`,
       });
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      toast.error('Connection failed', {
-        description: error instanceof Error ? error.message : 'Unable to connect marketplace store.',
+      toast.error('Gagal menghubungkan', {
+        description:
+          error instanceof Error ? error.message : 'Tidak bisa menghubungkan toko marketplace.',
       });
     }
   }
@@ -87,10 +88,10 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
     >
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Connect marketplace store</DialogTitle>
+          <DialogTitle>Hubungkan toko marketplace</DialogTitle>
           <DialogDescription>
-            Simulate a provider connection for now. OAuth integration will replace manual token entry
-            later.
+            Untuk sekarang koneksi provider masih simulasi. Integrasi OAuth akan menggantikan input
+            token manual nanti.
           </DialogDescription>
         </DialogHeader>
 
@@ -133,7 +134,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
                 name="shopId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shop ID</FormLabel>
+                    <FormLabel>ID Toko</FormLabel>
                     <FormControl>
                       <Input placeholder="123456789" autoComplete="off" {...field} />
                     </FormControl>
@@ -147,9 +148,9 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
                 name="shopName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shop name</FormLabel>
+                    <FormLabel>Nama toko</FormLabel>
                     <FormControl>
-                      <Input placeholder="My Shopee Store" autoComplete="off" {...field} />
+                      <Input placeholder="Toko Shopee Saya" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,12 +167,14 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Simulated OAuth access token"
+                      placeholder="Access token OAuth (simulasi)"
                       autoComplete="off"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>Encrypted before storage. Never sent back to the browser.</FormDescription>
+                  <FormDescription>
+                    Dienkripsi sebelum disimpan. Tidak pernah dikirim balik ke browser.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -182,11 +185,11 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
               name="refreshToken"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Refresh token (optional)</FormLabel>
+                  <FormLabel>Refresh token (opsional)</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Simulated refresh token"
+                      placeholder="Refresh token (simulasi)"
                       autoComplete="off"
                       {...field}
                     />
@@ -201,7 +204,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
               name="expiresAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Token expiry (optional)</FormLabel>
+                  <FormLabel>Masa berlaku token (opsional)</FormLabel>
                   <FormControl>
                     <Input
                       type="datetime-local"
@@ -223,10 +226,10 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Batal
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Connecting...' : 'Connect store'}
+                {createMutation.isPending ? 'Menghubungkan...' : 'Hubungkan toko'}
               </Button>
             </DialogFooter>
           </form>

@@ -116,7 +116,7 @@ export function StockActivity() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search SKU or variant..."
+          placeholder="Cari SKU atau varian..."
           className="h-9 w-full sm:max-w-xs"
         />
 
@@ -124,9 +124,9 @@ export function StockActivity() {
           className="w-40"
           value={filters.reason}
           onChange={(event) => setFilters({ reason: event.target.value, page: '1' })}
-          aria-label="Filter by reason"
+          aria-label="Saring berdasarkan alasan"
         >
-          <option value="">All reasons</option>
+          <option value="">Semua alasan</option>
           {REASONS.map((reason) => (
             <option key={reason} value={reason}>
               {stockReasonLabel(reason)}
@@ -138,9 +138,9 @@ export function StockActivity() {
           className="w-36"
           value={filters.source}
           onChange={(event) => setFilters({ source: event.target.value, page: '1' })}
-          aria-label="Filter by source"
+          aria-label="Saring berdasarkan sumber"
         >
-          <option value="">All sources</option>
+          <option value="">Semua sumber</option>
           {SOURCES.map((source) => (
             <option key={source} value={source}>
               {source}
@@ -152,11 +152,11 @@ export function StockActivity() {
           className="w-32"
           value={filters.direction}
           onChange={(event) => setFilters({ direction: event.target.value, page: '1' })}
-          aria-label="Filter by direction"
+          aria-label="Saring berdasarkan arah"
         >
-          <option value="">In &amp; out</option>
-          <option value="in">In (+)</option>
-          <option value="out">Out (−)</option>
+          <option value="">Masuk &amp; keluar</option>
+          <option value="in">Masuk (+)</option>
+          <option value="out">Keluar (−)</option>
         </Select>
 
         <DateRangePicker
@@ -180,14 +180,14 @@ export function StockActivity() {
         <Button asChild variant="outline" size="sm" className="ml-auto">
           <a href={buildExportHref(filters)}>
             <Download className="size-4" />
-            Export CSV
+            Ekspor CSV
           </a>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load activity. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat aktivitas. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -200,9 +200,11 @@ export function StockActivity() {
       ) : isEmpty ? (
         <EmptyState
           icon={ScrollText}
-          title="No stock activity"
+          title="Belum ada aktivitas stok"
           description={
-            isFiltered ? 'No movements match these filters.' : 'Stock changes will show up here.'
+            isFiltered
+              ? 'Tidak ada pergerakan yang cocok dengan saringan ini.'
+              : 'Perubahan stok akan muncul di sini.'
           }
         />
       ) : (
@@ -211,13 +213,13 @@ export function StockActivity() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date &amp; time</TableHead>
-                  <TableHead>Product / variant</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="text-right">Change</TableHead>
-                  <TableHead className="text-right">Balance after</TableHead>
-                  <TableHead>Note / reference</TableHead>
+                  <TableHead>Tanggal &amp; waktu</TableHead>
+                  <TableHead>Produk / varian</TableHead>
+                  <TableHead>Alasan</TableHead>
+                  <TableHead>Sumber</TableHead>
+                  <TableHead className="text-right">Perubahan</TableHead>
+                  <TableHead className="text-right">Saldo akhir</TableHead>
+                  <TableHead>Catatan / referensi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -278,7 +280,7 @@ export function StockActivity() {
 
           <div className="flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
-              {totalPages > 0 ? `Page ${page} of ${totalPages}` : null} · {total} entries
+              {totalPages > 0 ? `Halaman ${page} dari ${totalPages}` : null} · {total} entri
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -288,7 +290,7 @@ export function StockActivity() {
                 onClick={() => setFilters({ page: String(page - 1) })}
               >
                 <ChevronLeft className="size-4" />
-                Prev
+                Sebelumnya
               </Button>
               <Button
                 variant="outline"
@@ -296,7 +298,7 @@ export function StockActivity() {
                 disabled={!hasNext}
                 onClick={() => setFilters({ page: String(page + 1) })}
               >
-                Next
+                Berikutnya
                 <ChevronRight className="size-4" />
               </Button>
             </div>

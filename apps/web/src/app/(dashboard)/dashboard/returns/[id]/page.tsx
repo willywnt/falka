@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { ReturnDetail } from '@/modules/returns/components/return-detail';
 
 export const metadata: Metadata = {
-  title: 'Return',
+  title: 'Retur',
 };
 
 export default async function ReturnDetailPage({ params }: { params: Promise<{ id: string }> }) {

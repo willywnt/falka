@@ -143,9 +143,9 @@ export function RecordingPanel() {
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div>
-              <CardTitle>Webcam recording</CardTitle>
+              <CardTitle>Rekaman webcam</CardTitle>
               <CardDescription>
-                Enter a tracking number (resi), then record and upload to storage.
+                Masukkan no. resi, lalu rekam dan unggah ke penyimpanan.
               </CardDescription>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -164,8 +164,8 @@ export function RecordingPanel() {
 
             {anotherTabRecording ? (
               <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
-                Recording is already active in another tab. Close that tab or wait for its session
-                to finish before starting here.
+                Rekaman sudah aktif di tab lain. Tutup tab itu atau tunggu sesinya selesai sebelum
+                mulai di sini.
               </div>
             ) : null}
 
@@ -174,10 +174,10 @@ export function RecordingPanel() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="noResi">Tracking number (resi)</Label>
+                  <Label htmlFor="noResi">No. resi</Label>
                   <Input
                     id="noResi"
-                    placeholder="Enter resi number"
+                    placeholder="Masukkan no. resi"
                     value={noResi}
                     onChange={(event) => setNoResi(event.target.value)}
                     disabled={isBusy}
@@ -189,7 +189,7 @@ export function RecordingPanel() {
 
                 {showCameraPicker ? (
                   <div className="space-y-2">
-                    <Label>Camera</Label>
+                    <Label>Kamera</Label>
                     <div className="flex flex-wrap gap-2">
                       {devices.map((device) => (
                         <Button
@@ -213,7 +213,7 @@ export function RecordingPanel() {
                 {status === 'UPLOADING' ? (
                   <UploadProgressBar
                     progress={uploadProgress}
-                    label="Uploading recording"
+                    label="Mengunggah rekaman"
                     metrics={uploadMetrics}
                   />
                 ) : null}
@@ -225,7 +225,7 @@ export function RecordingPanel() {
                       <p className="font-medium">{error}</p>
                       {isPermissionDenied ? (
                         <p className="mt-1">
-                          Check browser camera permissions, then click Retry camera.
+                          Cek izin kamera di browser, lalu klik Coba lagi kamera.
                         </p>
                       ) : null}
                     </div>
@@ -236,12 +236,14 @@ export function RecordingPanel() {
                   <div className="border-primary/30 bg-primary/5 flex gap-3 rounded-lg border p-3 text-sm">
                     <CheckCircle2 className="text-primary mt-0.5 size-4 shrink-0" />
                     <div>
-                      <p className="font-medium">Recording saved for {completedRecording.noResi}</p>
+                      <p className="font-medium">
+                        Rekaman tersimpan untuk {completedRecording.noResi}
+                      </p>
                       <Button variant="link" className="h-auto p-0" asChild>
                         <Link
                           href={`/dashboard/recordings?search=${encodeURIComponent(completedRecording.noResi)}`}
                         >
-                          View recording in library
+                          Lihat rekaman di pustaka
                         </Link>
                       </Button>
                     </div>
@@ -278,17 +280,17 @@ export function RecordingPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Duplicate tracking number</AlertDialogTitle>
+            <AlertDialogTitle>No. resi duplikat</AlertDialogTitle>
             <AlertDialogDescription>
               {scannerDuplicateWarning
-                ? `${scannerDuplicateWarning.noResi} was recorded in the last 24 hours. Start recording anyway?`
+                ? `${scannerDuplicateWarning.noResi} sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?`
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={clearScannerDuplicateWarning}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={clearScannerDuplicateWarning}>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={confirmScannerDuplicateAndCountdown}>
-              Continue
+              Lanjutkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -300,15 +302,15 @@ export function RecordingPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Recently recorded tracking number</AlertDialogTitle>
+            <AlertDialogTitle>No. resi baru saja direkam</AlertDialogTitle>
             <AlertDialogDescription>
               {duplicateWarning
-                ? `Tracking number ${duplicateWarning.noResi} was recorded recently. Continue anyway?`
+                ? `No. resi ${duplicateWarning.noResi} baru saja direkam. Tetap lanjutkan?`
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={clearDuplicateWarning}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={clearDuplicateWarning}>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 clearDuplicateWarning();
@@ -318,7 +320,7 @@ export function RecordingPanel() {
                 }
               }}
             >
-              Continue anyway
+              Tetap lanjutkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

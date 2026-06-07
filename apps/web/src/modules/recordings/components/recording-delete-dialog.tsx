@@ -28,14 +28,14 @@ export function RecordingDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete recording?</AlertDialogTitle>
+          <AlertDialogTitle>Hapus rekaman?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove <span className="font-medium">{noResi}</span> from your library. The
-            storage file is kept for now and can be cleaned up later.
+            Ini akan menghapus <span className="font-medium">{noResi}</span> dari pustaka kamu. File
+            di penyimpanan tetap disimpan dulu dan bisa dibersihkan nanti.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
           <AlertDialogAction
             disabled={isDeleting}
             onClick={(event) => {
@@ -44,7 +44,7 @@ export function RecordingDeleteDialog({
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'Deleting...' : 'Delete recording'}
+            {isDeleting ? 'Menghapus...' : 'Hapus rekaman'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

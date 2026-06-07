@@ -40,11 +40,11 @@ export function MarketplaceTable({
         <TableHeader>
           <TableRow>
             <TableHead>Provider</TableHead>
-            <TableHead>Shop</TableHead>
+            <TableHead>Toko</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Token expiry</TableHead>
-            <TableHead>Connected</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Masa berlaku token</TableHead>
+            <TableHead>Terhubung</TableHead>
+            <TableHead className="text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -79,7 +79,7 @@ export function MarketplaceTable({
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon">
                       <MoreHorizontal className="size-4" />
-                      <span className="sr-only">Open actions</span>
+                      <span className="sr-only">Buka aksi</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -89,7 +89,7 @@ export function MarketplaceTable({
                       onClick={() => onDisconnect(connection)}
                     >
                       <Unplug className="size-4" />
-                      Disconnect
+                      Putuskan koneksi
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

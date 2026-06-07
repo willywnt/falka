@@ -26,10 +26,10 @@ import { useReturnsQuery } from '../hooks/use-returns';
 import { ReturnStatusBadge } from './return-status-badge';
 
 const FILTERS: ReadonlyArray<{ label: string; value: ReturnStatus | 'ALL' }> = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Awaiting goods', value: 'PENDING' },
-  { label: 'Received', value: 'RECEIVED' },
-  { label: 'Rejected', value: 'REJECTED' },
+  { label: 'Semua', value: 'ALL' },
+  { label: 'Menunggu barang', value: 'PENDING' },
+  { label: 'Diterima', value: 'RECEIVED' },
+  { label: 'Ditolak', value: 'REJECTED' },
 ];
 
 export function ReturnsDashboard() {
@@ -68,7 +68,7 @@ export function ReturnsDashboard() {
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load returns. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat retur. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -81,8 +81,8 @@ export function ReturnsDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Undo2}
-          title="No returns"
-          description="Returns open automatically when a shipped order is cancelled, or you can open one from an order."
+          title="Belum ada retur"
+          description="Retur terbuka otomatis saat pesanan yang sudah terkirim dibatalkan, atau kamu bisa membukanya dari sebuah pesanan."
         />
       ) : (
         <div className="space-y-3">
@@ -90,11 +90,11 @@ export function ReturnsDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order</TableHead>
+                  <TableHead>Pesanan</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Items</TableHead>
-                  <TableHead>Opened</TableHead>
-                  <TableHead>Processed</TableHead>
+                  <TableHead className="text-right">Item</TableHead>
+                  <TableHead>Dibuka</TableHead>
+                  <TableHead>Diproses</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -109,13 +109,13 @@ export function ReturnsDashboard() {
                       </Link>
                       <div className="text-muted-foreground text-xs">
                         {ret.shopName}
-                        {ret.autoDetected ? ' · auto' : ''}
+                        {ret.autoDetected ? ' · otomatis' : ''}
                       </div>
                     </TableCell>
                     <TableCell>
                       <ReturnStatusBadge status={ret.status} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{ret.itemCount}</TableCell>
+                    <TableCell className="num text-right">{ret.itemCount}</TableCell>
                     <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                       <span suppressHydrationWarning>{formatDateTime(ret.createdAt)}</span>
                     </TableCell>
@@ -124,7 +124,7 @@ export function ReturnsDashboard() {
                         <span suppressHydrationWarning>{formatDateTime(ret.processedAt)}</span>
                       ) : (
                         <Badge variant="outline" className={cn('border-amber-500 text-amber-600')}>
-                          pending
+                          menunggu
                         </Badge>
                       )}
                     </TableCell>
