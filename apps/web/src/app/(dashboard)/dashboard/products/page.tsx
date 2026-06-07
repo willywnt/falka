@@ -14,7 +14,7 @@ export default function ProductsPage() {
       <PageHeader
         eyebrow="Katalog"
         title="Produk"
-        description="Katalog produk kamu — daftar utama semua item yang kamu jual."
+        description="Katalog produk kamu — semua item yang kamu jual ada di sini."
       />
       <Suspense fallback={null}>
         <ProductsDashboard />

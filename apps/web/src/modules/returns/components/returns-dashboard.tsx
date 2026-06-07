@@ -82,7 +82,7 @@ export function ReturnsDashboard() {
         <EmptyState
           icon={Undo2}
           title="Belum ada retur"
-          description="Retur terbuka otomatis saat pesanan yang sudah terkirim dibatalkan, atau kamu bisa membukanya dari sebuah pesanan."
+          description="Retur terbuka otomatis kalau pesanan yang sudah dikirim dibatalkan, atau kamu bisa buka sendiri dari halaman pesanan."
         />
       ) : (
         <div className="space-y-3">

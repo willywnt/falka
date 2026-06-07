@@ -35,9 +35,9 @@ export function DisconnectMarketplaceDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Putuskan koneksi toko marketplace?</AlertDialogTitle>
           <AlertDialogDescription>
-            Ini akan menonaktifkan <span className="font-medium">{connection.shopName}</span> (
-            {getMarketplaceProviderLabel(connection.provider)}). Kredensial tetap terenkripsi di
-            akun kamu dan bisa dihubungkan lagi nanti.
+            <span className="font-medium">{connection.shopName}</span> (
+            {getMarketplaceProviderLabel(connection.provider)}) akan dinonaktifkan. Kredensialnya
+            tetap tersimpan terenkripsi di akunmu, jadi bisa dihubungkan lagi kapan saja.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

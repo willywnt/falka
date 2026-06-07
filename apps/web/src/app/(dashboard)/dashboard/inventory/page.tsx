@@ -17,7 +17,7 @@ export default function InventoryPage() {
       <PageHeader
         eyebrow="Katalog"
         title="Inventaris"
-        description="Berapa banyak stok tiap item kamu, selalu sinkron di semua channel penjualan."
+        description="Sisa stok tiap item kamu, selalu sync di semua channel penjualan."
       >
         <Button asChild variant="outline">
           <Link href="/dashboard/inventory/activity">

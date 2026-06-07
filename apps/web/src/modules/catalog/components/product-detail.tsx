@@ -208,7 +208,7 @@ export function ProductDetail({
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/products">
           <ArrowLeft className="size-4" />
-          Back to products
+          Kembali ke produk
         </Link>
       </Button>
 

@@ -184,13 +184,13 @@ export function ReorderReport() {
                 <TableHead className="text-right">
                   <HeadWithHint
                     label="MOQ"
-                    hint="Minimum order quantity: jumlah terkecil yang diterima pemasok per pesanan."
+                    hint="Minimum order quantity: jumlah paling sedikit yang mau diterima supplier per pesanan."
                   />
                 </TableHead>
                 <TableHead className="text-right">
                   <HeadWithHint
                     label="Restok"
-                    hint="Saran jumlah yang dibeli: cukup untuk menutup lead time plus target hari ketahanan, dan minimal sesuai MOQ pemasok."
+                    hint="Saran jumlah yang dibeli: cukup buat nutup lead time plus target hari ketahanan, dan minimal sesuai MOQ supplier."
                   />
                 </TableHead>
                 <TableHead className="text-right">Status</TableHead>

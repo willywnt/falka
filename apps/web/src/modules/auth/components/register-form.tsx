@@ -61,8 +61,7 @@ export function RegisterForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Nama tampilan{' '}
-                  <span className="text-muted-foreground font-normal">(opsional)</span>
+                  Nama <span className="text-muted-foreground font-normal">(opsional)</span>
                 </FormLabel>
                 <FormControl>
                   <Input placeholder="Nama kamu" autoComplete="name" {...field} />

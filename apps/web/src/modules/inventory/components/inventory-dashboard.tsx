@@ -151,7 +151,7 @@ export function InventoryDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Perlu restok</CardTitle>
-            <CardDescription>Stok tersedia paling sedikit di atas</CardDescription>
+            <CardDescription>Stok yang paling sedikit di urutan atas</CardDescription>
           </CardHeader>
           <CardContent>
             {lowStock.length === 0 ? (
@@ -206,7 +206,7 @@ export function InventoryDashboard() {
                 Lihat semua →
               </Link>
             </div>
-            <CardDescription>Entri ledger terbaru</CardDescription>
+            <CardDescription>Perubahan stok terbaru</CardDescription>
           </CardHeader>
           <CardContent>
             {recentMovements.length === 0 ? (

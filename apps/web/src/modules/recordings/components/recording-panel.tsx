@@ -145,7 +145,7 @@ export function RecordingPanel() {
             <div>
               <CardTitle>Rekaman webcam</CardTitle>
               <CardDescription>
-                Masukkan no. resi, lalu rekam dan unggah ke penyimpanan.
+                Masukkan no. resi, lalu rekam dan upload ke penyimpanan.
               </CardDescription>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -164,8 +164,8 @@ export function RecordingPanel() {
 
             {anotherTabRecording ? (
               <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
-                Rekaman sudah aktif di tab lain. Tutup tab itu atau tunggu sesinya selesai sebelum
-                mulai di sini.
+                Lagi ada rekaman aktif di tab lain. Tutup tab itu dulu atau tunggu sampai selesai
+                sebelum mulai rekam di sini.
               </div>
             ) : null}
 
@@ -213,7 +213,7 @@ export function RecordingPanel() {
                 {status === 'UPLOADING' ? (
                   <UploadProgressBar
                     progress={uploadProgress}
-                    label="Mengunggah rekaman"
+                    label="Mengupload rekaman"
                     metrics={uploadMetrics}
                   />
                 ) : null}
@@ -243,7 +243,7 @@ export function RecordingPanel() {
                         <Link
                           href={`/dashboard/recordings?search=${encodeURIComponent(completedRecording.noResi)}`}
                         >
-                          Lihat rekaman di pustaka
+                          Lihat di daftar rekaman
                         </Link>
                       </Button>
                     </div>

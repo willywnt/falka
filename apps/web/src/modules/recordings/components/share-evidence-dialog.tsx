@@ -50,8 +50,8 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
       const result = await createMutation.mutateAsync(expiresInHours);
       setCreatedUrl(result.shareUrl);
       setCopied(false);
-      toast.success('Link bagikan dibuat', {
-        description: 'Salin sekarang — tempel ke komplain.',
+      toast.success('Link berhasil dibuat', {
+        description: 'Salin sekarang, lalu tempel ke komplain.',
       });
     } catch (error) {
       toast.error('Gagal membuat link', {
@@ -119,7 +119,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
         {createdUrl ? (
           <div className="border-primary/30 bg-primary/5 space-y-2 rounded-lg border p-3">
             <p className="text-xs font-medium">
-              Siapa pun yang punya link ini bisa melihat video packing sampai kedaluwarsa.
+              Siapa pun yang pegang link ini bisa lihat video packing sampai masa berlakunya habis.
             </p>
             <div className="flex items-center gap-2">
               <Input readOnly value={createdUrl} className="h-9 font-mono text-xs" />
@@ -139,7 +139,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
         {linksQuery.isLoading ? (
           <p className="text-muted-foreground text-sm">Memuat…</p>
         ) : links.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Belum ada link bagikan.</p>
+          <p className="text-muted-foreground text-sm">Belum ada link.</p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {links.map((link) => {
@@ -194,8 +194,9 @@ export function ShareEvidenceDialog({ recording, open, onOpenChange }: ShareEvid
         <DialogHeader>
           <DialogTitle>Bagikan bukti packing</DialogTitle>
           <DialogDescription>
-            Buat link ke video packing yang bisa kedaluwarsa dan dicabut — tempel ke komplain
-            pembeli atau marketplace. Tanpa perlu login untuk melihatnya.
+            Buat link video packing buat dikirim ke pembeli atau marketplace pas ada komplain.
+            Pembeli bisa lihat tanpa perlu login, dan link bisa kamu atur masa berlakunya atau
+            dicabut kapan aja.
           </DialogDescription>
         </DialogHeader>
         {recording ? (

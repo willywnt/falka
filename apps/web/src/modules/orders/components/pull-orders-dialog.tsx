@@ -58,12 +58,12 @@ export function PullOrdersDialog({
         ids.length === activeStores.length ? undefined : ids,
       );
       const parts = [`${result.pulled} pesanan dari ${result.storesPulled} toko`];
-      if (result.applied > 0) parts.push(`${result.applied} dipesan`);
-      if (result.shipped > 0) parts.push(`${result.shipped} terkirim`);
-      if (result.reverted > 0) parts.push(`${result.reverted} direstok (dibatalkan)`);
+      if (result.applied > 0) parts.push(`${result.applied} stok dipesan`);
+      if (result.shipped > 0) parts.push(`${result.shipped} dikirim`);
+      if (result.reverted > 0) parts.push(`${result.reverted} direstok (batal)`);
       toast.success('Pesanan ditarik', { description: parts.join(' · ') });
       if (result.storesSkipped.length > 0) {
-        toast.info(`Dilewati (baru ditarik): ${result.storesSkipped.join(', ')}`);
+        toast.info(`Dilewati (baru aja ditarik): ${result.storesSkipped.join(', ')}`);
       }
       onOpenChange(false);
     } catch (error) {

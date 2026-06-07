@@ -56,7 +56,7 @@ export default async function SharedRecordingPage({ params }: { params: Promise<
 
             <div className="text-muted-foreground border-t p-4 text-xs">
               Tautan ini berlaku sampai {formatDateTime(view.expiresAt)}. Dibagikan sebagai bukti
-              sengketa — mohon jangan disebarluaskan.
+              sengketa — tolong jangan disebar ke umum.
             </div>
           </div>
         ) : (

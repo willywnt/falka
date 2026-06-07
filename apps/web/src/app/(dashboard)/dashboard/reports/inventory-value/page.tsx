@@ -13,7 +13,7 @@ export default function InventoryValuationPage() {
       <PageHeader
         eyebrow="Insight"
         title="Nilai stok"
-        description="Nilai inventaris di tangan dihitung dari modal — lihat di mana modal kamu tertahan."
+        description="Nilai stok yang ada sekarang, dihitung dari modal — lihat di mana modal kamu tertahan."
       />
       <InventoryValuationReport />
     </div>

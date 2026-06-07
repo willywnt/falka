@@ -57,8 +57,8 @@ export function OrdersDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={ShoppingCart}
-          title="Belum ada pesanan — tarik dari toko kamu untuk mulai"
-          description="Tarik pesanan dari toko yang terhubung untuk membawanya ke stok."
+          title="Belum ada pesanan — tarik dari toko kamu dulu"
+          description="Tarik pesanan dari toko yang terhubung biar stoknya ikut kekelola di sini."
           action={
             <Button onClick={() => setPullOpen(true)}>
               <DownloadCloud className="size-4" />
@@ -114,10 +114,10 @@ export function OrdersDashboard() {
                     </TableCell>
                     <TableCell>
                       {order.inventoryApplied ? (
-                        <Badge variant="secondary">Diterapkan</Badge>
+                        <Badge variant="secondary">Sudah dipotong</Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">
-                          {order.status === 'PAID' ? 'belum diterapkan' : '—'}
+                          {order.status === 'PAID' ? 'belum dipotong' : '—'}
                         </span>
                       )}
                     </TableCell>

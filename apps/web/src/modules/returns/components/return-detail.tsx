@@ -60,7 +60,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
       toast.success('Retur diproses', { description: 'Stok sudah diperbarui.' });
     } catch (err) {
       toast.error('Gagal memproses retur', {
-        description: err instanceof Error ? err.message : 'Kesalahan tidak diketahui',
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan.',
       });
     }
   }
@@ -71,7 +71,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
       toast.success('Retur ditolak', { description: 'Ditutup tanpa restok.' });
     } catch (err) {
       toast.error('Gagal menolak retur', {
-        description: err instanceof Error ? err.message : 'Kesalahan tidak diketahui',
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan.',
       });
     }
   }
@@ -178,7 +178,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => void handleProcess()} disabled={busy}>
                 <PackageCheck className="size-4" />
-                {processMutation.isPending ? 'Memproses...' : 'Terima & terapkan stok'}
+                {processMutation.isPending ? 'Memproses...' : 'Terima & update stok'}
               </Button>
               <Button variant="outline" onClick={() => void handleReject()} disabled={busy}>
                 <XCircle className="size-4" />

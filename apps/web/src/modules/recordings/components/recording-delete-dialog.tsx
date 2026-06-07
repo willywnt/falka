@@ -30,8 +30,8 @@ export function RecordingDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Hapus rekaman?</AlertDialogTitle>
           <AlertDialogDescription>
-            Ini akan menghapus <span className="font-medium">{noResi}</span> dari pustaka kamu. File
-            di penyimpanan tetap disimpan dulu dan bisa dibersihkan nanti.
+            <span className="font-medium">{noResi}</span> bakal dihapus dari daftar rekaman kamu.
+            File aslinya masih disimpan dulu dan bisa dibersihkan nanti.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

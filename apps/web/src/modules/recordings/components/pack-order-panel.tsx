@@ -29,7 +29,7 @@ export function PackOrderPanel({ noResi }: { noResi: string }) {
   if (!order) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed p-3 text-xs">
-        Tidak ada pesanan yang cocok untuk resi ini — rekaman tetap akan disimpan.
+        Nggak ada pesanan yang cocok sama resi ini — rekamannya tetap disimpan kok.
       </div>
     );
   }
@@ -63,11 +63,13 @@ export function PackOrderPanel({ noResi }: { noResi: string }) {
       </ul>
       {order.unresolvedCount > 0 ? (
         <p className="text-xs text-amber-600">
-          {order.unresolvedCount} item belum dicocokkan ke produk.
+          {order.unresolvedCount} item belum dicocokkan ke produk kamu.
         </p>
       ) : null}
       {order.fulfilledAt ? (
-        <p className="text-xs text-emerald-600">Sudah selesai dikemas — ini menambah video lagi.</p>
+        <p className="text-xs text-emerald-600">
+          Pesanan ini sudah pernah dikemas — ini nambah video lagi.
+        </p>
       ) : null}
     </div>
   );

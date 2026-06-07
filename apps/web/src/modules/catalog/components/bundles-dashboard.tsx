@@ -168,7 +168,7 @@ export function BundlesDashboard() {
           description={
             isFiltered
               ? 'Coba pencarian atau filter lain.'
-              : 'Bundel dijual sebagai paket dan mengurangi stok komponennya — bundel tidak menyimpan stok sendiri. Buat satu untuk mulai.'
+              : 'Bundel itu paket jualan yang stoknya ikut varian komponen — tidak punya stok sendiri. Buat bundel pertama kamu untuk mulai.'
           }
           action={
             isFiltered ? undefined : (

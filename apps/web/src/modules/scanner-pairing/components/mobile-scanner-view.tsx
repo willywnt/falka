@@ -106,7 +106,7 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
       <CenteredMessage
         icon={<ScanLine className="text-muted-foreground size-10" />}
         title="Link tidak valid"
-        description="Pindai kode QR yang ditampilkan di desktop untuk memasangkan ponsel ini."
+        description="Scan QR yang muncul di desktop buat masangin ponsel ini."
       />
     );
   }
@@ -115,8 +115,8 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
     return (
       <CenteredMessage
         icon={<Loader2 className="text-primary size-10 animate-spin" />}
-        title="Sedang masuk"
-        description="Memakai akun stasiun desktop kamu…"
+        title="Lagi masuk"
+        description="Pakai akun desktop kamu…"
       />
     );
   }
@@ -129,8 +129,8 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
         description={
           claimError ??
           (pairingCode
-            ? 'Pindai kode QR baru dari desktop, atau masuk manual.'
-            : 'Link ini tidak punya kode. Masuk atau pindai QR baru dari desktop.')
+            ? 'Scan QR baru dari desktop, atau masuk manual.'
+            : 'Link ini nggak ada kodenya. Masuk atau scan QR baru dari desktop.')
         }
         action={
           <div className="flex w-full max-w-xs flex-col gap-2">
@@ -188,13 +188,13 @@ export function MobileScannerView({ pairingId, pairingCode, loginHref }: MobileS
       ? 'Memulai…'
       : stationPhase === 'recording'
         ? 'Merekam'
-        : 'Mengunggah'
+        : 'Mengupload'
     : isReady
       ? 'Siap'
       : isReconnecting
         ? 'Menyambung kembali…'
         : isSessionConnected
-          ? 'Menautkan…'
+          ? 'Menyambungkan…'
           : 'Offline';
 
   const statusClass = stationBusy

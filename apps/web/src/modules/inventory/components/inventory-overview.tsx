@@ -182,7 +182,7 @@ export function InventoryOverview() {
                   </TableCell>
                   <TableCell className="num text-right whitespace-nowrap">
                     {item.incomingStock > 0 ? (
-                      <span className="text-sky-600" title="Sedang dipesan dari pemasok">
+                      <span className="text-sky-600" title="Lagi dipesan ke supplier">
                         {item.incomingStock}
                       </span>
                     ) : (

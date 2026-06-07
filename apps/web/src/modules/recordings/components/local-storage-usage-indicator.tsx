@@ -31,15 +31,14 @@ export function LocalStorageUsageIndicator() {
       className={`rounded-lg border px-4 py-3 text-sm ${quotaWarning ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-muted/30'}`}
     >
       <p>
-        Unggahan tertunda memakai{' '}
+        Upload yang tertunda makan{' '}
         <span className="font-medium">{formatRecoveryFileSize(totalBytes)}</span> penyimpanan lokal
         <span className="text-muted-foreground"> · {temporaryRecordings.length} item</span>
       </p>
       {quotaWarning ? (
         <p className="mt-2 flex items-start gap-2 text-amber-900 dark:text-amber-100">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          Penyimpanan lokal hampir penuh. Unggah atau buang rekaman tertunda untuk mengosongkan
-          ruang.
+          Penyimpanan lokal hampir penuh. Upload atau buang rekaman yang tertunda biar lega lagi.
         </p>
       ) : null}
     </div>

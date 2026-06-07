@@ -16,18 +16,18 @@ import { Button } from '@/components/ui/button';
 const FEATURES = [
   {
     icon: Boxes,
-    title: 'Satu hitungan stok yang akurat',
-    text: 'Satu angka stok yang tepat di balik setiap toko — nggak perlu nebak-nebak lagi.',
+    title: 'Stok selalu akurat',
+    text: 'Satu angka stok yang benar untuk semua toko kamu — nggak perlu nebak-nebak lagi.',
   },
   {
     icon: RefreshCw,
-    title: 'Sinkron di semua toko',
-    text: 'Cocokkan listing sekali, lalu stok tetap sinkron di Shopee, Tokopedia, dan lainnya.',
+    title: 'Sync stok di semua toko',
+    text: 'Cocokkan listing sekali, stok kamu langsung sync di Shopee, Tokopedia, dan lainnya.',
   },
   {
     icon: ShoppingCart,
-    title: 'Pesanan yang langsung memperbarui stok',
-    text: 'Pesanan dibayar masuk, stok berkurang, dan toko lain ikut diperbarui otomatis.',
+    title: 'Pesanan langsung potong stok',
+    text: 'Pesanan dibayar masuk, stok berkurang, toko lain ikut update otomatis.',
   },
   {
     icon: PackageCheck,
@@ -37,7 +37,7 @@ const FEATURES = [
   {
     icon: LineChart,
     title: 'Saran restok yang pintar',
-    text: 'Lihat seberapa cepat barang terjual dan berapa banyak harus dibeli lagi — sudah dihitung buat kamu.',
+    text: 'Lihat seberapa cepat barang laku dan berapa yang perlu kamu restok — sudah dihitung otomatis.',
   },
   {
     icon: ScrollText,
@@ -94,8 +94,8 @@ export default async function HomePage() {
             Jaga stok kamu tetap akurat di semua marketplace.
           </h1>
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
-            {APP_NAME} menjaga stok kamu tetap benar dari hulu ke hilir: pesanan dari setiap toko
-            masuk, stok tetap sinkron, dan kamu dapat video packing untuk setiap pesanan.
+            {APP_NAME} menjaga stok kamu tetap akurat dari hulu ke hilir: pesanan dari setiap toko
+            masuk, stok tetap sync, dan kamu dapat video packing untuk setiap pesanan.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
             {isLoggedIn ? (

@@ -46,16 +46,16 @@ import { MarketplaceProviderBadge } from './marketplace-provider-badge';
 function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
   if (!mapping.syncEnabled) return null;
   if (mapping.lastSyncStatus === 'SYNCED') {
-    return <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Tersinkron</Badge>;
+    return <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Sudah sync</Badge>;
   }
   if (mapping.lastSyncStatus === 'FAILED') {
     return (
       <Badge variant="destructive" title={mapping.lastSyncError ?? undefined}>
-        Sinkron gagal
+        Sync gagal
       </Badge>
     );
   }
-  return <Badge variant="outline">Sinkron tertunda</Badge>;
+  return <Badge variant="outline">Menunggu sync</Badge>;
 }
 
 export function MarketplaceConnectionDetail({ connectionId }: { connectionId: string }) {
@@ -74,7 +74,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     try {
       const result = await importMutation.mutateAsync();
       toast.success('Impor selesai', {
-        description: `${result.imported} listing diimpor, ${result.autoMapped} tercocokkan otomatis.`,
+        description: `${result.imported} listing masuk, ${result.autoMapped} otomatis cocok.`,
       });
     } catch (error) {
       toast.error('Gagal impor', {
@@ -86,14 +86,14 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleRerunAutoMap() {
     try {
       const result = await rerunMutation.mutateAsync();
-      toast.success('Cocokkan otomatis selesai', {
+      toast.success('Auto-cocok selesai', {
         description:
           result.autoMapped > 0
-            ? `${result.autoMapped} listing baru tercocokkan.`
-            : 'Tidak ada kecocokan SKU baru.',
+            ? `${result.autoMapped} listing baru berhasil dicocokkan.`
+            : 'Belum ada SKU baru yang cocok.',
       });
     } catch (error) {
-      toast.error('Gagal cocokkan otomatis', {
+      toast.error('Auto-cocok gagal', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -102,7 +102,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleMap(marketplaceProductId: string, variantId: string) {
     try {
       await mapMutation.mutateAsync({ marketplaceProductId, variantId });
-      toast.success('Listing tercocokkan');
+      toast.success('Listing berhasil dicocokkan');
       setMapTarget(null);
     } catch (error) {
       toast.error('Gagal mencocokkan', {
@@ -114,9 +114,9 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleUnmap(marketplaceProductId: string) {
     try {
       await unmapMutation.mutateAsync(marketplaceProductId);
-      toast.success('Pemetaan listing dilepas');
+      toast.success('Listing dilepas');
     } catch (error) {
-      toast.error('Gagal melepas pemetaan', {
+      toast.error('Gagal melepas listing', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -125,9 +125,9 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleToggleSync(marketplaceProductId: string, syncEnabled: boolean) {
     try {
       await syncToggleMutation.mutateAsync({ marketplaceProductId, syncEnabled });
-      toast.success(syncEnabled ? 'Sinkron diaktifkan' : 'Sinkron dinonaktifkan');
+      toast.success(syncEnabled ? 'Sync diaktifkan' : 'Sync dimatikan');
     } catch (error) {
-      toast.error('Gagal memperbarui sinkron', {
+      toast.error('Gagal mengubah sync', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -136,11 +136,11 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleSyncNow(marketplaceProductId: string) {
     try {
       await syncNowMutation.mutateAsync(marketplaceProductId);
-      toast.success('Sinkron diantrekan', {
-        description: 'Worker akan mengirim stok sebentar lagi.',
+      toast.success('Sync diantrekan', {
+        description: 'Stok akan dikirim sebentar lagi.',
       });
     } catch (error) {
-      toast.error('Gagal sinkron', {
+      toast.error('Gagal sync', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -184,7 +184,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             disabled={rerunMutation.isPending || listings.length === 0}
           >
             <Wand2 className="size-4" />
-            {rerunMutation.isPending ? 'Mencocokkan...' : 'Cocokkan ulang otomatis'}
+            {rerunMutation.isPending ? 'Mencocokkan...' : 'Auto-cocok lagi'}
           </Button>
           <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
             <DownloadCloud className="size-4" />
@@ -197,13 +197,13 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Listing" value={listings.length} icon={ShoppingCart} tone="sky" />
           <StatCard
-            label="Tercocokkan"
+            label="Sudah cocok"
             value={mappedCount}
             icon={Link2}
             tone="emerald"
             hint={`${listings.length - mappedCount} belum cocok`}
           />
-          <StatCard label="Sinkron aktif" value={syncOnCount} icon={RefreshCw} tone="primary" />
+          <StatCard label="Sync aktif" value={syncOnCount} icon={RefreshCw} tone="primary" />
           <StatCard
             label="Perlu ditinjau"
             value={reviewCount}
@@ -293,17 +293,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                                   onCheckedChange={(checked) =>
                                     void handleToggleSync(listing.marketplaceProductId, checked)
                                   }
-                                  aria-label="Sinkron stok ke listing ini"
+                                  aria-label="Sync stok ke listing ini"
                                 />
-                                <span className="text-muted-foreground text-xs">Sinkron</span>
+                                <span className="text-muted-foreground text-xs">Sync</span>
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
                               {mapping.mappingStatus === 'NEEDS_REVIEW'
-                                ? 'Konfirmasi kecocokan dulu sebelum mengaktifkan sinkron.'
+                                ? 'Konfirmasi kecocokannya dulu sebelum sync diaktifkan.'
                                 : mapping.syncEnabled
                                   ? 'Stok dikirim ke listing ini.'
-                                  : 'Aktifkan untuk mengirim stok ke listing ini.'}
+                                  : 'Aktifkan untuk kirim stok ke listing ini.'}
                             </TooltipContent>
                           </Tooltip>
                           {mapping.syncEnabled ? (
@@ -332,7 +332,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                                 <Link2Off className="size-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Lepas pemetaan listing ini</TooltipContent>
+                            <TooltipContent>Lepas listing ini</TooltipContent>
                           </Tooltip>
                         </div>
                       ) : (
@@ -376,7 +376,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             if (!open) setMapTarget(null);
           }}
           title="Cocokkan ke varian"
-          description="Pilih varian internal yang diwakili listing ini."
+          description="Pilih varian di tokomu yang sama dengan listing ini."
           busy={mapMutation.isPending}
           onSelect={(variantId) => void handleMap(mapTarget, variantId)}
         />

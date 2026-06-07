@@ -68,7 +68,7 @@ export function RecordingControls({
 
       {isUploading ? (
         <Button variant="outline" onClick={onCancelUpload}>
-          Batalkan unggahan
+          Batalkan upload
         </Button>
       ) : null}
 

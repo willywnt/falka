@@ -23,7 +23,7 @@ export default function StockActivityPage() {
       <PageHeader
         eyebrow="Inventaris"
         title="Aktivitas stok"
-        description="Setiap perubahan stok, terbaru di atas — cari dan ekspor seluruh riwayatnya."
+        description="Semua perubahan stok, terbaru di atas — cari dan export seluruh riwayatnya."
       />
       <Suspense fallback={null}>
         <StockActivity />

@@ -13,7 +13,7 @@ export function LowStockBadge({ threshold, className }: { threshold: number; cla
           Menipis
         </Badge>
       </TooltipTrigger>
-      <TooltipContent>Sama dengan atau di bawah batas stok menipis {threshold}.</TooltipContent>
+      <TooltipContent>Stok sudah di batas menipis ({threshold}) atau kurang.</TooltipContent>
     </Tooltip>
   );
 }

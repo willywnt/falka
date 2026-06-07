@@ -55,7 +55,7 @@ export function RecordingDetailModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{recording?.noResi ?? 'Detail rekaman'}</DialogTitle>
-          <DialogDescription>Informasi rekaman operasional</DialogDescription>
+          <DialogDescription>Detail video packing</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -98,24 +98,24 @@ export function RecordingDetailModal({
               />
               <DetailRow label="Dibuat" value={formatRecordingDate(recording.createdAt)} />
               <DetailRow
-                label="Diunggah"
+                label="Diupload"
                 value={
                   recording.uploadedAt
                     ? formatRecordingDate(recording.uploadedAt)
-                    : 'Belum diunggah'
+                    : 'Belum diupload'
                 }
               />
               <DetailRow
-                label="Status unggahan"
+                label="Status upload"
                 value={
                   recording.uploadedAt
-                    ? 'Sudah diunggah ke penyimpanan'
+                    ? 'Sudah masuk penyimpanan'
                     : recording.status === 'FAILED'
                       ? 'Gagal'
-                      : 'Sedang berlangsung'
+                      : 'Lagi berlangsung'
                 }
               />
-              {failureDetail ? <DetailRow label="Alasan gagal" value={failureDetail} /> : null}
+              {failureDetail ? <DetailRow label="Penyebab gagal" value={failureDetail} /> : null}
             </div>
           </div>
         ) : null}

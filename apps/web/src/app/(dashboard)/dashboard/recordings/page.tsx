@@ -7,16 +7,16 @@ import { PendingUploadTrigger } from '@/modules/recordings/recovery/components/p
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const metadata: Metadata = {
-  title: 'Pustaka Rekaman',
+  title: 'Rekaman',
 };
 
 export default function DashboardRecordingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Pengemasan"
-        title="Pustaka rekaman"
-        description="Telusuri, putar, dan unduh video packing kamu."
+        eyebrow="Fulfillment"
+        title="Rekaman"
+        description="Cari, putar, dan download video packing kamu."
       >
         <PendingUploadTrigger />
       </PageHeader>

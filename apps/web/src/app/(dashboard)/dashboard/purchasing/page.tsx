@@ -13,7 +13,7 @@ export default function PurchasingPage() {
       <PageHeader
         eyebrow="Katalog"
         title="Pembelian"
-        description="Pesan stok dari pemasok. Unit yang dipesan tampil sebagai akan datang, lalu jadi tersedia saat diterima."
+        description="Restok dari supplier. Barang yang dipesan masuk hitungan stok akan datang, lalu jadi tersedia begitu kamu terima."
       />
       <PurchasingDashboard />
     </div>

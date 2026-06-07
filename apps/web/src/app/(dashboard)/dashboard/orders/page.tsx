@@ -13,7 +13,7 @@ export default function OrdersPage() {
       <PageHeader
         eyebrow="Channel penjualan"
         title="Pesanan"
-        description="Pesanan dari toko kamu. Pesanan yang sudah dibayar otomatis mengurangi stok."
+        description="Pesanan dari toko kamu. Begitu dibayar, stok otomatis kepotong."
       />
       <OrdersDashboard />
     </div>

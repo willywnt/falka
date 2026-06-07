@@ -60,12 +60,12 @@ const SCAN_STATUS_META: Record<
   connected: {
     dot: 'bg-emerald-500',
     cta: 'HP terhubung',
-    hint: 'HP terhubung — scan label produk untuk menambahkannya ke keranjang.',
+    hint: 'HP terhubung — scan label produk buat masukin ke keranjang.',
   },
   disconnected: {
     dot: 'bg-destructive',
     cta: 'Hubungkan ulang',
-    hint: 'HP terputus. Ketuk Hubungkan ulang untuk menampilkan QR baru.',
+    hint: 'HP terputus. Ketuk Hubungkan ulang buat tampilin QR baru.',
   },
 };
 
@@ -469,7 +469,7 @@ export function PosTerminal() {
             <EmptyState
               icon={ShoppingCart}
               title="Keranjang kosong"
-              description="Cari produk dan tambahkan untuk memulai penjualan."
+              description="Cari produk lalu tambahkan buat mulai jualan."
             />
           ) : (
             <div className="space-y-3">
@@ -719,7 +719,7 @@ function VariantCartRow({
       </div>
       {oversold ? (
         <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
-          Lebih dari stok (boleh — barang di tangan) · hanya {line.availableStock} tersedia
+          Melebihi stok (boleh, barangnya ada di tangan) · sisa {line.availableStock} di sistem
         </Badge>
       ) : null}
     </div>
@@ -796,7 +796,7 @@ function BundleCartRow({
       </div>
       {oversold ? (
         <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
-          Lebih dari stok (boleh — barang di tangan) · salah satu komponen kurang
+          Melebihi stok (boleh, barangnya ada di tangan) · ada komponen yang kurang
         </Badge>
       ) : null}
     </div>

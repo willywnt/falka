@@ -72,7 +72,9 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
     try {
       const trimmed = resi.trim();
       await markShipped.mutateAsync(trimmed ? { noResi: trimmed } : {});
-      toast.success('Pesanan ditandai terkirim', { description: 'Stok yang dipesan dikonsumsi.' });
+      toast.success('Pesanan ditandai terkirim', {
+        description: 'Stok yang dipesan langsung dipotong.',
+      });
       close();
     } catch (error) {
       toast.error('Gagal menandai terkirim', {
@@ -97,7 +99,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
     try {
       const trimmed = reason.trim();
       await cancelOrder.mutateAsync(trimmed ? { reason: trimmed } : {});
-      toast.success('Pesanan dibatalkan', { description: 'Stok yang dipesan dilepaskan kembali.' });
+      toast.success('Pesanan dibatalkan', { description: 'Stok yang dipesan dilepas lagi.' });
       close();
     } catch (error) {
       toast.error('Gagal membatalkan pesanan', {
@@ -158,8 +160,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           <DialogHeader>
             <DialogTitle>Tandai terkirim</DialogTitle>
             <DialogDescription>
-              Mengonsumsi stok yang dipesan untuk pesanan ini. Tambahkan no. resi sekarang atau
-              biarkan kosong.
+              Stok yang dipesan langsung dipotong. Isi no. resi sekarang atau kosongin dulu.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -189,8 +190,8 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           <DialogHeader>
             <DialogTitle>Ubah no. resi</DialogTitle>
             <DialogDescription>
-              Atur atau perbaiki no. resi pesanan ini. Tarik pesanan dari marketplace berikutnya
-              bisa menimpanya.
+              Isi atau perbaiki no. resi pesanan ini. Tapi ingat, tarik pesanan dari marketplace
+              berikutnya bisa menimpanya lagi.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -222,9 +223,8 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Batalkan pesanan {order.externalOrderId}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Stok yang dipesan untuk pesanan ini dilepaskan kembali ke tersedia. Tindakan ini tidak
-              bisa dibatalkan. Batalkan hanya sebelum barang dikirim — setelah dikirim, buka retur
-              saja.
+              Stok yang dipesan bakal dilepas lagi ke stok tersedia, dan ini nggak bisa dibatalkan.
+              Cuma batalin kalau barang belum dikirim — kalau sudah dikirim, buka retur aja.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
@@ -239,7 +239,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Pertahankan pesanan</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>Nggak jadi</AlertDialogCancel>
             <AlertDialogAction
               disabled={busy}
               onClick={(event) => {

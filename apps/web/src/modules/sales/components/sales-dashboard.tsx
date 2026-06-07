@@ -52,12 +52,12 @@ export function SalesDashboard() {
         <EmptyState
           icon={Receipt}
           title="Belum ada penjualan"
-          description="Catat penjualan di toko — stoknya sama dengan yang disinkronkan ke marketplace kamu."
+          description="Catat penjualan di toko — stoknya langsung kepotong dan ikut ke-Sync ke marketplace kamu."
           action={
             <Button asChild>
               <Link href="/dashboard/sales/new">
                 <Plus className="size-4" />
-                New sale
+                Penjualan baru
               </Link>
             </Button>
           }

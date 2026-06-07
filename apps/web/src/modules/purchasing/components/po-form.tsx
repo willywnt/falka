@@ -65,7 +65,7 @@ const SCAN_STATUS_META: Record<PoScannerStatus, { dot: string; cta: string; hint
     disconnected: {
       dot: 'bg-destructive',
       cta: 'Hubungkan lagi',
-      hint: 'HP terputus. Tap Hubungkan lagi untuk tampilkan QR baru.',
+      hint: 'HP terputus. Tap Hubungkan lagi untuk munculin QR baru.',
     },
   };
 
@@ -316,7 +316,7 @@ export function PoForm() {
         (item.status === 'URGENT' || item.status === 'SOON') && item.suggestedReorderQty > 0,
     );
     if (suggestions.length === 0) {
-      toast.info('Belum ada saran restok saat ini.');
+      toast.info('Belum ada saran restok.');
       return;
     }
     for (const item of suggestions) {
@@ -334,7 +334,7 @@ export function PoForm() {
       });
     }
     toast.success(`${suggestions.length} saran dimuat`, {
-      description: 'Atur modal per unit.',
+      description: 'Jangan lupa atur modal per unit-nya.',
     });
   }
 
@@ -388,7 +388,7 @@ export function PoForm() {
         ),
       });
       toast.success(`PO ${po.code} dibuat`, {
-        description: `${formatCurrency(po.totalCost)} · ditandai akan datang`,
+        description: `${formatCurrency(po.totalCost)} · masuk stok akan datang`,
       });
       router.push(`/dashboard/purchasing/${po.id}`);
     } catch (error) {
@@ -443,7 +443,7 @@ export function PoForm() {
               variant="outline"
               onClick={loadReorderSuggestions}
               disabled={reorder.isLoading}
-              title="Tambahkan item saran dari laporan restok"
+              title="Tambah item saran dari laporan restok"
             >
               <ClipboardList className="size-4" />
               Restok
@@ -529,7 +529,7 @@ export function PoForm() {
             <EmptyState
               icon={PackagePlus}
               title="Belum ada item"
-              description="Cari produk atau muat saran restok untuk menyusun PO."
+              description="Cari produk atau muat saran restok buat mulai bikin PO."
             />
           ) : (
             <div className="space-y-3">

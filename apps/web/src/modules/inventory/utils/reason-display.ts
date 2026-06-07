@@ -6,12 +6,12 @@ export const STOCK_REASON_LABELS: Record<StockLedgerReason, string> = {
   DAMAGE: 'Rusak',
   DAMAGE_WRITE_OFF: 'Hapus stok rusak',
   RECONCILE: 'Rekonsiliasi',
-  ORDER_RESERVE: 'Pesanan dipesan',
-  ORDER_RELEASE: 'Pesanan dilepas',
-  ORDER_SHIP: 'Pesanan terkirim',
+  ORDER_RESERVE: 'Stok dipesan',
+  ORDER_RELEASE: 'Stok dilepas',
+  ORDER_SHIP: 'Pesanan dikirim',
   RETURN: 'Retur',
-  SALE: 'Penjualan offline',
-  MARKETPLACE_SYNC: 'Sinkron marketplace',
+  SALE: 'Penjualan',
+  MARKETPLACE_SYNC: 'Sync marketplace',
 };
 
 export function stockReasonLabel(reason: StockLedgerReason): string {

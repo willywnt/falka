@@ -66,14 +66,14 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         refreshToken: values.refreshToken?.trim() || undefined,
       });
       toast.success('Toko marketplace terhubung', {
-        description: `${values.shopName} siap untuk alur sinkron berikutnya.`,
+        description: `${values.shopName} siap dipakai untuk sync berikutnya.`,
       });
       form.reset();
       onOpenChange(false);
     } catch (error) {
       toast.error('Gagal menghubungkan', {
         description:
-          error instanceof Error ? error.message : 'Tidak bisa menghubungkan toko marketplace.',
+          error instanceof Error ? error.message : 'Toko marketplace tidak bisa dihubungkan.',
       });
     }
   }
@@ -90,8 +90,8 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         <DialogHeader>
           <DialogTitle>Hubungkan toko marketplace</DialogTitle>
           <DialogDescription>
-            Untuk sekarang koneksi provider masih simulasi. Integrasi OAuth akan menggantikan input
-            token manual nanti.
+            Untuk sekarang koneksinya masih simulasi. Nanti pakai login OAuth, jadi nggak perlu isi
+            token manual lagi.
           </DialogDescription>
         </DialogHeader>
 

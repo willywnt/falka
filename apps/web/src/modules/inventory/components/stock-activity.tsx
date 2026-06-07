@@ -180,7 +180,7 @@ export function StockActivity() {
         <Button asChild variant="outline" size="sm" className="ml-auto">
           <a href={buildExportHref(filters)}>
             <Download className="size-4" />
-            Ekspor CSV
+            Export CSV
           </a>
         </Button>
       </div>
@@ -203,7 +203,7 @@ export function StockActivity() {
           title="Belum ada aktivitas stok"
           description={
             isFiltered
-              ? 'Tidak ada pergerakan yang cocok dengan saringan ini.'
+              ? 'Tidak ada pergerakan yang cocok dengan filter ini.'
               : 'Perubahan stok akan muncul di sini.'
           }
         />

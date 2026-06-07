@@ -122,8 +122,8 @@ export function AdjustStockDialog({
       onAdjusted?.();
       form.reset({ ...values, quantity: values.mode === 'set' ? values.quantity : 1, note: '' });
     } catch (error) {
-      toast.error('Penyesuaian gagal', {
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      toast.error('Gagal menyesuaikan stok', {
+        description: error instanceof Error ? error.message : 'Ada yang error, coba lagi.',
       });
     }
   }
@@ -201,7 +201,7 @@ export function AdjustStockDialog({
             </div>
 
             <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground">Tersedia setelahnya</span>
+              <span className="text-muted-foreground">Stok jadi</span>
               <span className="num flex items-center gap-2 font-semibold">
                 <span className="text-muted-foreground">{currentStock}</span>→
                 <span className={cn('text-base', resultStock < 0 && 'text-destructive')}>
@@ -239,7 +239,7 @@ export function AdjustStockDialog({
                 <FormItem>
                   <FormLabel>Catatan (opsional)</FormLabel>
                   <FormControl>
-                    <Textarea rows={1} placeholder="mis. pengiriman pemasok #123" {...field} />
+                    <Textarea rows={1} placeholder="mis. kiriman dari supplier #123" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -247,11 +247,7 @@ export function AdjustStockDialog({
             />
 
             <Button type="submit" className="w-full" disabled={adjustMutation.isPending}>
-              {adjustMutation.isPending
-                ? 'Menyimpan...'
-                : mode === 'set'
-                  ? 'Atur stok'
-                  : 'Terapkan penyesuaian'}
+              {adjustMutation.isPending ? 'Menyimpan...' : mode === 'set' ? 'Atur stok' : 'Simpan'}
             </Button>
           </form>
         </Form>

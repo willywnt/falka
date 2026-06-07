@@ -135,9 +135,8 @@ export function RecordingsDashboard() {
     try {
       await downloadMutation.mutateAsync(recording.id);
     } catch (downloadError) {
-      toast.error('Unduhan gagal', {
-        description:
-          downloadError instanceof Error ? downloadError.message : 'Kesalahan tidak diketahui',
+      toast.error('Gagal mengunduh', {
+        description: downloadError instanceof Error ? downloadError.message : 'Coba lagi ya.',
       });
     }
   }
@@ -151,8 +150,7 @@ export function RecordingsDashboard() {
       setDeleteTarget(null);
     } catch (deleteError) {
       toast.error('Gagal menghapus', {
-        description:
-          deleteError instanceof Error ? deleteError.message : 'Kesalahan tidak diketahui',
+        description: deleteError instanceof Error ? deleteError.message : 'Coba lagi ya.',
       });
     }
   }
@@ -253,7 +251,7 @@ export function RecordingsDashboard() {
           description={
             hasSearch
               ? 'Coba no. resi lain atau hapus filter kamu.'
-              : 'Buat rekaman operasional pertama kamu untuk melihatnya di sini.'
+              : 'Buat video packing pertama kamu, nanti muncul di sini.'
           }
         />
       ) : (

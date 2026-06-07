@@ -158,18 +158,18 @@ export function ConnectScannerDialog({
       setQrDataUrl(null);
       createStartedRef.current = false;
       onOpenChange(false);
-      toast.success('Pemindai ponsel terputus');
+      toast.success('Scanner ponsel terputus');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Gagal memutus koneksi');
     }
   };
 
   const statusLabel = isConnected
-    ? 'Ponsel terhubung — siap memindai'
+    ? 'Ponsel terhubung — siap scan'
     : displaySession?.status === 'PENDING'
-      ? 'Pindai QR ini dengan kamera ponsel kamu'
+      ? 'Scan QR ini pakai kamera ponsel kamu'
       : displaySession?.status === 'DISCONNECTED'
-        ? 'Ponsel terputus — pindai lagi untuk menyambung kembali'
+        ? 'Ponsel terputus — scan lagi buat nyambungin'
         : 'Menyiapkan QR…';
 
   const isQrLoading =
@@ -183,7 +183,7 @@ export function ConnectScannerDialog({
           <DialogHeader className="gap-1.5 text-left">
             <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
               <Smartphone className="size-4 shrink-0" />
-              Pemindai ponsel
+              Scanner ponsel
               <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
                 {meta.shortLabel}
               </span>
@@ -217,7 +217,7 @@ export function ConnectScannerDialog({
                   // eslint-disable-next-line @next/next/no-img-element -- dynamic QR data URL
                   <img
                     src={qrDataUrl ?? ''}
-                    alt="Kode QR untuk pemindai ponsel"
+                    alt="Kode QR untuk scanner ponsel"
                     className="size-full object-contain p-2"
                   />
                 )}

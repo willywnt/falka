@@ -13,7 +13,7 @@ export default function SalesPage() {
       <PageHeader
         eyebrow="Channel penjualan"
         title="Penjualan (Kasir)"
-        description="Penjualan di toko yang menarik dari stok yang sama dengan marketplace kamu — tanpa jual dobel."
+        description="Jualan langsung di toko, pakai stok yang sama dengan marketplace kamu — jadi nggak bakal kejual dobel."
       />
       <SalesDashboard />
     </div>

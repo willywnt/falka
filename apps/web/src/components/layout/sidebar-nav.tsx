@@ -60,10 +60,10 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
     ],
   },
   {
-    label: 'Pengemasan',
+    label: 'Fulfillment',
     items: [
       { title: 'Rekam', href: '/recordings', icon: Video },
-      { title: 'Pustaka', href: '/dashboard/recordings', icon: Library },
+      { title: 'Rekaman', href: '/dashboard/recordings', icon: Library },
       { title: 'Retur', href: '/dashboard/returns', icon: Undo2 },
     ],
   },

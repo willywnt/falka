@@ -129,7 +129,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
   async function handleCancel() {
     try {
       await cancelMutation.mutateAsync();
-      toast.success('PO dibatalkan', { description: 'Stok akan datang yang tersisa dihapus.' });
+      toast.success('PO dibatalkan', { description: 'Sisa stok akan datang dihapus.' });
     } catch (err) {
       toast.error('Gagal membatalkan', {
         description: err instanceof Error ? err.message : 'Terjadi kesalahan',

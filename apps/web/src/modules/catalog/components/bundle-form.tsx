@@ -99,8 +99,8 @@ export function BundleForm() {
             />
           </div>
           <p className="text-muted-foreground text-xs">
-            Bundel tidak menyimpan stok sendiri — menjual satu akan mengurangi varian komponennya.
-            Berapa yang bisa kamu jual dihitung dari stok komponen.
+            Bundel tidak punya stok sendiri — tiap kali terjual, stok varian komponennya yang
+            berkurang. Jumlah yang bisa kamu jual dihitung dari stok komponen.
           </p>
         </CardContent>
       </Card>

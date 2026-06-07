@@ -205,11 +205,11 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
   const { summary, returns } = data;
   const costUnknownHint =
     summary.costUnknownLines > 0
-      ? `${summary.costUnknownLines} baris belum ada modal — dikecualikan dari margin`
-      : 'Semua baris terjual sudah ada modalnya';
+      ? `${summary.costUnknownLines} baris belum ada modal — nggak ikut dihitung margin`
+      : 'Semua barang terjual sudah ada modalnya';
   const revenueHint =
     returns.lineCount > 0
-      ? `${summary.unitsSold} unit · bersih dari retur ${formatCurrency(returns.refundedRevenue)}`
+      ? `${summary.unitsSold} unit · sudah dipotong retur ${formatCurrency(returns.refundedRevenue)}`
       : `${summary.unitsSold} unit terjual`;
 
   return (
@@ -253,7 +253,7 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
             <EmptyState
               icon={TrendingDown}
               title="Belum ada penjualan di rentang ini"
-              description="Begitu ada penjualan kasir atau pesanan marketplace yang terkirim di periode ini, labanya muncul di sini."
+              description="Begitu ada penjualan kasir atau pesanan marketplace yang terkirim di periode ini, labanya langsung muncul di sini."
             />
           ) : (
             <Table>
@@ -306,12 +306,12 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
         <SkuTable
           title="SKU margin tertinggi"
           rows={data.topSku}
-          emptyHint="Belum ada penjualan dengan modal yang diketahui."
+          emptyHint="Belum ada penjualan yang modalnya sudah diisi."
         />
         <SkuTable
           title="SKU margin terendah"
           rows={data.bottomSku}
-          emptyHint="Belum cukup varian untuk diperingkat."
+          emptyHint="Belum cukup varian buat diurutkan."
         />
       </div>
 

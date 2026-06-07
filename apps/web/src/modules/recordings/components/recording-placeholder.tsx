@@ -13,13 +13,13 @@ export function RecordingPlaceholder() {
         </div>
         <CardTitle>Belum ada rekaman</CardTitle>
         <CardDescription>
-          Rekaman webcam akan muncul di sini. Mulai rekam alur operasional langsung dari browser
+          Rekaman webcam bakal muncul di sini. Mulai rekam proses packing langsung dari browser
           kamu.
         </CardDescription>
       </CardHeader>
       <CardContent className="text-center">
         <p className="text-muted-foreground text-sm">
-          Mesin rekam, unggah R2, dan manajemen siklus hidup segera hadir.
+          Fitur rekam, upload, dan kelola rekaman segera hadir.
         </p>
       </CardContent>
     </Card>

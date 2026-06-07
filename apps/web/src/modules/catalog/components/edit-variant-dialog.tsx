@@ -69,7 +69,7 @@ export function EditVariantDialog({
           minOrderQty: values.minOrderQty,
         },
       });
-      toast.success('Varian diperbarui', { description: `Perencanaan ${variant.name} disimpan.` });
+      toast.success('Varian diperbarui', { description: `Pengaturan ${variant.name} disimpan.` });
       onOpenChange(false);
     } catch (error) {
       toast.error('Gagal memperbarui varian', {

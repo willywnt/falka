@@ -82,7 +82,7 @@ export function PendingUploadsSection({
         onClick={toggle}
       >
         <div>
-          <p className="text-sm font-medium">Unggahan tertunda</p>
+          <p className="text-sm font-medium">Upload tertunda</p>
           <p className="text-muted-foreground text-xs">
             {recordings.length} tersimpan di perangkat ini — belum masuk penyimpanan cloud
           </p>
@@ -99,7 +99,7 @@ export function PendingUploadsSection({
             <TableRow>
               <TableHead>No. resi</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Alasan gagal</TableHead>
+              <TableHead>Penyebab gagal</TableHead>
               <TableHead>Durasi</TableHead>
               <TableHead>Ukuran file</TableHead>
               <TableHead>Direkam</TableHead>
@@ -139,7 +139,7 @@ export function PendingUploadsSection({
                       <div
                         className="inline-flex items-center gap-2"
                         role="status"
-                        aria-label={`Mengunggah ${retryUploadProgress}%`}
+                        aria-label={`Mengupload ${retryUploadProgress}%`}
                       >
                         <Loader2 className="text-primary size-4 animate-spin" />
                         <span className="text-muted-foreground num text-xs">
@@ -167,11 +167,11 @@ export function PendingUploadsSection({
                             }}
                           >
                             <UploadCloud className="size-4" />
-                            Unggah
+                            Upload
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onViewTimeline(recording)}>
                             <Eye className="size-4" />
-                            Lihat linimasa
+                            Lihat riwayat
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"

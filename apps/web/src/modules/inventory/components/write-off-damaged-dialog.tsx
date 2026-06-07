@@ -52,8 +52,8 @@ export function WriteOffDamagedDialog({
       });
       onOpenChange(false);
     } catch (error) {
-      toast.error('Penghapusan gagal', {
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      toast.error('Gagal hapus stok rusak', {
+        description: error instanceof Error ? error.message : 'Ada yang error, coba lagi.',
       });
     }
   }

@@ -37,7 +37,7 @@ export function PurchasingDashboard() {
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat daftar PO. {error instanceof Error ? error.message : 'Silakan coba lagi.'}
+          Gagal memuat daftar PO. {error instanceof Error ? error.message : 'Coba lagi, ya.'}
         </div>
       ) : null}
 

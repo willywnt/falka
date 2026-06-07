@@ -65,7 +65,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
   async function handleVoid() {
     try {
       await voidMutation.mutateAsync(saleId);
-      toast.success('Penjualan dibatalkan', { description: 'Semua item telah direstok.' });
+      toast.success('Penjualan dibatalkan', { description: 'Semua item sudah direstok.' });
       setVoidOpen(false);
     } catch (caught) {
       toast.error('Gagal membatalkan penjualan', {
@@ -123,7 +123,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/sales">
           <ArrowLeft className="size-4" />
-          Back to sales
+          Kembali ke penjualan
         </Link>
       </Button>
 
@@ -223,8 +223,8 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Batalkan penjualan {data.code}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Setiap item direstok ke stok tersedia dan penjualan dikeluarkan dari laporan
-                    laba. Tindakan ini tidak bisa dibatalkan.
+                    Semua item bakal direstok ke stok tersedia dan penjualan ini gak dihitung lagi
+                    di laporan laba. Aksi ini gak bisa diurungkan.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

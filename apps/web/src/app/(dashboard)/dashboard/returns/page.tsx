@@ -11,9 +11,9 @@ export default function ReturnsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Pengemasan"
+        eyebrow="Fulfillment"
         title="Retur"
-        description="Barang yang dikembalikan. Terima retur untuk merestok unit yang masih layak jual atau hapus stok rusak."
+        description="Barang yang dikembalikan pembeli. Proses returnya buat restok unit yang masih layak jual, atau hapus stok yang rusak."
       />
       <ReturnsDashboard />
     </div>

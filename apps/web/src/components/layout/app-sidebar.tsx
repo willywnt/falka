@@ -96,7 +96,7 @@ export function AppSidebar({ className }: { className?: string }) {
 
       {collapsed ? null : (
         <div className="border-sidebar-border text-sidebar-foreground/45 border-t px-5 py-3 text-xs">
-          Inventaris &amp; pengemasan
+          Inventaris &amp; fulfillment
         </div>
       )}
     </aside>

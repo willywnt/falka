@@ -79,7 +79,7 @@ export function MarketplaceDashboard() {
         <EmptyState
           icon={ShoppingBag}
           title="Belum ada toko marketplace terhubung"
-          description="Hubungkan toko Shopee atau Tokopedia untuk menyiapkan sinkronisasi inventaris dan pesanan."
+          description="Hubungkan toko Shopee atau Tokopedia biar stok dan pesanannya bisa di-sync."
         />
       ) : (
         <MarketplaceTable

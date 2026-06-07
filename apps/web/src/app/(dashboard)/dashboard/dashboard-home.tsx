@@ -27,7 +27,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     label: 'Tarik pesanan',
-    description: 'Sinkron dari toko',
+    description: 'Sync dari toko',
     href: '/dashboard/marketplace',
     icon: ShoppingCart,
     tone: 'amber',
@@ -41,7 +41,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     label: 'Restok',
-    description: 'Apa yang perlu distok ulang',
+    description: 'Yang perlu dibeli lagi',
     href: '/dashboard/inventory/reorder',
     icon: LineChart,
     tone: 'emerald',

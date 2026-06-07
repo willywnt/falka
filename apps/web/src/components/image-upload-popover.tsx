@@ -41,7 +41,7 @@ export function ImageUploadPopover({
       await onUpload(file);
       toast.success('Foto diperbarui');
     } catch (error) {
-      toast.error('Gagal mengunggah foto', {
+      toast.error('Gagal upload foto', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -111,7 +111,7 @@ export function ImageUploadPopover({
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="size-4" />
-            {imageUrl ? 'Ganti' : 'Unggah'}
+            {imageUrl ? 'Ganti' : 'Upload'}
           </Button>
           {imageUrl ? (
             <Button

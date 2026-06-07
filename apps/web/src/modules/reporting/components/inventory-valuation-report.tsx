@@ -38,7 +38,7 @@ export function InventoryValuationReport() {
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat valuasi inventaris. {error instanceof Error ? error.message : 'Coba lagi.'}
+          Gagal memuat nilai stok. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -51,8 +51,8 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
   const { summary, byProduct } = data;
   const costUnknownHint =
     summary.costUnknownVariants > 0
-      ? `${summary.costUnknownVariants} SKU bersisa stok belum ada modal — dikecualikan dari nilai`
-      : 'Setiap SKU bersisa stok sudah ada modalnya';
+      ? `${summary.costUnknownVariants} SKU masih ada stok tapi modalnya belum diisi — nggak ikut dihitung`
+      : 'Semua SKU yang masih ada stok sudah ada modalnya';
 
   return (
     <>
@@ -62,10 +62,10 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
           value={formatCurrency(summary.totalStockValue)}
           icon={Coins}
           tone="emerald"
-          hint="Stok di tangan dengan modal rata-rata bergerak"
+          hint="Stok yang ada dihitung pakai modal rata-rata"
         />
         <StatCard
-          label="Unit di tangan"
+          label="Unit yang ada"
           value={summary.availableUnits.toLocaleString()}
           icon={Warehouse}
           tone="sky"
@@ -100,8 +100,8 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
           {byProduct.length === 0 ? (
             <EmptyState
               icon={Warehouse}
-              title="Tidak ada stok di tangan"
-              description="Begitu produk punya stok tersedia beserta modalnya, nilainya muncul di sini."
+              title="Belum ada stok"
+              description="Begitu produk punya stok dan modalnya sudah diisi, nilainya muncul di sini."
             />
           ) : (
             <Table>

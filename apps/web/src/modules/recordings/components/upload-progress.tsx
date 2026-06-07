@@ -9,7 +9,7 @@ import { formatRecoveryFileSize } from '@/modules/recordings/recovery/utils/form
 
 export function UploadProgressBar({
   progress,
-  label = 'Mengunggah rekaman',
+  label = 'Mengupload rekaman',
   metrics,
 }: {
   progress: number;

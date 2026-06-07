@@ -311,9 +311,7 @@ export function RecordingPreviewShell({
               <h2 className="text-base font-semibold tracking-tight sm:text-lg">{meta.noResi}</h2>
               <OperationalStatusBadge status={meta.status} />
             </div>
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              Pratinjau rekaman operasional
-            </p>
+            <p className="text-muted-foreground text-xs sm:text-sm">Pratinjau video packing</p>
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-5 sm:py-5">
@@ -336,15 +334,15 @@ export function RecordingPreviewShell({
               {meta.uploadedAt !== undefined ? (
                 <InspectorRow
                   icon={Upload}
-                  label="Diunggah"
+                  label="Diupload"
                   value={
-                    meta.uploadedAt ? formatOperationalDateTime(meta.uploadedAt) : 'Belum diunggah'
+                    meta.uploadedAt ? formatOperationalDateTime(meta.uploadedAt) : 'Belum diupload'
                   }
                 />
               ) : (
                 <InspectorRow
                   icon={Upload}
-                  label="Percobaan unggah"
+                  label="Percobaan upload"
                   value={String(meta.retryCount ?? 0)}
                 />
               )}
@@ -441,7 +439,7 @@ export function RecordingPreviewShell({
           <div className="text-muted-foreground hidden shrink-0 border-t px-5 py-3 text-[11px] leading-relaxed lg:block">
             <kbd className="rounded border px-1 font-mono">Space</kbd> putar/jeda ·{' '}
             <kbd className="rounded border px-1 font-mono">←</kbd>
-            <kbd className="rounded border px-1 font-mono">→</kbd> geser 5d ·{' '}
+            <kbd className="rounded border px-1 font-mono">→</kbd> geser 5 detik ·{' '}
             <kbd className="rounded border px-1 font-mono">F</kbd> layar penuh
           </div>
         </aside>

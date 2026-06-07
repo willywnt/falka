@@ -41,7 +41,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   async function handleCreateReturn() {
     try {
       const created = await createReturnMutation.mutateAsync({ orderId });
-      toast.success('Retur dibuka', { description: 'Terima untuk restok atau hapus stok rusak.' });
+      toast.success('Retur dibuka', {
+        description: 'Proses returnya untuk restok atau tandai sebagai stok rusak.',
+      });
       router.push(`/dashboard/returns/${created.id}`);
     } catch (err) {
       toast.error('Gagal membuka retur', {
@@ -55,7 +57,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     try {
       await resolveMutation.mutateAsync({ orderItemId: mapTarget.id, variantId });
       toast.success('Item dicocokkan', {
-        description: 'Stok diperbarui jika pesanan sudah dibayar.',
+        description: 'Stok ikut diperbarui kalau pesanan sudah dibayar.',
       });
       setMapTarget(null);
     } catch (error) {
