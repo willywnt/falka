@@ -2,8 +2,12 @@ import 'server-only';
 
 import { prisma } from '@olshop/db';
 
-import type { ProfitBySku, ProfitChannel, ProfitReport } from '../types';
+import type { InventoryValuationReport, ProfitBySku, ProfitChannel, ProfitReport } from '../types';
 import type { ProfitReportQuery } from '../validators/profit-report';
+import {
+  aggregateInventoryValuation,
+  type ValuationVariant,
+} from '../utils/inventory-valuation-aggregate';
 import { aggregateProfit, aggregateProfitBySku, type SoldLine } from '../utils/profit-aggregate';
 
 const DEFAULT_RANGE_DAYS = 30;
@@ -105,6 +109,33 @@ export class ReportingServerService {
   async getProfitSkuRows(userId: string, query: ProfitReportQuery): Promise<ProfitBySku[]> {
     const { lines } = await this.loadSoldLines(userId, query);
     return aggregateProfitBySku(lines);
+  }
+
+  /**
+   * Current inventory valuation: every live variant's on-hand stock valued at its
+   * moving-average cost (same formula as the dashboard's totalStockValue), rolled
+   * up per product. A snapshot — no date range.
+   */
+  async getInventoryValuation(userId: string): Promise<InventoryValuationReport> {
+    const variants = await prisma.productVariant.findMany({
+      where: { userId, deletedAt: null },
+      select: {
+        productId: true,
+        cost: true,
+        product: { select: { name: true, category: true } },
+        inventory: { select: { availableStock: true } },
+      },
+    });
+
+    const lines: ValuationVariant[] = variants.map((variant) => ({
+      productId: variant.productId,
+      productName: variant.product.name,
+      category: variant.product.category,
+      available: variant.inventory?.availableStock ?? 0,
+      cost: variant.cost == null ? null : Number(variant.cost),
+    }));
+
+    return aggregateInventoryValuation(lines);
   }
 }
 

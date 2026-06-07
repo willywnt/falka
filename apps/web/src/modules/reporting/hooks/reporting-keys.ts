@@ -2,4 +2,5 @@
 export const reportingKeys = {
   all: ['reporting'] as const,
   profit: (params: Record<string, string>) => ['reporting', 'profit', params] as const,
+  inventoryValue: ['reporting', 'inventory-value'] as const,
 };

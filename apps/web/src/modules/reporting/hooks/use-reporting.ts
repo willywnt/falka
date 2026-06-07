@@ -7,7 +7,7 @@ import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
 
 import { reportingKeys } from './reporting-keys';
-import type { ProfitPeriodGranularity, ProfitReport } from '../types';
+import type { InventoryValuationReport, ProfitPeriodGranularity, ProfitReport } from '../types';
 
 export type ProfitReportParams = {
   from?: string;
@@ -46,4 +46,27 @@ export function useProfitReportQuery(params: ProfitReportParams) {
 export function profitExportUrl(params: ProfitReportParams): string {
   const search = new URLSearchParams(toQueryParams(params));
   return `${apiRoutes.reports}/profit/export?${search.toString()}`;
+}
+
+/** Current inventory valuation (on-hand stock at moving-average cost). */
+export function useInventoryValuationQuery() {
+  return useQuery({
+    queryKey: reportingKeys.inventoryValue,
+    queryFn: async () => {
+      const result = await apiFetch<InventoryValuationReport>(
+        `${apiRoutes.reports}/inventory-value`,
+      );
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+/** URL for the per-product valuation CSV export, for a plain download link. */
+export function inventoryValuationExportUrl(): string {
+  return `${apiRoutes.reports}/inventory-value/export`;
 }
