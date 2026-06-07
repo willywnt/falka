@@ -8,8 +8,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
   async (request, { user }) => {
+    const searchParams = new URL(request.url).searchParams;
     const parsed = listReturnsQuerySchema.safeParse({
-      status: new URL(request.url).searchParams.get('status') ?? undefined,
+      status: searchParams.get('status') ?? undefined,
+      page: searchParams.get('page') ?? undefined,
+      pageSize: searchParams.get('pageSize') ?? undefined,
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 

@@ -1,20 +1,27 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import type { PageMeta } from '@/hooks/use-pagination';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { orderKeys } from './order-keys';
 import type { MultiPullOrdersResult, OrderDetail, OrderListItem } from '../types';
 
-export function useOrdersQuery() {
+/** A page of orders (mirror of the server's PaginatedResult). */
+export type OrdersPage = {
+  items: OrderListItem[];
+  meta: PageMeta;
+};
+
+export function useOrdersQuery(page: number, pageSize: number) {
   return useQuery({
-    queryKey: orderKeys.list,
+    queryKey: orderKeys.list(page, pageSize),
     queryFn: async () => {
-      const result = await apiFetch<OrderListItem[]>(apiRoutes.orders);
+      const result = await apiFetch<OrdersPage>(apiRoutes.orders, { params: { page, pageSize } });
 
       if (!result.success) {
         throw new Error(formatApiErrorMessage(result.error));
@@ -22,6 +29,7 @@ export function useOrdersQuery() {
 
       return result.data;
     },
+    placeholderData: keepPreviousData,
   });
 }
 

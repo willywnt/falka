@@ -17,6 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { TablePagination } from '@/components/table-pagination';
+import { usePagination } from '@/hooks/use-pagination';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatters';
 
@@ -32,10 +34,21 @@ const FILTERS: ReadonlyArray<{ label: string; value: ReturnStatus | 'ALL' }> = [
 
 export function ReturnsDashboard() {
   const [filter, setFilter] = useState<ReturnStatus | 'ALL'>('ALL');
-  const { data, isLoading, error } = useReturnsQuery(filter === 'ALL' ? undefined : filter);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+  const { data, isLoading, error } = useReturnsQuery(
+    filter === 'ALL' ? undefined : filter,
+    page,
+    pageSize,
+  );
 
-  const returns = data ?? [];
-  const isEmpty = !isLoading && returns.length === 0;
+  const returns = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
+  const isEmpty = !isLoading && total === 0;
+
+  function changeFilter(value: ReturnStatus | 'ALL') {
+    setFilter(value);
+    setPage(1);
+  }
 
   return (
     <div className="space-y-6">
@@ -46,7 +59,7 @@ export function ReturnsDashboard() {
             type="button"
             size="sm"
             variant={filter === option.value ? 'default' : 'outline'}
-            onClick={() => setFilter(option.value)}
+            onClick={() => changeFilter(option.value)}
           >
             {option.label}
           </Button>
@@ -72,52 +85,62 @@ export function ReturnsDashboard() {
           description="Returns open automatically when a shipped order is cancelled, or you can open one from an order."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Items</TableHead>
-                <TableHead>Opened</TableHead>
-                <TableHead>Processed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {returns.map((ret) => (
-                <TableRow key={ret.id}>
-                  <TableCell>
-                    <Link
-                      href={`/dashboard/returns/${ret.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {ret.externalOrderId}
-                    </Link>
-                    <div className="text-muted-foreground text-xs">
-                      {ret.shopName}
-                      {ret.autoDetected ? ' · auto' : ''}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <ReturnStatusBadge status={ret.status} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{ret.itemCount}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                    <span suppressHydrationWarning>{formatDateTime(ret.createdAt)}</span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                    {ret.processedAt ? (
-                      <span suppressHydrationWarning>{formatDateTime(ret.processedAt)}</span>
-                    ) : (
-                      <Badge variant="outline" className={cn('border-amber-500 text-amber-600')}>
-                        pending
-                      </Badge>
-                    )}
-                  </TableCell>
+        <div className="space-y-3">
+          <div className="overflow-x-auto rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Items</TableHead>
+                  <TableHead>Opened</TableHead>
+                  <TableHead>Processed</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {returns.map((ret) => (
+                  <TableRow key={ret.id}>
+                    <TableCell>
+                      <Link
+                        href={`/dashboard/returns/${ret.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {ret.externalOrderId}
+                      </Link>
+                      <div className="text-muted-foreground text-xs">
+                        {ret.shopName}
+                        {ret.autoDetected ? ' · auto' : ''}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <ReturnStatusBadge status={ret.status} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{ret.itemCount}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      <span suppressHydrationWarning>{formatDateTime(ret.createdAt)}</span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {ret.processedAt ? (
+                        <span suppressHydrationWarning>{formatDateTime(ret.processedAt)}</span>
+                      ) : (
+                        <Badge variant="outline" className={cn('border-amber-500 text-amber-600')}>
+                          pending
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <TablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

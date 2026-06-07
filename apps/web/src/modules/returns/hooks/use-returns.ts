@@ -1,11 +1,12 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReturnStatus } from '@prisma/client';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import type { PageMeta } from '@/hooks/use-pagination';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 import { orderKeys } from '@/modules/orders/hooks/order-keys';
 
@@ -13,15 +14,23 @@ import { returnKeys } from './return-keys';
 import type { ProcessReturnInput } from '../validators/process-return';
 import type { ReturnDetail, ReturnListItem } from '../types';
 
-export function useReturnsQuery(status?: ReturnStatus) {
+/** A page of returns (mirror of the server's PaginatedResult). */
+export type ReturnsPage = {
+  items: ReturnListItem[];
+  meta: PageMeta;
+};
+
+export function useReturnsQuery(status: ReturnStatus | undefined, page: number, pageSize: number) {
   return useQuery({
-    queryKey: returnKeys.list(status),
+    queryKey: returnKeys.list(status, page, pageSize),
     queryFn: async () => {
-      const query = status ? `?status=${status}` : '';
-      const result = await apiFetch<ReturnListItem[]>(`${apiRoutes.returns}${query}`);
+      const result = await apiFetch<ReturnsPage>(apiRoutes.returns, {
+        params: { page, pageSize, ...(status ? { status } : {}) },
+      });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
+    placeholderData: keepPreviousData,
   });
 }
 

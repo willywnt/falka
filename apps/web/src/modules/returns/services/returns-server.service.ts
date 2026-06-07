@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
+import { buildPaginatedResult, prisma, type PaginatedResult } from '@olshop/db';
 import { enqueuePropagateInventoryStock } from '@olshop/queue';
 import type { Prisma } from '@prisma/client';
 
@@ -82,24 +82,36 @@ function mapDetail(row: ReturnRow): ReturnDetail {
  * processing time, through the inventory service, so we never over-credit.
  */
 export class ReturnsServerService {
-  async listReturns(userId: string, query: ListReturnsQuery): Promise<ReturnListItem[]> {
-    const rows = await prisma.return.findMany({
-      where: { userId, ...(query.status ? { status: query.status } : {}) },
-      include: {
-        order: {
-          select: {
-            externalOrderId: true,
-            provider: true,
-            connection: { select: { shopName: true } },
-          },
-        },
-        _count: { select: { items: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    });
+  async listReturns(
+    userId: string,
+    query: ListReturnsQuery,
+  ): Promise<PaginatedResult<ReturnListItem>> {
+    const where: Prisma.ReturnWhereInput = {
+      userId,
+      ...(query.status ? { status: query.status } : {}),
+    };
 
-    return rows.map((row) => ({
+    const [rows, total] = await Promise.all([
+      prisma.return.findMany({
+        where,
+        include: {
+          order: {
+            select: {
+              externalOrderId: true,
+              provider: true,
+              connection: { select: { shopName: true } },
+            },
+          },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.return.count({ where }),
+    ]);
+
+    const items = rows.map((row) => ({
       id: row.id,
       orderId: row.orderId,
       externalOrderId: row.order.externalOrderId,
@@ -113,6 +125,8 @@ export class ReturnsServerService {
       createdAt: row.createdAt.toISOString(),
       processedAt: row.processedAt?.toISOString() ?? null,
     }));
+
+    return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
   async getReturn(userId: string, returnId: string): Promise<ReturnDetail> {

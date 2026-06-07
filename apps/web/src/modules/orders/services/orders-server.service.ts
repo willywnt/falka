@@ -1,6 +1,11 @@
 import 'server-only';
 
-import { prisma, type TransactionClient } from '@olshop/db';
+import {
+  buildPaginatedResult,
+  prisma,
+  type PaginatedResult,
+  type TransactionClient,
+} from '@olshop/db';
 import { enqueuePropagateInventoryStock } from '@olshop/queue';
 import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
@@ -11,6 +16,7 @@ import { returnsServerService } from '@/modules/returns/services/returns-server.
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
+import type { ListOrdersQuery } from '../validators/list-orders';
 import type { MultiPullOrdersResult, OrderDetail, OrderItemDetail, OrderListItem } from '../types';
 
 /** Minimum gap between pulls from the same store, to curb API abuse. */
@@ -21,18 +27,27 @@ function isCoolingDown(lastPulledAt: Date | null): boolean {
 }
 
 export class OrdersServerService {
-  async listOrders(userId: string): Promise<OrderListItem[]> {
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      include: {
-        connection: { select: { shopName: true, lastOrdersPulledAt: true } },
-        items: { select: { productVariantId: true } },
-      },
-      orderBy: { placedAt: 'desc' },
-      take: 100,
-    });
+  async listOrders(
+    userId: string,
+    query: ListOrdersQuery,
+  ): Promise<PaginatedResult<OrderListItem>> {
+    const where: Prisma.OrderWhereInput = { userId };
 
-    return orders.map((order) => ({
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          connection: { select: { shopName: true, lastOrdersPulledAt: true } },
+          items: { select: { productVariantId: true } },
+        },
+        orderBy: { placedAt: 'desc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    const items = orders.map((order) => ({
       id: order.id,
       externalOrderId: order.externalOrderId,
       provider: order.provider,
@@ -49,6 +64,8 @@ export class OrdersServerService {
       placedAt: order.placedAt.toISOString(),
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
     }));
+
+    return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
   async getOrder(userId: string, orderId: string): Promise<OrderDetail> {

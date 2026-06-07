@@ -16,6 +16,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { TablePagination } from '@/components/table-pagination';
+import { usePagination } from '@/hooks/use-pagination';
 import { formatDateTime } from '@/lib/formatters';
 
 import { useOrdersQuery } from '../hooks/use-orders';
@@ -23,11 +25,13 @@ import { OrderStatusBadge } from './order-status-badge';
 import { PullOrdersDialog } from './pull-orders-dialog';
 
 export function OrdersDashboard() {
-  const { data, isLoading, error } = useOrdersQuery();
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+  const { data, isLoading, error } = useOrdersQuery(page, pageSize);
   const [pullOpen, setPullOpen] = useState(false);
 
-  const orders = data ?? [];
-  const isEmpty = !isLoading && orders.length === 0;
+  const orders = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
+  const isEmpty = !isLoading && total === 0;
 
   return (
     <div className="space-y-6">
@@ -63,73 +67,83 @@ export function OrdersDashboard() {
           }
         />
       ) : (
-        <div className="rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Buyer</TableHead>
-                <TableHead className="text-right">Items</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Placed</TableHead>
-                <TableHead>Last pulled</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
-                    <Link
-                      href={`/dashboard/orders/${order.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {order.externalOrderId}
-                    </Link>
-                    <div className="text-muted-foreground text-xs">{order.shopName}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <OrderStatusBadge status={order.status} />
-                      {order.fulfilledAt ? (
-                        <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                          Fulfilled
+        <div className="space-y-3">
+          <div className="rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Buyer</TableHead>
+                  <TableHead className="text-right">Items</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Placed</TableHead>
+                  <TableHead>Last pulled</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>
+                      <Link
+                        href={`/dashboard/orders/${order.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {order.externalOrderId}
+                      </Link>
+                      <div className="text-muted-foreground text-xs">{order.shopName}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <OrderStatusBadge status={order.status} />
+                        {order.fulfilledAt ? (
+                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                            Fulfilled
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm">{order.buyerName ?? '—'}</TableCell>
+                    <TableCell className="text-right">
+                      <span className="tabular-nums">{order.itemCount}</span>
+                      {order.unresolvedCount > 0 ? (
+                        <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
+                          {order.unresolvedCount} unmapped
                         </Badge>
                       ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{order.buyerName ?? '—'}</TableCell>
-                  <TableCell className="text-right">
-                    <span className="tabular-nums">{order.itemCount}</span>
-                    {order.unresolvedCount > 0 ? (
-                      <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
-                        {order.unresolvedCount} unmapped
-                      </Badge>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    {order.inventoryApplied ? (
-                      <Badge variant="secondary">Applied</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">
-                        {order.status === 'PAID' ? 'not applied' : '—'}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap" suppressHydrationWarning>
-                    {formatDateTime(order.placedAt)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                    {order.lastPulledAt ? (
-                      <span suppressHydrationWarning>{formatDateTime(order.lastPulledAt)}</span>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                    <TableCell>
+                      {order.inventoryApplied ? (
+                        <Badge variant="secondary">Applied</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          {order.status === 'PAID' ? 'not applied' : '—'}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap" suppressHydrationWarning>
+                      {formatDateTime(order.placedAt)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {order.lastPulledAt ? (
+                        <span suppressHydrationWarning>{formatDateTime(order.lastPulledAt)}</span>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <TablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
 
