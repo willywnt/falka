@@ -498,6 +498,8 @@ model Order {
    * order has been packed + recorded. Matched by noResi (no FK).
    */
   fulfilledAt             DateTime?
+  /** Free-text reason captured when an order is cancelled manually (null otherwise). */
+  cancelReason            String?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 

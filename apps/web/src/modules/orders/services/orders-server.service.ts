@@ -125,6 +125,7 @@ export class OrdersServerService {
       fulfilledAt: order.fulfilledAt?.toISOString() ?? null,
       placedAt: order.placedAt.toISOString(),
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
+      cancelReason: order.cancelReason,
       items,
     };
   }
@@ -231,6 +232,139 @@ export class OrdersServerService {
     }
 
     appLogger.info('orders.item.resolved', { userId, orderId, orderItemId, variantId });
+    return this.getOrder(userId, orderId);
+  }
+
+  /**
+   * Manually mark a PAID order as shipped: consume the reservation for every resolved
+   * line (available unchanged) and stamp `inventoryShippedAt`, set status SHIPPED, and
+   * optionally set/update the tracking number. Idempotent via `inventoryShippedAt`.
+   * Best-effort re-runs the noResi → packing-video fulfillment match afterwards.
+   */
+  async markOrderShipped(
+    userId: string,
+    orderId: string,
+    input: { noResi?: string } = {},
+  ): Promise<OrderDetail> {
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { items: true },
+    });
+    if (!order) throw OrderError.notFound();
+    if (order.inventoryShippedAt !== null) {
+      throw OrderError.validation('This order is already marked shipped.');
+    }
+    if (order.status !== 'PAID') {
+      throw OrderError.validation('Only a paid order can be marked shipped.');
+    }
+    if (order.inventoryAppliedAt === null) {
+      throw OrderError.validation(
+        'Stock is not reserved for this order yet — map every item first, then pull or resolve.',
+      );
+    }
+
+    const noResi = input.noResi ?? order.noResi;
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of order.items) {
+        if (!item.productVariantId) continue;
+        await inventoryServerService.applyOrderShipTx(tx, {
+          userId,
+          variantId: item.productVariantId,
+          quantity: item.quantity,
+          orderId: order.id,
+        });
+      }
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: 'SHIPPED', inventoryShippedAt: new Date(), noResi },
+      });
+    });
+
+    // The order is packed-and-shipped now; stamp fulfillment if a video already exists.
+    if (noResi) await this.markFulfilledByResi(userId, noResi);
+    appLogger.info('orders.marked_shipped', { userId, orderId, hasResi: Boolean(noResi) });
+    return this.getOrder(userId, orderId);
+  }
+
+  /**
+   * Set or update an order's tracking number (an offline shipment, or a missing resi),
+   * then re-run the noResi → packing-video fulfillment match. NOTE: a later marketplace
+   * re-pull may overwrite this for a marketplace-sourced order.
+   */
+  async setOrderResi(userId: string, orderId: string, noResi: string): Promise<OrderDetail> {
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      select: { id: true },
+    });
+    if (!order) throw OrderError.notFound();
+
+    await prisma.order.update({ where: { id: orderId }, data: { noResi } });
+    await this.markFulfilledByResi(userId, noResi);
+    appLogger.info('orders.resi_updated', { userId, orderId });
+    return this.getOrder(userId, orderId);
+  }
+
+  /**
+   * Manually cancel an order BEFORE it ships. If stock was reserved, release it back to
+   * available (reversing the reservation) and stamp `inventoryRevertedAt`; always set
+   * status CANCELLED + the reason. A shipped order can't be cancelled here — that's a
+   * return (goods coming back). Idempotent via `inventoryRevertedAt`; released variants
+   * propagate to the other channels.
+   */
+  async cancelOrder(
+    userId: string,
+    orderId: string,
+    input: { reason?: string } = {},
+  ): Promise<OrderDetail> {
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { items: true },
+    });
+    if (!order) throw OrderError.notFound();
+    if (order.inventoryShippedAt !== null) {
+      throw OrderError.validation(
+        'This order already shipped — open a return to bring the goods back instead of cancelling.',
+      );
+    }
+    if (order.status === 'CANCELLED') {
+      throw OrderError.validation('This order is already cancelled.');
+    }
+    if (order.status === 'COMPLETED') {
+      throw OrderError.validation('A completed order cannot be cancelled.');
+    }
+
+    const reason = input.reason?.trim() || null;
+    const shouldRelease = order.inventoryAppliedAt !== null && order.inventoryRevertedAt === null;
+    const released = new Set<string>();
+
+    await prisma.$transaction(async (tx) => {
+      if (shouldRelease) {
+        for (const item of order.items) {
+          if (!item.productVariantId) continue;
+          await inventoryServerService.applyOrderReleaseTx(tx, {
+            userId,
+            variantId: item.productVariantId,
+            quantity: item.quantity,
+            orderId: order.id,
+          });
+          released.add(item.productVariantId);
+        }
+      }
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'CANCELLED',
+          cancelReason: reason,
+          ...(shouldRelease ? { inventoryRevertedAt: new Date() } : {}),
+        },
+      });
+    });
+
+    if (released.size > 0) {
+      await this.propagateAffected(userId, released, order.marketplaceConnectionId);
+    }
+    appLogger.info('orders.cancelled', { userId, orderId, released: released.size });
     return this.getOrder(userId, orderId);
   }
 

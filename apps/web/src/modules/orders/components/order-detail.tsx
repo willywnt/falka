@@ -27,6 +27,7 @@ import { useCreateReturnMutation } from '@/modules/returns/hooks/use-returns';
 
 import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
 import { MapOrderItemDialog } from './map-order-item-dialog';
+import { OrderActionsMenu } from './order-actions-menu';
 import { OrderStatusBadge } from './order-status-badge';
 
 export function OrderDetail({ orderId }: { orderId: string }) {
@@ -102,6 +103,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         {data.fulfilledAt ? (
           <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Fulfilled</Badge>
         ) : null}
+        <div className="ml-auto">
+          <OrderActionsMenu order={data} />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -216,6 +220,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                 <span className="text-muted-foreground">Tracking no.</span>
                 <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
+              {data.status === 'CANCELLED' && data.cancelReason ? (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-muted-foreground shrink-0">Cancel reason</span>
+                  <span className="text-right font-medium">{data.cancelReason}</span>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 

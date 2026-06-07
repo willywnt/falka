@@ -36,7 +36,11 @@ export type OrderListItem = {
   lastPulledAt: string | null;
 };
 
-export type OrderDetail = OrderListItem & { items: OrderItemDetail[] };
+export type OrderDetail = OrderListItem & {
+  items: OrderItemDetail[];
+  /** Free-text reason captured when the order was cancelled manually (null otherwise). */
+  cancelReason: string | null;
+};
 
 /** Result of pulling from several stores at once. */
 export type MultiPullOrdersResult = {

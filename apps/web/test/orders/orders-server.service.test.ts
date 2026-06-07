@@ -287,3 +287,101 @@ describe('findByResi / markFulfilledByResi (fulfillment)', () => {
     expect(args.data.fulfilledAt).toBeInstanceOf(Date);
   });
 });
+
+/** A persisted order row (findFirst with items) for the manual-action paths. */
+function persistedOrder(overrides: Record<string, unknown>) {
+  return {
+    id: 'o1',
+    externalOrderId: 'EXT-1',
+    marketplaceConnectionId: CONN_ID,
+    status: 'PAID',
+    noResi: 'RESI-1',
+    inventoryAppliedAt: APPLIED_AT,
+    inventoryShippedAt: null,
+    inventoryRevertedAt: null,
+    items: [{ productVariantId: 'v1', quantity: 2 }],
+    ...overrides,
+  };
+}
+
+describe('markOrderShipped (manual)', () => {
+  it('ships a reserved PAID order: consumes the reservation and sets SHIPPED + resi', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(persistedOrder({}));
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+    const getOrderSpy = vi
+      .spyOn(service, 'getOrder')
+      .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
+
+    await service.markOrderShipped(USER, 'o1', { noResi: 'NEW-RESI' });
+
+    expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', quantity: 2, orderId: 'o1' }),
+    );
+    expect(txMock.order.update.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: 'o1' },
+      data: expect.objectContaining({ status: 'SHIPPED', noResi: 'NEW-RESI' }),
+    });
+    getOrderSpy.mockRestore();
+  });
+
+  it('refuses to ship an order that is not PAID', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(persistedOrder({ status: 'PENDING' }));
+    await expect(service.markOrderShipped(USER, 'o1')).rejects.toThrow(/paid/i);
+    expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalled();
+  });
+
+  it('refuses to ship a PAID order whose stock was never reserved', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(persistedOrder({ inventoryAppliedAt: null }));
+    await expect(service.markOrderShipped(USER, 'o1')).rejects.toThrow(/not reserved/i);
+    expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('cancelOrder (manual)', () => {
+  it('releases reserved stock, sets CANCELLED + reason, and propagates', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(persistedOrder({}));
+    const getOrderSpy = vi
+      .spyOn(service, 'getOrder')
+      .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
+
+    await service.cancelOrder(USER, 'o1', { reason: 'Buyer changed mind' });
+
+    expect(inventoryMock.applyOrderReleaseTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', quantity: 2, orderId: 'o1' }),
+    );
+    expect(txMock.order.update.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: 'o1' },
+      data: expect.objectContaining({ status: 'CANCELLED', cancelReason: 'Buyer changed mind' }),
+    });
+    expect(enqueueMock).toHaveBeenCalledTimes(1);
+    getOrderSpy.mockRestore();
+  });
+
+  it('refuses to cancel a shipped order (it is a return, not a release)', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(
+      persistedOrder({ status: 'SHIPPED', inventoryShippedAt: SHIPPED_AT }),
+    );
+    await expect(service.cancelOrder(USER, 'o1', {})).rejects.toThrow(/return/i);
+    expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
+  });
+
+  it('cancels a never-reserved order without releasing stock', async () => {
+    prismaMock.order.findFirst.mockResolvedValue(
+      persistedOrder({ status: 'PENDING', inventoryAppliedAt: null }),
+    );
+    const getOrderSpy = vi
+      .spyOn(service, 'getOrder')
+      .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
+
+    await service.cancelOrder(USER, 'o1', {});
+
+    expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
+    expect(txMock.order.update.mock.calls[0]?.[0]).toMatchObject({
+      data: expect.objectContaining({ status: 'CANCELLED' }),
+    });
+    expect(enqueueMock).not.toHaveBeenCalled();
+    getOrderSpy.mockRestore();
+  });
+});
