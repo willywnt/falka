@@ -116,6 +116,7 @@
     'Plus Jakarta Sans Variable', var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     'Apple Color Emoji', 'Segoe UI Emoji';
   --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+  --font-serif: 'Fraunces Variable', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
@@ -172,6 +173,17 @@
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+}
+
+/*
+ * Editorial serif for HERO KPI numbers (StatCard values) — a single rationed
+ * Fraunces (display) touch over the warm paper, the "financial statement" voice.
+ * Tabular so KPI rows align; falls back to Georgia before Fraunces loads (swap).
+ */
+@utility kpi-serif {
+  font-family: var(--font-serif);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 @layer base {
