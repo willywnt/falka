@@ -80,6 +80,9 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
           ) : null}
         </TableCell>
         <TableCell className="num text-right">{formatCurrency(item.unitCost)}</TableCell>
+        <TableCell className="num text-right font-medium">
+          {formatCurrency(item.lineTotal)}
+        </TableCell>
         {canReceive ? (
           <TableCell className="text-right">
             {item.outstanding > 0 ? (
@@ -191,6 +194,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                   <TableHead className="text-right">Dipesan</TableHead>
                   <TableHead className="text-right">Diterima</TableHead>
                   <TableHead className="text-right">Modal satuan</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                   {canReceive ? (
                     <TableHead className="text-right">Terima sekarang</TableHead>
                   ) : null}
@@ -201,7 +205,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                   group.kind === 'bundle' ? (
                     <Fragment key={`bundle-${group.bundleName}-${group.items[0]?.id}`}>
                       <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={canReceive ? 5 : 4} className="bg-muted/30 py-2">
+                        <TableCell colSpan={canReceive ? 6 : 5} className="bg-muted/30 py-2">
                           <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                             <Boxes className="size-3.5 text-violet-500" />
                             Bundel · {group.bundleName}

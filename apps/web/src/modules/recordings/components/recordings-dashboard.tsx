@@ -39,6 +39,7 @@ import { RecordingPlayerModal } from './recording-player-modal';
 import { ShareEvidenceDialog } from './share-evidence-dialog';
 import { OperationalStatusBadge } from './operational-status-badge';
 import { EmptyState } from '@/components/empty-state';
+import { TablePagination } from '@/components/table-pagination';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -107,7 +108,7 @@ export function RecordingsDashboard() {
   const setUploadCenterOpen = useRecordingReliabilityStore((state) => state.setUploadCenterOpen);
   const { discardRecording } = useUploadRetry();
 
-  const { data, isLoading, isFetching, error } = useRecordingsListQuery(listQuery);
+  const { data, isLoading, error } = useRecordingsListQuery(listQuery);
   const detailQuery = useRecordingDetailQuery(detailId, detailOpen);
   const deleteMutation = useDeleteRecordingMutation();
   const downloadMutation = useDownloadRecordingMutation();
@@ -379,31 +380,15 @@ export function RecordingsDashboard() {
           ) : null}
 
           {visibleServerRecordings.length > 0 ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-muted-foreground text-sm">
-                Halaman {data?.meta.page ?? 1} dari {data?.meta.totalPages ?? 1} ·{' '}
-                {data?.meta.total ?? 0} rekaman
-                {isFetching ? ' · Memperbarui...' : ''}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!data?.meta.hasPreviousPage}
-                  onClick={() => setQuery((current) => ({ ...current, page: current.page - 1 }))}
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!data?.meta.hasNextPage}
-                  onClick={() => setQuery((current) => ({ ...current, page: current.page + 1 }))}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+            <TablePagination
+              page={query.page}
+              pageSize={query.pageSize}
+              total={data?.meta.total ?? 0}
+              onPageChange={(nextPage) => setQuery((current) => ({ ...current, page: nextPage }))}
+              onPageSizeChange={(size) =>
+                setQuery((current) => ({ ...current, pageSize: size, page: 1 }))
+              }
+            />
           ) : null}
         </>
       )}

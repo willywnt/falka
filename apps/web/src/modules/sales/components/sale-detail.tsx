@@ -145,7 +145,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Harga satuan</TableHead>
-                  <TableHead className="text-right">Total baris</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -178,7 +178,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">Total harga</span>
                 <span className="num text-right font-semibold">
                   {formatCurrency(data.totalAmount)}
                 </span>

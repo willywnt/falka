@@ -28,16 +28,16 @@ function LabelCell({ label, qr }: { label: PrintableLabel; qr: string | undefine
 
   return (
     <div className="flex break-inside-avoid flex-col items-center gap-1 rounded-md border p-2 text-center">
+      <div className="line-clamp-2 text-[11px] leading-tight font-medium">
+        {label.productName ? `${label.productName} · ${label.name}` : label.name}
+      </div>
       {qr ? (
         // eslint-disable-next-line @next/next/no-img-element -- dynamic QR data URL
         <img src={qr} alt={code} className="size-20" />
       ) : (
         <div className="bg-muted size-20 animate-pulse rounded" />
       )}
-      <div className="line-clamp-2 text-[11px] leading-tight font-medium">
-        {label.productName ? `${label.productName} · ${label.name}` : label.name}
-      </div>
-      <div className="text-muted-foreground font-mono text-[10px]">{code}</div>
+      <div className="num text-muted-foreground text-[10px]">{label.sku}</div>
       <div className="num text-xs font-semibold">{formatCurrency(label.price)}</div>
     </div>
   );

@@ -46,7 +46,8 @@ export function LabelStudio() {
         sku: variant.sku,
         barcode: variant.barcode,
         price: variant.price,
-        productName: variant.productName,
+        // The label shows the variant label (group · name / name), not the product.
+        productName: variant.variantGroup ?? undefined,
       })),
     [picked],
   );

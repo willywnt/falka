@@ -45,6 +45,8 @@ export type LabelVariant = {
   variantId: string;
   productName: string;
   name: string;
+  /** Parent group label when this is a subvariant; null = standalone. */
+  variantGroup: string | null;
   sku: string;
   barcode: string | null;
   /** Decimal serialized as a string to avoid float precision loss. */

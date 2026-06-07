@@ -227,6 +227,7 @@ export class CatalogServerService {
       variantId: variant.id,
       productName: variant.product.name,
       name: variant.name,
+      variantGroup: variant.variantGroup,
       sku: variant.sku,
       barcode: variant.barcode,
       price: variant.price.toString(),
