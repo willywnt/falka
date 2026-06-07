@@ -46,4 +46,12 @@ export class MarketplaceSyncError extends Error {
       retryable: false,
     });
   }
+
+  static tokenExpired(
+    message = 'Marketplace access token has expired — re-authenticate the connection.',
+  ): MarketplaceSyncError {
+    return new MarketplaceSyncError(SYNC_ERROR_CODES.INVALID_TOKEN, message, {
+      retryable: false,
+    });
+  }
 }

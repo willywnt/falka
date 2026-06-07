@@ -82,6 +82,7 @@ export type SyncJobContext = {
   syncEnabled: boolean;
   connectionActive: boolean;
   encryptedAccessToken: string;
+  tokenExpiresAt: Date | null;
   externalProductId: string;
   externalVariantId: string;
   externalSku: string | null;
@@ -98,7 +99,14 @@ export async function loadSyncJobContext(syncJobId: string): Promise<SyncJobCont
       attempts: true,
       provider: true,
       marketplaceProductMappingId: true,
-      connection: { select: { isActive: true, deletedAt: true, encryptedAccessToken: true } },
+      connection: {
+        select: {
+          isActive: true,
+          deletedAt: true,
+          encryptedAccessToken: true,
+          tokenExpiresAt: true,
+        },
+      },
       mapping: {
         select: {
           syncEnabled: true,
@@ -130,6 +138,7 @@ export async function loadSyncJobContext(syncJobId: string): Promise<SyncJobCont
     syncEnabled: job.mapping.syncEnabled,
     connectionActive: job.connection.isActive && job.connection.deletedAt === null,
     encryptedAccessToken: job.connection.encryptedAccessToken,
+    tokenExpiresAt: job.connection.tokenExpiresAt,
     externalProductId: job.mapping.marketplaceProduct.externalProductId,
     externalVariantId: job.mapping.marketplaceProduct.externalVariantId,
     externalSku: job.mapping.marketplaceProduct.externalSku,

@@ -22,6 +22,15 @@ export type ExecuteStockSyncResult = {
 };
 
 /**
+ * A connection's access token is expired when it carries an expiry that is at or
+ * before `now`. A null expiry means "no expiry recorded" (stub/seed connections)
+ * and is treated as not-expired so the existing flows are unaffected.
+ */
+export function isAccessTokenExpired(expiresAt: Date | null, now: Date = new Date()): boolean {
+  return expiresAt !== null && expiresAt.getTime() <= now.getTime();
+}
+
+/**
  * Pushes a single mapping's current available stock to its marketplace listing.
  * Reads the LATEST available stock so repeated events converge to the truth.
  * Returns a result; the caller (job processor) decides whether to throw for a
@@ -43,6 +52,25 @@ export async function executeStockSync(
   ) {
     await disableSyncJob({ syncJobId, reason: 'Mapping is no longer sync-eligible.' });
     return { success: false, skipped: true };
+  }
+
+  // Reject an expired token BEFORE touching the provider: a real adapter would
+  // otherwise burn a network call and a non-retryable failure on every mapping.
+  // Unlike the eligibility gate above we FAIL (not DISABLE) the job — once the
+  // token is refreshed the mapping is sync-eligible again and a fresh event syncs.
+  if (isAccessTokenExpired(context.tokenExpiresAt)) {
+    const error = MarketplaceSyncError.tokenExpired();
+    await failSyncJob({
+      syncJobId,
+      mappingId: context.mappingId,
+      errorMessage: error.message,
+      finalFailure: true,
+    });
+    logger.warn('marketplace.stock.token_expired', {
+      syncJobId,
+      provider: context.provider,
+    });
+    return { success: false, errorCode: error.code, retryable: false };
   }
 
   await markSyncJobProcessing(syncJobId);
