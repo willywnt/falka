@@ -39,6 +39,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { formatDateTime } from '@/lib/formatters';
+import { formatVariantLabel } from '@/lib/variant-label';
 import { useMarkLabelsPrintedMutation } from '@/modules/catalog/hooks/use-products';
 
 import { useStockOverviewQuery } from '../hooks/use-inventory';
@@ -151,7 +152,12 @@ export function InventoryOverview() {
                         >
                           {item.productName}
                         </Link>
-                        <div className="text-muted-foreground text-xs">{item.variantName}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {formatVariantLabel({
+                            variantGroup: item.variantGroup,
+                            name: item.variantName,
+                          })}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -283,8 +289,11 @@ export function InventoryOverview() {
             if (!open) setQrTarget(null);
           }}
           value={qrTarget.barcode?.trim() || qrTarget.sku}
-          title={`${qrTarget.productName} · ${qrTarget.variantName}`}
-          subtitle={qrTarget.sku}
+          name={formatVariantLabel({
+            variantGroup: qrTarget.variantGroup,
+            name: qrTarget.variantName,
+          })}
+          sku={qrTarget.sku}
           lastPrintedAt={qrTarget.labelPrintedAt}
           onPrint={() => markPrinted.mutate([qrTarget.variantId])}
         />

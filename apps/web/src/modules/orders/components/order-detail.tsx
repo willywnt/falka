@@ -105,7 +105,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
         <OrderStatusBadge status={data.status} />
         {data.fulfilledAt ? (
-          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Fulfillment</Badge>
+          <Badge className="bg-sky-600 text-white hover:bg-sky-600">Fulfillment</Badge>
         ) : null}
         <div className="ml-auto">
           <OrderActionsMenu order={data} />

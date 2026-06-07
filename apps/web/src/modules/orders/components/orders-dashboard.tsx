@@ -97,7 +97,7 @@ export function OrdersDashboard() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <OrderStatusBadge status={order.status} />
                         {order.fulfilledAt ? (
-                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">
                             Fulfillment
                           </Badge>
                         ) : null}
@@ -108,7 +108,7 @@ export function OrdersDashboard() {
                       <span className="num">{order.itemCount}</span>
                       {order.unresolvedCount > 0 ? (
                         <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
-                          {order.unresolvedCount} belum cocok
+                          {order.unresolvedCount} belum ter-mapping
                         </Badge>
                       ) : null}
                     </TableCell>

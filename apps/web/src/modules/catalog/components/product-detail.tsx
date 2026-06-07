@@ -359,7 +359,8 @@ export function ProductDetail({
             if (!open) setQrTarget(null);
           }}
           value={qrTarget.barcode?.trim() || qrTarget.sku}
-          title={formatVariantLabel(qrTarget)}
+          name={formatVariantLabel(qrTarget)}
+          sku={qrTarget.sku}
           lastPrintedAt={qrTarget.labelPrintedAt}
           onPrint={() => markPrinted.mutate([qrTarget.id])}
         />

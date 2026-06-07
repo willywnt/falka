@@ -157,6 +157,7 @@ export class InventoryServerService {
         sku: variant.sku,
         barcode: variant.barcode,
         variantName: variant.name,
+        variantGroup: variant.variantGroup,
         availableStock,
         reservedStock: variant.inventory?.reservedStock ?? 0,
         damagedStock: variant.inventory?.damagedStock ?? 0,

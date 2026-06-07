@@ -278,8 +278,8 @@ export function BundlesDashboard() {
             if (!open) setQrTarget(null);
           }}
           value={qrTarget.sku}
-          title={qrTarget.name}
-          subtitle={qrTarget.sku}
+          name={qrTarget.name}
+          sku={qrTarget.sku}
           onPrint={() => markPrinted.mutate([qrTarget.id])}
         />
       ) : null}

@@ -43,6 +43,8 @@ export type StockOverviewItem = {
   /** Optional scan code; the QR action encodes `barcode ?? sku`. */
   barcode: string | null;
   variantName: string;
+  /** Parent group label when this is a subvariant; null = standalone. */
+  variantGroup: string | null;
   availableStock: number;
   /** Units committed to paid-not-shipped orders. on-hand = available + reserved. */
   reservedStock: number;
