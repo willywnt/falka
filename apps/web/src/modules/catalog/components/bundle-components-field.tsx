@@ -13,7 +13,7 @@ import { useLabelVariantsQuery } from '../hooks/use-products';
 import type { LabelVariant } from '../types';
 
 export type BundleComponentDraft = {
-  componentVariantId: string;
+  productVariantId: string;
   sku: string;
   name: string;
   quantity: number;
@@ -25,25 +25,21 @@ export type BundleComponentDraft = {
 export function BundleComponentsField({
   value,
   onChange,
-  excludeVariantId,
 }: {
   value: BundleComponentDraft[];
   onChange: (next: BundleComponentDraft[]) => void;
-  excludeVariantId?: string;
 }) {
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 300);
   const { data, isLoading } = useLabelVariantsQuery(debounced, 1, 8);
 
-  const selectedIds = new Set(value.map((component) => component.componentVariantId));
-  const results = (data?.items ?? []).filter(
-    (item) => item.variantId !== excludeVariantId && !selectedIds.has(item.variantId),
-  );
+  const selectedIds = new Set(value.map((component) => component.productVariantId));
+  const results = (data?.items ?? []).filter((item) => !selectedIds.has(item.variantId));
 
   function add(item: LabelVariant) {
     onChange([
       ...value,
-      { componentVariantId: item.variantId, sku: item.sku, name: item.name, quantity: 1 },
+      { productVariantId: item.variantId, sku: item.sku, name: item.name, quantity: 1 },
     ]);
     setSearch('');
   }
@@ -51,7 +47,7 @@ export function BundleComponentsField({
   function setQuantity(id: string, quantity: number) {
     onChange(
       value.map((component) =>
-        component.componentVariantId === id
+        component.productVariantId === id
           ? { ...component, quantity: Math.max(1, quantity) }
           : component,
       ),
@@ -59,7 +55,7 @@ export function BundleComponentsField({
   }
 
   function remove(id: string) {
-    onChange(value.filter((component) => component.componentVariantId !== id));
+    onChange(value.filter((component) => component.productVariantId !== id));
   }
 
   return (
@@ -113,7 +109,7 @@ export function BundleComponentsField({
         <ul className="divide-y rounded-lg border">
           {value.map((component) => (
             <li
-              key={component.componentVariantId}
+              key={component.productVariantId}
               className="flex items-center justify-between gap-3 p-3"
             >
               <div className="min-w-0">
@@ -129,7 +125,7 @@ export function BundleComponentsField({
                 <div className="w-20">
                   <NumberInput
                     value={component.quantity}
-                    onChange={(value_) => setQuantity(component.componentVariantId, value_)}
+                    onChange={(value_) => setQuantity(component.productVariantId, value_)}
                   />
                 </div>
                 <Button
@@ -137,7 +133,7 @@ export function BundleComponentsField({
                   size="icon"
                   variant="ghost"
                   className="text-destructive hover:text-destructive size-8"
-                  onClick={() => remove(component.componentVariantId)}
+                  onClick={() => remove(component.productVariantId)}
                 >
                   <Trash2 className="size-4" />
                   <span className="sr-only">Remove</span>

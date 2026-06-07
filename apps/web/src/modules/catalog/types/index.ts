@@ -89,48 +89,56 @@ export type ProductDetail = {
   updatedAt: string;
 };
 
-/** A component line of a bundle, with the component's current sellable stock. */
-export type BundleComponentItem = {
-  componentVariantId: string;
+/** A component line of a bundle: a variant + how many go into one bundle, with live stock. */
+export type BundleComponentLine = {
+  productVariantId: string;
   sku: string;
   name: string;
   quantity: number;
   availableStock: number;
+  /** Component standard per-unit value (serialized Decimals) — drives price/cost allocation. */
+  price: string;
+  cost: string | null;
 };
 
-/** A variant's bundle composition + how many whole bundles can currently be built. */
+/** A bundle's full composition for the edit screen + how many it can currently fulfil. */
 export type BundleDetail = {
-  bundleVariantId: string;
-  /** The host variant's identity (a bundle is presented as its own thing). */
+  id: string;
+  name: string;
+  sku: string;
+  barcode: string | null;
+  price: string;
+  imageUrl: string | null;
+  components: BundleComponentLine[];
+  /** How many whole bundles can be built from component stock. */
+  available: number;
+};
+
+/** A resolved bundle for stock/price math (sale or PO explosion). Keyed by bundle id. */
+export type BundleResolution = {
+  id: string;
   name: string;
   sku: string;
   price: string;
-  components: BundleComponentItem[];
-  buildable: number;
-};
-
-/** Resolved bundle for stock math: buildable count + the component lines to decrement. */
-export type BundleResolution = {
-  buildable: number;
-  components: { componentVariantId: string; quantity: number }[];
+  components: BundleComponentLine[];
+  available: number;
 };
 
 /** Triage counts for the Bundles list (within the active search, ignoring the status filter). */
 export type BundleListSummary = {
   total: number;
-  buildable: number;
-  unbuildable: number;
+  available: number;
+  unavailable: number;
 };
 
 /** A bundle row in the dedicated Bundles list. */
 export type BundleListItem = {
-  bundleVariantId: string;
-  productId: string;
-  productName: string;
+  id: string;
   name: string;
   sku: string;
-  price: string;
   imageUrl: string | null;
-  componentCount: number;
-  buildable: number;
+  price: string;
+  /** How many distinct component variants the bundle groups. */
+  totalVariant: number;
+  available: number;
 };

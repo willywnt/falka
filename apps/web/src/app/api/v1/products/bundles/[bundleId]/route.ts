@@ -2,40 +2,51 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
-import { setBundleSchema } from '@/modules/catalog/validators';
+import { updateBundleSchema } from '@/modules/catalog/validators';
 import { apiNotFound, apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
-const paramsSchema = z.object({ variantId: z.string().min(1) });
+const paramsSchema = z.object({ bundleId: z.string().min(1) });
 
-type RouteParams = { variantId: string };
+type RouteParams = { bundleId: string };
 
 export const GET = withApiRoute<RouteParams>(
   async (_request, { user, params }) => {
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Bundle not found');
 
-    const bundle = await catalogServerService.getBundleByVariant(user.id, parsed.data.variantId);
+    const bundle = await catalogServerService.getBundle(user.id, parsed.data.bundleId);
     return apiSuccess(bundle);
   },
   { requireAuth: true },
 );
 
-export const PUT = withApiRoute<RouteParams>(
+export const PATCH = withApiRoute<RouteParams>(
   async (request, { user, params }) => {
     const parsedParams = paramsSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Bundle not found');
 
     const body: unknown = await request.json();
-    const parsed = setBundleSchema.safeParse(body);
+    const parsed = updateBundleSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const bundle = await catalogServerService.setBundleComponentsByVariant(
+    const bundle = await catalogServerService.updateBundle(
       user.id,
-      parsedParams.data.variantId,
+      parsedParams.data.bundleId,
       parsed.data,
     );
     return apiSuccess(bundle);
+  },
+  { requireAuth: true },
+);
+
+export const DELETE = withApiRoute<RouteParams>(
+  async (_request, { user, params }) => {
+    const parsed = paramsSchema.safeParse(await params);
+    if (!parsed.success) return apiNotFound('Bundle not found');
+
+    await catalogServerService.deleteBundle(user.id, parsed.data.bundleId);
+    return apiSuccess({ id: parsed.data.bundleId });
   },
   { requireAuth: true },
 );

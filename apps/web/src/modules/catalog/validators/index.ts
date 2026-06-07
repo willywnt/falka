@@ -31,10 +31,12 @@ export { markLabelsPrintedSchema, type MarkLabelsPrintedInput } from './mark-lab
 export { productIdParamSchema, type ProductIdParam } from './product-id';
 export { setVariantImageSchema, type SetVariantImageInput } from './variant-image';
 export {
-  setBundleSchema,
+  bundleItemsSchema,
   createBundleSchema,
+  updateBundleSchema,
   listBundlesQuerySchema,
-  type SetBundleInput,
+  resolveBundleQuerySchema,
   type CreateBundleInput,
+  type UpdateBundleInput,
   type ListBundlesQuery,
 } from './bundle';

@@ -11,15 +11,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
 
-import { useCreateBundleMutation } from '../hooks/use-products';
+import { useCreateBundleMutation } from '../hooks/use-bundles';
 import { suggestVariantSku } from '../utils/variants';
 import { BundleComponentsField, type BundleComponentDraft } from './bundle-components-field';
 
-/** From-scratch bundle creation: mints a stockless host variant, then sets its components. */
+/** From-scratch bundle creation: its own identity + the component variants it groups. */
 export function BundleForm() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
+  const [barcode, setBarcode] = useState('');
   const [price, setPrice] = useState(0);
   const [components, setComponents] = useState<BundleComponentDraft[]>([]);
   const createBundle = useCreateBundleMutation();
@@ -36,14 +37,15 @@ export function BundleForm() {
       const result = await createBundle.mutateAsync({
         name: name.trim(),
         sku: sku.trim(),
+        barcode: barcode.trim() || undefined,
         price,
-        components: components.map((component) => ({
-          componentVariantId: component.componentVariantId,
+        items: components.map((component) => ({
+          productVariantId: component.productVariantId,
           quantity: component.quantity,
         })),
       });
       toast.success('Bundle created');
-      router.push(`/dashboard/bundles/${result.bundleVariantId}`);
+      router.push(`/dashboard/bundles/${result.id}`);
     } catch (error) {
       toast.error('Could not create the bundle', {
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -89,6 +91,15 @@ export function BundleForm() {
                 <span className="sr-only">Generate SKU</span>
               </Button>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="bundle-barcode">Barcode (optional)</Label>
+            <Input
+              id="bundle-barcode"
+              value={barcode}
+              onChange={(event) => setBarcode(event.target.value)}
+              placeholder="Scan or type a barcode"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="bundle-price">Price</Label>

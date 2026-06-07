@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Boxes, PackageOpen, Save } from 'lucide-react';
+import { ArrowLeft, Boxes, Save, Trash2, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -20,70 +20,70 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/stat-card';
 import { formatCurrency } from '@/lib/formatters';
 
-import { useBundleByVariantQuery, useSetBundleByVariantMutation } from '../hooks/use-products';
-import { computeBuildableQty } from '../utils/bundle';
+import {
+  useBundleQuery,
+  useDeleteBundleMutation,
+  useUpdateBundleMutation,
+} from '../hooks/use-bundles';
+import { suggestVariantSku } from '../utils/variants';
 import { BundleComponentsField, type BundleComponentDraft } from './bundle-components-field';
+import { BundleImage } from './bundle-image';
 
-const normalize = (components: { componentVariantId: string; quantity: number }[]) =>
-  components
-    .map((component) => `${component.componentVariantId}:${component.quantity}`)
-    .sort()
-    .join(',');
-
-export function BundleDetailEditor({ variantId }: { variantId: string }) {
+export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
   const router = useRouter();
-  const { data, isLoading, error } = useBundleByVariantQuery(variantId);
-  const setBundle = useSetBundleByVariantMutation(variantId);
+  const { data, isLoading, error } = useBundleQuery(bundleId);
+  const updateBundle = useUpdateBundleMutation(bundleId);
+  const deleteBundle = useDeleteBundleMutation();
+
+  const [name, setName] = useState('');
+  const [sku, setSku] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [price, setPrice] = useState(0);
   const [components, setComponents] = useState<BundleComponentDraft[]>([]);
 
   useEffect(() => {
-    if (data) {
-      setComponents(
-        data.components.map((component) => ({
-          componentVariantId: component.componentVariantId,
-          sku: component.sku,
-          name: component.name,
-          quantity: component.quantity,
-          availableStock: component.availableStock,
-        })),
-      );
-    }
+    if (!data) return;
+    setName(data.name);
+    setSku(data.sku);
+    setBarcode(data.barcode ?? '');
+    setPrice(Number(data.price));
+    setComponents(
+      data.components.map((component) => ({
+        productVariantId: component.productVariantId,
+        sku: component.sku,
+        name: component.name,
+        quantity: component.quantity,
+        availableStock: component.availableStock,
+      })),
+    );
   }, [data]);
 
-  const buildable = useMemo(
-    () =>
-      computeBuildableQty(
-        components.map((component) => ({
-          quantity: component.quantity,
-          availableStock: component.availableStock ?? 0,
-        })),
-      ),
-    [components],
-  );
-
-  const hasUnknownStock = components.some((component) => component.availableStock === undefined);
-  const dirty = data ? normalize(components) !== normalize(data.components) : false;
-  // The page doubles as "make this variant a bundle" — a variant with no saved
-  // components isn't a bundle yet, so we hide the bundle-only framing.
-  const isBundle = (data?.components.length ?? 0) > 0;
-
-  async function persist(next: BundleComponentDraft[]) {
-    return setBundle.mutateAsync({
-      components: next.map((component) => ({
-        componentVariantId: component.componentVariantId,
-        quantity: component.quantity,
-      })),
-    });
-  }
+  const canSave =
+    name.trim().length > 0 &&
+    sku.trim().length > 0 &&
+    components.length > 0 &&
+    !updateBundle.isPending;
 
   async function handleSave() {
-    if (!dirty || components.length === 0) return;
+    if (!canSave) return;
     try {
-      await persist(components);
+      await updateBundle.mutateAsync({
+        name: name.trim(),
+        sku: sku.trim(),
+        barcode: barcode.trim() || undefined,
+        price,
+        items: components.map((component) => ({
+          productVariantId: component.productVariantId,
+          quantity: component.quantity,
+        })),
+      });
       toast.success('Bundle saved');
     } catch (saveError) {
       toast.error('Could not save the bundle', {
@@ -92,16 +92,14 @@ export function BundleDetailEditor({ variantId }: { variantId: string }) {
     }
   }
 
-  async function handleConvert() {
+  async function handleDelete() {
     try {
-      await persist([]);
-      toast.success('Converted to a normal product', {
-        description: 'It now tracks its own stock instead of its components.',
-      });
+      await deleteBundle.mutateAsync(bundleId);
+      toast.success('Bundle deleted');
       router.push('/dashboard/bundles');
-    } catch (convertError) {
-      toast.error('Could not convert the bundle', {
-        description: convertError instanceof Error ? convertError.message : 'Please try again.',
+    } catch (deleteError) {
+      toast.error('Could not delete the bundle', {
+        description: deleteError instanceof Error ? deleteError.message : 'Please try again.',
       });
     }
   }
@@ -140,96 +138,142 @@ export function BundleDetailEditor({ variantId }: { variantId: string }) {
             Bundles
           </Link>
         </Button>
-        <div className="mt-2 flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{data.name}</h1>
-          {isBundle ? (
-            <Badge className="border-transparent bg-violet-500/10 text-violet-600 dark:text-violet-400">
-              Bundle
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground">
-              Not a bundle yet
-            </Badge>
-          )}
+        <div className="mt-2 flex items-center gap-3">
+          <BundleImage bundleId={bundleId} imageUrl={data.imageUrl} label={data.name} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-2xl font-semibold tracking-tight">{data.name}</h1>
+              <Badge className="border-transparent bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                Bundle
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {data.sku} · {formatCurrency(data.price)}
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {data.sku} · {formatCurrency(data.price)}
-        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Components</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <BundleComponentsField
-              value={components}
-              onChange={setComponents}
-              excludeVariantId={variantId}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={() => void handleSave()}
-                disabled={!dirty || components.length === 0 || setBundle.isPending}
-              >
-                <Save className="size-4" />
-                {setBundle.isPending ? 'Saving…' : isBundle ? 'Save changes' : 'Make bundle'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Details</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="bundle-name">Name</Label>
+                <Input
+                  id="bundle-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="e.g. Paket Hemat"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bundle-sku">SKU</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bundle-sku"
+                    value={sku}
+                    onChange={(event) => setSku(event.target.value)}
+                    placeholder="e.g. PAKET-HEMAT"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!name.trim()}
+                    onClick={() => setSku(suggestVariantSku(name))}
+                    title="Generate SKU from the name"
+                  >
+                    <Wand2 className="size-4" />
+                    <span className="sr-only">Generate SKU</span>
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bundle-barcode">Barcode (optional)</Label>
+                <Input
+                  id="bundle-barcode"
+                  value={barcode}
+                  onChange={(event) => setBarcode(event.target.value)}
+                  placeholder="Scan or type a barcode"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bundle-price">Price</Label>
+                <NumberInput
+                  id="bundle-price"
+                  value={price}
+                  onChange={(value) => setPrice(Math.max(0, value))}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Components</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <BundleComponentsField value={components} onChange={setComponents} />
+              <div className="flex justify-end">
+                <Button onClick={() => void handleSave()} disabled={!canSave}>
+                  <Save className="size-4" />
+                  {updateBundle.isPending ? 'Saving…' : 'Save changes'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-6">
           <StatCard
-            label="Buildable now"
-            value={buildable}
+            label="Available"
+            value={data.available}
             icon={Boxes}
-            tone={buildable > 0 ? 'emerald' : 'amber'}
-            hint={
-              hasUnknownStock
-                ? 'Newly added components count after you save.'
-                : 'The most you can sell, from component stock.'
-            }
+            tone={data.available > 0 ? 'emerald' : 'amber'}
+            hint="The most you can sell, from component stock. Updates after you save."
           />
 
-          {isBundle ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Convert to normal product</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-muted-foreground text-sm">
-                  Remove all components so this variant tracks its own stock again.
-                </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="w-full" disabled={setBundle.isPending}>
-                      <PackageOpen className="size-4" />
-                      Convert to normal product
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Convert “{data.name}” to a normal product?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Its components will be removed. The variant will track its own stock instead
-                        of being built from other variants. You can make it a bundle again later.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => void handleConvert()}>
-                        Convert
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
-            </Card>
-          ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Delete bundle</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-muted-foreground text-sm">
+                Removes the bundle. Its component variants and their stock are untouched.
+              </p>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="text-destructive w-full"
+                    disabled={deleteBundle.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete bundle
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete “{data.name}”?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This removes the bundle. Its component variants and their stock are untouched.
+                      This can&apos;t be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void handleDelete()}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

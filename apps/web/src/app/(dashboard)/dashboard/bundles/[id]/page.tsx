@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 export default async function BundleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  return <BundleDetailEditor variantId={id} />;
+  return <BundleDetailEditor bundleId={id} />;
 }

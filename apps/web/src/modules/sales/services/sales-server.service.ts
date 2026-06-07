@@ -5,7 +5,6 @@ import { enqueuePropagateInventoryStock } from '@olshop/queue';
 import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
-import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 
 import { SaleError } from '../errors/sale-errors';
@@ -175,49 +174,23 @@ export class SalesServerService {
     if (!sale) throw SaleError.notFound();
     if (sale.status === 'VOID') return this.getSale(userId, saleId);
 
-    const variantIds = [...new Set(sale.items.map((item) => item.productVariantId))];
-    // Mirror the sale: a bundle decremented its components, so the void restocks
-    // those components (using the current composition), not the bundle itself.
-    const bundles = await catalogServerService.resolveBundles(userId, variantIds);
-
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
-        const bundle = bundles.get(item.productVariantId);
-        if (bundle) {
-          for (const component of bundle.components) {
-            await inventoryServerService.applyOfflineSaleReversalTx(tx, {
-              userId,
-              variantId: component.componentVariantId,
-              quantity: item.quantity * component.quantity,
-              saleId: sale.id,
-            });
-          }
-        } else {
-          await inventoryServerService.applyOfflineSaleReversalTx(tx, {
-            userId,
-            variantId: item.productVariantId,
-            quantity: item.quantity,
-            saleId: sale.id,
-          });
-        }
+        await inventoryServerService.applyOfflineSaleReversalTx(tx, {
+          userId,
+          variantId: item.productVariantId,
+          quantity: item.quantity,
+          saleId: sale.id,
+        });
       }
       await tx.sale.update({ where: { id: sale.id }, data: { status: 'VOID' } });
     });
 
     appLogger.info('sales.voided', { userId, saleId: sale.id, code: sale.code });
 
-    const affectedVariantIds = new Set<string>();
-    for (const item of sale.items) {
-      const bundle = bundles.get(item.productVariantId);
-      if (bundle) {
-        bundle.components.forEach((component) =>
-          affectedVariantIds.add(component.componentVariantId),
-        );
-      } else {
-        affectedVariantIds.add(item.productVariantId);
-      }
-    }
-    await this.propagateAffected(userId, [...affectedVariantIds]);
+    await this.propagateAffected(userId, [
+      ...new Set(sale.items.map((item) => item.productVariantId)),
+    ]);
     return this.getSale(userId, saleId);
   }
 
@@ -240,9 +213,6 @@ export class SalesServerService {
     }
 
     const totalAmount = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-
-    // Bundles decrement their component variants (not their own stock) on sale.
-    const bundles = await catalogServerService.resolveBundles(userId, variantIds);
 
     const created = await prisma.$transaction(async (tx) => {
       const count = await tx.sale.count({ where: { userId } });
@@ -274,24 +244,12 @@ export class SalesServerService {
       });
 
       for (const item of input.items) {
-        const bundle = bundles.get(item.variantId);
-        if (bundle) {
-          for (const component of bundle.components) {
-            await inventoryServerService.applyOfflineSaleTx(tx, {
-              userId,
-              variantId: component.componentVariantId,
-              quantity: item.quantity * component.quantity,
-              saleId: sale.id,
-            });
-          }
-        } else {
-          await inventoryServerService.applyOfflineSaleTx(tx, {
-            userId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-            saleId: sale.id,
-          });
-        }
+        await inventoryServerService.applyOfflineSaleTx(tx, {
+          userId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          saleId: sale.id,
+        });
       }
 
       return sale;
@@ -304,20 +262,7 @@ export class SalesServerService {
       items: input.items.length,
     });
 
-    // Propagate the variants whose available actually changed — a bundle's components,
-    // not the bundle itself.
-    const affectedVariantIds = new Set<string>();
-    for (const item of input.items) {
-      const bundle = bundles.get(item.variantId);
-      if (bundle) {
-        bundle.components.forEach((component) =>
-          affectedVariantIds.add(component.componentVariantId),
-        );
-      } else {
-        affectedVariantIds.add(item.variantId);
-      }
-    }
-    await this.propagateAffected(userId, [...affectedVariantIds]);
+    await this.propagateAffected(userId, [...new Set(input.items.map((item) => item.variantId))]);
     return this.getSale(userId, created.id);
   }
 

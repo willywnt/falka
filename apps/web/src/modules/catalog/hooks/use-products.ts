@@ -11,9 +11,6 @@ import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 import { compressImage } from '../utils/compress-image';
 import { catalogKeys } from './catalog-keys';
 import type {
-  BundleDetail,
-  BundleListItem,
-  BundleListSummary,
   DeletionBlockers,
   LabelVariant,
   ProductDetail,
@@ -24,7 +21,6 @@ import type { CreateProductInput } from '../validators/create-product';
 import type { CreateVariantInput } from '../validators/variant';
 import type { ListProductsQuery } from '../validators/list-products';
 import type { UpdateVariantInput } from '../validators/update-variant';
-import type { CreateBundleInput, SetBundleInput } from '../validators/bundle';
 
 const LIST_PAGE_SIZE = 50;
 
@@ -32,13 +28,6 @@ const LIST_PAGE_SIZE = 50;
 export type LabelVariantsPage = {
   items: LabelVariant[];
   meta: PageMeta;
-};
-
-/** A page of bundles for the dedicated Bundles list + triage summary counts. */
-export type BundlesPage = {
-  items: BundleListItem[];
-  meta: PageMeta;
-  summary: BundleListSummary;
 };
 
 function listQuery(search?: string): ListProductsQuery {
@@ -58,79 +47,6 @@ export function useProductsQuery(search?: string) {
       }
 
       return result.data;
-    },
-  });
-}
-
-/** Paginated list of bundles (debounced search) + a status triage filter. */
-export function useBundlesQuery(
-  q: string,
-  status: 'all' | 'buildable' | 'unbuildable',
-  page: number,
-  pageSize: number,
-) {
-  const trimmed = q.trim();
-  return useQuery({
-    queryKey: catalogKeys.bundles(trimmed, status, page, pageSize),
-    queryFn: async () => {
-      const result = await apiFetch<BundlesPage>(apiRoutes.bundles, {
-        params: { page, pageSize, status, ...(trimmed ? { q: trimmed } : {}) },
-      });
-      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
-      return result.data;
-    },
-    placeholderData: keepPreviousData,
-  });
-}
-
-/** Variant-id-keyed bundle read for the dedicated Bundles edit page. */
-export function useBundleByVariantQuery(variantId: string | null, enabled = true) {
-  return useQuery({
-    queryKey: catalogKeys.bundle(variantId ?? 'unknown'),
-    queryFn: async () => {
-      const result = await apiFetch<BundleDetail>(`${apiRoutes.bundles}/${variantId}`);
-      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
-      return result.data;
-    },
-    enabled: Boolean(variantId) && enabled,
-  });
-}
-
-export function useSetBundleByVariantMutation(variantId: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: SetBundleInput) => {
-      const result = await apiFetch<BundleDetail>(`${apiRoutes.bundles}/${variantId}`, {
-        method: 'PUT',
-        body: input,
-      });
-      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
-      return result.data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.bundle(variantId) });
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
-      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
-    },
-  });
-}
-
-export function useCreateBundleMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: CreateBundleInput) => {
-      const result = await apiFetch<{ bundleVariantId: string; productId: string }>(
-        apiRoutes.bundles,
-        { method: 'POST', body: input },
-      );
-      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
-      return result.data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
-      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },
   });
 }

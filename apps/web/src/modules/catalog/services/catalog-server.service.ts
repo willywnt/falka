@@ -11,11 +11,10 @@ import { storageService } from '@/modules/storage/services/storage.service';
 
 import { CatalogError } from '../errors/catalog-errors';
 import type {
-  BundleComponentItem,
+  BundleComponentLine,
   BundleDetail,
   BundleListItem,
   BundleListSummary,
-  BundleResolution,
   DeletionBlockers,
   LabelVariant,
   ProductDetail,
@@ -25,7 +24,7 @@ import type {
 } from '../types';
 import { computeBuildableQty } from '../utils/bundle';
 import { archivedSku } from '../utils/variants';
-import type { CreateBundleInput, ListBundlesQuery, SetBundleInput } from '../validators/bundle';
+import type { CreateBundleInput, ListBundlesQuery, UpdateBundleInput } from '../validators/bundle';
 import type { CreateProductInput } from '../validators/create-product';
 import type { LabelVariantsQuery } from '../validators/label-variants';
 import type { ListProductsQuery } from '../validators/list-products';
@@ -478,79 +477,70 @@ export class CatalogServerService {
   }
 
   /**
-   * Paginated list of bundles — variants that have >=1 component — with each
-   * bundle's live buildable count. Searches the bundle's own sku/name + its
-   * product name. Active (non-deleted) bundles only.
+   * Paginated list of bundles with each bundle's live "available" count (how many whole
+   * bundles its component stock can build). Searches the bundle's own sku/name. Bundles
+   * are few, so the summary + status filter are computed in memory across the search set.
    */
   async listBundles(
     userId: string,
     query: ListBundlesQuery,
   ): Promise<PaginatedResult<BundleListItem> & { summary: BundleListSummary }> {
     const term = query.q.trim();
-    const where: Prisma.ProductVariantWhereInput = {
+    const where: Prisma.BundleWhereInput = {
       userId,
-      deletedAt: null,
-      bundleComponents: { some: {} },
       ...(term
         ? {
             OR: [
               { sku: { contains: term, mode: 'insensitive' } },
               { name: { contains: term, mode: 'insensitive' } },
-              { product: { name: { contains: term, mode: 'insensitive' } } },
             ],
           }
         : {}),
     };
 
-    // Bundles are few — load all matched (search applied), compute buildable, then derive
-    // the triage summary, apply the status filter, and paginate in memory so the counts and
-    // the filter stay accurate across pages (buildable is computed, not a column).
-    const variants = await prisma.productVariant.findMany({
+    const bundles = await prisma.bundle.findMany({
       where,
       include: {
-        product: { select: { name: true } },
-        bundleComponents: {
+        items: {
           select: {
             quantity: true,
-            componentVariant: {
+            productVariant: {
               select: { deletedAt: true, inventory: { select: { availableStock: true } } },
             },
           },
         },
       },
-      orderBy: [{ product: { name: 'asc' } }, { name: 'asc' }],
+      orderBy: [{ name: 'asc' }],
     });
 
-    const all: BundleListItem[] = variants.map((variant) => ({
-      bundleVariantId: variant.id,
-      productId: variant.productId,
-      productName: variant.product.name,
-      name: variant.name,
-      sku: variant.sku,
-      price: variant.price.toString(),
-      imageUrl: variant.imageUrl,
-      componentCount: variant.bundleComponents.length,
-      buildable: computeBuildableQty(
-        variant.bundleComponents.map((component) => ({
-          quantity: component.quantity,
-          availableStock: component.componentVariant.deletedAt
+    const all: BundleListItem[] = bundles.map((bundle) => ({
+      id: bundle.id,
+      name: bundle.name,
+      sku: bundle.sku,
+      imageUrl: bundle.imageUrl,
+      price: bundle.price.toString(),
+      totalVariant: bundle.items.length,
+      available: computeBuildableQty(
+        bundle.items.map((item) => ({
+          quantity: item.quantity,
+          availableStock: item.productVariant.deletedAt
             ? 0
-            : (component.componentVariant.inventory?.availableStock ?? 0),
+            : (item.productVariant.inventory?.availableStock ?? 0),
         })),
       ),
     }));
 
     const summary: BundleListSummary = {
       total: all.length,
-      buildable: all.filter((bundle) => bundle.buildable > 0).length,
-      unbuildable: all.filter((bundle) => bundle.buildable <= 0).length,
+      available: all.filter((bundle) => bundle.available > 0).length,
+      unavailable: all.filter((bundle) => bundle.available <= 0).length,
     };
 
     const filtered =
-      query.status === 'buildable'
-        ? all.filter((bundle) => bundle.buildable > 0)
-        : query.status === 'unbuildable'
-          ? all.filter((bundle) => bundle.buildable <= 0)
+      query.status === 'available'
+        ? all.filter((bundle) => bundle.available > 0)
+        : query.status === 'unavailable'
+          ? all.filter((bundle) => bundle.available <= 0)
           : all;
 
     const start = (query.page - 1) * query.pageSize;
@@ -562,206 +552,178 @@ export class CatalogServerService {
     };
   }
 
-  /** Variant-id-keyed bundle read for the dedicated Bundles UI (no productId needed). */
-  async getBundleByVariant(userId: string, variantId: string): Promise<BundleDetail> {
-    await this.assertVariantOwned(userId, variantId);
-    return this.buildBundleDetail(userId, variantId);
+  /** A bundle's full composition for the edit screen. */
+  async getBundle(userId: string, bundleId: string): Promise<BundleDetail> {
+    return this.buildBundleDetail(userId, bundleId);
   }
 
-  /** Variant-id-keyed bundle write for the dedicated Bundles UI. */
-  async setBundleComponentsByVariant(
-    userId: string,
-    variantId: string,
-    input: SetBundleInput,
-  ): Promise<BundleDetail> {
-    await this.assertVariantOwned(userId, variantId);
-    return this.replaceBundleComponents(userId, variantId, input);
-  }
+  /** Create a bundle: validate the SKU is free (across bundles + variants) and the components. */
+  async createBundle(userId: string, input: CreateBundleInput): Promise<{ id: string }> {
+    await this.assertBundleSkuAvailable(userId, input.sku);
+    await this.assertBundleItemsValid(userId, input.items);
 
-  /**
-   * Creates a bundle from scratch: mints a single-variant product (the bundle's
-   * SKU/price/name) then sets its components in one logical operation. Returns the
-   * new bundle variant id so the UI can navigate to its detail page.
-   */
-  async createBundle(
-    userId: string,
-    input: CreateBundleInput,
-  ): Promise<{ bundleVariantId: string; productId: string }> {
-    const product = await this.createProduct(userId, {
-      name: input.name,
-      description: undefined,
-      category: input.category,
-      variants: [
-        {
-          sku: input.sku,
-          name: input.name,
-          price: input.price,
-          lowStockThreshold: 0,
-          alertEnabled: true,
-          initialStock: 0,
-        },
-      ],
-    });
-    const bundleVariantId = product.variants[0]?.id;
-    if (!bundleVariantId) throw CatalogError.validation('Could not create the bundle.');
-
-    await this.replaceBundleComponents(userId, bundleVariantId, { components: input.components });
-    return { bundleVariantId, productId: product.id };
-  }
-
-  /**
-   * Validate + replace a variant's bundle components (empty array clears it). Shared
-   * by the product- and variant-keyed setters + create. Guards: components must be
-   * owned, distinct, not the bundle itself, and not bundles themselves (no nesting).
-   */
-  private async replaceBundleComponents(
-    userId: string,
-    variantId: string,
-    input: SetBundleInput,
-  ): Promise<BundleDetail> {
-    const componentIds = input.components.map((component) => component.componentVariantId);
-    if (componentIds.includes(variantId)) {
-      throw CatalogError.validation('A bundle cannot contain itself.');
-    }
-    if (new Set(componentIds).size !== componentIds.length) {
-      throw CatalogError.validation('A component is listed more than once.');
-    }
-
-    if (componentIds.length > 0) {
-      const owned = await prisma.productVariant.findMany({
-        where: { id: { in: componentIds }, userId, deletedAt: null },
-        select: { id: true },
-      });
-      if (owned.length !== componentIds.length) {
-        throw CatalogError.validation('A selected component no longer exists.');
-      }
-      const nested = await prisma.bundleComponent.findFirst({
-        where: { bundleVariantId: { in: componentIds } },
-        select: { id: true },
-      });
-      if (nested) throw CatalogError.validation('A bundle component cannot itself be a bundle.');
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.bundleComponent.deleteMany({ where: { bundleVariantId: variantId } });
-      if (input.components.length > 0) {
-        await tx.bundleComponent.createMany({
-          data: input.components.map((component) => ({
-            userId,
-            bundleVariantId: variantId,
-            componentVariantId: component.componentVariantId,
-            quantity: component.quantity,
+    const bundle = await prisma.bundle.create({
+      data: {
+        userId,
+        name: input.name,
+        sku: input.sku,
+        barcode: input.barcode ?? null,
+        price: input.price,
+        items: {
+          create: input.items.map((item) => ({
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
           })),
-        });
-      }
-    });
-
-    appLogger.info('catalog.bundle.set', {
-      userId,
-      variantId,
-      components: input.components.length,
-    });
-    return this.buildBundleDetail(userId, variantId);
-  }
-
-  /**
-   * Resolves which of the given variants are bundles, returning each bundle's
-   * buildable count + the component lines to decrement on sale. Variants that are
-   * not bundles are simply absent from the map. Used by POS/order stock flows so
-   * they can explode a bundle into its components without reaching into catalog tables.
-   */
-  async resolveBundles(
-    userId: string,
-    variantIds: string[],
-  ): Promise<Map<string, BundleResolution>> {
-    const resolved = new Map<string, BundleResolution>();
-    if (variantIds.length === 0) return resolved;
-
-    const rows = await prisma.bundleComponent.findMany({
-      where: { bundleVariantId: { in: variantIds }, userId },
-      select: {
-        bundleVariantId: true,
-        componentVariantId: true,
-        quantity: true,
-        componentVariant: {
-          select: { deletedAt: true, inventory: { select: { availableStock: true } } },
         },
       },
+      select: { id: true },
     });
 
-    const grouped = new Map<
-      string,
-      { componentVariantId: string; quantity: number; availableStock: number }[]
-    >();
-    for (const row of rows) {
-      const list = grouped.get(row.bundleVariantId) ?? [];
-      list.push({
-        componentVariantId: row.componentVariantId,
-        quantity: row.quantity,
-        availableStock: row.componentVariant.deletedAt
-          ? 0
-          : (row.componentVariant.inventory?.availableStock ?? 0),
-      });
-      grouped.set(row.bundleVariantId, list);
-    }
-
-    for (const [bundleVariantId, list] of grouped) {
-      resolved.set(bundleVariantId, {
-        buildable: computeBuildableQty(
-          list.map((component) => ({
-            quantity: component.quantity,
-            availableStock: component.availableStock,
-          })),
-        ),
-        components: list.map((component) => ({
-          componentVariantId: component.componentVariantId,
-          quantity: component.quantity,
-        })),
-      });
-    }
-
-    return resolved;
+    appLogger.info('catalog.bundle.created', {
+      userId,
+      bundleId: bundle.id,
+      items: input.items.length,
+    });
+    return { id: bundle.id };
   }
 
-  private async buildBundleDetail(userId: string, variantId: string): Promise<BundleDetail> {
-    const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, userId },
-      select: { name: true, sku: true, price: true },
+  /** Update a bundle's identity + replace its component set in one transaction. */
+  async updateBundle(
+    userId: string,
+    bundleId: string,
+    input: UpdateBundleInput,
+  ): Promise<BundleDetail> {
+    await this.assertBundleOwned(userId, bundleId);
+    await this.assertBundleSkuAvailable(userId, input.sku, bundleId);
+    await this.assertBundleItemsValid(userId, input.items);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bundle.update({
+        where: { id: bundleId },
+        data: {
+          name: input.name,
+          sku: input.sku,
+          barcode: input.barcode ?? null,
+          price: input.price,
+        },
+      });
+      await tx.bundleItem.deleteMany({ where: { bundleId } });
+      await tx.bundleItem.createMany({
+        data: input.items.map((item) => ({
+          bundleId,
+          productVariantId: item.productVariantId,
+          quantity: item.quantity,
+        })),
+      });
     });
-    const rows = await prisma.bundleComponent.findMany({
-      where: { bundleVariantId: variantId, userId },
-      orderBy: { createdAt: 'asc' },
-      select: {
-        componentVariantId: true,
-        quantity: true,
-        componentVariant: {
+
+    appLogger.info('catalog.bundle.updated', { userId, bundleId, items: input.items.length });
+    return this.buildBundleDetail(userId, bundleId);
+  }
+
+  /** Delete a bundle (cascades its items). Past sale/PO lines keep their name snapshots. */
+  async deleteBundle(userId: string, bundleId: string): Promise<void> {
+    await this.assertBundleOwned(userId, bundleId);
+    const bundle = await prisma.bundle.findUnique({
+      where: { id: bundleId },
+      select: { imageKey: true },
+    });
+    await prisma.bundle.delete({ where: { id: bundleId } });
+    if (bundle?.imageKey) await this.deleteStorageObject(bundle.imageKey);
+    appLogger.info('catalog.bundle.deleted', { userId, bundleId });
+  }
+
+  /** Set/replace a bundle's image from a just-uploaded R2 object; drops the old one. */
+  async setBundleImage(
+    userId: string,
+    bundleId: string,
+    input: SetVariantImageInput,
+  ): Promise<BundleDetail> {
+    const bundle = await prisma.bundle.findFirst({
+      where: { id: bundleId, userId },
+      select: { id: true, imageKey: true },
+    });
+    if (!bundle) throw CatalogError.notFound('Bundle not found.');
+    if (!storageService.ownsKey(input.imageKey, userId)) {
+      throw CatalogError.validation('Invalid image reference.');
+    }
+
+    await prisma.bundle.update({
+      where: { id: bundleId },
+      data: { imageKey: input.imageKey, imageUrl: input.imageUrl },
+    });
+    if (bundle.imageKey && bundle.imageKey !== input.imageKey) {
+      await this.deleteStorageObject(bundle.imageKey);
+    }
+
+    appLogger.info('catalog.bundle.image.set', { userId, bundleId });
+    return this.buildBundleDetail(userId, bundleId);
+  }
+
+  /** Remove a bundle's image (clears the fields + deletes the R2 object). */
+  async removeBundleImage(userId: string, bundleId: string): Promise<BundleDetail> {
+    const bundle = await prisma.bundle.findFirst({
+      where: { id: bundleId, userId },
+      select: { id: true, imageKey: true },
+    });
+    if (!bundle) throw CatalogError.notFound('Bundle not found.');
+
+    await prisma.bundle.update({
+      where: { id: bundleId },
+      data: { imageKey: null, imageUrl: null },
+    });
+    if (bundle.imageKey) await this.deleteStorageObject(bundle.imageKey);
+
+    appLogger.info('catalog.bundle.image.removed', { userId, bundleId });
+    return this.buildBundleDetail(userId, bundleId);
+  }
+
+  private async buildBundleDetail(userId: string, bundleId: string): Promise<BundleDetail> {
+    const bundle = await prisma.bundle.findFirst({
+      where: { id: bundleId, userId },
+      include: {
+        items: {
+          orderBy: { productVariant: { name: 'asc' } },
           select: {
-            sku: true,
-            name: true,
-            deletedAt: true,
-            inventory: { select: { availableStock: true } },
+            quantity: true,
+            productVariant: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                price: true,
+                cost: true,
+                deletedAt: true,
+                inventory: { select: { availableStock: true } },
+              },
+            },
           },
         },
       },
     });
+    if (!bundle) throw CatalogError.notFound('Bundle not found.');
 
-    const components: BundleComponentItem[] = rows.map((row) => ({
-      componentVariantId: row.componentVariantId,
-      sku: row.componentVariant.sku,
-      name: row.componentVariant.name,
-      quantity: row.quantity,
-      availableStock: row.componentVariant.deletedAt
+    const components: BundleComponentLine[] = bundle.items.map((item) => ({
+      productVariantId: item.productVariant.id,
+      sku: item.productVariant.sku,
+      name: item.productVariant.name,
+      quantity: item.quantity,
+      availableStock: item.productVariant.deletedAt
         ? 0
-        : (row.componentVariant.inventory?.availableStock ?? 0),
+        : (item.productVariant.inventory?.availableStock ?? 0),
+      price: item.productVariant.price.toString(),
+      cost: item.productVariant.cost?.toString() ?? null,
     }));
 
     return {
-      bundleVariantId: variantId,
-      name: variant?.name ?? '',
-      sku: variant?.sku ?? '',
-      price: variant?.price.toString() ?? '0',
+      id: bundle.id,
+      name: bundle.name,
+      sku: bundle.sku,
+      barcode: bundle.barcode,
+      price: bundle.price.toString(),
+      imageUrl: bundle.imageUrl,
       components,
-      buildable: computeBuildableQty(
+      available: computeBuildableQty(
         components.map((component) => ({
           quantity: component.quantity,
           availableStock: component.availableStock,
@@ -770,12 +732,52 @@ export class CatalogServerService {
     };
   }
 
-  private async assertVariantOwned(userId: string, variantId: string): Promise<void> {
-    const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, userId, deletedAt: null },
+  private async assertBundleOwned(userId: string, bundleId: string): Promise<void> {
+    const bundle = await prisma.bundle.findFirst({
+      where: { id: bundleId, userId },
       select: { id: true },
     });
-    if (!variant) throw CatalogError.notFound('Variant not found.');
+    if (!bundle) throw CatalogError.notFound('Bundle not found.');
+  }
+
+  /**
+   * A bundle SKU must be unique among the user's bundles AND not collide with a variant
+   * SKU — both are scannable, so they share one code namespace.
+   */
+  private async assertBundleSkuAvailable(
+    userId: string,
+    sku: string,
+    excludeBundleId?: string,
+  ): Promise<void> {
+    const [bundleClash, variantClash] = await Promise.all([
+      prisma.bundle.findFirst({
+        where: { userId, sku, ...(excludeBundleId ? { id: { not: excludeBundleId } } : {}) },
+        select: { id: true },
+      }),
+      prisma.productVariant.findFirst({
+        where: { userId, sku, deletedAt: null },
+        select: { id: true },
+      }),
+    ]);
+    if (bundleClash || variantClash) throw CatalogError.duplicateSku(sku);
+  }
+
+  /** Components must be distinct + owned + active (not soft-deleted). */
+  private async assertBundleItemsValid(
+    userId: string,
+    items: { productVariantId: string; quantity: number }[],
+  ): Promise<void> {
+    const ids = items.map((item) => item.productVariantId);
+    if (new Set(ids).size !== ids.length) {
+      throw CatalogError.validation('A component is listed more than once.');
+    }
+    const owned = await prisma.productVariant.findMany({
+      where: { id: { in: ids }, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (owned.length !== ids.length) {
+      throw CatalogError.validation('A selected component no longer exists.');
+    }
   }
 
   /** Best-effort image delete — a failed cleanup must not fail the request. */
