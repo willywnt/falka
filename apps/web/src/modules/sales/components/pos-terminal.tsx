@@ -69,7 +69,6 @@ type CartLine = {
   unitPrice: number;
   quantity: number;
   availableStock: number;
-  isBundle: boolean;
   imageUrl: string | null;
 };
 
@@ -126,7 +125,6 @@ export function PosTerminal() {
           unitPrice: Number(variant.price),
           quantity: 1,
           availableStock: variant.availableStock,
-          isBundle: variant.isBundle,
           imageUrl: variant.imageUrl,
         },
       ];
@@ -244,20 +242,13 @@ export function PosTerminal() {
                   <div className="flex min-w-0 items-center gap-3">
                     <ImageThumb src={variant.imageUrl} alt={variant.name} />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate text-sm font-medium">
-                          {variant.productName} · {variant.name}
-                        </span>
-                        {variant.isBundle ? (
-                          <Badge className="shrink-0 border-transparent bg-violet-500/10 px-1.5 py-0 text-[10px] font-medium text-violet-600 dark:text-violet-400">
-                            Bundle
-                          </Badge>
-                        ) : null}
+                      <div className="truncate text-sm font-medium">
+                        {variant.productName} · {variant.name}
                       </div>
                       <div className="text-muted-foreground text-xs">
                         {variant.sku} · {formatCurrency(variant.price)} ·{' '}
                         <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
-                          {variant.availableStock} {variant.isBundle ? 'buildable' : 'in stock'}
+                          {variant.availableStock} in stock
                         </span>
                       </div>
                     </div>
@@ -338,8 +329,7 @@ export function PosTerminal() {
                     </div>
                     {oversold ? (
                       <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
-                        Oversell — only {line.availableStock}{' '}
-                        {line.isBundle ? 'buildable' : 'in stock'}
+                        Oversell — only {line.availableStock} in stock
                       </Badge>
                     ) : null}
                   </div>

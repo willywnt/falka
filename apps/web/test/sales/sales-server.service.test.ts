@@ -217,7 +217,6 @@ describe('searchSellableVariants', () => {
         productName: 'Cotton Tee',
         price: '100000',
         availableStock: 12,
-        isBundle: false,
       },
     ]);
   });

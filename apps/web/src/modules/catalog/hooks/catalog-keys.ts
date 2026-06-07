@@ -17,5 +17,4 @@ export const catalogKeys = {
   bundle: (variantId: string) => ['catalog', 'bundle', variantId] as const,
   bundles: (q: string, status: string, page: number, pageSize: number) =>
     ['catalog', 'bundles', q, status, page, pageSize] as const,
-  bundleBuildable: (variantIds: string) => ['catalog', 'bundle-buildable', variantIds] as const,
 };

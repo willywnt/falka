@@ -61,7 +61,6 @@ function isLowStock(variant: ProductVariant, availableStock: number): boolean {
 function mapVariant(
   variant: VariantWithInventory,
   mappings: VariantMappingRef[] = [],
-  bundle?: BundleResolution,
 ): ProductVariantItem {
   const availableStock = variant.inventory?.availableStock ?? 0;
 
@@ -84,8 +83,6 @@ function mapVariant(
     availableStock,
     reservedStock: variant.inventory?.reservedStock ?? 0,
     incomingStock: variant.inventory?.incomingStock ?? 0,
-    isBundle: Boolean(bundle),
-    buildable: bundle ? bundle.buildable : null,
     isLowStock: isLowStock(variant, availableStock),
     labelPrintedAt: variant.labelPrintedAt?.toISOString() ?? null,
     mappings,
@@ -102,7 +99,6 @@ function normalizePlanningValue(value: number | undefined): number | null {
 function mapProductDetail(
   product: ProductWithVariants,
   mappingsByVariant: Map<string, VariantMappingRef[]>,
-  bundlesByVariant: Map<string, BundleResolution>,
 ): ProductDetail {
   return {
     id: product.id,
@@ -111,11 +107,7 @@ function mapProductDetail(
     category: product.category,
     isActive: product.isActive,
     variants: product.variants.map((variant) =>
-      mapVariant(
-        variant,
-        mappingsByVariant.get(variant.id) ?? [],
-        bundlesByVariant.get(variant.id),
-      ),
+      mapVariant(variant, mappingsByVariant.get(variant.id) ?? []),
     ),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
@@ -280,13 +272,12 @@ export class CatalogServerService {
 
     if (!product) throw CatalogError.notFound();
 
-    const variantIds = product.variants.map((variant) => variant.id);
-    const [mappingsByVariant, bundlesByVariant] = await Promise.all([
-      marketplaceMappingService.getVariantMappings(userId, variantIds),
-      this.resolveBundles(userId, variantIds),
-    ]);
+    const mappingsByVariant = await marketplaceMappingService.getVariantMappings(
+      userId,
+      product.variants.map((variant) => variant.id),
+    );
 
-    return mapProductDetail(product, mappingsByVariant, bundlesByVariant);
+    return mapProductDetail(product, mappingsByVariant);
   }
 
   async createProduct(userId: string, input: CreateProductInput): Promise<ProductDetail> {
@@ -730,14 +721,6 @@ export class CatalogServerService {
     }
 
     return resolved;
-  }
-
-  /** Buildable count keyed by variant id, for the bundles among `variantIds` (others absent). */
-  async getBundleBuildable(userId: string, variantIds: string[]): Promise<Record<string, number>> {
-    const resolved = await this.resolveBundles(userId, variantIds);
-    const buildableByVariant: Record<string, number> = {};
-    for (const [id, resolution] of resolved) buildableByVariant[id] = resolution.buildable;
-    return buildableByVariant;
   }
 
   private async buildBundleDetail(userId: string, variantId: string): Promise<BundleDetail> {

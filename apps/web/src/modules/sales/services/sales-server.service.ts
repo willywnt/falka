@@ -82,20 +82,13 @@ export class SalesServerService {
       take: SEARCH_LIMIT,
     });
 
-    const bundles = await catalogServerService.resolveBundles(
-      userId,
-      variants.map((variant) => variant.id),
-    );
-
     return variants.map((variant) => ({
       variantId: variant.id,
       sku: variant.sku,
       name: variant.name,
       productName: variant.product.name,
       price: variant.price.toString(),
-      // A bundle shows how many it can build from components, not its own stock.
-      availableStock: bundles.get(variant.id)?.buildable ?? variant.inventory?.availableStock ?? 0,
-      isBundle: bundles.has(variant.id),
+      availableStock: variant.inventory?.availableStock ?? 0,
       imageUrl: variant.imageUrl,
     }));
   }
@@ -128,18 +121,13 @@ export class SalesServerService {
 
     if (!variant) return null;
 
-    const bundle = (await catalogServerService.resolveBundles(userId, [variant.id])).get(
-      variant.id,
-    );
-
     return {
       variantId: variant.id,
       sku: variant.sku,
       name: variant.name,
       productName: variant.product.name,
       price: variant.price.toString(),
-      availableStock: bundle?.buildable ?? variant.inventory?.availableStock ?? 0,
-      isBundle: Boolean(bundle),
+      availableStock: variant.inventory?.availableStock ?? 0,
       imageUrl: variant.imageUrl,
     };
   }
