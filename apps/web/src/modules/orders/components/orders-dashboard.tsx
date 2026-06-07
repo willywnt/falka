@@ -98,7 +98,7 @@ export function OrdersDashboard() {
                         <OrderStatusBadge status={order.status} />
                         {order.fulfilledAt ? (
                           <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                            Selesai dikemas
+                            Fulfillment
                           </Badge>
                         ) : null}
                       </div>
@@ -114,10 +114,10 @@ export function OrdersDashboard() {
                     </TableCell>
                     <TableCell>
                       {order.inventoryApplied ? (
-                        <Badge variant="secondary">Sudah dipotong</Badge>
+                        <Badge variant="secondary">Sudah sinkron</Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">
-                          {order.status === 'PAID' ? 'belum dipotong' : '—'}
+                          {order.status === 'PAID' ? 'belum sinkron' : '—'}
                         </span>
                       )}
                     </TableCell>

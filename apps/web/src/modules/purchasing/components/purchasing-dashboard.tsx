@@ -30,14 +30,14 @@ export function PurchasingDashboard() {
         <Button asChild>
           <Link href="/dashboard/purchasing/new">
             <Plus className="size-4" />
-            PO baru
+            Pembelian baru
           </Link>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat daftar PO. {error instanceof Error ? error.message : 'Coba lagi, ya.'}
+          Gagal memuat daftar pembelian. {error instanceof Error ? error.message : 'Coba lagi, ya.'}
         </div>
       ) : null}
 
@@ -50,13 +50,13 @@ export function PurchasingDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Truck}
-          title="Belum ada PO"
+          title="Belum ada pembelian"
           description="Pesan stok dari pemasok — stok muncul sebagai akan datang, lalu jadi tersedia saat kamu terima."
           action={
             <Button asChild>
               <Link href="/dashboard/purchasing/new">
                 <Plus className="size-4" />
-                PO baru
+                Pembelian baru
               </Link>
             </Button>
           }
@@ -66,7 +66,7 @@ export function PurchasingDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>PO</TableHead>
+                <TableHead>Pembelian</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Item</TableHead>
                 <TableHead className="text-right">Total modal</TableHead>

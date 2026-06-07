@@ -129,7 +129,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
   async function handleCancel() {
     try {
       await cancelMutation.mutateAsync();
-      toast.success('PO dibatalkan', { description: 'Sisa stok akan datang dihapus.' });
+      toast.success('Pembelian dibatalkan', { description: 'Sisa stok akan datang dihapus.' });
     } catch (err) {
       toast.error('Gagal membatalkan', {
         description: err instanceof Error ? err.message : 'Terjadi kesalahan',
@@ -156,7 +156,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'PO tidak ditemukan.'}
+          {error instanceof Error ? error.message : 'Pembelian tidak ditemukan.'}
         </div>
       </div>
     );
@@ -190,7 +190,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Dipesan</TableHead>
                   <TableHead className="text-right">Diterima</TableHead>
-                  <TableHead className="text-right">Modal per unit</TableHead>
+                  <TableHead className="text-right">Modal satuan</TableHead>
                   {canReceive ? (
                     <TableHead className="text-right">Terima sekarang</TableHead>
                   ) : null}
@@ -226,7 +226,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
               </Button>
               <Button variant="outline" onClick={() => void handleCancel()} disabled={busy}>
                 <XCircle className="size-4" />
-                Batalkan PO
+                Batalkan Pembelian
               </Button>
             </div>
           ) : null}
@@ -235,7 +235,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">PO</CardTitle>
+              <CardTitle className="text-base">Pembelian</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">

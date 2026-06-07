@@ -66,7 +66,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         refreshToken: values.refreshToken?.trim() || undefined,
       });
       toast.success('Toko marketplace terhubung', {
-        description: `${values.shopName} siap dipakai untuk sync berikutnya.`,
+        description: `${values.shopName} siap dipakai untuk sinkronisasi berikutnya.`,
       });
       form.reset();
       onOpenChange(false);

@@ -52,10 +52,10 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
     ],
   },
   {
-    label: 'Kanal penjualan',
+    label: 'Channel penjualan',
     items: [
       { title: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
-      { title: 'Pesanan', href: '/dashboard/orders', icon: ShoppingCart },
+      { title: 'Pesanan (online)', href: '/dashboard/orders', icon: ShoppingCart },
       { title: 'Penjualan (Kasir)', href: '/dashboard/sales', icon: Store },
     ],
   },

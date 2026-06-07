@@ -53,7 +53,7 @@ export function QrCodeDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-8">
             <div className="min-w-0 space-y-1 text-left">
-              <DialogTitle>Label QR</DialogTitle>
+              <DialogTitle>QR Code</DialogTitle>
               <DialogDescription className="truncate">{title}</DialogDescription>
             </div>
             <Button type="button" size="sm" onClick={handlePrint} className="shrink-0">

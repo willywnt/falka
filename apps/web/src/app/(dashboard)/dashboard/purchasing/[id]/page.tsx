@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { PurchaseOrderDetail } from '@/modules/purchasing/components/purchase-order-detail';
 
 export const metadata: Metadata = {
-  title: 'PO',
+  title: 'Detail Pembelian',
 };
 
 export default async function PurchaseOrderDetailPage({

@@ -27,7 +27,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     label: 'Tarik pesanan',
-    description: 'Sync dari toko',
+    description: 'Sinkronisasi dari toko',
     href: '/dashboard/marketplace',
     icon: ShoppingCart,
     tone: 'amber',

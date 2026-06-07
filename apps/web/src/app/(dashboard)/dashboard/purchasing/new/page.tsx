@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { PoForm } from '@/modules/purchasing/components/po-form';
 
 export const metadata: Metadata = {
-  title: 'PO baru',
+  title: 'Pembelian baru',
 };
 
 export default function NewPurchaseOrderPage() {
@@ -22,7 +22,7 @@ export default function NewPurchaseOrderPage() {
 
       <PageHeader
         eyebrow="Katalog"
-        title="PO baru"
+        title="Pembelian baru"
         description="Cari produk atau muat saran restok, atur jumlah + modal, lalu buat pesanan."
       />
       <PoForm />

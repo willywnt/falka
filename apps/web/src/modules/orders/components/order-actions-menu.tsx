@@ -73,7 +73,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
       const trimmed = resi.trim();
       await markShipped.mutateAsync(trimmed ? { noResi: trimmed } : {});
       toast.success('Pesanan ditandai terkirim', {
-        description: 'Stok yang dipesan langsung dipotong.',
+        description: 'Stok yang dipesan langsung tersinkronisasi.',
       });
       close();
     } catch (error) {
@@ -160,7 +160,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           <DialogHeader>
             <DialogTitle>Tandai terkirim</DialogTitle>
             <DialogDescription>
-              Stok yang dipesan langsung dipotong. Isi no. resi sekarang atau kosongin dulu.
+              Stok yang dipesan langsung tersinkronisasi. Isi no. resi sekarang atau kosongin dulu.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

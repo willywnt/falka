@@ -51,21 +51,21 @@ const SCAN_STATUS_META: Record<
   { dot: string; cta: string; hint: string | null }
 > = {
   off: { dot: '', cta: '', hint: null },
-  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan pakai HP', hint: null },
+  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
   waiting: {
     dot: 'bg-amber-500',
     cta: 'Tampilkan QR',
-    hint: 'Menunggu HP kamu terhubung…',
+    hint: 'Menunggu ponsel kamu terhubung…',
   },
   connected: {
     dot: 'bg-emerald-500',
-    cta: 'HP terhubung',
-    hint: 'HP terhubung — scan label produk buat masukin ke keranjang.',
+    cta: 'ponsel terhubung',
+    hint: 'ponsel terhubung — scan label produk buat masukin ke keranjang.',
   },
   disconnected: {
     dot: 'bg-destructive',
     cta: 'Hubungkan ulang',
-    hint: 'HP terputus. Ketuk Hubungkan ulang buat tampilin QR baru.',
+    hint: 'ponsel terputus. Ketuk Hubungkan ulang buat tampilin QR baru.',
   },
 };
 
@@ -654,7 +654,7 @@ function BundleResults({
               <div className="text-muted-foreground text-xs">
                 {bundle.sku} · {formatCurrency(bundle.price)} · {bundle.totalVariant} item ·{' '}
                 <span className={bundle.available <= 0 ? 'text-destructive' : ''}>
-                  {bundle.available} bisa dirakit
+                  {bundle.available} tersedia
                 </span>
               </div>
             </div>

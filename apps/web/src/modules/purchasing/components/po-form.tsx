@@ -55,17 +55,17 @@ import type { PurchasableVariant, ScannedPurchaseItem } from '../types';
 const SCAN_STATUS_META: Record<PoScannerStatus, { dot: string; cta: string; hint: string | null }> =
   {
     off: { dot: '', cta: '', hint: null },
-    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan pakai HP', hint: null },
-    waiting: { dot: 'bg-amber-500', cta: 'Tampilkan QR', hint: 'Menunggu HP kamu terhubung…' },
+    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
+    waiting: { dot: 'bg-amber-500', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
     connected: {
       dot: 'bg-emerald-500',
-      cta: 'HP terhubung',
-      hint: 'HP terhubung — scan label produk untuk menambahkannya ke PO.',
+      cta: 'ponsel terhubung',
+      hint: 'ponsel terhubung — scan label produk untuk menambahkannya ke pembelian.',
     },
     disconnected: {
       dot: 'bg-destructive',
       cta: 'Hubungkan lagi',
-      hint: 'HP terputus. Tap Hubungkan lagi untuk munculin QR baru.',
+      hint: 'ponsel terputus. Tap Hubungkan lagi untuk munculin QR baru.',
     },
   };
 
@@ -334,7 +334,7 @@ export function PoForm() {
       });
     }
     toast.success(`${suggestions.length} saran dimuat`, {
-      description: 'Jangan lupa atur modal per unit-nya.',
+      description: 'Jangan lupa atur modal satuan-nya.',
     });
   }
 
@@ -387,12 +387,12 @@ export function PoForm() {
               },
         ),
       });
-      toast.success(`PO ${po.code} dibuat`, {
+      toast.success(`Pembelian ${po.code} dibuat`, {
         description: `${formatCurrency(po.totalCost)} · masuk stok akan datang`,
       });
       router.push(`/dashboard/purchasing/${po.id}`);
     } catch (error) {
-      toast.error('Gagal membuat PO', {
+      toast.error('Gagal membuat pembelian', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -512,7 +512,7 @@ export function PoForm() {
       {/* PO lines */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">PO</CardTitle>
+          <CardTitle className="text-base">Pembelian</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
@@ -529,7 +529,7 @@ export function PoForm() {
             <EmptyState
               icon={PackagePlus}
               title="Belum ada item"
-              description="Cari produk atau muat saran restok buat mulai bikin PO."
+              description="Cari produk atau muat saran restok buat mulai bikin pembelian."
             />
           ) : (
             <div className="space-y-3">
@@ -565,7 +565,7 @@ export function PoForm() {
               disabled={lines.length === 0 || createPo.isPending}
             >
               <PackagePlus className="size-4" />
-              {createPo.isPending ? 'Membuat...' : 'Buat PO'}
+              {createPo.isPending ? 'Membuat...' : 'Buat Pembelian'}
             </Button>
           </div>
         </CardContent>
@@ -727,14 +727,14 @@ function VariantPoRow({
       </div>
       <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
         <div className="space-y-1.5">
-          <Label>Jml</Label>
+          <Label>Qty</Label>
           <NumberInput
             value={line.quantity}
             onChange={(value) => onPatch({ quantity: Math.max(1, value) })}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Modal per unit</Label>
+          <Label>Modal satuan</Label>
           <NumberInput
             value={line.unitCost}
             onChange={(value) => onPatch({ unitCost: Math.max(0, value) })}
@@ -809,7 +809,7 @@ function BundlePoRow({
 
       <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
         <div className="space-y-1.5">
-          <Label>Jml</Label>
+          <Label>Qty</Label>
           <NumberInput
             value={line.quantity}
             onChange={(value) => onPatch({ quantity: Math.max(1, value) })}

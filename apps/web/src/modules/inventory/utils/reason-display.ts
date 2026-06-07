@@ -11,7 +11,7 @@ export const STOCK_REASON_LABELS: Record<StockLedgerReason, string> = {
   ORDER_SHIP: 'Pesanan dikirim',
   RETURN: 'Retur',
   SALE: 'Penjualan',
-  MARKETPLACE_SYNC: 'Sync marketplace',
+  MARKETPLACE_SYNC: 'Sinkronisasi marketplace',
 };
 
 export function stockReasonLabel(reason: StockLedgerReason): string {

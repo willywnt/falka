@@ -46,16 +46,16 @@ import { MarketplaceProviderBadge } from './marketplace-provider-badge';
 function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
   if (!mapping.syncEnabled) return null;
   if (mapping.lastSyncStatus === 'SYNCED') {
-    return <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Sudah sync</Badge>;
+    return <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Sudah sinkron</Badge>;
   }
   if (mapping.lastSyncStatus === 'FAILED') {
     return (
       <Badge variant="destructive" title={mapping.lastSyncError ?? undefined}>
-        Sync gagal
+        Sinkronisasi gagal
       </Badge>
     );
   }
-  return <Badge variant="outline">Menunggu sync</Badge>;
+  return <Badge variant="outline">Menunggu sinkronisasi</Badge>;
 }
 
 export function MarketplaceConnectionDetail({ connectionId }: { connectionId: string }) {
@@ -125,9 +125,9 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleToggleSync(marketplaceProductId: string, syncEnabled: boolean) {
     try {
       await syncToggleMutation.mutateAsync({ marketplaceProductId, syncEnabled });
-      toast.success(syncEnabled ? 'Sync diaktifkan' : 'Sync dimatikan');
+      toast.success(syncEnabled ? 'Sinkronisasi diaktifkan' : 'Sinkronisasi dimatikan');
     } catch (error) {
-      toast.error('Gagal mengubah sync', {
+      toast.error('Gagal mengubah sinkronisasi', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -136,11 +136,11 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleSyncNow(marketplaceProductId: string) {
     try {
       await syncNowMutation.mutateAsync(marketplaceProductId);
-      toast.success('Sync diantrekan', {
+      toast.success('Sinkronisasi diantrekan', {
         description: 'Stok akan dikirim sebentar lagi.',
       });
     } catch (error) {
-      toast.error('Gagal sync', {
+      toast.error('Gagal sinkronisasi', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -203,7 +203,12 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             tone="emerald"
             hint={`${listings.length - mappedCount} belum cocok`}
           />
-          <StatCard label="Sync aktif" value={syncOnCount} icon={RefreshCw} tone="primary" />
+          <StatCard
+            label="Sinkronisasi aktif"
+            value={syncOnCount}
+            icon={RefreshCw}
+            tone="primary"
+          />
           <StatCard
             label="Perlu ditinjau"
             value={reviewCount}
@@ -293,14 +298,14 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                                   onCheckedChange={(checked) =>
                                     void handleToggleSync(listing.marketplaceProductId, checked)
                                   }
-                                  aria-label="Sync stok ke listing ini"
+                                  aria-label="Sinkronisasi stok ke listing ini"
                                 />
-                                <span className="text-muted-foreground text-xs">Sync</span>
+                                <span className="text-muted-foreground text-xs">Sinkronisasi</span>
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
                               {mapping.mappingStatus === 'NEEDS_REVIEW'
-                                ? 'Konfirmasi kecocokannya dulu sebelum sync diaktifkan.'
+                                ? 'Konfirmasi kecocokannya dulu sebelum sinkronisasi diaktifkan.'
                                 : mapping.syncEnabled
                                   ? 'Stok dikirim ke listing ini.'
                                   : 'Aktifkan untuk kirim stok ke listing ini.'}

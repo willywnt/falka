@@ -21,8 +21,8 @@ const FEATURES = [
   },
   {
     icon: RefreshCw,
-    title: 'Sync stok di semua toko',
-    text: 'Cocokkan listing sekali, stok kamu langsung sync di Shopee, Tokopedia, dan lainnya.',
+    title: 'Sinkronisasi stok di semua toko',
+    text: 'Cocokkan listing sekali, stok kamu langsung sinkron di Shopee, Tokopedia, dan lainnya.',
   },
   {
     icon: ShoppingCart,
@@ -95,7 +95,7 @@ export default async function HomePage() {
           </h1>
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
             {APP_NAME} menjaga stok kamu tetap akurat dari hulu ke hilir: pesanan dari setiap toko
-            masuk, stok tetap sync, dan kamu dapat video packing untuk setiap pesanan.
+            masuk, stok tetap sinkron, dan kamu dapat video packing untuk setiap pesanan.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
             {isLoggedIn ? (

@@ -105,7 +105,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
         <OrderStatusBadge status={data.status} />
         {data.fulfilledAt ? (
-          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Selesai dikemas</Badge>
+          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Fulfillment</Badge>
         ) : null}
         <div className="ml-auto">
           <OrderActionsMenu order={data} />
@@ -124,7 +124,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Harga satuan</TableHead>
-                  <TableHead>Cocok ke</TableHead>
+                  <TableHead>Mapping</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -154,7 +154,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                       ) : (
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="border-amber-500 text-amber-600">
-                            Belum cocok
+                            Belum ter-mapping
                           </Badge>
                           <Button
                             variant="outline"

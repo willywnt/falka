@@ -92,7 +92,7 @@ export function LabelStudio() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Cari SKU, barcode, atau nama produk..."
+          placeholder="Cari nama produk, varian, atau sku..."
           className="sm:max-w-xs"
         />
         <div className="flex items-center gap-2">

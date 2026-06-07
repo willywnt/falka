@@ -142,18 +142,18 @@ export const RECORDING_MODULE_CONFIG = {
 } as const;
 
 export const RECORDING_STATUS_LABELS: Record<PrismaRecordingStatus, string> = {
-  RECORDING: 'Recording',
-  UPLOADING: 'Uploading',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-  PENDING_DELETE: 'Pending deletion',
-  DELETED: 'Deleted',
+  RECORDING: 'Merekam',
+  UPLOADING: 'Mengupload',
+  COMPLETED: 'Selesai',
+  FAILED: 'Gagal',
+  PENDING_DELETE: 'Menunggu dihapus',
+  DELETED: 'Dihapus',
 };
 
 export const RECORDING_STATUS_FILTER_LABELS: Record<RecordingStatusFilter, string> = {
-  ALL: 'All statuses',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-  UPLOADING: 'Uploading',
-  RECORDING: 'Recording',
+  ALL: 'Semua status',
+  COMPLETED: 'Selesai',
+  FAILED: 'Gagal',
+  UPLOADING: 'Mengupload',
+  RECORDING: 'Merekam',
 };

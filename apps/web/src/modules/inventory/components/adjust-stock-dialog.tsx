@@ -201,7 +201,7 @@ export function AdjustStockDialog({
             </div>
 
             <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground">Stok jadi</span>
+              <span className="text-muted-foreground">Perubahan stok</span>
               <span className="num flex items-center gap-2 font-semibold">
                 <span className="text-muted-foreground">{currentStock}</span>→
                 <span className={cn('text-base', resultStock < 0 && 'text-destructive')}>

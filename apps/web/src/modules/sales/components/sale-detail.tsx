@@ -194,7 +194,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Waktu</span>
+                <span className="text-muted-foreground">Terjual</span>
                 <span className="text-right font-medium" suppressHydrationWarning>
                   {formatDateTime(data.createdAt)}
                 </span>

@@ -13,7 +13,7 @@ export default function BundlesPage() {
       <PageHeader
         eyebrow="Katalog"
         title="Bundel"
-        description="Paket yang dijual jadi satu SKU dan motong stok varian komponennya. Bundel nggak punya stok sendiri — jumlah yang bisa dijual dihitung dari komponennya."
+        description="Paket jualan dari beberapa varian — punya SKU & harga sendiri, stok tetap ikut komponennya."
       />
       <BundlesDashboard />
     </div>
