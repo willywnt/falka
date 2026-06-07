@@ -137,17 +137,33 @@ export function ProductDetail({
               label={formatVariantLabel(variant)}
             />
             <div className="min-w-0">
-              <EllipsisTooltip text={variant.name} className="font-medium" />
+              <div className="flex items-center gap-1.5">
+                <EllipsisTooltip text={variant.name} className="font-medium" />
+                {variant.isBundle ? (
+                  <Badge className="shrink-0 border-transparent bg-violet-500/10 px-1.5 py-0 text-[10px] font-medium text-violet-600 dark:text-violet-400">
+                    Bundle
+                  </Badge>
+                ) : null}
+              </div>
               <EllipsisTooltip text={variant.sku} className="text-muted-foreground text-xs" />
             </div>
           </div>
         </TableCell>
         <TableCell className="text-right tabular-nums">{formatCurrency(variant.price)}</TableCell>
         <TableCell className="text-right">
-          <span className="font-medium tabular-nums">{variant.availableStock}</span>
-          {variant.isLowStock ? (
-            <LowStockBadge threshold={variant.lowStockThreshold} className="ml-2" />
-          ) : null}
+          {variant.isBundle ? (
+            <span className="font-medium tabular-nums" title="Buildable from component stock">
+              {variant.buildable ?? 0}
+              <span className="text-muted-foreground ml-1 text-xs font-normal">buildable</span>
+            </span>
+          ) : (
+            <>
+              <span className="font-medium tabular-nums">{variant.availableStock}</span>
+              {variant.isLowStock ? (
+                <LowStockBadge threshold={variant.lowStockThreshold} className="ml-2" />
+              ) : null}
+            </>
+          )}
         </TableCell>
         <TableCell className="max-w-[220px]">
           <ConnectionBadges connections={connections} />

@@ -31,6 +31,10 @@ export type ProductVariantItem = {
   reservedStock: number;
   /** Incoming from open purchase orders. */
   incomingStock: number;
+  /** True when this variant is a bundle (has components) — it keeps no own stock. */
+  isBundle: boolean;
+  /** Whole bundles buildable from component stock; null when not a bundle. */
+  buildable: number | null;
   isLowStock: boolean;
   /** When a QR/barcode label was last printed for this variant; null = never. */
   labelPrintedAt: string | null;
