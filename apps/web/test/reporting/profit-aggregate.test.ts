@@ -74,6 +74,42 @@ describe('aggregateProfit', () => {
     expect(report.belowCost[0]?.lossPerUnit).toBe('30.00');
     expect(report.belowCost[0]?.units).toBe(3);
   });
+
+  it('nets a processed return (negative-qty line) out of revenue, COGS and units', () => {
+    const report = aggregateProfit(
+      [
+        line({ quantity: 5, unitPrice: 100, unitCost: 60 }),
+        line({ quantity: -2, unitPrice: 100, unitCost: 60 }),
+      ],
+      opts,
+    );
+
+    expect(report.summary.grossRevenue).toBe('300.00');
+    expect(report.summary.cogs).toBe('180.00');
+    expect(report.summary.grossProfit).toBe('120.00');
+    expect(report.summary.unitsSold).toBe(3);
+    expect(report.returns).toEqual({
+      refundedRevenue: '200.00',
+      refundedCogs: '120.00',
+      units: 2,
+      lineCount: 1,
+    });
+  });
+
+  it('never lets a return reversal land in the below-cost watchlist', () => {
+    const report = aggregateProfit(
+      [
+        line({ sku: 'LOSS', unitPrice: 50, unitCost: 80, quantity: 3 }),
+        line({ sku: 'LOSS', unitPrice: 50, unitCost: 80, quantity: -1 }),
+      ],
+      opts,
+    );
+
+    expect(report.belowCost).toHaveLength(1);
+    // The 3 sold units are flagged; the returned unit does not subtract from them.
+    expect(report.belowCost[0]?.units).toBe(3);
+    expect(report.returns.units).toBe(1);
+  });
 });
 
 describe('aggregateProfitBySku', () => {

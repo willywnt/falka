@@ -209,21 +209,25 @@ export function ProfitReport() {
 }
 
 function ProfitContent({ data }: { data: ProfitReportData }) {
-  const { summary } = data;
+  const { summary, returns } = data;
   const costUnknownHint =
     summary.costUnknownLines > 0
       ? `${summary.costUnknownLines} line(s) have no cost yet — excluded from margin`
       : 'All sold lines have a known cost';
+  const revenueHint =
+    returns.lineCount > 0
+      ? `${summary.unitsSold} units · net of ${formatCurrency(returns.refundedRevenue)} returned`
+      : `${summary.unitsSold} units sold`;
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Gross revenue"
+          label="Net revenue"
           value={formatCurrency(summary.grossRevenue)}
           icon={Banknote}
           tone="sky"
-          hint={`${summary.unitsSold} units sold`}
+          hint={revenueHint}
         />
         <StatCard label="COGS" value={formatCurrency(summary.cogs)} icon={Coins} tone="amber" />
         <StatCard

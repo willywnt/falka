@@ -24,8 +24,11 @@ function endOfDay(date: Date): Date {
 /**
  * Read-only profit/margin reporting over realized sales. Revenue is recognized
  * for POS sales that are COMPLETED and for marketplace orders that have shipped
- * (SHIPPED/COMPLETED); COGS comes from each line's snapshotted unitCost. Never
- * writes — it only reads SaleItem/OrderItem history.
+ * (SHIPPED/COMPLETED); COGS comes from each line's snapshotted unitCost. A
+ * processed return (RECEIVED) on a still-shipped/completed order nets its lines
+ * back out — recognized when the goods return (`processedAt`), as negative-qty
+ * lines — so a returned order no longer overstates profit. Never writes — it
+ * only reads SaleItem/OrderItem/Return history.
  */
 export class ReportingServerService {
   private async loadSoldLines(
@@ -35,7 +38,7 @@ export class ReportingServerService {
     const to = endOfDay(query.to ?? new Date());
     const from = startOfDay(query.from ?? new Date(to.getTime() - DEFAULT_RANGE_DAYS * DAY_MS));
 
-    const [saleItems, orderItems] = await Promise.all([
+    const [saleItems, orderItems, returns] = await Promise.all([
       prisma.saleItem.findMany({
         where: { sale: { userId, status: 'COMPLETED', createdAt: { gte: from, lte: to } } },
         select: {
@@ -68,6 +71,37 @@ export class ReportingServerService {
           order: { select: { placedAt: true, provider: true } },
         },
       }),
+      // Processed returns whose order still counts as revenue above. A post-ship
+      // cancellation (order status CANCELLED) is already excluded from revenue, so
+      // netting it here would double-subtract — gate on SHIPPED/COMPLETED. Recognized
+      // by processedAt (when the goods actually came back).
+      prisma.return.findMany({
+        where: {
+          userId,
+          status: 'RECEIVED',
+          processedAt: { gte: from, lte: to },
+          order: { status: { in: ['SHIPPED', 'COMPLETED'] } },
+        },
+        select: {
+          processedAt: true,
+          items: { select: { orderItemId: true, productVariantId: true, quantity: true } },
+          order: {
+            select: {
+              provider: true,
+              items: {
+                select: {
+                  id: true,
+                  unitPrice: true,
+                  unitCost: true,
+                  externalSku: true,
+                  externalName: true,
+                  productVariant: { select: { sku: true, name: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     const lines: SoldLine[] = [
@@ -92,6 +126,28 @@ export class ReportingServerService {
         unitCost: item.unitCost == null ? null : Number(item.unitCost),
       })),
     ];
+
+    // Net each processed return back out, valued at the original order line's
+    // snapshotted price/cost, as a negative-qty line (reverses both revenue + COGS).
+    for (const ret of returns) {
+      if (!ret.processedAt) continue;
+      const orderItemsById = new Map(ret.order.items.map((item) => [item.id, item]));
+      for (const item of ret.items) {
+        if (!item.productVariantId) continue;
+        const orderItem = orderItemsById.get(item.orderItemId);
+        if (!orderItem) continue;
+        lines.push({
+          date: ret.processedAt,
+          channel: ret.order.provider as ProfitChannel,
+          variantId: item.productVariantId,
+          sku: orderItem.productVariant?.sku ?? orderItem.externalSku ?? '—',
+          name: orderItem.productVariant?.name ?? orderItem.externalName,
+          quantity: -item.quantity,
+          unitPrice: orderItem.unitPrice == null ? 0 : Number(orderItem.unitPrice),
+          unitCost: orderItem.unitCost == null ? null : Number(orderItem.unitCost),
+        });
+      }
+    }
 
     return { lines, from, to };
   }

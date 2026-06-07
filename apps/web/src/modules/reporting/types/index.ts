@@ -42,9 +42,22 @@ export type BelowCostItem = {
   units: number;
 };
 
+/**
+ * What processed returns netted back out of the summary above (positive
+ * magnitudes). `summary`/`byChannel`/`byPeriod` are already NET of these; this
+ * block surfaces the deduction so the netting isn't silent.
+ */
+export type ProfitReturnsSummary = {
+  refundedRevenue: string;
+  refundedCogs: string;
+  units: number;
+  lineCount: number;
+};
+
 export type ProfitReport = {
   range: { from: string; to: string; groupBy: ProfitPeriodGranularity };
   summary: ProfitMetrics;
+  returns: ProfitReturnsSummary;
   byChannel: ProfitByChannel[];
   byPeriod: ProfitByPeriod[];
   topSku: ProfitBySku[];

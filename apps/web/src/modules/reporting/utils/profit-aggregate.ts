@@ -5,6 +5,7 @@ import type {
   ProfitMetrics,
   ProfitPeriodGranularity,
   ProfitReport,
+  ProfitReturnsSummary,
 } from '../types';
 
 /** A single realized sale line, normalized across POS and marketplace orders. */
@@ -85,6 +86,33 @@ function periodKey(date: Date, groupBy: ProfitPeriodGranularity): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Summarize the return reversals (the negative-qty lines) into positive
+ * refund magnitudes, so the UI can show what was netted out.
+ */
+function summarizeReturns(lines: SoldLine[]): ProfitReturnsSummary {
+  let refundedRevenue = 0;
+  let refundedCogs = 0;
+  let units = 0;
+  let lineCount = 0;
+
+  for (const line of lines) {
+    if (line.quantity >= 0) continue;
+    const returnedUnits = -line.quantity;
+    refundedRevenue += line.unitPrice * returnedUnits;
+    units += returnedUnits;
+    lineCount += 1;
+    if (line.unitCost != null) refundedCogs += line.unitCost * returnedUnits;
+  }
+
+  return {
+    refundedRevenue: money(refundedRevenue),
+    refundedCogs: money(refundedCogs),
+    units,
+    lineCount,
+  };
+}
+
 /** Full per-SKU profit list, highest gross profit first (drives top/bottom + CSV). */
 export function aggregateProfitBySku(lines: SoldLine[]): ProfitBySku[] {
   const bySku = new Map<
@@ -135,7 +163,9 @@ export function aggregateProfit(
     addLine(periodAcc, line);
     byPeriod.set(pk, periodAcc);
 
-    if (line.unitCost != null && line.unitPrice < line.unitCost) {
+    // Below-cost is a SALES signal — only positive (real sale) lines qualify, so a
+    // return reversal never lands in (or distorts) the watchlist.
+    if (line.quantity > 0 && line.unitCost != null && line.unitPrice < line.unitCost) {
       const key = `${line.variantId ?? line.sku}|${line.channel}|${line.unitPrice}|${line.unitCost}`;
       const existing = belowCost.get(key);
       if (existing) {
@@ -161,6 +191,7 @@ export function aggregateProfit(
   return {
     range: { from: opts.from.toISOString(), to: opts.to.toISOString(), groupBy: opts.groupBy },
     summary: toMetrics(summary),
+    returns: summarizeReturns(lines),
     byChannel: [...byChannel.entries()]
       .map(([channel, acc]) => ({ ...toMetrics(acc), channel }))
       .sort((a, b) => Number(b.grossRevenue) - Number(a.grossRevenue)),
