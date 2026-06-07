@@ -214,7 +214,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Total</span>
-                <span className="text-right font-medium">
+                <span className="num text-right font-medium">
                   {data.totalAmount ? formatCurrency(data.totalAmount) : '—'}
                 </span>
               </div>

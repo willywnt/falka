@@ -240,7 +240,9 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Total modal</span>
-                <span className="text-right font-semibold">{formatCurrency(data.totalCost)}</span>
+                <span className="num text-right font-semibold">
+                  {formatCurrency(data.totalCost)}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pemasok</span>
