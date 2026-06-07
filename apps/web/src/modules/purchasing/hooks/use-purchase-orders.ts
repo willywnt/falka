@@ -11,7 +11,12 @@ import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 import { purchaseOrderKeys } from './purchase-order-keys';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
 import type { ReceivePurchaseOrderInput } from '../validators/receive-po';
-import type { PurchasableVariant, PurchaseOrderDetail, PurchaseOrderListItem } from '../types';
+import type {
+  PurchasableVariant,
+  PurchaseOrderDetail,
+  PurchaseOrderListItem,
+  ScannedPurchaseItem,
+} from '../types';
 
 /** A page of PO-picker variants (mirror of the server's PaginatedResult). */
 export type PurchasableVariantsPage = {
@@ -65,11 +70,11 @@ export function usePurchaseVariantsQuery(
   });
 }
 
-/** Resolve a scanned code (barcode/SKU) to a variant for a PO line. */
-export function useResolvePurchaseVariantMutation() {
+/** Resolve a scanned code (barcode/SKU) to a variant OR a bundle for a PO line. */
+export function useResolvePurchaseScanMutation() {
   return useMutation({
     mutationFn: async (code: string) => {
-      const result = await apiFetch<PurchasableVariant | null>(
+      const result = await apiFetch<ScannedPurchaseItem | null>(
         `${apiRoutes.purchaseOrders}/variants/resolve`,
         { params: { code } },
       );

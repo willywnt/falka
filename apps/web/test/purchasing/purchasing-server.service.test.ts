@@ -16,7 +16,7 @@ type TxClient = {
   purchaseOrderItem: { update: ReturnType<typeof vi.fn> };
 };
 
-const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
+const { prismaMock, txMock, enqueueMock, inventoryMock, catalogMock } = vi.hoisted(() => {
   const txMock: TxClient = {
     purchaseOrder: { count: vi.fn(), create: vi.fn(), update: vi.fn() },
     purchaseOrderItem: { update: vi.fn() },
@@ -27,6 +27,9 @@ const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
     inventoryMock: {
       adjustIncomingTx: vi.fn().mockResolvedValue(undefined),
       applyPurchaseReceiveTx: vi.fn().mockResolvedValue(0),
+    },
+    catalogMock: {
+      resolveBundles: vi.fn().mockResolvedValue(new Map()),
     },
     prismaMock: {
       productVariant: { findMany: vi.fn(), count: vi.fn() },
@@ -59,6 +62,9 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/modules/inventory/services/inventory-server.service', () => ({
   inventoryServerService: inventoryMock,
 }));
+vi.mock('@/modules/catalog/services/catalog-server.service', () => ({
+  catalogServerService: catalogMock,
+}));
 
 const { PurchasingServerService } =
   await import('@/modules/purchasing/services/purchasing-server.service');
@@ -76,6 +82,7 @@ beforeEach(() => {
   txMock.purchaseOrder.create.mockResolvedValue({ id: 'po1', code: 'PO00001' });
   txMock.purchaseOrder.update.mockResolvedValue({});
   txMock.purchaseOrderItem.update.mockResolvedValue({});
+  catalogMock.resolveBundles.mockResolvedValue(new Map());
 });
 
 describe('createPurchaseOrder', () => {
@@ -85,7 +92,7 @@ describe('createPurchaseOrder', () => {
     ]);
 
     await service.createPurchaseOrder(USER, {
-      items: [{ variantId: 'v1', quantity: 20, unitCost: 50_000 }],
+      items: [{ kind: 'variant', variantId: 'v1', quantity: 20, unitCost: 50_000 }],
     });
 
     const args = txMock.purchaseOrder.create.mock.calls[0]?.[0] as {
@@ -99,6 +106,55 @@ describe('createPurchaseOrder', () => {
       expect.objectContaining({ variantId: 'v1', delta: 20 }),
     );
     expect(getSpy).toHaveBeenCalledWith(USER, 'po1');
+  });
+
+  it('explodes a bundle line into per-component rows (qty × component qty, bundle-tagged)', async () => {
+    prismaMock.productVariant.findMany.mockResolvedValue([]);
+    catalogMock.resolveBundles.mockResolvedValue(
+      new Map([
+        [
+          'b1',
+          {
+            id: 'b1',
+            name: 'Paket',
+            sku: 'PKT',
+            price: '0',
+            available: 9,
+            components: [
+              {
+                productVariantId: 'c1',
+                sku: 'C1',
+                name: 'C1',
+                quantity: 2,
+                availableStock: 0,
+                price: '0',
+                cost: '5000',
+              },
+            ],
+          },
+        ],
+      ]),
+    );
+
+    await service.createPurchaseOrder(USER, {
+      items: [{ kind: 'bundle', bundleId: 'b1', quantity: 3, unitCost: 30_000 }],
+    });
+
+    const args = txMock.purchaseOrder.create.mock.calls[0]?.[0] as {
+      data: {
+        items: {
+          create: Array<{ productVariantId: string; quantity: number; bundleName: string | null }>;
+        };
+      };
+    };
+    const componentLine = args.data.items.create[0];
+    expect(componentLine?.productVariantId).toBe('c1');
+    expect(componentLine?.quantity).toBe(6);
+    expect(componentLine?.bundleName).toBe('Paket');
+    expect(inventoryMock.adjustIncomingTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'c1', delta: 6 }),
+    );
   });
 });
 

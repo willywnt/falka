@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, PackageCheck, XCircle } from 'lucide-react';
+import { ArrowLeft, Boxes, PackageCheck, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,35 @@ import {
   usePurchaseOrderQuery,
   useReceivePurchaseOrderMutation,
 } from '../hooks/use-purchase-orders';
+import type { PurchaseOrderItemDetail } from '../types';
 import { PurchaseOrderStatusBadge } from './purchase-order-status-badge';
+
+/** A run of consecutive items sharing a bundle origin, or a single standalone item. */
+type ItemGroup =
+  | { kind: 'bundle'; bundleName: string; items: PurchaseOrderItemDetail[] }
+  | { kind: 'standalone'; item: PurchaseOrderItemDetail };
+
+/**
+ * Fold the flat item list into display groups: consecutive lines sharing a
+ * non-null `bundleName` collapse under one bundle header (they were created
+ * together when the bundle line was exploded server-side, so they stay adjacent).
+ */
+function groupItems(items: PurchaseOrderItemDetail[]): ItemGroup[] {
+  const groups: ItemGroup[] = [];
+  for (const item of items) {
+    if (item.bundleName) {
+      const last = groups.at(-1);
+      if (last?.kind === 'bundle' && last.bundleName === item.bundleName) {
+        last.items.push(item);
+      } else {
+        groups.push({ kind: 'bundle', bundleName: item.bundleName, items: [item] });
+      }
+    } else {
+      groups.push({ kind: 'standalone', item });
+    }
+  }
+  return groups;
+}
 
 export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: string }) {
   const { data, isLoading, error } = usePurchaseOrderQuery(purchaseOrderId);
@@ -35,6 +63,45 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
 
   const canReceive = data?.status === 'ORDERED' || data?.status === 'PARTIALLY_RECEIVED';
   const busy = receiveMutation.isPending || cancelMutation.isPending;
+
+  /** One item row. `indented` nudges bundle-component lines under their group header. */
+  function renderItemRow(item: PurchaseOrderItemDetail, indented: boolean) {
+    return (
+      <TableRow key={item.id}>
+        <TableCell className={indented ? 'pl-8' : undefined}>
+          <div className="font-medium">{item.name}</div>
+          <div className="text-muted-foreground text-xs">{item.sku}</div>
+        </TableCell>
+        <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+        <TableCell className="text-right tabular-nums">
+          {item.receivedQuantity}
+          {item.outstanding > 0 ? (
+            <span className="text-muted-foreground"> / {item.outstanding} left</span>
+          ) : null}
+        </TableCell>
+        <TableCell className="text-right tabular-nums">{formatCurrency(item.unitCost)}</TableCell>
+        {canReceive ? (
+          <TableCell className="text-right">
+            {item.outstanding > 0 ? (
+              <div className="ml-auto w-20">
+                <NumberInput
+                  value={receiveQty[item.id] ?? item.outstanding}
+                  onChange={(value) =>
+                    setReceiveQty((prev) => ({
+                      ...prev,
+                      [item.id]: Math.max(0, Math.min(value, item.outstanding)),
+                    }))
+                  }
+                />
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-xs">done</span>
+            )}
+          </TableCell>
+        ) : null}
+      </TableRow>
+    );
+  }
 
   async function handleReceive() {
     if (!data) return;
@@ -95,6 +162,8 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
     );
   }
 
+  const groups = groupItems(data.items);
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2">
@@ -126,43 +195,23 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-muted-foreground text-xs">{item.sku}</div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {item.receivedQuantity}
-                      {item.outstanding > 0 ? (
-                        <span className="text-muted-foreground"> / {item.outstanding} left</span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(item.unitCost)}
-                    </TableCell>
-                    {canReceive ? (
-                      <TableCell className="text-right">
-                        {item.outstanding > 0 ? (
-                          <div className="ml-auto w-20">
-                            <NumberInput
-                              value={receiveQty[item.id] ?? item.outstanding}
-                              onChange={(value) =>
-                                setReceiveQty((prev) => ({
-                                  ...prev,
-                                  [item.id]: Math.max(0, Math.min(value, item.outstanding)),
-                                }))
-                              }
-                            />
+                {groups.map((group) =>
+                  group.kind === 'bundle' ? (
+                    <Fragment key={`bundle-${group.bundleName}-${group.items[0]?.id}`}>
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={canReceive ? 5 : 4} className="bg-muted/30 py-2">
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                            <Boxes className="size-3.5 text-violet-500" />
+                            Bundle · {group.bundleName}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">done</span>
-                        )}
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
+                        </TableCell>
+                      </TableRow>
+                      {group.items.map((item) => renderItemRow(item, true))}
+                    </Fragment>
+                  ) : (
+                    renderItemRow(group.item, false)
+                  ),
+                )}
               </TableBody>
             </Table>
           </div>

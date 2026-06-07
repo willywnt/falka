@@ -12,11 +12,8 @@ export const GET = withApiRoute(
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const variant = await purchasingServerService.resolvePurchasableVariant(
-      user.id,
-      parsed.data.code,
-    );
-    return apiSuccess(variant);
+    const result = await purchasingServerService.resolveScannedItem(user.id, parsed.data.code);
+    return apiSuccess(result);
   },
   { requireAuth: true },
 );

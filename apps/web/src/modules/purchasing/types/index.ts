@@ -1,5 +1,7 @@
 import type { PurchaseOrderStatus } from '@prisma/client';
 
+import type { BundleResolution } from '@/modules/catalog/types';
+
 export type { PurchaseOrderStatus };
 
 /** A variant offered in the PO picker (cost + current available/incoming stock). */
@@ -15,6 +17,11 @@ export type PurchasableVariant = {
   imageUrl: string | null;
 };
 
+/** What a scanned PO code resolves to — a standalone variant or a whole bundle. */
+export type ScannedPurchaseItem =
+  | { kind: 'variant'; variant: PurchasableVariant }
+  | { kind: 'bundle'; bundle: BundleResolution };
+
 export type PurchaseOrderItemDetail = {
   id: string;
   productVariantId: string;
@@ -25,6 +32,8 @@ export type PurchaseOrderItemDetail = {
   outstanding: number;
   unitCost: string;
   lineTotal: string;
+  /** Snapshot of the bundle this line came from (null = a standalone variant line). */
+  bundleName: string | null;
 };
 
 export type PurchaseOrderListItem = {

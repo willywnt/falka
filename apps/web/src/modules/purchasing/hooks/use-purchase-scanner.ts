@@ -9,22 +9,22 @@ import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-des
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
 import type { BarcodeScannedServerPayload } from '@/modules/scanner-pairing/socket/events';
 
-import { useResolvePurchaseVariantMutation } from './use-purchase-orders';
-import type { PurchasableVariant } from '../types';
+import { useResolvePurchaseScanMutation } from './use-purchase-orders';
+import type { ScannedPurchaseItem } from '../types';
 
 /** Coarse state of the PO phone scanner, for the status indicator. */
 export type PoScannerStatus = 'off' | 'idle' | 'waiting' | 'connected' | 'disconnected';
 
 type UsePurchaseScannerOptions = {
-  onResolved: (variant: PurchasableVariant) => void;
+  onResolved: (scanned: ScannedPurchaseItem) => void;
   soundEnabled: boolean;
 };
 
 /**
  * Mobile scan-to-order for the New Purchase Order page — the same shared pairing
  * flow as POS, but on a PURCHASING pairing so it never collides with a POS or
- * recordings phone. A scanned code resolves to a variant → onResolved adds/bumps
- * the PO line, with an audible blip.
+ * recordings phone. A scanned code resolves to a variant OR a whole bundle →
+ * onResolved adds/bumps the PO line, with an audible blip.
  */
 export function usePurchaseScanner({ onResolved, soundEnabled }: UsePurchaseScannerOptions): {
   scannerEnabled: boolean;
@@ -36,26 +36,28 @@ export function usePurchaseScanner({ onResolved, soundEnabled }: UsePurchaseScan
     scannerEnabled && activePairing?.session?.purpose === 'PURCHASING'
       ? activePairing.session
       : null;
-  const resolve = useResolvePurchaseVariantMutation();
+  const resolve = useResolvePurchaseScanMutation();
 
   const soundRef = useRef(soundEnabled);
   soundRef.current = soundEnabled;
 
   async function handleBarcodeScanned(payload: BarcodeScannedServerPayload): Promise<void> {
     try {
-      const variant = await resolve.mutateAsync(payload.barcode);
-      if (!variant) {
+      const scanned = await resolve.mutateAsync(payload.barcode);
+      if (!scanned) {
         if (soundRef.current) playScanError();
         toast.warning('No matching product', {
           description: `Code ${payload.barcode} didn't match any SKU or barcode.`,
         });
         return;
       }
-      onResolved(variant);
+      onResolved(scanned);
       if (soundRef.current) playScanSuccess();
-      toast.success('Added to order', {
-        description: `${variant.productName} · ${variant.name}`,
-      });
+      const description =
+        scanned.kind === 'variant'
+          ? `${scanned.variant.productName} · ${scanned.variant.name}`
+          : scanned.bundle.name;
+      toast.success('Added to order', { description });
     } catch (error) {
       if (soundRef.current) playScanError();
       toast.error('Scan failed', {

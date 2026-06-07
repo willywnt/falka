@@ -6,6 +6,9 @@ import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
+import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
+import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-allocation';
+import type { BundleResolution } from '@/modules/catalog/types';
 
 import { PurchaseOrderError } from '../errors/purchase-order-errors';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
@@ -16,6 +19,7 @@ import type {
   PurchaseOrderItemDetail,
   PurchaseOrderListItem,
   PurchasableVariant,
+  ScannedPurchaseItem,
 } from '../types';
 
 const LIST_LIMIT = 100;
@@ -37,6 +41,7 @@ function mapDetail(row: PurchaseOrderRow): PurchaseOrderDetail {
     outstanding: Math.max(0, item.quantity - item.receivedQuantity),
     unitCost: item.unitCost.toString(),
     lineTotal: (Number(item.unitCost) * item.quantity).toString(),
+    bundleName: item.bundleName,
   }));
 
   return {
@@ -181,24 +186,50 @@ export class PurchasingServerService {
    * Place a purchase order (status ORDERED): snapshot the variants, create the PO +
    * lines, and bump each variant's incoming stock — all in one transaction.
    */
+  /** Resolve a scanned code to a purchasable variant OR a whole bundle (variant takes priority). */
+  async resolveScannedItem(userId: string, code: string): Promise<ScannedPurchaseItem | null> {
+    const variant = await this.resolvePurchasableVariant(userId, code);
+    if (variant) return { kind: 'variant', variant };
+    const bundle = await catalogServerService.resolveBundleByCode(userId, code);
+    if (bundle) return { kind: 'bundle', bundle };
+    return null;
+  }
+
   async createPurchaseOrder(
     userId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<PurchaseOrderDetail> {
-    const variantIds = [...new Set(input.items.map((item) => item.variantId))];
-    const variants = await prisma.productVariant.findMany({
-      where: { id: { in: variantIds }, userId, deletedAt: null },
-      select: { id: true, sku: true, name: true },
-    });
-    const byId = new Map(variants.map((variant) => [variant.id, variant]));
+    const variantItems = input.items.filter((item) => item.kind === 'variant');
+    const bundleItems = input.items.filter((item) => item.kind === 'bundle');
 
-    for (const item of input.items) {
-      if (!byId.has(item.variantId)) {
+    const variantIds = [...new Set(variantItems.map((item) => item.variantId))];
+    const variants = variantIds.length
+      ? await prisma.productVariant.findMany({
+          where: { id: { in: variantIds }, userId, deletedAt: null },
+          select: { id: true, sku: true, name: true },
+        })
+      : [];
+    const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+    const bundles = await catalogServerService.resolveBundles(
+      userId,
+      bundleItems.map((item) => item.bundleId),
+    );
+
+    for (const item of variantItems) {
+      if (!variantById.has(item.variantId))
         throw PurchaseOrderError.validation('A selected product no longer exists.');
-      }
+    }
+    for (const item of bundleItems) {
+      const bundle = bundles.get(item.bundleId);
+      if (!bundle) throw PurchaseOrderError.validation('A selected bundle no longer exists.');
+      if (bundle.components.length === 0)
+        throw PurchaseOrderError.validation('A bundle has no components to order.');
     }
 
-    const totalCost = input.items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+    // A bundle PO line explodes into one row per component (stock + cost are per-variant);
+    // its single cost is allocated across components (proportional to each component's cost).
+    const lines = this.buildPurchaseOrderLines(variantItems, bundleItems, variantById, bundles);
+    const totalCost = lines.reduce((sum, line) => sum + Number(line.unitCost) * line.quantity, 0);
 
     const created = await prisma.$transaction(async (tx) => {
       const count = await tx.purchaseOrder.count({ where: { userId } });
@@ -211,25 +242,14 @@ export class PurchasingServerService {
           supplierName: input.supplierName ?? null,
           note: input.note ?? null,
           totalCost,
-          items: {
-            create: input.items.map((item) => {
-              const variant = byId.get(item.variantId)!;
-              return {
-                productVariantId: item.variantId,
-                sku: variant.sku,
-                name: variant.name,
-                quantity: item.quantity,
-                unitCost: item.unitCost,
-              };
-            }),
-          },
+          items: { create: lines },
         },
       });
 
-      for (const item of input.items) {
+      for (const line of lines) {
         await inventoryServerService.adjustIncomingTx(tx, {
-          variantId: item.variantId,
-          delta: item.quantity,
+          variantId: line.productVariantId,
+          delta: line.quantity,
         });
       }
 
@@ -242,6 +262,51 @@ export class PurchasingServerService {
       code: created.code,
     });
     return this.getPurchaseOrder(userId, created.id);
+  }
+
+  /** Flatten variant + bundle cart items into per-variant PO rows (bundle cost allocated). */
+  private buildPurchaseOrderLines(
+    variantItems: Extract<CreatePurchaseOrderInput['items'][number], { kind: 'variant' }>[],
+    bundleItems: Extract<CreatePurchaseOrderInput['items'][number], { kind: 'bundle' }>[],
+    variantById: Map<string, { id: string; sku: string; name: string }>,
+    bundles: Map<string, BundleResolution>,
+  ): Prisma.PurchaseOrderItemUncheckedCreateWithoutPurchaseOrderInput[] {
+    const lines: Prisma.PurchaseOrderItemUncheckedCreateWithoutPurchaseOrderInput[] = [];
+
+    for (const item of variantItems) {
+      const variant = variantById.get(item.variantId)!;
+      lines.push({
+        productVariantId: item.variantId,
+        sku: variant.sku,
+        name: variant.name,
+        quantity: item.quantity,
+        unitCost: item.unitCost,
+        bundleName: null,
+      });
+    }
+
+    for (const item of bundleItems) {
+      const bundle = bundles.get(item.bundleId)!;
+      const allocated = allocateBundleUnitAmounts(
+        Math.round(item.unitCost * 100),
+        bundle.components.map((component) => ({
+          weightMinor: Math.round(Number(component.cost ?? 0) * 100),
+          quantity: component.quantity,
+        })),
+      );
+      bundle.components.forEach((component, index) => {
+        lines.push({
+          productVariantId: component.productVariantId,
+          sku: component.sku,
+          name: component.name,
+          quantity: item.quantity * component.quantity,
+          unitCost: (allocated[index] ?? 0) / 100,
+          bundleName: bundle.name,
+        });
+      });
+    }
+
+    return lines;
   }
 
   /**
