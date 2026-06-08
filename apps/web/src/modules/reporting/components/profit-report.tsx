@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import type { DateRange } from 'react-day-picker';
-import { Banknote, Coins, Info, Percent, TrendingDown, Wallet } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ArrowRight, Banknote, Coins, Info, Percent, TrendingDown, Wallet } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
 import { StatCard } from '@/components/stat-card';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,19 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ValueRankList, type ValueRankRow } from '@/components/charts/bars';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
-import { ReportRangeControls, rangeToParams } from './report-range-controls';
 import { channelLabel } from '../utils/channel-label';
 import { formatPct, marginClass } from '../utils/format';
-import { profitExportUrl, useProfitReportQuery } from '../hooks/use-reporting';
-import type {
-  ProfitBySku,
-  ProfitMetrics,
-  ProfitPeriodGranularity,
-  ProfitReport as ProfitReportData,
-} from '../types';
+import { useProfitReportQuery, type ProfitReportParams } from '../hooks/use-reporting';
+import type { ProfitBySku, ProfitMetrics, ProfitReport as ProfitReportData } from '../types';
+
+const RevenueTrendChart = dynamic(
+  () => import('@/components/charts/revenue-trend-chart').then((m) => m.RevenueTrendChart),
+  { ssr: false, loading: () => <Skeleton className="h-[260px] w-full" /> },
+);
 
 /** The shared trailing metric cells (revenue / COGS / profit / margin / units). */
 function MetricCells({ metrics }: { metrics: ProfitMetrics }) {
@@ -66,7 +66,8 @@ function MetricHeadCells() {
   );
 }
 
-function SkuTable({
+/** A SKU profit ranking — a value bar per row (by gross profit) + the margin %. */
+function SkuRankCard({
   title,
   rows,
   emptyHint,
@@ -75,76 +76,75 @@ function SkuTable({
   rows: ProfitBySku[];
   emptyHint: string;
 }) {
+  const rankRows: ValueRankRow[] = rows.map((row) => ({
+    id: row.variantId ?? row.sku,
+    label: row.name,
+    sublabel: `${row.sku} · ${formatPct(row.grossMarginPct)}`,
+    value: Math.max(0, Number(row.grossProfit)),
+    flagged: Number(row.grossProfit) < 0,
+  }));
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        {rows.length === 0 ? (
+        {rankRows.length === 0 ? (
           <p className="text-muted-foreground text-sm">{emptyHint}</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Varian</TableHead>
-                <TableHead className="text-right">Laba</TableHead>
-                <TableHead className="text-right">Margin</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={`${row.variantId ?? row.sku}`}>
-                  <TableCell>
-                    <div className="font-medium">{row.name}</div>
-                    <div className="text-muted-foreground text-xs">{row.sku}</div>
-                  </TableCell>
-                  <TableCell className="num text-right font-medium">
-                    {formatCurrency(row.grossProfit)}
-                  </TableCell>
-                  <TableCell className={cn('num text-right', marginClass(row.grossMarginPct))}>
-                    {formatPct(row.grossMarginPct)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ValueRankList rows={rankRows} formatValue={(value) => formatCurrency(value)} />
         )}
       </CardContent>
     </Card>
   );
 }
 
-export function ProfitReport() {
-  const [range, setRange] = useState<DateRange | undefined>(undefined);
-  const [groupBy, setGroupBy] = useState<ProfitPeriodGranularity>('day');
-
-  const params = rangeToParams(range, groupBy);
+export function ProfitReport({
+  params,
+  onSeeChannels,
+}: {
+  params: ProfitReportParams;
+  onSeeChannels?: () => void;
+}) {
   const { data, isLoading, error } = useProfitReportQuery(params);
 
-  return (
-    <div className="space-y-6">
-      <ReportRangeControls
-        range={range}
-        onRangeChange={setRange}
-        groupBy={groupBy}
-        onGroupByChange={setGroupBy}
-        exportUrl={profitExportUrl(params)}
-      />
+  if (error) {
+    return (
+      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
+        Gagal memuat laporan laba. {error instanceof Error ? error.message : 'Coba lagi.'}
+      </div>
+    );
+  }
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat laporan laba. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
+  if (isLoading || !data) return <ProfitSkeleton />;
 
-      {isLoading || !data ? <ProfitSkeleton /> : <ProfitContent data={data} />}
-    </div>
-  );
+  return <ProfitContent data={data} onSeeChannels={onSeeChannels} />;
 }
 
-function ProfitContent({ data }: { data: ProfitReportData }) {
+function ProfitContent({
+  data,
+  onSeeChannels,
+}: {
+  data: ProfitReportData;
+  onSeeChannels?: () => void;
+}) {
   const { summary, returns } = data;
+
+  if (data.byChannel.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-2">
+          <EmptyState
+            icon={TrendingDown}
+            title="Belum ada penjualan di rentang ini"
+            description="Begitu ada penjualan kasir atau pesanan marketplace yang terkirim di periode ini, labanya langsung muncul di sini."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
   const costUnknownHint =
     summary.costUnknownLines > 0
       ? `${summary.costUnknownLines} baris belum ada modal — nggak ikut dihitung margin`
@@ -154,8 +154,14 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
       ? `${summary.unitsSold} unit · sudah dipotong retur ${formatCurrency(returns.refundedRevenue)}`
       : `${summary.unitsSold} unit terjual`;
 
+  const trendData = data.byPeriod.map((row) => ({
+    period: row.period,
+    revenue: Number(row.grossRevenue),
+    profit: Number(row.grossProfit),
+  }));
+
   return (
-    <>
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Omzet bersih"
@@ -186,72 +192,55 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
         />
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Per channel</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.byChannel.length === 0 ? (
-            <EmptyState
-              icon={TrendingDown}
-              title="Belum ada penjualan di rentang ini"
-              description="Begitu ada penjualan kasir atau pesanan marketplace yang terkirim di periode ini, labanya langsung muncul di sini."
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Channel</TableHead>
-                  <MetricHeadCells />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.byChannel.map((row) => (
-                  <TableRow key={row.channel}>
-                    <TableCell className="font-medium">{channelLabel(row.channel)}</TableCell>
-                    <MetricCells metrics={row} />
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {data.byPeriod.length > 0 ? (
+      {trendData.length > 0 ? (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Per periode</CardTitle>
+          <CardHeader className="flex-row items-center justify-between gap-2 pb-3">
+            <CardTitle className="text-base">Tren laba &amp; omzet</CardTitle>
+            {onSeeChannels ? (
+              <Button variant="ghost" size="sm" onClick={onSeeChannels}>
+                Bandingkan channel
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : null}
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Periode</TableHead>
-                  <MetricHeadCells />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.byPeriod.map((row) => (
-                  <TableRow key={row.period}>
-                    <TableCell className="num font-medium">{row.period}</TableCell>
-                    <MetricCells metrics={row} />
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <RevenueTrendChart data={trendData} />
+            <details className="group mt-3">
+              <summary className="text-muted-foreground hover:text-foreground cursor-pointer list-none text-xs select-none">
+                <span className="group-open:hidden">▸ Lihat tabel per periode</span>
+                <span className="hidden group-open:inline">▾ Sembunyikan tabel</span>
+              </summary>
+              <div className="mt-3">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Periode</TableHead>
+                      <MetricHeadCells />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.byPeriod.map((row) => (
+                      <TableRow key={row.period}>
+                        <TableCell className="num font-medium">{row.period}</TableCell>
+                        <MetricCells metrics={row} />
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </details>
           </CardContent>
         </Card>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SkuTable
-          title="SKU margin tertinggi"
+        <SkuRankCard
+          title="SKU laba tertinggi"
           rows={data.topSku}
           emptyHint="Belum ada penjualan yang modalnya sudah diisi."
         />
-        <SkuTable
-          title="SKU margin terendah"
+        <SkuRankCard
+          title="SKU laba terendah"
           rows={data.bottomSku}
           emptyHint="Belum cukup varian buat diurutkan."
         />
@@ -300,7 +289,7 @@ function ProfitContent({ data }: { data: ProfitReportData }) {
           </CardContent>
         </Card>
       ) : null}
-    </>
+    </div>
   );
 }
 

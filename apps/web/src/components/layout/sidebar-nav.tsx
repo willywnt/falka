@@ -4,7 +4,6 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BarChart3,
   Boxes,
   ChevronRight,
   Coins,
@@ -71,8 +70,7 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
   {
     label: 'Insight',
     items: [
-      { title: 'Laba', href: '/dashboard/reports/profit', icon: LineChart },
-      { title: 'Performa channel', href: '/dashboard/reports/channels', icon: BarChart3 },
+      { title: 'Laba & channel', href: '/dashboard/reports/profit', icon: LineChart },
       { title: 'Nilai stok', href: '/dashboard/reports/inventory-value', icon: Coins },
     ],
   },

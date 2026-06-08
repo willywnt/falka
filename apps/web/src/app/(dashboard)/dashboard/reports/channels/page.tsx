@@ -1,24 +1,9 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 
-import { PageHeader } from '@/components/page-header';
-import { ChannelPerformanceReport } from '@/modules/reporting/components/channel-performance-report';
-
-export const metadata: Metadata = {
-  title: 'Performa channel',
-};
-
+/**
+ * The channel report was merged into the Laba & channel page as a tab. Keep this
+ * route alive (old links/bookmarks) by redirecting to the Channel tab.
+ */
 export default function ChannelPerformanceReportPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Insight"
-        title="Performa channel"
-        description="Bandingkan tiap channel jualan — omzet, porsi, margin, transaksi, dan retur — biar tahu mana yang paling menghasilkan."
-      />
-      <Suspense fallback={null}>
-        <ChannelPerformanceReport />
-      </Suspense>
-    </div>
-  );
+  redirect('/dashboard/reports/profit?tab=channel');
 }

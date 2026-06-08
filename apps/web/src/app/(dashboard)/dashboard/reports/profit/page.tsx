@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 import { PageHeader } from '@/components/page-header';
-import { ProfitReport } from '@/modules/reporting/components/profit-report';
+import { ReportsInsights } from '@/modules/reporting/components/reports-insights';
 
 export const metadata: Metadata = {
-  title: 'Laba & margin',
+  title: 'Laba & channel',
 };
 
 export default function ProfitReportPage() {
@@ -13,11 +13,11 @@ export default function ProfitReportPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Insight"
-        title="Laba & margin"
-        description="Omzet, HPP, dan margin kotor di semua channel — lihat SKU mana yang benar-benar menghasilkan."
+        title="Laba & channel"
+        description="Omzet, HPP, margin, dan perbandingan tiap channel — lihat dari mana untung kamu datang."
       />
       <Suspense fallback={null}>
-        <ProfitReport />
+        <ReportsInsights />
       </Suspense>
     </div>
   );

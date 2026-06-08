@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import type { DateRange } from 'react-day-picker';
+import dynamic from 'next/dynamic';
 import { Banknote, Crown, Percent, Receipt, Store, Wallet } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -19,38 +18,35 @@ import {
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
-import { ReportRangeControls, rangeToParams } from './report-range-controls';
+import { channelColor } from '../utils/channel-color';
 import { channelLabel } from '../utils/channel-label';
 import { formatPct, marginClass } from '../utils/format';
-import { channelPerformanceExportUrl, useChannelPerformanceQuery } from '../hooks/use-reporting';
+import { useChannelPerformanceQuery, type ProfitReportParams } from '../hooks/use-reporting';
 import type { ChannelPerformanceReport as ChannelReportData } from '../types';
 
-export function ChannelPerformanceReport() {
-  const [range, setRange] = useState<DateRange | undefined>(undefined);
-  const [groupBy, setGroupBy] = useState<'day' | 'week' | 'month'>('day');
+const ChannelDonutChart = dynamic(
+  () => import('@/components/charts/channel-donut-chart').then((m) => m.ChannelDonutChart),
+  { ssr: false, loading: () => <Skeleton className="h-[240px] w-full" /> },
+);
+const ChannelTrendChart = dynamic(
+  () => import('@/components/charts/channel-trend-chart').then((m) => m.ChannelTrendChart),
+  { ssr: false, loading: () => <Skeleton className="h-[260px] w-full" /> },
+);
 
-  const params = rangeToParams(range, groupBy);
+export function ChannelPerformanceReport({ params }: { params: ProfitReportParams }) {
   const { data, isLoading, error } = useChannelPerformanceQuery(params);
 
-  return (
-    <div className="space-y-6">
-      <ReportRangeControls
-        range={range}
-        onRangeChange={setRange}
-        groupBy={groupBy}
-        onGroupByChange={setGroupBy}
-        exportUrl={channelPerformanceExportUrl(params)}
-      />
+  if (error) {
+    return (
+      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
+        Gagal memuat laporan channel. {error instanceof Error ? error.message : 'Coba lagi.'}
+      </div>
+    );
+  }
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat laporan channel. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
+  if (isLoading || !data) return <ChannelSkeleton />;
 
-      {isLoading || !data ? <ChannelSkeleton /> : <ChannelContent data={data} />}
-    </div>
-  );
+  return <ChannelContent data={data} />;
 }
 
 function ChannelContent({ data }: { data: ChannelReportData }) {
@@ -75,8 +71,31 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
     ? data.byChannel.find((row) => row.channel === summary.topByMargin)
     : undefined;
 
+  const colorOf = new Map(
+    data.byChannel.map((row, index) => [row.channel, channelColor(row.channel, index)]),
+  );
+  const donutData = data.byChannel.map((row) => ({
+    name: channelLabel(row.channel),
+    value: Number(row.grossRevenue),
+    color: colorOf.get(row.channel) ?? 'var(--chart-1)',
+  }));
+  const trendSeries = data.byChannel.map((row) => ({
+    key: row.channel,
+    label: channelLabel(row.channel),
+    color: colorOf.get(row.channel) ?? 'var(--chart-1)',
+  }));
+  const trendData = data.trend.map((period) => {
+    const datum: Record<string, number | string> = { period: period.period };
+    for (const row of data.byChannel) {
+      datum[row.channel] = Number(period.revenueByChannel[row.channel] ?? 0);
+    }
+    return datum;
+  });
+
+  const showDonut = data.byChannel.length >= 2;
+
   return (
-    <>
+    <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Omzet bersih"
@@ -120,11 +139,98 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
         />
       </div>
 
+      <div className={cn('grid gap-4', showDonut && 'lg:grid-cols-3')}>
+        {showDonut ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Porsi omzet</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChannelDonutChart
+                data={donutData}
+                centerPrimary={formatCurrency(summary.totalGrossRevenue)}
+                centerSecondary="omzet bersih"
+              />
+              <ul className="mt-3 space-y-1.5">
+                {data.byChannel.map((row) => (
+                  <li key={row.channel} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: colorOf.get(row.channel) }}
+                      />
+                      {channelLabel(row.channel)}
+                    </span>
+                    <span className="num text-muted-foreground">
+                      {formatPct(row.revenueSharePct)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <Card className={cn(showDonut && 'lg:col-span-2')}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Tren omzet per channel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trendData.length > 0 ? (
+              <ChannelTrendChart data={trendData} series={trendSeries} />
+            ) : (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                Belum cukup data buat menggambar tren.
+              </p>
+            )}
+            <details className="group mt-3">
+              <summary className="text-muted-foreground hover:text-foreground cursor-pointer list-none text-xs select-none">
+                <span className="group-open:hidden">▸ Lihat tabel tren</span>
+                <span className="hidden group-open:inline">▾ Sembunyikan tabel</span>
+              </summary>
+              <div className="mt-3 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Periode</TableHead>
+                      {data.byChannel.map((row) => (
+                        <TableHead key={row.channel} className="text-right">
+                          {channelLabel(row.channel)}
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.trend.map((period) => (
+                      <TableRow key={period.period}>
+                        <TableCell className="num font-medium">{period.period}</TableCell>
+                        {data.byChannel.map((row) => (
+                          <TableCell
+                            key={row.channel}
+                            className="text-muted-foreground num text-right"
+                          >
+                            {formatCurrency(period.revenueByChannel[row.channel] ?? '0')}
+                          </TableCell>
+                        ))}
+                        <TableCell className="num text-right font-medium">
+                          {formatCurrency(period.total)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </details>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Perbandingan channel</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -142,7 +248,15 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
             <TableBody>
               {data.byChannel.map((row) => (
                 <TableRow key={row.channel}>
-                  <TableCell className="font-medium">{channelLabel(row.channel)}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: colorOf.get(row.channel) }}
+                      />
+                      {channelLabel(row.channel)}
+                    </span>
+                  </TableCell>
                   <TableCell className="num text-right">
                     {formatCurrency(row.grossRevenue)}
                   </TableCell>
@@ -185,45 +299,7 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
           </Table>
         </CardContent>
       </Card>
-
-      {data.trend.length > 0 ? (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Tren omzet per channel</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Periode</TableHead>
-                  {data.byChannel.map((row) => (
-                    <TableHead key={row.channel} className="text-right">
-                      {channelLabel(row.channel)}
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.trend.map((period) => (
-                  <TableRow key={period.period}>
-                    <TableCell className="num font-medium">{period.period}</TableCell>
-                    {data.byChannel.map((row) => (
-                      <TableCell key={row.channel} className="text-muted-foreground num text-right">
-                        {formatCurrency(period.revenueByChannel[row.channel] ?? '0')}
-                      </TableCell>
-                    ))}
-                    <TableCell className="num text-right font-medium">
-                      {formatCurrency(period.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
-    </>
+    </div>
   );
 }
 

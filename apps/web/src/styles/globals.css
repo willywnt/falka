@@ -54,6 +54,17 @@
   --signed-down: oklch(0.62 0.17 45);
   --signed-down-foreground: oklch(0.99 0.01 60);
 
+  /*
+   * Categorical chart palette — a harmonized ramp for series/slices (channels,
+   * etc.). Moderate chroma so it sits on the paper canvas without shouting; the
+   * teal lead matches --primary. NOT the signed pair (deltas) or destructive.
+   */
+  --chart-1: oklch(0.58 0.1 205);
+  --chart-2: oklch(0.55 0.14 290);
+  --chart-3: oklch(0.7 0.13 70);
+  --chart-4: oklch(0.6 0.12 245);
+  --chart-5: oklch(0.6 0.13 340);
+
   --sidebar: oklch(0.23 0.006 260);
   --sidebar-foreground: oklch(0.92 0.004 250);
   --sidebar-primary: oklch(0.58 0.1 205);
@@ -101,6 +112,13 @@
   --signed-down: oklch(0.74 0.15 55);
   --signed-down-foreground: oklch(0.17 0.02 50);
 
+  /* Categorical chart palette — lifted lightness for the dark canvas. */
+  --chart-1: oklch(0.7 0.1 200);
+  --chart-2: oklch(0.68 0.13 290);
+  --chart-3: oklch(0.78 0.12 75);
+  --chart-4: oklch(0.7 0.12 245);
+  --chart-5: oklch(0.7 0.13 340);
+
   --sidebar: oklch(0.15 0.005 260);
   --sidebar-foreground: oklch(0.92 0.004 250);
   --sidebar-primary: oklch(0.7 0.1 200);
@@ -142,6 +160,11 @@
   --color-signed-up-foreground: var(--signed-up-foreground);
   --color-signed-down: var(--signed-down);
   --color-signed-down-foreground: var(--signed-down-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

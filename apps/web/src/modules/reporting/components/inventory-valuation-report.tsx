@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ValueRankList } from '@/components/charts/bars';
 import { formatCurrency } from '@/lib/formatters';
 
 import { inventoryValuationExportUrl, useInventoryValuationQuery } from '../hooks/use-reporting';
@@ -91,6 +92,31 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
           }
         />
       </div>
+
+      {byProduct.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Konsentrasi nilai stok</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ValueRankList
+              rows={byProduct.slice(0, 12).map((row) => ({
+                id: row.productId,
+                label: row.productName,
+                sublabel: row.category ?? undefined,
+                value: Number(row.stockValue),
+                flagged: row.costUnknownVariants > 0,
+              }))}
+              formatValue={(value) => formatCurrency(value)}
+            />
+            {byProduct.length > 12 ? (
+              <p className="text-muted-foreground mt-3 text-xs">
+                +{byProduct.length - 12} produk lainnya ada di tabel bawah
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-3">
