@@ -31,14 +31,14 @@ export function SalesDashboard() {
         <Button asChild>
           <Link href="/dashboard/sales/new">
             <Plus className="size-4" />
-            New sale
+            Penjualan baru
           </Link>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load sales. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat penjualan. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -51,13 +51,13 @@ export function SalesDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Receipt}
-          title="No sales yet"
-          description="Ring up an in-store sale — it decrements the same stock your marketplaces sync from."
+          title="Belum ada penjualan"
+          description="Catat penjualan di toko — stoknya langsung kepotong dan ikut tersinkronisasi ke marketplace kamu."
           action={
             <Button asChild>
               <Link href="/dashboard/sales/new">
                 <Plus className="size-4" />
-                New sale
+                Penjualan baru
               </Link>
             </Button>
           }
@@ -67,11 +67,11 @@ export function SalesDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sale</TableHead>
-                <TableHead className="text-right">Items</TableHead>
+                <TableHead>Penjualan</TableHead>
+                <TableHead className="text-right">Item</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>When</TableHead>
+                <TableHead>Pembayaran</TableHead>
+                <TableHead>Waktu</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,18 +87,18 @@ export function SalesDashboard() {
                       </Link>
                       {sale.status === 'VOID' ? (
                         <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
-                          Voided
+                          Dibatalkan
                         </Badge>
                       ) : null}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      {sale.customerName ?? 'Walk-in'}
+                      {sale.customerName ?? 'Pelanggan langsung'}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{sale.itemCount}</TableCell>
+                  <TableCell className="num text-right">{sale.itemCount}</TableCell>
                   <TableCell
                     className={cn(
-                      'text-right font-medium tabular-nums',
+                      'num text-right font-medium',
                       sale.status === 'VOID' && 'text-muted-foreground line-through',
                     )}
                   >

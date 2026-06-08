@@ -72,11 +72,13 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
     try {
       const trimmed = resi.trim();
       await markShipped.mutateAsync(trimmed ? { noResi: trimmed } : {});
-      toast.success('Order marked shipped', { description: 'The reservation was consumed.' });
+      toast.success('Pesanan ditandai terkirim', {
+        description: 'Stok yang dipesan langsung tersinkronisasi.',
+      });
       close();
     } catch (error) {
-      toast.error('Could not mark shipped', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menandai terkirim', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -84,11 +86,11 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
   async function handleSaveResi() {
     try {
       await setOrderResi.mutateAsync({ noResi: resi.trim() });
-      toast.success('Tracking number updated');
+      toast.success('No. resi diperbarui');
       close();
     } catch (error) {
-      toast.error('Could not update tracking number', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal memperbarui no. resi', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -97,11 +99,11 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
     try {
       const trimmed = reason.trim();
       await cancelOrder.mutateAsync(trimmed ? { reason: trimmed } : {});
-      toast.success('Order cancelled', { description: 'Any reserved stock was released.' });
+      toast.success('Pesanan dibatalkan', { description: 'Stok yang dipesan dilepas lagi.' });
       close();
     } catch (error) {
-      toast.error('Could not cancel order', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal membatalkan pesanan', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -112,7 +114,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             <MoreHorizontal className="size-4" />
-            Actions
+            Aksi
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -124,7 +126,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
               }}
             >
               <Truck className="size-4" />
-              Mark as shipped
+              Tandai terkirim
             </DropdownMenuItem>
           ) : null}
           {canEditResi ? (
@@ -135,7 +137,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
               }}
             >
               <Tag className="size-4" />
-              Edit tracking no.
+              Ubah no. resi
             </DropdownMenuItem>
           ) : null}
           {canCancel ? (
@@ -147,7 +149,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
               }}
             >
               <Ban className="size-4" />
-              Cancel order
+              Batalkan pesanan
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>
@@ -156,29 +158,28 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
       <Dialog open={dialog === 'ship'} onOpenChange={(open) => !open && close()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mark as shipped</DialogTitle>
+            <DialogTitle>Tandai terkirim</DialogTitle>
             <DialogDescription>
-              Consumes the stock reservation for this order. Add a tracking number now or leave it
-              blank.
+              Stok yang dipesan langsung tersinkronisasi. Isi no. resi sekarang atau kosongin dulu.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="ship-resi">Tracking number (optional)</Label>
+            <Label htmlFor="ship-resi">No. resi (opsional)</Label>
             <Input
               id="ship-resi"
               value={resi}
               onChange={(event) => setResi(event.target.value)}
-              placeholder="e.g. JX1234567890"
+              placeholder="mis. JX1234567890"
               maxLength={64}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={close} disabled={busy}>
-              Cancel
+              Batal
             </Button>
             <Button onClick={() => void handleShip()} disabled={busy}>
               <Truck className="size-4" />
-              {markShipped.isPending ? 'Marking...' : 'Mark shipped'}
+              {markShipped.isPending ? 'Menandai...' : 'Tandai terkirim'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -187,31 +188,31 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
       <Dialog open={dialog === 'resi'} onOpenChange={(open) => !open && close()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit tracking number</DialogTitle>
+            <DialogTitle>Ubah no. resi</DialogTitle>
             <DialogDescription>
-              Set or correct this order&apos;s tracking number. A later marketplace pull may
-              overwrite it.
+              Isi atau perbaiki no. resi pesanan ini. Tapi ingat, tarik pesanan dari marketplace
+              berikutnya bisa menimpanya lagi.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="edit-resi">Tracking number</Label>
+            <Label htmlFor="edit-resi">No. resi</Label>
             <Input
               id="edit-resi"
               value={resi}
               onChange={(event) => setResi(event.target.value)}
-              placeholder="e.g. JX1234567890"
+              placeholder="mis. JX1234567890"
               maxLength={64}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={close} disabled={busy}>
-              Cancel
+              Batal
             </Button>
             <Button
               onClick={() => void handleSaveResi()}
               disabled={busy || resi.trim().length === 0}
             >
-              {setOrderResi.isPending ? 'Saving...' : 'Save'}
+              {setOrderResi.isPending ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -220,25 +221,25 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
       <AlertDialog open={dialog === 'cancel'} onOpenChange={(open) => !open && close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel order {order.externalOrderId}?</AlertDialogTitle>
+            <AlertDialogTitle>Batalkan pesanan {order.externalOrderId}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Any stock reserved for this order is released back to available. This can&apos;t be
-              undone. Cancel only before the goods ship — after shipping, open a return instead.
+              Stok yang dipesan bakal dilepas lagi ke stok tersedia, dan ini nggak bisa dibatalkan.
+              Cuma batalin kalau barang belum dikirim — kalau sudah dikirim, buka retur aja.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="cancel-reason">Reason (optional)</Label>
+            <Label htmlFor="cancel-reason">Alasan (opsional)</Label>
             <Textarea
               id="cancel-reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="e.g. Buyer requested cancellation"
+              placeholder="mis. Pembeli minta dibatalkan"
               maxLength={500}
               rows={3}
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Keep order</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>Nggak jadi</AlertDialogCancel>
             <AlertDialogAction
               disabled={busy}
               onClick={(event) => {
@@ -246,7 +247,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
                 void handleCancel();
               }}
             >
-              {cancelOrder.isPending ? 'Cancelling...' : 'Cancel order'}
+              {cancelOrder.isPending ? 'Membatalkan...' : 'Batalkan pesanan'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

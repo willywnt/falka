@@ -30,11 +30,11 @@ export function ShareEvidenceControl({ recordings }: { recordings: RecordingList
           onClick={() => setTarget(recordings[0] ?? null)}
         >
           <Share2 className="size-4" />
-          Share evidence
+          Bagikan bukti
         </Button>
       ) : (
         <div className="space-y-1.5">
-          <p className="text-muted-foreground text-xs">Share a specific video:</p>
+          <p className="text-muted-foreground text-xs">Bagikan video tertentu:</p>
           {recordings.map((recording) => (
             <Button
               key={recording.id}

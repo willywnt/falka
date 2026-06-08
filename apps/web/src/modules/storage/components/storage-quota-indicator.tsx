@@ -63,13 +63,13 @@ export function StorageQuotaIndicator({
         className={`rounded-lg border px-4 py-3 text-sm ${getStorageQuotaContainerClassName(level)} ${className ?? ''}`}
       >
         <p className="font-medium">
-          Cloud storage{' '}
-          <span className="tabular-nums">
-            {formatStoragePercent(data.usedBytes, data.quotaBytes)} full
+          Penyimpanan cloud{' '}
+          <span className="num">
+            {formatStoragePercent(data.usedBytes, data.quotaBytes)} terpakai
           </span>
           <span className="text-muted-foreground font-normal">
             {' '}
-            · {formatStorageUsage(data.usedBytes, data.quotaBytes)} used
+            · {formatStorageUsage(data.usedBytes, data.quotaBytes)} digunakan
           </span>
         </p>
         <div className="mt-2">
@@ -88,9 +88,9 @@ export function StorageQuotaIndicator({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {showIcon ? <HardDrive className="text-muted-foreground size-4 shrink-0" /> : null}
-          <span className="font-medium">Cloud storage</span>
+          <span className="font-medium">Penyimpanan cloud</span>
         </div>
-        <span className="font-medium tabular-nums">
+        <span className="num font-medium">
           {formatStoragePercent(data.usedBytes, data.quotaBytes)}
         </span>
       </div>
@@ -102,8 +102,8 @@ export function StorageQuotaIndicator({
         />
       </div>
 
-      <p className="text-muted-foreground mt-2 text-xs tabular-nums">
-        {formatStorageUsage(data.usedBytes, data.quotaBytes)} used
+      <p className="text-muted-foreground num mt-2 text-xs">
+        {formatStorageUsage(data.usedBytes, data.quotaBytes)} digunakan
       </p>
 
       {warningMessage ? (

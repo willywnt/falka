@@ -33,7 +33,7 @@ export function DashboardNavbar() {
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden">
               <Menu className="size-4" />
-              <span className="sr-only">Toggle menu</span>
+              <span className="sr-only">Buka/tutup menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent
@@ -56,11 +56,13 @@ export function DashboardNavbar() {
 
         <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={toggle}>
           <Menu className="size-4" />
-          <span className="sr-only">Toggle sidebar</span>
+          <span className="sr-only">Buka/tutup sidebar</span>
         </Button>
+        {/* Reserved slot: <LocationSelector/> (multi-warehouse switcher) — backlog item E. */}
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Reserved slot: <NotificationBell/> (count badge → tray) — backlog item A. */}
         <Button
           variant="ghost"
           size="icon"
@@ -69,27 +71,27 @@ export function DashboardNavbar() {
         >
           <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">Ganti tema</span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 gap-2 px-1.5 sm:pr-2.5">
-              <Avatar name={user?.displayName ?? user?.email ?? 'Account'} />
+              <Avatar name={user?.displayName ?? user?.email ?? 'Akun'} />
               <span className="hidden max-w-[10rem] truncate text-sm font-medium sm:inline-block">
-                {user?.displayName ?? user?.email ?? 'Account'}
+                {user?.displayName ?? user?.email ?? 'Akun'}
               </span>
               <ChevronDown className="text-muted-foreground hidden size-4 sm:inline-block" />
-              <span className="sr-only">User menu</span>
+              <span className="sr-only">Menu pengguna</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuLabel>
               <div className="flex items-center gap-2.5">
-                <Avatar name={user?.displayName ?? user?.email ?? 'Account'} />
+                <Avatar name={user?.displayName ?? user?.email ?? 'Akun'} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm leading-none font-medium">
-                    {user?.displayName ?? user?.email ?? 'Account'}
+                    {user?.displayName ?? user?.email ?? 'Akun'}
                   </p>
                   {user?.displayName ? (
                     <p className="text-muted-foreground mt-1 truncate text-xs leading-none">
@@ -103,7 +105,7 @@ export function DashboardNavbar() {
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <SettingsIcon className="size-4" />
-                Settings
+                Pengaturan
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -113,7 +115,7 @@ export function DashboardNavbar() {
               }}
             >
               <LogOut className="size-4" />
-              Sign out
+              Keluar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

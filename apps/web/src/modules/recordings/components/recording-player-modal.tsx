@@ -40,7 +40,7 @@ export function RecordingPlayerModal({ recording, open, onOpenChange }: Recordin
     playbackQuery.error instanceof Error
       ? playbackQuery.error.message
       : hasVideoError
-        ? 'Unable to load this video. Try again or download the file.'
+        ? 'Tidak bisa memuat video ini. Coba lagi atau unduh filenya.'
         : null;
 
   return (

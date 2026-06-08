@@ -42,78 +42,83 @@ export function RegisterForm() {
     const result = await registerAction(formData);
 
     if (!result.success) {
-      toast.error('Registration failed', {
+      toast.error('Gagal mendaftar', {
         description: result.message,
       });
       return;
     }
 
-    toast.success('Account created successfully');
+    toast.success('Akun berhasil dibuat');
   }
 
   return (
     <ClientOnly fallback={<AuthFormSkeleton fields={4} />}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="displayName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Display name <span className="text-muted-foreground font-normal">(optional)</span>
-              </FormLabel>
-              <FormControl>
-                <Input placeholder="Your name" autoComplete="name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="you@company.com" autoComplete="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="new-password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirm password</FormLabel>
-              <FormControl>
-                <Input type="password" autoComplete="new-password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Creating account...' : 'Create account'}
-        </Button>
-      </form>
-    </Form>
+          <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Nama <span className="text-muted-foreground font-normal">(opsional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="Nama kamu" autoComplete="name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="you@company.com"
+                    autoComplete="email"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input type="password" autoComplete="new-password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Konfirmasi password</FormLabel>
+                <FormControl>
+                  <Input type="password" autoComplete="new-password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Membuat akun...' : 'Buat akun'}
+          </Button>
+        </form>
+      </Form>
     </ClientOnly>
   );
 }

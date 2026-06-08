@@ -8,11 +8,11 @@ const STATUS_CONFIG: Record<
   OrderStatus,
   { label: string; variant?: BadgeVariant; className?: string }
 > = {
-  PENDING: { label: 'Pending', variant: 'outline' },
-  PAID: { label: 'Paid', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
-  SHIPPED: { label: 'Shipped', variant: 'secondary' },
-  COMPLETED: { label: 'Completed', variant: 'secondary' },
-  CANCELLED: { label: 'Cancelled', variant: 'destructive' },
+  PENDING: { label: 'Menunggu', variant: 'outline' },
+  PAID: { label: 'Dibayar', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
+  SHIPPED: { label: 'Terkirim', variant: 'secondary' },
+  COMPLETED: { label: 'Selesai', variant: 'secondary' },
+  CANCELLED: { label: 'Dibatalkan', variant: 'destructive' },
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {

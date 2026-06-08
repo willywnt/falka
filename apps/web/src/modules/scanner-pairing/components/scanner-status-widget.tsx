@@ -41,7 +41,7 @@ export function ScannerStatusWidget({
     : isWaiting
       ? 'bg-amber-500'
       : 'bg-muted-foreground/40';
-  const cta = isConnected ? 'Phone connected' : isWaiting ? 'Show QR' : 'Scan with phone';
+  const cta = isConnected ? 'Ponsel terhubung' : isWaiting ? 'Tampilkan QR' : 'Scan pakai ponsel';
 
   return (
     <div className="flex items-center gap-1.5">
@@ -51,8 +51,8 @@ export function ScannerStatusWidget({
         size="icon"
         className="size-8"
         onClick={onToggleSound}
-        aria-label={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
-        title={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
+        aria-label={soundOn ? 'Matikan suara scan' : 'Nyalakan suara scan'}
+        title={soundOn ? 'Matikan suara scan' : 'Nyalakan suara scan'}
       >
         {soundOn ? (
           <Volume2 className="size-4" />

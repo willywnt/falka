@@ -46,7 +46,8 @@ export function LabelStudio() {
         sku: variant.sku,
         barcode: variant.barcode,
         price: variant.price,
-        productName: variant.productName,
+        // The label shows the variant label (group · name / name), not the product.
+        productName: variant.variantGroup ?? undefined,
       })),
     [picked],
   );
@@ -92,19 +93,19 @@ export function LabelStudio() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search SKU, barcode, or product name..."
+          placeholder="Cari nama produk, varian, atau sku..."
           className="sm:max-w-xs"
         />
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={selectPage} disabled={variants.length === 0}>
-            Select page
+            Pilih halaman ini
           </Button>
           <Button variant="outline" onClick={clearAll} disabled={selected.size === 0}>
-            Clear ({selected.size})
+            Bersihkan ({selected.size})
           </Button>
           <Button onClick={handlePrint} disabled={labels.length === 0 || !qrReady}>
             <Printer className="size-4" />
-            Print
+            Cetak
           </Button>
         </div>
       </div>
@@ -113,7 +114,7 @@ export function LabelStudio() {
         <Card className="print:hidden">
           <CardHeader>
             <CardTitle className="text-base">
-              Variants
+              Varian
               {meta ? (
                 <span className="text-muted-foreground font-normal"> · {meta.total}</span>
               ) : null}
@@ -128,7 +129,9 @@ export function LabelStudio() {
               </div>
             ) : variants.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">
-                {debouncedSearch ? 'No matching variants.' : 'No active variants to label.'}
+                {debouncedSearch
+                  ? 'Tidak ada varian yang cocok.'
+                  : 'Tidak ada varian aktif untuk dilabeli.'}
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">
@@ -165,7 +168,7 @@ export function LabelStudio() {
                               className="block truncate text-[11px] text-amber-600"
                               suppressHydrationWarning
                             >
-                              Printed {formatRelativeTime(variant.labelPrintedAt)}
+                              Dicetak {formatRelativeTime(variant.labelPrintedAt)}
                             </span>
                           ) : null}
                         </span>
@@ -192,8 +195,8 @@ export function LabelStudio() {
           {labels.length === 0 ? (
             <EmptyState
               icon={QrCode}
-              title="No labels selected"
-              description="Pick variants on the left to build a printable label sheet."
+              title="Belum ada label dipilih"
+              description="Pilih varian di sebelah kiri untuk menyusun lembar label yang bisa dicetak."
               className="print:hidden"
             />
           ) : (

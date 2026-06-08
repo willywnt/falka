@@ -10,7 +10,7 @@ export function RecordingTimer({
   isRecording: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 font-mono text-lg tabular-nums">
+    <div className="num flex items-center gap-2 font-mono text-lg">
       {isRecording ? (
         <span className="relative flex size-2.5">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-75" />

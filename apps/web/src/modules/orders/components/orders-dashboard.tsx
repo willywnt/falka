@@ -38,13 +38,13 @@ export function OrdersDashboard() {
       <div className="flex justify-end">
         <Button onClick={() => setPullOpen(true)}>
           <DownloadCloud className="size-4" />
-          Pull orders
+          Tarik pesanan
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load orders. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat pesanan. {error instanceof Error ? error.message : 'Silakan coba lagi.'}
         </div>
       ) : null}
 
@@ -57,12 +57,12 @@ export function OrdersDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={ShoppingCart}
-          title="No orders yet"
-          description="Pull orders from your connected stores to bring them into stock."
+          title="Belum ada pesanan — tarik dari toko kamu dulu"
+          description="Tarik pesanan dari toko yang terhubung biar stoknya ikut kekelola di sini."
           action={
             <Button onClick={() => setPullOpen(true)}>
               <DownloadCloud className="size-4" />
-              Pull orders
+              Tarik pesanan
             </Button>
           }
         />
@@ -72,13 +72,13 @@ export function OrdersDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Order</TableHead>
+                  <TableHead>Pesanan</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead className="text-right">Items</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Placed</TableHead>
-                  <TableHead>Last pulled</TableHead>
+                  <TableHead>Pembeli</TableHead>
+                  <TableHead className="text-right">Item</TableHead>
+                  <TableHead>Stok</TableHead>
+                  <TableHead>Dibuat</TableHead>
+                  <TableHead>Terakhir ditarik</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -97,27 +97,27 @@ export function OrdersDashboard() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <OrderStatusBadge status={order.status} />
                         {order.fulfilledAt ? (
-                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                            Fulfilled
+                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">
+                            Fulfillment
                           </Badge>
                         ) : null}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">{order.buyerName ?? '—'}</TableCell>
                     <TableCell className="text-right">
-                      <span className="tabular-nums">{order.itemCount}</span>
+                      <span className="num">{order.itemCount}</span>
                       {order.unresolvedCount > 0 ? (
                         <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
-                          {order.unresolvedCount} unmapped
+                          {order.unresolvedCount} belum ter-mapping
                         </Badge>
                       ) : null}
                     </TableCell>
                     <TableCell>
                       {order.inventoryApplied ? (
-                        <Badge variant="secondary">Applied</Badge>
+                        <Badge variant="secondary">Sudah sinkron</Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">
-                          {order.status === 'PAID' ? 'not applied' : '—'}
+                          {order.status === 'PAID' ? 'belum sinkron' : '—'}
                         </span>
                       )}
                     </TableCell>

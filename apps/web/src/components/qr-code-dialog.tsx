@@ -17,12 +17,12 @@ import { QrImage } from './qr-image';
 type QrCodeDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The scannable code (barcode or SKU). */
+  /** The scannable code encoded in the QR (barcode ?? sku). */
   value: string;
-  /** Product · variant name. */
-  title: string;
-  /** Secondary line (e.g. SKU or price). */
-  subtitle?: string;
+  /** Display name: bundle name, or the variant label (group · name / name). */
+  name: string;
+  /** SKU shown under the QR. */
+  sku: string;
   /** When this label was last printed (ISO); null/undefined = never. */
   lastPrintedAt?: string | null;
   /** Called when Print is pressed — record the print + refresh. */
@@ -30,15 +30,16 @@ type QrCodeDialogProps = {
 };
 
 /**
- * Shows an enlarged, printable QR label for a single variant. The QR area is the
- * `[data-print-root]` so Print outputs just the label (see globals.css @media print).
+ * Shows an enlarged, printable QR label for a single variant/bundle, laid out
+ * name → QR → SKU. The QR area is the `[data-print-root]` so Print outputs just
+ * the label (see globals.css @media print).
  */
 export function QrCodeDialog({
   open,
   onOpenChange,
   value,
-  title,
-  subtitle,
+  name,
+  sku,
   lastPrintedAt,
   onPrint,
 }: QrCodeDialogProps) {
@@ -53,12 +54,12 @@ export function QrCodeDialog({
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-8">
             <div className="min-w-0 space-y-1 text-left">
-              <DialogTitle>QR label</DialogTitle>
-              <DialogDescription className="truncate">{title}</DialogDescription>
+              <DialogTitle>QR Code</DialogTitle>
+              <DialogDescription className="truncate">{name}</DialogDescription>
             </div>
             <Button type="button" size="sm" onClick={handlePrint} className="shrink-0">
               <Printer className="size-4" />
-              {lastPrintedAt ? 'Print again' : 'Print'}
+              {lastPrintedAt ? 'Cetak lagi' : 'Cetak'}
             </Button>
           </div>
         </DialogHeader>
@@ -67,14 +68,15 @@ export function QrCodeDialog({
           data-print-root
           className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center"
         >
-          <div className="text-sm font-medium text-balance">{title}</div>
+          <div className="text-sm font-medium text-balance">{name}</div>
           <QrImage value={value} size={208} />
-          <div className="font-mono text-sm">{value}</div>
-          {subtitle ? <div className="text-muted-foreground text-xs">{subtitle}</div> : null}
+          <div className="num text-muted-foreground text-sm">{sku}</div>
         </div>
 
         <p className="text-muted-foreground text-center text-xs" suppressHydrationWarning>
-          {lastPrintedAt ? `Last printed ${formatRelativeTime(lastPrintedAt)}` : 'Not printed yet'}
+          {lastPrintedAt
+            ? `Terakhir dicetak ${formatRelativeTime(lastPrintedAt)}`
+            : 'Belum dicetak'}
         </p>
       </DialogContent>
     </Dialog>

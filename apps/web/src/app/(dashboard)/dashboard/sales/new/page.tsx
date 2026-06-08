@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { PosTerminal } from '@/modules/sales/components/pos-terminal';
 
 export const metadata: Metadata = {
-  title: 'New sale',
+  title: 'Penjualan baru',
 };
 
 export default function NewSalePage() {
@@ -16,14 +16,14 @@ export default function NewSalePage() {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/sales">
           <ArrowLeft className="size-4" />
-          Back to sales
+          Kembali ke penjualan
         </Link>
       </Button>
 
       <PageHeader
-        eyebrow="Sales channels"
-        title="New sale"
-        description="Search products, build the cart, and check out — stock updates instantly across channels."
+        eyebrow="Channel penjualan"
+        title="Penjualan baru"
+        description="Cari produk, susun keranjang, lalu bayar — stok langsung diperbarui di semua channel."
       />
       <PosTerminal />
     </div>

@@ -22,14 +22,14 @@ export function PackOrderPanel({ noResi }: { noResi: string }) {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground rounded-lg border p-3 text-xs">Looking up order…</div>
+      <div className="text-muted-foreground rounded-lg border p-3 text-xs">Mencari pesanan…</div>
     );
   }
 
   if (!order) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed p-3 text-xs">
-        No matching order for this resi — the recording will still be saved.
+        Nggak ada pesanan yang cocok sama resi ini — rekamannya tetap disimpan kok.
       </div>
     );
   }
@@ -39,7 +39,7 @@ export function PackOrderPanel({ noResi }: { noResi: string }) {
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 font-medium">
           <PackageSearch className="size-4" />
-          Items to pack
+          Barang untuk dikemas
         </span>
         <Badge variant="secondary">{order.status}</Badge>
       </div>
@@ -57,17 +57,19 @@ export function PackOrderPanel({ noResi }: { noResi: string }) {
                 ? `${item.variant.productName} / ${item.variant.name}`
                 : item.externalName}
             </span>
-            <span className="font-medium tabular-nums">×{item.quantity}</span>
+            <span className="num font-medium">×{item.quantity}</span>
           </li>
         ))}
       </ul>
       {order.unresolvedCount > 0 ? (
         <p className="text-xs text-amber-600">
-          {order.unresolvedCount} item(s) not mapped to a product.
+          {order.unresolvedCount} item belum dicocokkan ke produk kamu.
         </p>
       ) : null}
       {order.fulfilledAt ? (
-        <p className="text-xs text-emerald-600">Already fulfilled — this adds another video.</p>
+        <p className="text-xs text-emerald-600">
+          Pesanan ini sudah pernah dikemas — ini nambah video lagi.
+        </p>
       ) : null}
     </div>
   );

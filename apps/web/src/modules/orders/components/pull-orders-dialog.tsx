@@ -49,7 +49,7 @@ export function PullOrdersDialog({
   async function handlePull() {
     const ids = Array.from(selected);
     if (ids.length === 0) {
-      toast.info('Select at least one store.');
+      toast.info('Pilih minimal satu toko.');
       return;
     }
 
@@ -57,18 +57,18 @@ export function PullOrdersDialog({
       const result = await pullMutation.mutateAsync(
         ids.length === activeStores.length ? undefined : ids,
       );
-      const parts = [`${result.pulled} order(s) from ${result.storesPulled} store(s)`];
-      if (result.applied > 0) parts.push(`${result.applied} reserved`);
-      if (result.shipped > 0) parts.push(`${result.shipped} shipped`);
-      if (result.reverted > 0) parts.push(`${result.reverted} restocked (cancelled)`);
-      toast.success('Orders pulled', { description: parts.join(' · ') });
+      const parts = [`${result.pulled} pesanan dari ${result.storesPulled} toko`];
+      if (result.applied > 0) parts.push(`${result.applied} stok dipesan`);
+      if (result.shipped > 0) parts.push(`${result.shipped} dikirim`);
+      if (result.reverted > 0) parts.push(`${result.reverted} direstok (batal)`);
+      toast.success('Pesanan ditarik', { description: parts.join(' · ') });
       if (result.storesSkipped.length > 0) {
-        toast.info(`Skipped (pulled recently): ${result.storesSkipped.join(', ')}`);
+        toast.info(`Dilewati (baru aja ditarik): ${result.storesSkipped.join(', ')}`);
       }
       onOpenChange(false);
     } catch (error) {
-      toast.error('Pull failed', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menarik pesanan', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -77,12 +77,12 @@ export function PullOrdersDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Pull orders</DialogTitle>
-          <DialogDescription>Choose which connected stores to pull orders from.</DialogDescription>
+          <DialogTitle>Tarik pesanan</DialogTitle>
+          <DialogDescription>Pilih toko terhubung yang mau ditarik pesanannya.</DialogDescription>
         </DialogHeader>
 
         {activeStores.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No active stores are connected.</p>
+          <p className="text-muted-foreground text-sm">Belum ada toko aktif yang terhubung.</p>
         ) : (
           <div className="space-y-2">
             {activeStores.map((store) => (
@@ -94,7 +94,7 @@ export function PullOrdersDialog({
                 <Switch
                   checked={selected.has(store.id)}
                   onCheckedChange={(on) => toggle(store.id, on)}
-                  aria-label={`Pull from ${store.shopName}`}
+                  aria-label={`Tarik dari ${store.shopName}`}
                 />
               </div>
             ))}
@@ -103,7 +103,7 @@ export function PullOrdersDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Batal
           </Button>
           <Button
             type="button"
@@ -111,7 +111,7 @@ export function PullOrdersDialog({
             disabled={pullMutation.isPending || activeStores.length === 0}
           >
             <DownloadCloud className="size-4" />
-            {pullMutation.isPending ? 'Pulling...' : 'Pull orders'}
+            {pullMutation.isPending ? 'Menarik...' : 'Tarik pesanan'}
           </Button>
         </DialogFooter>
       </DialogContent>

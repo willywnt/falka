@@ -46,7 +46,7 @@ export function QrImage({ value, size = 160, className }: QrImageProps) {
     // eslint-disable-next-line @next/next/no-img-element -- dynamic QR data URL
     <img
       src={dataUrl}
-      alt={`QR code for ${value}`}
+      alt={`Kode QR untuk ${value}`}
       width={size}
       height={size}
       className={className}

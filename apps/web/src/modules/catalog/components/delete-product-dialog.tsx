@@ -42,18 +42,18 @@ export function DeleteProductDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete product?</AlertDialogTitle>
+          <AlertDialogTitle>Hapus produk?</AlertDialogTitle>
           <AlertDialogDescription>
-            This archives <span className="font-medium">{product.name}</span> and its{' '}
-            {product.variantCount} variant{product.variantCount === 1 ? '' : 's'}. Stock history is
-            kept; the product is hidden from your catalog.
+            Ini mengarsipkan <span className="font-medium">{product.name}</span> beserta{' '}
+            {product.variantCount} variannya. Riwayat stok tetap disimpan; produk disembunyikan dari
+            katalog kamu.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <DeletionImpact blockers={blockers} isLoading={isLoading} />
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
           <AlertDialogAction
             disabled={isDeleting || isLoading || blocked}
             onClick={(event) => {
@@ -62,7 +62,7 @@ export function DeleteProductDialog({
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? 'Deleting...' : 'Delete product'}
+            {isDeleting ? 'Menghapus...' : 'Hapus produk'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -21,12 +21,12 @@ import {
 import { ImageThumb } from '@/components/image-thumb';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
+import { VariantPickerDialog } from '@/components/variant-picker-dialog';
 import { ShareEvidenceControl } from '@/modules/recordings/components/share-evidence-control';
 import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordings-management';
 import { useCreateReturnMutation } from '@/modules/returns/hooks/use-returns';
 
 import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
-import { MapOrderItemDialog } from './map-order-item-dialog';
 import { OrderActionsMenu } from './order-actions-menu';
 import { OrderStatusBadge } from './order-status-badge';
 
@@ -41,11 +41,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   async function handleCreateReturn() {
     try {
       const created = await createReturnMutation.mutateAsync({ orderId });
-      toast.success('Return opened', { description: 'Receive it to restock or write off goods.' });
+      toast.success('Retur dibuka', {
+        description: 'Proses returnya untuk restok atau tandai sebagai stok rusak.',
+      });
       router.push(`/dashboard/returns/${created.id}`);
     } catch (err) {
-      toast.error('Could not open a return', {
-        description: err instanceof Error ? err.message : 'Unknown error',
+      toast.error('Gagal membuka retur', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -54,11 +56,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     if (!mapTarget) return;
     try {
       await resolveMutation.mutateAsync({ orderItemId: mapTarget.id, variantId });
-      toast.success('Item matched', { description: 'Stock is updated if the order is paid.' });
+      toast.success('Item dicocokkan', {
+        description: 'Stok ikut diperbarui kalau pesanan sudah dibayar.',
+      });
       setMapTarget(null);
     } catch (error) {
-      toast.error('Could not match item', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal mencocokkan item', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -78,11 +82,11 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/orders">
             <ArrowLeft className="size-4" />
-            Back to orders
+            Kembali ke pesanan
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'Order not found.'}
+          {error instanceof Error ? error.message : 'Pesanan tidak ditemukan.'}
         </div>
       </div>
     );
@@ -93,7 +97,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/orders">
           <ArrowLeft className="size-4" />
-          Back to orders
+          Kembali ke pesanan
         </Link>
       </Button>
 
@@ -101,7 +105,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
         <OrderStatusBadge status={data.status} />
         {data.fulfilledAt ? (
-          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Fulfilled</Badge>
+          <Badge className="bg-sky-600 text-white hover:bg-sky-600">Fulfillment</Badge>
         ) : null}
         <div className="ml-auto">
           <OrderActionsMenu order={data} />
@@ -111,7 +115,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Items <span className="text-muted-foreground">· {data.items.length}</span>
+            Item <span className="text-muted-foreground">· {data.items.length}</span>
           </p>
           <div className="rounded-xl border">
             <Table>
@@ -119,8 +123,8 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                 <TableRow>
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit price</TableHead>
-                  <TableHead>Maps to</TableHead>
+                  <TableHead className="text-right">Harga satuan</TableHead>
+                  <TableHead>Mapping</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,8 +136,8 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                         <div className="text-muted-foreground text-xs">{item.externalSku}</div>
                       ) : null}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="num text-right">{item.quantity}</TableCell>
+                    <TableCell className="num text-right">
                       {item.unitPrice ? formatCurrency(item.unitPrice) : '—'}
                     </TableCell>
                     <TableCell>
@@ -150,7 +154,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                       ) : (
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="border-amber-500 text-amber-600">
-                            Unmapped
+                            Belum ter-mapping
                           </Badge>
                           <Button
                             variant="outline"
@@ -163,7 +167,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                             }
                           >
                             <Link2 className="size-4" />
-                            Map
+                            Cocokkan
                           </Button>
                         </div>
                       )}
@@ -178,51 +182,51 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         <aside className="space-y-4">
           {data.inventoryApplied ? (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700">
-              Stock has been updated for this order.
+              Stok sudah diperbarui untuk pesanan ini.
             </div>
           ) : data.status === 'PAID' && data.unresolvedCount > 0 ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700">
-              {data.unresolvedCount} item(s) are not matched to a product yet, so stock was not
-              updated. Match the listing, then pull orders again.
+              {data.unresolvedCount} item belum dicocokkan ke produk, jadi stok belum diperbarui.
+              Cocokkan listing-nya, lalu tarik pesanan lagi.
             </div>
           ) : data.status === 'PAID' ? (
             <div className="text-muted-foreground rounded-lg border p-3 text-sm">
-              Stock not updated for this order yet.
+              Stok belum diperbarui untuk pesanan ini.
             </div>
           ) : null}
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Order</CardTitle>
+              <CardTitle className="text-base">Pesanan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Store</span>
+                <span className="text-muted-foreground">Toko</span>
                 <span className="truncate text-right font-medium">{data.shopName}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Buyer</span>
+                <span className="text-muted-foreground">Pembeli</span>
                 <span className="truncate text-right font-medium">{data.buyerName ?? '—'}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Placed</span>
+                <span className="text-muted-foreground">Dibuat</span>
                 <span className="text-right font-medium" suppressHydrationWarning>
                   {formatDateTime(data.placedAt)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Total</span>
-                <span className="text-right font-medium">
+                <span className="num text-right font-medium">
                   {data.totalAmount ? formatCurrency(data.totalAmount) : '—'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Tracking no.</span>
+                <span className="text-muted-foreground">No. resi</span>
                 <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
               {data.status === 'CANCELLED' && data.cancelReason ? (
                 <div className="flex items-start justify-between gap-4">
-                  <span className="text-muted-foreground shrink-0">Cancel reason</span>
+                  <span className="text-muted-foreground shrink-0">Alasan batal</span>
                   <span className="text-right font-medium">{data.cancelReason}</span>
                 </div>
               ) : null}
@@ -232,27 +236,27 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           {data.noResi ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Packing video</CardTitle>
+                <CardTitle className="text-base">Video packing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {packingVideos && packingVideos.length > 0 ? (
                   <>
                     <p className="text-muted-foreground text-xs">
-                      {packingVideos.length} recording(s) for this resi — dispute evidence.
+                      {packingVideos.length} rekaman untuk resi ini — bukti sengketa.
                     </p>
                     <Button variant="outline" size="sm" asChild className="w-full">
                       <Link
                         href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}
                       >
                         <Video className="size-4" />
-                        View packing video
+                        Lihat video packing
                       </Link>
                     </Button>
                     <ShareEvidenceControl recordings={packingVideos} />
                   </>
                 ) : (
                   <p className="text-muted-foreground text-xs">
-                    No packing video yet — record one at the station for this resi.
+                    Belum ada video packing — rekam di station untuk resi ini.
                   </p>
                 )}
               </CardContent>
@@ -267,20 +271,21 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               disabled={createReturnMutation.isPending}
             >
               <Undo2 className="size-4" />
-              {createReturnMutation.isPending ? 'Opening...' : 'Open a return'}
+              {createReturnMutation.isPending ? 'Membuka...' : 'Buka retur'}
             </Button>
           ) : null}
         </aside>
       </div>
 
       {mapTarget ? (
-        <MapOrderItemDialog
+        <VariantPickerDialog
           open={Boolean(mapTarget)}
           onOpenChange={(next) => {
             if (!next) setMapTarget(null);
           }}
-          itemLabel={mapTarget.label}
-          isMapping={resolveMutation.isPending}
+          title="Cocokkan ke produk"
+          description={mapTarget.label}
+          busy={resolveMutation.isPending}
           onSelect={(variantId) => void handleResolve(variantId)}
         />
       ) : null}

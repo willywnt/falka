@@ -10,7 +10,7 @@ import { formatDateTime, formatDuration } from '@/lib/formatters';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Packing video',
+  title: 'Video packing',
   robots: { index: false, follow: false },
 };
 
@@ -31,15 +31,15 @@ export default async function SharedRecordingPage({ params }: { params: Promise<
         </div>
 
         {view ? (
-          <div className="bg-card text-card-foreground overflow-hidden rounded-xl border shadow-sm">
+          <div className="bg-card text-card-foreground overflow-hidden rounded-lg border">
             <div className="border-b p-4">
               <div className="text-primary flex items-center gap-2 text-sm font-medium">
                 <PackageCheck className="size-4" />
-                Packing proof
+                Bukti packing
               </div>
-              <h1 className="mt-1 text-lg font-semibold">Tracking no. {view.noResi}</h1>
+              <h1 className="mt-1 text-lg font-semibold">No. resi {view.noResi}</h1>
               <p className="text-muted-foreground text-sm">
-                Recorded packing video, {formatDuration(view.durationSeconds)} long.
+                Video packing terekam, durasi {formatDuration(view.durationSeconds)}.
               </p>
             </div>
 
@@ -51,23 +51,23 @@ export default async function SharedRecordingPage({ params }: { params: Promise<
               src={view.playbackUrl}
             >
               <source src={view.playbackUrl} type={view.mimeType} />
-              Your browser cannot play this video.
+              Browser kamu tidak bisa memutar video ini.
             </video>
 
             <div className="text-muted-foreground border-t p-4 text-xs">
-              This link expires {formatDateTime(view.expiresAt)}. Shared as dispute evidence —
-              please do not redistribute.
+              Tautan ini berlaku sampai {formatDateTime(view.expiresAt)}. Dibagikan sebagai bukti
+              sengketa — tolong jangan disebar ke umum.
             </div>
           </div>
         ) : (
-          <div className="bg-card text-card-foreground rounded-xl border p-8 text-center shadow-sm">
+          <div className="bg-card text-card-foreground rounded-lg border p-8 text-center">
             <div className="bg-muted text-muted-foreground mx-auto flex size-12 items-center justify-center rounded-full">
               <ShieldAlert className="size-6" />
             </div>
-            <h1 className="mt-4 text-lg font-semibold">Link unavailable</h1>
+            <h1 className="mt-4 text-lg font-semibold">Tautan tidak tersedia</h1>
             <p className="text-muted-foreground mx-auto mt-1 max-w-sm text-sm">
-              This packing-video link is invalid, has expired, or was revoked. Ask the seller for a
-              fresh link.
+              Tautan video packing ini tidak valid, sudah kedaluwarsa, atau dicabut. Minta tautan
+              baru ke penjual.
             </p>
           </div>
         )}

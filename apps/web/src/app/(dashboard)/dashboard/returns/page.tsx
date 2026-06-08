@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { ReturnsDashboard } from '@/modules/returns/components/returns-dashboard';
 
 export const metadata: Metadata = {
-  title: 'Returns',
+  title: 'Retur',
 };
 
 export default function ReturnsPage() {
@@ -12,8 +12,8 @@ export default function ReturnsPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Fulfillment"
-        title="Returns"
-        description="Goods coming back. Receive a return to restock resellable units or write off damaged ones."
+        title="Retur"
+        description="Barang yang dikembalikan pembeli. Proses returnya buat restok unit yang masih layak jual, atau hapus stok yang rusak."
       />
       <ReturnsDashboard />
     </div>

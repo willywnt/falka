@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { BundleForm } from '@/modules/catalog/components/bundle-form';
 
 export const metadata: Metadata = {
-  title: 'New bundle',
+  title: 'Bundel baru',
 };
 
 export default function NewBundlePage() {
@@ -16,14 +16,14 @@ export default function NewBundlePage() {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/bundles">
           <ArrowLeft className="size-4" />
-          Back to bundles
+          Kembali ke bundel
         </Link>
       </Button>
 
       <PageHeader
-        eyebrow="Catalog"
-        title="New bundle"
-        description="Name the kit, set its price, then add the component variants and how many of each go into one bundle."
+        eyebrow="Katalog"
+        title="Bundel baru"
+        description="Beri nama paketnya, atur harganya, lalu tambahkan varian komponen dan berapa banyak tiap varian dalam satu bundel."
       />
       <BundleForm />
     </div>

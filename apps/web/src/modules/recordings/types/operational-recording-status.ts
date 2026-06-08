@@ -18,13 +18,13 @@ export type OperationalRecordingStatus =
   (typeof OPERATIONAL_RECORDING_STATUS)[keyof typeof OPERATIONAL_RECORDING_STATUS];
 
 export const OPERATIONAL_STATUS_LABELS: Record<OperationalRecordingStatus, string> = {
-  IDLE: 'Ready',
-  RECORDING: 'Recording',
-  PROCESSING: 'Processing',
-  PENDING_UPLOAD: 'Pending',
-  UPLOADING: 'Uploading',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
+  IDLE: 'Siap',
+  RECORDING: 'Merekam',
+  PROCESSING: 'Memproses',
+  PENDING_UPLOAD: 'Tertunda',
+  UPLOADING: 'Mengupload',
+  COMPLETED: 'Selesai',
+  FAILED: 'Gagal',
 };
 
 export const OPERATIONAL_STATUS_VARIANTS: Record<

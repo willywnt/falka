@@ -10,18 +10,18 @@ const PHASE_COPY: Record<
   { title: string; description: string; icon: ReactNode }
 > = {
   countdown: {
-    title: 'Starting recording',
-    description: 'Desktop is counting down — hold the phone steady.',
+    title: 'Memulai rekaman',
+    description: 'Desktop lagi hitung mundur — pegang ponsel yang stabil ya.',
     icon: <Loader2 className="size-8 animate-spin text-amber-400" />,
   },
   recording: {
-    title: 'Recording in progress',
-    description: 'Finish packing on the station. Scanning is paused until recording ends.',
+    title: 'Lagi merekam',
+    description: 'Lanjut packing dulu. Scan dijeda sampai rekaman selesai.',
     icon: <CircleDot className="size-8 animate-pulse text-red-500" />,
   },
   uploading: {
-    title: 'Uploading recording',
-    description: 'Wait for the upload on desktop before scanning the next resi.',
+    title: 'Mengupload rekaman',
+    description: 'Tunggu upload di desktop selesai sebelum scan resi berikutnya.',
     icon: <Upload className="size-8 text-sky-400" />,
   },
 };
@@ -44,7 +44,7 @@ export function MobileStationBusyOverlay({ phase, barcode }: MobileStationBusyOv
           <p className="font-mono text-base font-semibold tracking-wide text-white">{barcode}</p>
         ) : null}
       </div>
-      <p className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">Scanner paused</p>
+      <p className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">Scan dijeda</p>
     </div>
   );
 }

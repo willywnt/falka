@@ -31,15 +31,14 @@ export function InventoryValuationReport() {
         <Button variant="outline" size="sm" asChild>
           <a href={inventoryValuationExportUrl()} download>
             <Download className="size-4" />
-            Export CSV
+            Ekspor CSV
           </a>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load the inventory valuation.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat nilai stok. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -52,34 +51,34 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
   const { summary, byProduct } = data;
   const costUnknownHint =
     summary.costUnknownVariants > 0
-      ? `${summary.costUnknownVariants} in-stock SKU(s) have no cost — excluded from the value`
-      : 'Every in-stock SKU has a known cost';
+      ? `${summary.costUnknownVariants} SKU masih ada stok tapi modalnya belum diisi — nggak ikut dihitung`
+      : 'Semua SKU yang masih ada stok sudah ada modalnya';
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total stock value"
+          label="Total nilai stok"
           value={formatCurrency(summary.totalStockValue)}
           icon={Coins}
           tone="emerald"
-          hint="On-hand stock at moving-average cost"
+          hint="Stok yang ada dihitung pakai modal rata-rata"
         />
         <StatCard
-          label="Units on hand"
+          label="Unit yang ada"
           value={summary.availableUnits.toLocaleString()}
           icon={Warehouse}
           tone="sky"
         />
         <StatCard
-          label="Valued SKUs"
+          label="SKU bernilai"
           value={summary.valuedVariants.toLocaleString()}
           icon={Boxes}
           tone="violet"
-          hint={`of ${summary.totalVariants.toLocaleString()} total variants`}
+          hint={`dari ${summary.totalVariants.toLocaleString()} total varian`}
         />
         <StatCard
-          label="Missing cost"
+          label="Belum ada modal"
           value={summary.costUnknownVariants.toLocaleString()}
           icon={PackageSearch}
           tone="amber"
@@ -95,24 +94,24 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">By product</CardTitle>
+          <CardTitle className="text-base">Per produk</CardTitle>
         </CardHeader>
         <CardContent>
           {byProduct.length === 0 ? (
             <EmptyState
               icon={Warehouse}
-              title="No stock on hand"
-              description="Once products carry available stock with a cost, their value shows up here."
+              title="Belum ada stok"
+              description="Begitu produk punya stok dan modalnya sudah diisi, nilainya muncul di sini."
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Variants</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Stock value</TableHead>
+                  <TableHead>Produk</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead className="text-right">Varian</TableHead>
+                  <TableHead className="text-right">Unit</TableHead>
+                  <TableHead className="text-right">Nilai stok</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,18 +126,18 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
                       </Link>
                       {row.costUnknownVariants > 0 ? (
                         <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
-                          {row.costUnknownVariants} no cost
+                          {row.costUnknownVariants} tanpa modal
                         </Badge>
                       ) : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {row.category ?? '—'}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-right tabular-nums">
+                    <TableCell className="text-muted-foreground num text-right">
                       {row.variantCount}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{row.availableUnits}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
+                    <TableCell className="num text-right">{row.availableUnits}</TableCell>
+                    <TableCell className="num text-right font-medium">
                       {formatCurrency(row.stockValue)}
                     </TableCell>
                   </TableRow>

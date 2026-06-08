@@ -6,33 +6,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StorageSettingsCard } from '@/modules/storage/components/storage-settings-card';
 
 export const metadata: Metadata = {
-  title: 'Settings',
+  title: 'Pengaturan',
 };
 
 export default function SettingsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="System"
-        title="Settings"
-        description="Manage your account and organization preferences."
+        eyebrow="Sistem"
+        title="Pengaturan"
+        description="Kelola akun dan preferensi organisasi kamu."
       />
 
       <Tabs defaultValue="general" className="max-w-2xl">
         <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="storage">Storage</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="general">Umum</TabsTrigger>
+          <TabsTrigger value="storage">Penyimpanan</TabsTrigger>
+          <TabsTrigger value="team">Tim</TabsTrigger>
         </TabsList>
         <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle>General</CardTitle>
-              <CardDescription>Organization and profile settings</CardDescription>
+              <CardTitle>Umum</CardTitle>
+              <CardDescription>Pengaturan organisasi dan profil</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-sm">
-                Profile and organization preferences are coming soon.
+                Preferensi profil dan organisasi segera hadir.
               </p>
             </CardContent>
           </Card>
@@ -43,11 +43,11 @@ export default function SettingsPage() {
         <TabsContent value="team">
           <Card>
             <CardHeader>
-              <CardTitle>Team</CardTitle>
-              <CardDescription>Manage users and roles</CardDescription>
+              <CardTitle>Tim</CardTitle>
+              <CardDescription>Kelola pengguna dan peran</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-sm">User management coming soon.</p>
+              <p className="text-muted-foreground text-sm">Manajemen pengguna segera hadir.</p>
             </CardContent>
           </Card>
         </TabsContent>

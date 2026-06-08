@@ -39,6 +39,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePagination } from '@/hooks/use-pagination';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { formatDateTime } from '@/lib/formatters';
+import { formatVariantLabel } from '@/lib/variant-label';
 import { useMarkLabelsPrintedMutation } from '@/modules/catalog/hooks/use-products';
 
 import { useStockOverviewQuery } from '../hooks/use-inventory';
@@ -84,7 +85,7 @@ export function InventoryOverview() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search SKU or variant..."
+          placeholder="Cari SKU atau varian..."
           className="sm:max-w-xs"
         />
         <div className="flex items-center gap-2">
@@ -94,14 +95,14 @@ export function InventoryOverview() {
             onCheckedChange={(checked) => setFilters({ low: checked ? '1' : '' })}
           />
           <Label htmlFor="low-stock-only" className="text-sm font-normal">
-            Low stock only
+            Hanya stok menipis
           </Label>
         </div>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load stock. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat stok. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -114,13 +115,13 @@ export function InventoryOverview() {
       ) : isEmpty ? (
         <EmptyState
           icon={PackageSearch}
-          title="Nothing to show"
+          title="Tidak ada yang ditampilkan"
           description={
             lowStockOnly
-              ? 'No variants are below their low-stock level.'
+              ? 'Tidak ada varian yang di bawah batas stok menipis.'
               : filters.search
-                ? 'No variants match your search.'
-                : 'Add products to start tracking stock.'
+                ? 'Tidak ada varian yang cocok dengan pencarian kamu.'
+                : 'Tambah produk untuk mulai melacak stok.'
           }
         />
       ) : (
@@ -128,14 +129,14 @@ export function InventoryOverview() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Variant</TableHead>
+                <TableHead>Varian</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Available</TableHead>
-                <TableHead className="text-right">Reserved</TableHead>
-                <TableHead className="text-right">Damaged</TableHead>
-                <TableHead className="text-right">Incoming</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Tersedia</TableHead>
+                <TableHead className="text-right">Dipesan</TableHead>
+                <TableHead className="text-right">Rusak</TableHead>
+                <TableHead className="text-right">Akan datang</TableHead>
+                <TableHead>Diperbarui</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -151,38 +152,43 @@ export function InventoryOverview() {
                         >
                           {item.productName}
                         </Link>
-                        <div className="text-muted-foreground text-xs">{item.variantName}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {formatVariantLabel({
+                            variantGroup: item.variantGroup,
+                            name: item.variantName,
+                          })}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">{item.sku}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
-                    <span className="font-medium tabular-nums">{item.availableStock}</span>
+                    <span className="num font-medium">{item.availableStock}</span>
                     {item.isLowStock ? (
                       <LowStockBadge threshold={item.lowStockThreshold} className="ml-2" />
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  <TableCell className="num text-right whitespace-nowrap">
                     {item.reservedStock > 0 ? (
-                      <span title="Committed to paid, not-yet-shipped orders">
+                      <span title="Dipesan untuk pesanan yang sudah dibayar tapi belum dikirim">
                         {item.reservedStock}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  <TableCell className="num text-right whitespace-nowrap">
                     {item.damagedStock > 0 ? (
-                      <span className="text-destructive" title="Written off from returns">
+                      <span className="text-destructive" title="Dari retur">
                         {item.damagedStock}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  <TableCell className="num text-right whitespace-nowrap">
                     {item.incomingStock > 0 ? (
-                      <span className="text-sky-600" title="On order from suppliers">
+                      <span className="text-sky-600" title="Lagi dipesan ke supplier">
                         {item.incomingStock}
                       </span>
                     ) : (
@@ -200,26 +206,26 @@ export function InventoryOverview() {
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="outline" size="sm" onClick={() => setAdjustTarget(item)}>
                         <SlidersHorizontal className="size-4" />
-                        Adjust
+                        Sesuaikan
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">More actions</span>
+                            <span className="sr-only">Aksi lainnya</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setQrTarget(item)}>
                             <QrCode className="size-4" />
-                            Show QR code
+                            Tampilkan QR
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link
                               href={`/dashboard/inventory/activity?search=${encodeURIComponent(item.sku)}`}
                             >
                               <ScrollText className="size-4" />
-                              View activity
+                              Lihat aktivitas
                             </Link>
                           </DropdownMenuItem>
                           {item.damagedStock > 0 ? (
@@ -228,7 +234,7 @@ export function InventoryOverview() {
                               onClick={() => setDisposeTarget(item)}
                             >
                               <Trash2 className="size-4" />
-                              Write off damaged
+                              Hapus stok rusak
                             </DropdownMenuItem>
                           ) : null}
                         </DropdownMenuContent>
@@ -283,8 +289,11 @@ export function InventoryOverview() {
             if (!open) setQrTarget(null);
           }}
           value={qrTarget.barcode?.trim() || qrTarget.sku}
-          title={`${qrTarget.productName} · ${qrTarget.variantName}`}
-          subtitle={qrTarget.sku}
+          name={formatVariantLabel({
+            variantGroup: qrTarget.variantGroup,
+            name: qrTarget.variantName,
+          })}
+          sku={qrTarget.sku}
           lastPrintedAt={qrTarget.labelPrintedAt}
           onPrint={() => markPrinted.mutate([qrTarget.variantId])}
         />

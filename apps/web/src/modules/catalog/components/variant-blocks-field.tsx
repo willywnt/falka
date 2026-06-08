@@ -46,7 +46,7 @@ export const EMPTY_VARIANT_BLOCK: VariantBlockForm = {
  */
 export function VariantBlocksField({
   minBlocks = 0,
-  addLabel = 'Add variant',
+  addLabel = 'Tambah varian',
 }: {
   minBlocks?: number;
   addLabel?: string;
@@ -113,7 +113,7 @@ function VariantBlockFields({
           name={`variants.${index}.variantName`}
           render={({ field }) => (
             <FormItem className="flex-1">
-              <FormLabel required>Variant name</FormLabel>
+              <FormLabel required>Nama varian</FormLabel>
               <FormControl>
                 <Input placeholder="iPhone 16" autoComplete="off" {...field} />
               </FormControl>
@@ -130,7 +130,7 @@ function VariantBlockFields({
             onClick={onRemove}
           >
             <X className="size-4" />
-            <span className="sr-only">Remove variant</span>
+            <span className="sr-only">Hapus varian</span>
           </Button>
         ) : null}
       </div>
@@ -141,9 +141,10 @@ function VariantBlockFields({
         render={({ field }) => (
           <FormItem className="flex items-center justify-between gap-4 rounded-md border p-3">
             <div className="space-y-0.5">
-              <FormLabel>This variant has options</FormLabel>
+              <FormLabel>Varian ini punya opsi</FormLabel>
               <FormDescription>
-                Add subvariants like colors or sizes, each with its own SKU & stock.
+                Tambahkan subvarian seperti warna atau ukuran, masing-masing punya SKU & stok
+                sendiri.
               </FormDescription>
             </div>
             <FormControl>
@@ -166,7 +167,7 @@ function VariantBlockFields({
                   onClick={() => subvariants.remove(subIndex)}
                 >
                   <X className="size-4" />
-                  <span className="sr-only">Remove subvariant</span>
+                  <span className="sr-only">Hapus subvarian</span>
                 </Button>
               ) : null}
               <div className="flex items-start gap-2">
@@ -175,7 +176,7 @@ function VariantBlockFields({
                   name={`variants.${index}.subvariants.${subIndex}.name`}
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel required>Option name</FormLabel>
+                      <FormLabel required>Nama opsi</FormLabel>
                       <FormControl>
                         <Input placeholder="Hitam" autoComplete="off" {...field} />
                       </FormControl>
@@ -200,7 +201,7 @@ function VariantBlockFields({
                             variant="outline"
                             size="icon"
                             className="shrink-0"
-                            title="Generate SKU from the option name"
+                            title="Buat SKU dari nama opsi"
                             disabled={!optionName.trim()}
                             onClick={() =>
                               form.setValue(
@@ -210,7 +211,7 @@ function VariantBlockFields({
                             }
                           >
                             <Wand2 className="size-4" />
-                            <span className="sr-only">Generate SKU</span>
+                            <span className="sr-only">Buat SKU</span>
                           </Button>
                         </div>
                         <FormMessage />
@@ -226,7 +227,7 @@ function VariantBlockFields({
                   name={`variants.${index}.subvariants.${subIndex}.price`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price</FormLabel>
+                      <FormLabel>Harga</FormLabel>
                       <FormControl>
                         <NumberInput min={0} step={1} {...field} />
                       </FormControl>
@@ -239,7 +240,7 @@ function VariantBlockFields({
                   name={`variants.${index}.subvariants.${subIndex}.cost`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost</FormLabel>
+                      <FormLabel>Modal</FormLabel>
                       <FormControl>
                         <NumberInput min={0} step={1} {...field} />
                       </FormControl>
@@ -252,7 +253,7 @@ function VariantBlockFields({
                   name={`variants.${index}.subvariants.${subIndex}.initialStock`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Initial stock</FormLabel>
+                      <FormLabel>Stok awal</FormLabel>
                       <FormControl>
                         <NumberInput min={0} step={1} {...field} />
                       </FormControl>
@@ -265,7 +266,7 @@ function VariantBlockFields({
                   name={`variants.${index}.subvariants.${subIndex}.lowStockThreshold`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Low-stock at</FormLabel>
+                      <FormLabel>Stok menipis di</FormLabel>
                       <FormControl>
                         <NumberInput min={0} step={1} {...field} />
                       </FormControl>
@@ -286,7 +287,7 @@ function VariantBlockFields({
             onClick={() => subvariants.append({ ...EMPTY_SUBVARIANT })}
           >
             <Plus className="size-4" />
-            Add option
+            Tambah opsi
           </Button>
         </div>
       ) : (
@@ -306,17 +307,17 @@ function VariantBlockFields({
                     variant="outline"
                     size="icon"
                     className="shrink-0"
-                    title="Generate SKU from the variant name"
+                    title="Buat SKU dari nama varian"
                     disabled={!variantName.trim()}
                     onClick={() =>
                       form.setValue(`variants.${index}.single.sku`, suggestVariantSku(variantName))
                     }
                   >
                     <Wand2 className="size-4" />
-                    <span className="sr-only">Generate SKU</span>
+                    <span className="sr-only">Buat SKU</span>
                   </Button>
                 </div>
-                <FormDescription>Unique per account.</FormDescription>
+                <FormDescription>Unik per akun.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -326,7 +327,7 @@ function VariantBlockFields({
             name={`variants.${index}.single.price`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (IDR)</FormLabel>
+                <FormLabel>Harga (IDR)</FormLabel>
                 <FormControl>
                   <NumberInput min={0} step={1} {...field} />
                 </FormControl>
@@ -339,11 +340,11 @@ function VariantBlockFields({
             name={`variants.${index}.single.cost`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Cost (IDR)</FormLabel>
+                <FormLabel>Modal (IDR)</FormLabel>
                 <FormControl>
                   <NumberInput min={0} step={1} {...field} />
                 </FormControl>
-                <FormDescription>Modal price — drives stock value.</FormDescription>
+                <FormDescription>Harga modal — menentukan nilai stok.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -353,7 +354,7 @@ function VariantBlockFields({
             name={`variants.${index}.single.initialStock`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Initial stock</FormLabel>
+                <FormLabel>Stok awal</FormLabel>
                 <FormControl>
                   <NumberInput min={0} step={1} {...field} />
                 </FormControl>
@@ -366,7 +367,7 @@ function VariantBlockFields({
             name={`variants.${index}.single.lowStockThreshold`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Low-stock at</FormLabel>
+                <FormLabel>Stok menipis di</FormLabel>
                 <FormControl>
                   <NumberInput min={0} step={1} {...field} />
                 </FormControl>

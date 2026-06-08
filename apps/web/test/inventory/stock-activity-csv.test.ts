@@ -33,7 +33,7 @@ describe('stockActivityToCsv', () => {
     const csv = stockActivityToCsv([item()]);
     const [, row] = csv.split('\r\n');
     expect(row).toBe(
-      '2026-06-01T10:00:00.000Z,Kaos Polos,Black / M,KAOS-BLK-M,Restock,MANUAL,5,15,,',
+      '2026-06-01T10:00:00.000Z,Kaos Polos,Black / M,KAOS-BLK-M,Restok,MANUAL,5,15,,',
     );
   });
 

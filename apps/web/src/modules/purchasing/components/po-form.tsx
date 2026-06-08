@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Boxes,
-  ChevronDown,
-  ChevronRight,
   ClipboardList,
   PackagePlus,
   Plus,
@@ -38,6 +36,7 @@ import { apiRoutes } from '@/lib/api/routes';
 import { formatCurrency } from '@/lib/formatters';
 import { unlockScanSound } from '@/lib/scan-sound';
 import { cn } from '@/lib/utils';
+import { formatProductVariantLabel } from '@/lib/variant-label';
 import { useBundlesQuery } from '@/modules/catalog/hooks/use-bundles';
 import type { BundleComponentLine, BundleDetail, BundleListItem } from '@/modules/catalog/types';
 import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/connect-scanner-dialog';
@@ -55,17 +54,17 @@ import type { PurchasableVariant, ScannedPurchaseItem } from '../types';
 const SCAN_STATUS_META: Record<PoScannerStatus, { dot: string; cta: string; hint: string | null }> =
   {
     off: { dot: '', cta: '', hint: null },
-    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan with phone', hint: null },
-    waiting: { dot: 'bg-amber-500', cta: 'Show QR', hint: 'Waiting for your phone to connect…' },
+    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
+    waiting: { dot: 'bg-amber-500', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
     connected: {
       dot: 'bg-emerald-500',
-      cta: 'Phone connected',
-      hint: 'Phone connected — scan a product label to add it to the order.',
+      cta: 'ponsel terhubung',
+      hint: 'ponsel terhubung — scan label produk untuk menambahkannya ke pembelian.',
     },
     disconnected: {
       dot: 'bg-destructive',
-      cta: 'Reconnect',
-      hint: 'Phone disconnected. Tap Reconnect to show a fresh QR.',
+      cta: 'Hubungkan lagi',
+      hint: 'ponsel terputus. Tap Hubungkan lagi untuk munculin QR baru.',
     },
   };
 
@@ -81,6 +80,7 @@ type VariantPoLine = {
   sku: string;
   name: string;
   productName: string;
+  variantGroup: string | null;
   quantity: number;
   unitCost: number;
   availableStock: number;
@@ -205,6 +205,7 @@ export function PoForm() {
       sku: variant.sku,
       name: variant.name,
       productName: variant.productName,
+      variantGroup: variant.variantGroup,
       quantity: 1,
       unitCost: Number(variant.cost ?? 0),
       availableStock: variant.availableStock,
@@ -234,6 +235,7 @@ export function PoForm() {
           sku: variant.sku,
           name: variant.name,
           productName: variant.productName,
+          variantGroup: variant.variantGroup,
           quantity: 1,
           unitCost: Number(variant.cost ?? 0),
           availableStock: variant.availableStock,
@@ -288,8 +290,8 @@ export function PoForm() {
         components: detail.components,
       });
     } catch (error) {
-      toast.error('Could not add bundle', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menambahkan bundel', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -316,7 +318,7 @@ export function PoForm() {
         (item.status === 'URGENT' || item.status === 'SOON') && item.suggestedReorderQty > 0,
     );
     if (suggestions.length === 0) {
-      toast.info('No reorder suggestions right now.');
+      toast.info('Belum ada saran restok.');
       return;
     }
     for (const item of suggestions) {
@@ -326,6 +328,7 @@ export function PoForm() {
         sku: item.sku,
         name: item.variantName,
         productName: item.productName,
+        variantGroup: null,
         quantity: item.suggestedReorderQty,
         unitCost: 0,
         availableStock: item.availableStock,
@@ -333,8 +336,8 @@ export function PoForm() {
         imageUrl: null,
       });
     }
-    toast.success(`Loaded ${suggestions.length} suggestion(s)`, {
-      description: 'Set the unit costs.',
+    toast.success(`${suggestions.length} saran dimuat`, {
+      description: 'Jangan lupa atur modal satuan-nya.',
     });
   }
 
@@ -387,13 +390,13 @@ export function PoForm() {
               },
         ),
       });
-      toast.success(`Purchase order ${po.code} created`, {
-        description: `${formatCurrency(po.totalCost)} · marked incoming`,
+      toast.success(`Pembelian ${po.code} dibuat`, {
+        description: `${formatCurrency(po.totalCost)} · masuk stok akan datang`,
       });
       router.push(`/dashboard/purchasing/${po.id}`);
     } catch (error) {
-      toast.error('Could not create the purchase order', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal membuat pembelian', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -404,7 +407,7 @@ export function PoForm() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base">Find product</CardTitle>
+            <CardTitle className="text-base">Cari produk</CardTitle>
             {scannerEnabled ? (
               <div className="flex items-center gap-1.5">
                 <Button
@@ -412,8 +415,8 @@ export function PoForm() {
                   size="icon"
                   className="size-8"
                   onClick={toggleSound}
-                  aria-label={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
-                  title={soundOn ? 'Mute scan sound' : 'Unmute scan sound'}
+                  aria-label={soundOn ? 'Matikan suara scan' : 'Nyalakan suara scan'}
+                  title={soundOn ? 'Matikan suara scan' : 'Nyalakan suara scan'}
                 >
                   {soundOn ? (
                     <Volume2 className="size-4" />
@@ -435,7 +438,7 @@ export function PoForm() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search SKU or product name..."
+              placeholder="Cari SKU atau nama produk..."
               autoFocus
             />
             <Button
@@ -443,10 +446,10 @@ export function PoForm() {
               variant="outline"
               onClick={loadReorderSuggestions}
               disabled={reorder.isLoading}
-              title="Add the reorder report's suggested items"
+              title="Tambah item saran dari laporan restok"
             >
               <ClipboardList className="size-4" />
-              Reorder
+              Restok
             </Button>
           </div>
           {scannerEnabled && scanMeta.hint ? (
@@ -464,10 +467,10 @@ export function PoForm() {
             <Tabs defaultValue="products">
               <TabsList className="w-full">
                 <TabsTrigger value="products" className="flex-1">
-                  Products
+                  Produk
                 </TabsTrigger>
                 <TabsTrigger value="bundling" className="flex-1">
-                  Bundling
+                  Bundel
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="products" className="mt-3">
@@ -512,24 +515,24 @@ export function PoForm() {
       {/* PO lines */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Purchase order</CardTitle>
+          <CardTitle className="text-base">Pembelian</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="supplier">Supplier (optional)</Label>
+            <Label htmlFor="supplier">Pemasok (opsional)</Label>
             <Input
               id="supplier"
               value={supplierName}
               onChange={(event) => setSupplierName(event.target.value)}
-              placeholder="Supplier name"
+              placeholder="Nama pemasok"
             />
           </div>
 
           {lines.length === 0 ? (
             <EmptyState
               icon={PackagePlus}
-              title="No items yet"
-              description="Search a product or load reorder suggestions to build the order."
+              title="Belum ada item"
+              description="Cari produk atau muat saran restok buat mulai bikin pembelian."
             />
           ) : (
             <div className="space-y-3">
@@ -555,10 +558,8 @@ export function PoForm() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between border-t pt-3">
-              <span className="text-muted-foreground text-sm">Total cost</span>
-              <span className="text-lg font-semibold tabular-nums">
-                {formatCurrency(totalCost)}
-              </span>
+              <span className="text-muted-foreground text-sm">Total modal</span>
+              <span className="num text-lg font-semibold">{formatCurrency(totalCost)}</span>
             </div>
             <Button
               className="w-full"
@@ -567,7 +568,7 @@ export function PoForm() {
               disabled={lines.length === 0 || createPo.isPending}
             >
               <PackagePlus className="size-4" />
-              {createPo.isPending ? 'Creating...' : 'Create purchase order'}
+              {createPo.isPending ? 'Membuat...' : 'Buat Pembelian'}
             </Button>
           </div>
         </CardContent>
@@ -603,7 +604,9 @@ function VariantResults({
   if (variants.length === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'No matching products.' : 'Type to search, or load reorder suggestions.'}
+        {hasSearch
+          ? 'Tidak ada produk yang cocok.'
+          : 'Ketik untuk mencari, atau muat saran restok.'}
       </p>
     );
   }
@@ -616,16 +619,17 @@ function VariantResults({
             <ImageThumb src={variant.imageUrl} alt={variant.name} />
             <div className="min-w-0">
               <div className="truncate text-sm font-medium">
-                {variant.productName} · {variant.name}
+                {formatProductVariantLabel(variant.productName, variant)}
               </div>
               <div className="text-muted-foreground text-xs">
-                {variant.sku} · {variant.availableStock} avail · {variant.incomingStock} incoming
+                {variant.sku} · {variant.availableStock} tersedia · {variant.incomingStock} akan
+                datang
               </div>
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => onAdd(variant)}>
             <Plus className="size-4" />
-            Add
+            Tambah
           </Button>
         </li>
       ))}
@@ -660,7 +664,7 @@ function BundleResults({
   if ((bundles?.length ?? 0) === 0) {
     return (
       <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'No matching bundles.' : 'No bundles yet.'}
+        {hasSearch ? 'Tidak ada bundel yang cocok.' : 'Belum ada bundel.'}
       </p>
     );
   }
@@ -678,17 +682,17 @@ function BundleResults({
                   variant="outline"
                   className="border-violet-500/40 text-violet-600 dark:text-violet-400"
                 >
-                  Bundle
+                  Bundel
                 </Badge>
               </div>
               <div className="text-muted-foreground text-xs">
-                {bundle.sku} · {bundle.totalVariant} items
+                {bundle.sku} · {bundle.totalVariant} item
               </div>
             </div>
           </div>
           <Button size="sm" variant="outline" disabled={isAdding} onClick={() => onAdd(bundle)}>
             <Plus className="size-4" />
-            Add
+            Tambah
           </Button>
         </li>
       ))}
@@ -713,14 +717,14 @@ function VariantPoRow({
           <ImageThumb src={line.imageUrl} alt={line.name} />
           <div className="min-w-0">
             <div className="truncate text-sm font-medium">
-              {line.productName} · {line.name}
+              {formatProductVariantLabel(line.productName, line)}
             </div>
             <div className="text-muted-foreground text-xs">
-              {line.sku} · {line.availableStock} avail · {line.incomingStock} incoming
+              {line.sku} · {line.availableStock} tersedia · {line.incomingStock} akan datang
             </div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Remove">
+        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
           <Trash2 className="size-4" />
         </Button>
       </div>
@@ -733,24 +737,22 @@ function VariantPoRow({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Unit cost</Label>
+          <Label>Modal satuan</Label>
           <NumberInput
             value={line.unitCost}
             onChange={(value) => onPatch({ unitCost: Math.max(0, value) })}
           />
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs">Line</div>
-          <div className="font-medium tabular-nums">
-            {formatCurrency(line.unitCost * line.quantity)}
-          </div>
+          <div className="text-muted-foreground text-xs">Total</div>
+          <div className="num font-medium">{formatCurrency(line.unitCost * line.quantity)}</div>
         </div>
       </div>
     </div>
   );
 }
 
-/** A bundle PO row: a violet badge, a bundle-cost input, and an expandable per-component breakdown. */
+/** A bundle PO row: a violet badge, a bundle-cost input, and its per-component breakdown. */
 function BundlePoRow({
   line,
   onPatch,
@@ -760,8 +762,6 @@ function BundlePoRow({
   onPatch: (patch: Partial<BundlePoLine>) => void;
   onRemove: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   return (
     <div className="rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
@@ -775,40 +775,28 @@ function BundlePoRow({
                 className="border-violet-500/40 text-violet-600 dark:text-violet-400"
               >
                 <Boxes className="size-3" />
-                Bundle
+                Bundel
               </Badge>
             </div>
             <div className="text-muted-foreground text-xs">{line.sku}</div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Remove">
+        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
           <Trash2 className="size-4" />
         </Button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        className="text-muted-foreground hover:text-foreground mt-2 flex items-center gap-1 text-xs"
-      >
-        {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-        {line.components.length} component{line.components.length === 1 ? '' : 's'}
-      </button>
-      {expanded ? (
-        <ul className="bg-muted/40 mt-2 space-y-1 rounded-md px-2.5 py-2">
-          {line.components.map((component) => (
-            <li
-              key={component.name}
-              className="text-muted-foreground flex items-center justify-between gap-2 text-xs"
-            >
-              <span className="truncate">{component.name}</span>
-              <span className="whitespace-nowrap tabular-nums">
-                {line.quantity * component.quantity}×
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className="bg-muted/40 mt-2 space-y-1 rounded-md px-2.5 py-2">
+        {line.components.map((component) => (
+          <li
+            key={component.name}
+            className="text-muted-foreground flex items-center justify-between gap-2 text-xs"
+          >
+            <span className="truncate">{component.name}</span>
+            <span className="num whitespace-nowrap">{line.quantity * component.quantity}×</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
         <div className="space-y-1.5">
@@ -819,17 +807,15 @@ function BundlePoRow({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Bundle cost</Label>
+          <Label>Modal bundel</Label>
           <NumberInput
             value={line.unitCost}
             onChange={(value) => onPatch({ unitCost: Math.max(0, value) })}
           />
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs">Line</div>
-          <div className="font-medium tabular-nums">
-            {formatCurrency(line.unitCost * line.quantity)}
-          </div>
+          <div className="text-muted-foreground text-xs">Total</div>
+          <div className="num font-medium">{formatCurrency(line.unitCost * line.quantity)}</div>
         </div>
       </div>
     </div>

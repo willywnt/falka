@@ -30,15 +30,14 @@ export function PurchasingDashboard() {
         <Button asChild>
           <Link href="/dashboard/purchasing/new">
             <Plus className="size-4" />
-            New purchase order
+            Pembelian baru
           </Link>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load purchase orders.{' '}
-          {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat daftar pembelian. {error instanceof Error ? error.message : 'Coba lagi, ya.'}
         </div>
       ) : null}
 
@@ -51,13 +50,13 @@ export function PurchasingDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Truck}
-          title="No purchase orders"
-          description="Order stock from a supplier — it shows as incoming, then becomes available when you receive it."
+          title="Belum ada pembelian"
+          description="Pesan stok dari pemasok — stok muncul sebagai akan datang, lalu jadi tersedia saat kamu terima."
           action={
             <Button asChild>
               <Link href="/dashboard/purchasing/new">
                 <Plus className="size-4" />
-                New purchase order
+                Pembelian baru
               </Link>
             </Button>
           }
@@ -67,11 +66,11 @@ export function PurchasingDashboard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>PO</TableHead>
+                <TableHead>Pembelian</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Items</TableHead>
-                <TableHead className="text-right">Total cost</TableHead>
-                <TableHead>Ordered</TableHead>
+                <TableHead className="text-right">Item</TableHead>
+                <TableHead className="text-right">Total modal</TableHead>
+                <TableHead>Dipesan</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,14 +84,14 @@ export function PurchasingDashboard() {
                       {order.code}
                     </Link>
                     <div className="text-muted-foreground text-xs">
-                      {order.supplierName ?? 'No supplier'}
+                      {order.supplierName ?? 'Tanpa pemasok'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <PurchaseOrderStatusBadge status={order.status} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{order.itemCount}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
+                  <TableCell className="num text-right">{order.itemCount}</TableCell>
+                  <TableCell className="num text-right font-medium">
                     {formatCurrency(order.totalCost)}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs whitespace-nowrap">

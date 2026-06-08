@@ -8,7 +8,7 @@ export function DeletionImpact({
   blockers: DeletionBlockers | undefined;
   isLoading: boolean;
 }) {
-  if (isLoading) return <p className="text-muted-foreground text-sm">Checking…</p>;
+  if (isLoading) return <p className="text-muted-foreground text-sm">Memeriksa…</p>;
   if (!blockers) return null;
 
   // When blocked, show only the blocking reasons — the stock warnings are moot.

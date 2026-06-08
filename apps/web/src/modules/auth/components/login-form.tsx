@@ -40,13 +40,13 @@ export function LoginForm() {
     const result = await loginAction(formData);
 
     if (!result.success) {
-      toast.error('Sign in failed', {
+      toast.error('Gagal masuk', {
         description: result.message,
       });
       return;
     }
 
-    toast.success('Signed in successfully');
+    toast.success('Berhasil masuk');
   }
 
   return (
@@ -85,7 +85,7 @@ export function LoginForm() {
             )}
           />
           <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Signing in...' : 'Sign in'}
+            {form.formState.isSubmitting ? 'Memproses...' : 'Masuk'}
           </Button>
         </form>
       </Form>

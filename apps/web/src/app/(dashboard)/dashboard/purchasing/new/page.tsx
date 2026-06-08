@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { PoForm } from '@/modules/purchasing/components/po-form';
 
 export const metadata: Metadata = {
-  title: 'New purchase order',
+  title: 'Pembelian baru',
 };
 
 export default function NewPurchaseOrderPage() {
@@ -16,14 +16,14 @@ export default function NewPurchaseOrderPage() {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/purchasing">
           <ArrowLeft className="size-4" />
-          Back to purchasing
+          Kembali ke pembelian
         </Link>
       </Button>
 
       <PageHeader
-        eyebrow="Catalog"
-        title="New purchase order"
-        description="Search products or load reorder suggestions, set quantities + costs, and place the order."
+        eyebrow="Katalog"
+        title="Pembelian baru"
+        description="Cari produk atau muat saran restok, atur jumlah + modal, lalu buat pesanan."
       />
       <PoForm />
     </div>

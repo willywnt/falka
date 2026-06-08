@@ -75,10 +75,10 @@ export function BundlesDashboard() {
   async function handleDelete(bundle: BundleListItem) {
     try {
       await deleteBundle.mutateAsync(bundle.id);
-      toast.success('Bundle deleted');
+      toast.success('Bundel dihapus');
     } catch (deleteError) {
-      toast.error('Could not delete the bundle', {
-        description: deleteError instanceof Error ? deleteError.message : 'Please try again.',
+      toast.error('Gagal menghapus bundel', {
+        description: deleteError instanceof Error ? deleteError.message : 'Coba lagi.',
       });
     } finally {
       setDeleteTarget(null);
@@ -92,21 +92,21 @@ export function BundlesDashboard() {
           [
             {
               key: 'all',
-              label: 'All bundles',
+              label: 'Semua bundel',
               value: summary?.total ?? 0,
               tone: 'muted',
               icon: Layers,
             },
             {
               key: 'available',
-              label: 'Available',
+              label: 'Tersedia',
               value: summary?.available ?? 0,
               tone: 'emerald',
               icon: Boxes,
             },
             {
               key: 'unavailable',
-              label: 'Out of stock',
+              label: 'Stok habis',
               value: summary?.unavailable ?? 0,
               tone: 'amber',
               icon: AlertTriangle,
@@ -138,20 +138,20 @@ export function BundlesDashboard() {
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search bundle SKU or name…"
+          placeholder="Cari SKU atau nama bundel…"
           className="sm:max-w-xs"
         />
         <Button asChild>
           <Link href="/dashboard/bundles/new">
             <Plus className="size-4" />
-            New bundle
+            Bundel baru
           </Link>
         </Button>
       </div>
 
       {error ? (
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Failed to load bundles. {error instanceof Error ? error.message : 'Please try again.'}
+          Gagal memuat bundel. {error instanceof Error ? error.message : 'Coba lagi.'}
         </div>
       ) : null}
 
@@ -164,18 +164,18 @@ export function BundlesDashboard() {
       ) : isEmpty ? (
         <EmptyState
           icon={Layers}
-          title={isFiltered ? 'No bundles match' : 'No bundles yet'}
+          title={isFiltered ? 'Tidak ada bundel yang cocok' : 'Belum ada bundel'}
           description={
             isFiltered
-              ? 'Try a different search or filter.'
-              : 'A bundle sells as a kit and decrements its component stock — it keeps no stock of its own. Create one to get started.'
+              ? 'Coba pencarian atau filter lain.'
+              : 'Paket jualan dari beberapa varian — punya SKU & harga sendiri, stok tetap ikut komponennya.'
           }
           action={
             isFiltered ? undefined : (
               <Button asChild>
                 <Link href="/dashboard/bundles/new">
                   <Plus className="size-4" />
-                  New bundle
+                  Bundel baru
                 </Link>
               </Button>
             )
@@ -187,11 +187,11 @@ export function BundlesDashboard() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Total variant</TableHead>
-                  <TableHead className="text-right">Available</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead className="text-right">Total varian</TableHead>
+                  <TableHead className="text-right">Tersedia</TableHead>
+                  <TableHead className="text-right">Harga</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,7 +217,7 @@ export function BundlesDashboard() {
                                 variant="secondary"
                                 className="shrink-0 px-1.5 py-0 text-[10px]"
                               >
-                                Inactive
+                                Nonaktif
                               </Badge>
                             ) : null}
                           </div>
@@ -225,34 +225,30 @@ export function BundlesDashboard() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-right tabular-nums">
+                    <TableCell className="text-muted-foreground num text-right">
                       {bundle.totalVariant}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {bundle.available}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(bundle.price)}
-                    </TableCell>
+                    <TableCell className="num text-right font-medium">{bundle.available}</TableCell>
+                    <TableCell className="num text-right">{formatCurrency(bundle.price)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">More actions</span>
+                            <span className="sr-only">Aksi lainnya</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setQrTarget(bundle)}>
                             <QrCode className="size-4" />
-                            Show QR code
+                            Tampilkan QR code
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
                             onClick={() => setDeleteTarget(bundle)}
                           >
                             <Trash2 className="size-4" />
-                            Delete bundle
+                            Hapus bundel
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -282,8 +278,8 @@ export function BundlesDashboard() {
             if (!open) setQrTarget(null);
           }}
           value={qrTarget.sku}
-          title={qrTarget.name}
-          subtitle={qrTarget.sku}
+          name={qrTarget.name}
+          sku={qrTarget.sku}
           onPrint={() => markPrinted.mutate([qrTarget.id])}
         />
       ) : null}
@@ -296,19 +292,19 @@ export function BundlesDashboard() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{deleteTarget?.name}”?</AlertDialogTitle>
+            <AlertDialogTitle>Hapus “{deleteTarget?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the bundle. Its component variants and their stock are untouched. This
-              can&apos;t be undone.
+              Ini menghapus bundel. Varian komponen dan stoknya tidak terpengaruh. Tindakan ini
+              tidak bisa dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteTarget && void handleDelete(deleteTarget)}
               disabled={deleteBundle.isPending}
             >
-              Delete
+              Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

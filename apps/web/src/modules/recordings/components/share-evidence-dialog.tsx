@@ -29,11 +29,11 @@ const DEFAULT_TTL_HOURS = 168;
 
 const STATUS_BADGE: Record<ShareLinkItem['status'], { label: string; className: string }> = {
   active: {
-    label: 'Active',
+    label: 'Aktif',
     className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   },
-  expired: { label: 'Expired', className: 'bg-muted text-muted-foreground' },
-  revoked: { label: 'Revoked', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+  expired: { label: 'Kedaluwarsa', className: 'bg-muted text-muted-foreground' },
+  revoked: { label: 'Dicabut', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
 };
 
 function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi: string }) {
@@ -50,12 +50,12 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
       const result = await createMutation.mutateAsync(expiresInHours);
       setCreatedUrl(result.shareUrl);
       setCopied(false);
-      toast.success('Share link created', {
-        description: 'Copy it now — paste it into the dispute.',
+      toast.success('Link berhasil dibuat', {
+        description: 'Salin sekarang, lalu tempel ke komplain.',
       });
     } catch (error) {
-      toast.error('Could not create link', {
-        description: error instanceof Error ? error.message : 'Please try again.',
+      toast.error('Gagal membuat link', {
+        description: error instanceof Error ? error.message : 'Coba lagi.',
       });
     }
   }
@@ -65,19 +65,19 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
     try {
       await navigator.clipboard.writeText(createdUrl);
       setCopied(true);
-      toast.success('Link copied');
+      toast.success('Link disalin');
     } catch {
-      toast.error('Copy failed — select and copy the link manually.');
+      toast.error('Gagal menyalin — pilih dan salin link-nya manual.');
     }
   }
 
   async function handleRevoke(shareLinkId: string) {
     try {
       await revokeMutation.mutateAsync(shareLinkId);
-      toast.success('Link revoked');
+      toast.success('Link dicabut');
     } catch (error) {
-      toast.error('Could not revoke link', {
-        description: error instanceof Error ? error.message : 'Please try again.',
+      toast.error('Gagal mencabut link', {
+        description: error instanceof Error ? error.message : 'Coba lagi.',
       });
     }
   }
@@ -88,7 +88,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
     <div className="space-y-5">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-muted-foreground mr-1 text-sm">Expires in</span>
+          <span className="text-muted-foreground mr-1 text-sm">Kedaluwarsa dalam</span>
           {SHARE_LINK_TTL_OPTIONS.map((option) => (
             <Button
               key={option.hours}
@@ -112,20 +112,20 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
             ) : (
               <Link2 className="size-4" />
             )}
-            Create link
+            Buat link
           </Button>
         </div>
 
         {createdUrl ? (
           <div className="border-primary/30 bg-primary/5 space-y-2 rounded-lg border p-3">
             <p className="text-xs font-medium">
-              Anyone with this link can view the packing video until it expires.
+              Siapa pun yang pegang link ini bisa lihat video packing sampai masa berlakunya habis.
             </p>
             <div className="flex items-center gap-2">
               <Input readOnly value={createdUrl} className="h-9 font-mono text-xs" />
               <Button type="button" size="sm" variant="outline" onClick={() => void handleCopy()}>
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? 'Tersalin' : 'Salin'}
               </Button>
             </div>
           </div>
@@ -134,12 +134,12 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
 
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Links for resi {noResi}
+          Link untuk resi {noResi}
         </p>
         {linksQuery.isLoading ? (
-          <p className="text-muted-foreground text-sm">Loading…</p>
+          <p className="text-muted-foreground text-sm">Memuat…</p>
         ) : links.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No share links yet.</p>
+          <p className="text-muted-foreground text-sm">Belum ada link.</p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {links.map((link) => {
@@ -152,11 +152,11 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
                         {badge.label}
                       </Badge>
                       <span className="text-muted-foreground text-xs">
-                        {link.viewCount} view{link.viewCount === 1 ? '' : 's'}
+                        {link.viewCount} tampilan
                       </span>
                     </div>
                     <div className="text-muted-foreground mt-1 text-xs">
-                      Expires {formatDateTime(link.expiresAt)}
+                      Kedaluwarsa {formatDateTime(link.expiresAt)}
                     </div>
                   </div>
                   {link.status === 'active' ? (
@@ -168,7 +168,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
                       onClick={() => void handleRevoke(link.id)}
                       disabled={revokeMutation.isPending}
                     >
-                      Revoke
+                      Cabut
                     </Button>
                   ) : null}
                 </li>
@@ -192,10 +192,11 @@ export function ShareEvidenceDialog({ recording, open, onOpenChange }: ShareEvid
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Share packing evidence</DialogTitle>
+          <DialogTitle>Bagikan bukti packing</DialogTitle>
           <DialogDescription>
-            Create an expiring, revocable link to the packing video — paste it into a buyer or
-            marketplace dispute. No login needed to view it.
+            Buat link video packing buat dikirim ke pembeli atau marketplace pas ada komplain.
+            Pembeli bisa lihat tanpa perlu login, dan link bisa kamu atur masa berlakunya atau
+            dicabut kapan aja.
           </DialogDescription>
         </DialogHeader>
         {recording ? (

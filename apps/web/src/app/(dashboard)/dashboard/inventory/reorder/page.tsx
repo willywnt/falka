@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ReorderReport } from '@/modules/inventory/components/reorder-report';
 
 export const metadata: Metadata = {
-  title: 'Reorder suggestions',
+  title: 'Saran restok',
 };
 
 export default function ReorderPage() {
@@ -16,13 +16,13 @@ export default function ReorderPage() {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/inventory">
           <ArrowLeft className="size-4" />
-          Back to inventory
+          Kembali ke inventaris
         </Link>
       </Button>
       <PageHeader
-        eyebrow="Inventory"
-        title="Reorder suggestions"
-        description="How fast items sell, how long your stock will last, and how much to buy again."
+        eyebrow="Inventaris"
+        title="Saran restok"
+        description="Seberapa cepat item terjual, berapa lama stok kamu bertahan, dan berapa yang perlu dibeli lagi."
       />
       <ReorderReport />
     </div>

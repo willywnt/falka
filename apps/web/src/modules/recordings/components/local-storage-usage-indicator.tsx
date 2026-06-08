@@ -31,14 +31,14 @@ export function LocalStorageUsageIndicator() {
       className={`rounded-lg border px-4 py-3 text-sm ${quotaWarning ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-muted/30'}`}
     >
       <p>
-        Pending uploads using{' '}
-        <span className="font-medium">{formatRecoveryFileSize(totalBytes)}</span> local storage
-        <span className="text-muted-foreground"> · {temporaryRecordings.length} item(s)</span>
+        Upload yang tertunda makan{' '}
+        <span className="font-medium">{formatRecoveryFileSize(totalBytes)}</span> penyimpanan lokal
+        <span className="text-muted-foreground"> · {temporaryRecordings.length} item</span>
       </p>
       {quotaWarning ? (
         <p className="mt-2 flex items-start gap-2 text-amber-900 dark:text-amber-100">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          Local storage is getting full. Upload or discard pending recordings to free space.
+          Penyimpanan lokal hampir penuh. Upload atau buang rekaman yang tertunda biar lega lagi.
         </p>
       ) : null}
     </div>

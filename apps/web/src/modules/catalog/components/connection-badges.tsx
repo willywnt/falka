@@ -37,7 +37,7 @@ export function ConnectionBadges({ connections }: { connections: VariantMappingR
           <Badge
             variant="outline"
             className="hover:bg-muted max-w-[150px] gap-1 font-normal"
-            title={`${connection.shopName} — open to unmap`}
+            title={`${connection.shopName} — buka untuk lepas mapping`}
           >
             <span className="truncate">{connection.shopName}</span>
             <ExternalLink className="size-3 shrink-0" />
@@ -52,7 +52,7 @@ export function ConnectionBadges({ connections }: { connections: VariantMappingR
           className="h-6 px-1.5 text-xs"
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? 'Show less' : `+${connections.length - COLLAPSED} more`}
+          {expanded ? 'Tampilkan lebih sedikit' : `+${connections.length - COLLAPSED} lainnya`}
         </Button>
       ) : null}
     </div>

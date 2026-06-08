@@ -8,14 +8,14 @@ const STATUS_CONFIG: Record<
   PurchaseOrderStatus,
   { label: string; variant?: BadgeVariant; className?: string }
 > = {
-  ORDERED: { label: 'Ordered', variant: 'outline', className: 'border-sky-500 text-sky-600' },
+  ORDERED: { label: 'Dipesan', variant: 'outline', className: 'border-sky-500 text-sky-600' },
   PARTIALLY_RECEIVED: {
-    label: 'Partially received',
+    label: 'Diterima sebagian',
     variant: 'outline',
     className: 'border-amber-500 text-amber-600',
   },
-  RECEIVED: { label: 'Received', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
-  CANCELLED: { label: 'Cancelled', variant: 'destructive' },
+  RECEIVED: { label: 'Diterima', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
+  CANCELLED: { label: 'Dibatalkan', variant: 'destructive' },
 };
 
 export function PurchaseOrderStatusBadge({ status }: { status: PurchaseOrderStatus }) {

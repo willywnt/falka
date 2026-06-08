@@ -40,8 +40,8 @@ const DEFAULT_VALUES: AdjustStockFormInput = {
 };
 
 const directionOptions = [
-  { label: 'Add', value: 'add' },
-  { label: 'Remove', value: 'remove' },
+  { label: 'Tambah', value: 'add' },
+  { label: 'Kurangi', value: 'remove' },
 ];
 
 /** Reasons that make sense for the chosen action — keeps the options relevant. */
@@ -106,7 +106,7 @@ export function AdjustStockDialog({
           : -values.quantity;
 
     if (delta === 0) {
-      toast.info(values.mode === 'set' ? `Stock is already ${currentStock}.` : 'Enter a quantity.');
+      toast.info(values.mode === 'set' ? `Stok sudah ${currentStock}.` : 'Masukkan jumlah.');
       return;
     }
 
@@ -116,14 +116,14 @@ export function AdjustStockDialog({
         reason: values.reason,
         note: values.note.trim() || undefined,
       });
-      toast.success('Stock updated', {
-        description: `Available is now ${result.inventory.availableStock}.`,
+      toast.success('Stok diperbarui', {
+        description: `Tersedia sekarang ${result.inventory.availableStock}.`,
       });
       onAdjusted?.();
       form.reset({ ...values, quantity: values.mode === 'set' ? values.quantity : 1, note: '' });
     } catch (error) {
-      toast.error('Adjustment failed', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Gagal menyesuaikan stok', {
+        description: error instanceof Error ? error.message : 'Ada yang error, coba lagi.',
       });
     }
   }
@@ -138,7 +138,7 @@ export function AdjustStockDialog({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Adjust stock</DialogTitle>
+          <DialogTitle>Sesuaikan stok</DialogTitle>
           <DialogDescription>{variantLabel}</DialogDescription>
         </DialogHeader>
 
@@ -155,7 +155,7 @@ export function AdjustStockDialog({
                     mode === value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
                   )}
                 >
-                  {value === 'adjust' ? 'Adjust by' : 'Set to'}
+                  {value === 'adjust' ? 'Ubah sebanyak' : 'Atur ke'}
                 </button>
               ))}
             </div>
@@ -167,11 +167,11 @@ export function AdjustStockDialog({
                   name="direction"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Direction</FormLabel>
+                      <FormLabel>Arah</FormLabel>
                       <Select
                         value={field.value}
                         onChange={(event) => field.onChange(event.target.value as 'add' | 'remove')}
-                        aria-label="Direction"
+                        aria-label="Arah"
                       >
                         {directionOptions.map((direction) => (
                           <option key={direction.value} value={direction.value}>
@@ -190,7 +190,7 @@ export function AdjustStockDialog({
                 name="quantity"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>{mode === 'set' ? 'New stock count' : 'Quantity'}</FormLabel>
+                    <FormLabel>{mode === 'set' ? 'Jumlah stok baru' : 'Jumlah'}</FormLabel>
                     <FormControl>
                       <NumberInput min={mode === 'set' ? 0 : 1} step={1} {...field} />
                     </FormControl>
@@ -201,8 +201,8 @@ export function AdjustStockDialog({
             </div>
 
             <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground">Available after</span>
-              <span className="flex items-center gap-2 font-semibold tabular-nums">
+              <span className="text-muted-foreground">Perubahan stok</span>
+              <span className="num flex items-center gap-2 font-semibold">
                 <span className="text-muted-foreground">{currentStock}</span>→
                 <span className={cn('text-base', resultStock < 0 && 'text-destructive')}>
                   {resultStock}
@@ -215,11 +215,11 @@ export function AdjustStockDialog({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason</FormLabel>
+                  <FormLabel>Alasan</FormLabel>
                   <Select
                     value={field.value}
                     onChange={(event) => field.onChange(event.target.value)}
-                    aria-label="Reason"
+                    aria-label="Alasan"
                   >
                     {reasons.map((reason) => (
                       <option key={reason} value={reason}>
@@ -237,9 +237,9 @@ export function AdjustStockDialog({
               name="note"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Note (optional)</FormLabel>
+                  <FormLabel>Catatan (opsional)</FormLabel>
                   <FormControl>
-                    <Textarea rows={1} placeholder="e.g. supplier delivery #123" {...field} />
+                    <Textarea rows={1} placeholder="mis. kiriman dari supplier #123" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -247,11 +247,7 @@ export function AdjustStockDialog({
             />
 
             <Button type="submit" className="w-full" disabled={adjustMutation.isPending}>
-              {adjustMutation.isPending
-                ? 'Saving...'
-                : mode === 'set'
-                  ? 'Set stock'
-                  : 'Apply adjustment'}
+              {adjustMutation.isPending ? 'Menyimpan...' : mode === 'set' ? 'Atur stok' : 'Simpan'}
             </Button>
           </form>
         </Form>

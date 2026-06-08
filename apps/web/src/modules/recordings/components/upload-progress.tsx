@@ -9,7 +9,7 @@ import { formatRecoveryFileSize } from '@/modules/recordings/recovery/utils/form
 
 export function UploadProgressBar({
   progress,
-  label = 'Uploading recording',
+  label = 'Mengupload rekaman',
   metrics,
 }: {
   progress: number;
@@ -22,7 +22,7 @@ export function UploadProgressBar({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 text-sm">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums">{safeProgress}%</span>
+        <span className="num font-medium">{safeProgress}%</span>
       </div>
       <div className="bg-muted h-2 overflow-hidden rounded-full">
         <div
@@ -49,7 +49,7 @@ export function UploadProgressBar({
 export function EstimatedFileSize({ bytes }: { bytes: number }) {
   return (
     <p className="text-muted-foreground text-sm">
-      Estimated size:{' '}
+      Perkiraan ukuran:{' '}
       <span className="text-foreground font-medium">{formatRecoveryFileSize(bytes)}</span>
     </p>
   );

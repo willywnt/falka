@@ -19,36 +19,36 @@ type QuickAction = {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    label: 'New product',
-    description: 'Add to catalog',
+    label: 'Produk baru',
+    description: 'Tambah ke katalog',
     href: '/dashboard/products',
     icon: Boxes,
     tone: 'sky',
   },
   {
-    label: 'Pull orders',
-    description: 'Sync from stores',
+    label: 'Tarik pesanan',
+    description: 'Sinkronisasi dari toko',
     href: '/dashboard/marketplace',
     icon: ShoppingCart,
     tone: 'amber',
   },
   {
-    label: 'Record packing',
-    description: 'Proof per parcel',
+    label: 'Rekam packing',
+    description: 'Bukti per paket',
     href: '/recordings',
     icon: Video,
     tone: 'rose',
   },
   {
-    label: 'Reorder',
-    description: 'What to restock',
+    label: 'Restok',
+    description: 'Yang perlu dibeli lagi',
     href: '/dashboard/inventory/reorder',
     icon: LineChart,
     tone: 'emerald',
   },
   {
-    label: 'Activity',
-    description: 'Stock history',
+    label: 'Aktivitas',
+    description: 'Riwayat stok',
     href: '/dashboard/inventory/activity',
     icon: ScrollText,
     tone: 'violet',
@@ -57,9 +57,9 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 function greeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'Selamat pagi';
+  if (hour < 18) return 'Selamat siang';
+  return 'Selamat malam';
 }
 
 export function DashboardHome() {
@@ -74,7 +74,7 @@ export function DashboardHome() {
           {firstName ? `, ${firstName}` : ''} 👋
         </p>
         <p className="text-muted-foreground mt-1 text-sm">
-          Here&apos;s your shop at a glance — stock, orders, and what needs attention today.
+          Ringkasan toko kamu — stok, pesanan, dan yang perlu diperhatikan hari ini.
         </p>
 
         <div className="mt-5 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-5">

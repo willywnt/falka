@@ -88,10 +88,10 @@ export function ConnectScannerDialog({
         createStartedRef.current = false;
         const message =
           error.code === 'UNAUTHORIZED'
-            ? 'You are not signed in. Log in at https://localhost:3000 (same account), then try again.'
+            ? 'Kamu belum masuk. Login di https://localhost:3000 (akun yang sama), lalu coba lagi.'
             : error.message;
         setCreateError(message);
-        toast.error('Failed to create pairing session', { description: message });
+        toast.error('Gagal membuat sesi pairing', { description: message });
       });
   };
 
@@ -158,19 +158,19 @@ export function ConnectScannerDialog({
       setQrDataUrl(null);
       createStartedRef.current = false;
       onOpenChange(false);
-      toast.success('Mobile scanner disconnected');
+      toast.success('Scanner ponsel terputus');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Disconnect failed');
+      toast.error(error instanceof Error ? error.message : 'Gagal memutus koneksi');
     }
   };
 
   const statusLabel = isConnected
-    ? 'Phone connected — ready to scan'
+    ? 'Ponsel terhubung — siap scan'
     : displaySession?.status === 'PENDING'
-      ? 'Scan this QR with your phone camera'
+      ? 'Scan QR ini pakai kamera ponsel kamu'
       : displaySession?.status === 'DISCONNECTED'
-        ? 'Phone dropped — scan again to reconnect'
-        : 'Preparing QR…';
+        ? 'Ponsel terputus — scan lagi buat nyambungin'
+        : 'Menyiapkan QR…';
 
   const isQrLoading =
     authStatus === 'loading' ||
@@ -183,13 +183,13 @@ export function ConnectScannerDialog({
           <DialogHeader className="gap-1.5 text-left">
             <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
               <Smartphone className="size-4 shrink-0" />
-              Phone scanner
+              Scanner ponsel
               <span className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
                 {meta.shortLabel}
               </span>
             </DialogTitle>
             <DialogDescription className="text-left text-xs">
-              {meta.description} Use the same account as this PC.
+              {meta.description} Pakai akun yang sama dengan PC ini.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -202,10 +202,10 @@ export function ConnectScannerDialog({
           ) : !isAuthenticated ? (
             <div className="space-y-3 py-6 text-center">
               <p className="text-muted-foreground text-sm">
-                Sign in on this PC first (same browser), then reopen this dialog.
+                Masuk dulu di PC ini (browser yang sama), lalu buka kembali dialog ini.
               </p>
               <Button asChild size="sm">
-                <a href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}>Sign in</a>
+                <a href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}>Masuk</a>
               </Button>
             </div>
           ) : (
@@ -217,7 +217,7 @@ export function ConnectScannerDialog({
                   // eslint-disable-next-line @next/next/no-img-element -- dynamic QR data URL
                   <img
                     src={qrDataUrl ?? ''}
-                    alt="QR code for mobile scanner"
+                    alt="Kode QR untuk scanner ponsel"
                     className="size-full object-contain p-2"
                   />
                 )}
@@ -234,7 +234,7 @@ export function ConnectScannerDialog({
                       runCreatePairing();
                     }}
                   >
-                    Try again
+                    Coba lagi
                   </Button>
                 </div>
               ) : (
@@ -259,13 +259,13 @@ export function ConnectScannerDialog({
               size="sm"
               onClick={() => void handleDisconnect()}
             >
-              Disconnect
+              Putuskan
             </Button>
           ) : (
             <span />
           )}
           <Button type="button" variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
-            Close
+            Tutup
           </Button>
         </DialogFooter>
       </DialogContent>

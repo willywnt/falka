@@ -82,9 +82,9 @@ export function PendingUploadsSection({
         onClick={toggle}
       >
         <div>
-          <p className="text-sm font-medium">Pending uploads</p>
+          <p className="text-sm font-medium">Upload tertunda</p>
           <p className="text-muted-foreground text-xs">
-            {recordings.length} saved on this device — not yet in cloud storage
+            {recordings.length} tersimpan di perangkat ini — belum masuk penyimpanan cloud
           </p>
         </div>
         <div className="text-muted-foreground flex items-center gap-2">
@@ -97,13 +97,13 @@ export function PendingUploadsSection({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Resi</TableHead>
+              <TableHead>No. resi</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Failure reason</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>File size</TableHead>
-              <TableHead>Recorded</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Penyebab gagal</TableHead>
+              <TableHead>Durasi</TableHead>
+              <TableHead>Ukuran file</TableHead>
+              <TableHead>Direkam</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -139,10 +139,10 @@ export function PendingUploadsSection({
                       <div
                         className="inline-flex items-center gap-2"
                         role="status"
-                        aria-label={`Uploading ${retryUploadProgress}%`}
+                        aria-label={`Mengupload ${retryUploadProgress}%`}
                       >
                         <Loader2 className="text-primary size-4 animate-spin" />
-                        <span className="text-muted-foreground text-xs tabular-nums">
+                        <span className="text-muted-foreground num text-xs">
                           {retryUploadProgress}%
                         </span>
                       </div>
@@ -151,13 +151,13 @@ export function PendingUploadsSection({
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Open actions</span>
+                            <span className="sr-only">Buka aksi</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => onPreview(recording)}>
                             <Play className="size-4" />
-                            Preview
+                            Pratinjau
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             disabled={!isOnline || isRetryingUpload}
@@ -171,7 +171,7 @@ export function PendingUploadsSection({
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onViewTimeline(recording)}>
                             <Eye className="size-4" />
-                            View timeline
+                            Lihat riwayat
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
@@ -179,7 +179,7 @@ export function PendingUploadsSection({
                             onClick={() => onDiscard(recording)}
                           >
                             <Trash2 className="size-4" />
-                            Discard
+                            Buang
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

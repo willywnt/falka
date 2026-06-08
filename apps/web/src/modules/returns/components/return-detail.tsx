@@ -33,8 +33,8 @@ import {
 import { ReturnStatusBadge } from './return-status-badge';
 
 function dispositionLabel(disposition: ReturnDisposition | null): string {
-  if (disposition === 'RESTOCK') return 'Restocked';
-  if (disposition === 'DAMAGED') return 'Damaged';
+  if (disposition === 'RESTOCK') return 'Direstok';
+  if (disposition === 'DAMAGED') return 'Rusak';
   return '—';
 }
 
@@ -57,10 +57,10 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
     });
     try {
       await processMutation.mutateAsync({ lines });
-      toast.success('Return processed', { description: 'Stock has been updated.' });
+      toast.success('Retur diproses', { description: 'Stok sudah diperbarui.' });
     } catch (err) {
-      toast.error('Could not process return', {
-        description: err instanceof Error ? err.message : 'Unknown error',
+      toast.error('Gagal memproses retur', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan.',
       });
     }
   }
@@ -68,10 +68,10 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
   async function handleReject() {
     try {
       await rejectMutation.mutateAsync();
-      toast.success('Return rejected', { description: 'Closed without restocking.' });
+      toast.success('Retur ditolak', { description: 'Ditutup tanpa restok.' });
     } catch (err) {
-      toast.error('Could not reject return', {
-        description: err instanceof Error ? err.message : 'Unknown error',
+      toast.error('Gagal menolak retur', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan.',
       });
     }
   }
@@ -91,11 +91,11 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/dashboard/returns">
             <ArrowLeft className="size-4" />
-            Back to returns
+            Kembali ke retur
           </Link>
         </Button>
         <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          {error instanceof Error ? error.message : 'Return not found.'}
+          {error instanceof Error ? error.message : 'Retur tidak ditemukan.'}
         </div>
       </div>
     );
@@ -106,20 +106,20 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href="/dashboard/returns">
           <ArrowLeft className="size-4" />
-          Back to returns
+          Kembali ke retur
         </Link>
       </Button>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">Return · {data.externalOrderId}</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Retur · {data.externalOrderId}</h2>
         <ReturnStatusBadge status={data.status} />
-        {data.autoDetected ? <Badge variant="outline">Auto-detected</Badge> : null}
+        {data.autoDetected ? <Badge variant="outline">Terdeteksi otomatis</Badge> : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Items <span className="text-muted-foreground">· {data.items.length}</span>
+            Item <span className="text-muted-foreground">· {data.items.length}</span>
           </p>
           <div className="rounded-xl border">
             <Table>
@@ -128,7 +128,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                   <TableHead>Item</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">
-                    {isPending ? 'Resellable?' : 'Disposition'}
+                    {isPending ? 'Bisa dijual lagi?' : 'Penanganan'}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -141,13 +141,13 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                         <div className="min-w-0">
                           <div className="font-medium">{item.externalName}</div>
                           <div className="text-muted-foreground text-xs">
-                            {item.sku ? `${item.sku}` : 'unmapped'}
+                            {item.sku ? `${item.sku}` : 'belum dicocokkan'}
                             {item.productName ? ` · ${item.productName}` : ''}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
+                    <TableCell className="num text-right">{item.quantity}</TableCell>
                     <TableCell className="text-right">
                       {isPending ? (
                         <div className="flex items-center justify-end gap-2">
@@ -156,10 +156,10 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                             onCheckedChange={(on) =>
                               setResellable((prev) => ({ ...prev, [item.id]: on }))
                             }
-                            aria-label={`Restock ${item.externalName}`}
+                            aria-label={`Restok ${item.externalName}`}
                           />
                           <span className="text-muted-foreground text-xs">
-                            {(resellable[item.id] ?? true) ? 'Restock' : 'Damaged'}
+                            {(resellable[item.id] ?? true) ? 'Restok' : 'Rusak'}
                           </span>
                         </div>
                       ) : (
@@ -178,11 +178,11 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => void handleProcess()} disabled={busy}>
                 <PackageCheck className="size-4" />
-                {processMutation.isPending ? 'Processing...' : 'Receive & apply stock'}
+                {processMutation.isPending ? 'Memproses...' : 'Terima & update stok'}
               </Button>
               <Button variant="outline" onClick={() => void handleReject()} disabled={busy}>
                 <XCircle className="size-4" />
-                Reject
+                Tolak
               </Button>
             </div>
           ) : null}
@@ -191,41 +191,41 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
         <aside className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Packing video evidence</CardTitle>
+              <CardTitle className="text-base">Bukti video packing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Tracking no.</span>
+                <span className="text-muted-foreground">No. resi</span>
                 <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
               {data.noResi ? (
                 <>
                   <p className="text-muted-foreground text-xs">
                     {packingVideos && packingVideos.length > 0
-                      ? `${packingVideos.length} packing video(s) for this resi.`
-                      : 'No packing video found for this resi.'}
+                      ? `${packingVideos.length} video packing untuk resi ini.`
+                      : 'Tidak ada video packing untuk resi ini.'}
                   </p>
                   <Button variant="outline" size="sm" asChild className="w-full">
                     <Link href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}>
                       <Video className="size-4" />
-                      View packing video
+                      Lihat video packing
                     </Link>
                   </Button>
                   <ShareEvidenceControl recordings={packingVideos ?? []} />
                 </>
               ) : (
-                <p className="text-muted-foreground text-xs">No tracking number on this order.</p>
+                <p className="text-muted-foreground text-xs">Pesanan ini tidak punya no. resi.</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Return</CardTitle>
+              <CardTitle className="text-base">Retur</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Order</span>
+                <span className="text-muted-foreground">Pesanan</span>
                 <Link
                   href={`/dashboard/orders/${data.orderId}`}
                   className="truncate text-right font-medium hover:underline"
@@ -234,24 +234,24 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                 </Link>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Store</span>
+                <span className="text-muted-foreground">Toko</span>
                 <span className="truncate text-right font-medium">{data.shopName}</span>
               </div>
               {data.reason ? (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Reason</span>
+                  <span className="text-muted-foreground">Alasan</span>
                   <span className="truncate text-right font-medium">{data.reason}</span>
                 </div>
               ) : null}
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Opened</span>
+                <span className="text-muted-foreground">Dibuka</span>
                 <span className="text-right font-medium" suppressHydrationWarning>
                   {formatDateTime(data.createdAt)}
                 </span>
               </div>
               {data.processedAt ? (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Processed</span>
+                  <span className="text-muted-foreground">Diproses</span>
                   <span className="text-right font-medium" suppressHydrationWarning>
                     {formatDateTime(data.processedAt)}
                   </span>

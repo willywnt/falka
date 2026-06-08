@@ -33,12 +33,12 @@ export function TablePagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
       <div className="text-muted-foreground flex items-center gap-1.5">
-        <span>Rows</span>
+        <span>Baris</span>
         <Select
           value={String(pageSize)}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
           className="h-8 w-auto pr-7"
-          aria-label="Rows per page"
+          aria-label="Baris per halaman"
         >
           {pageSizeOptions.map((size) => (
             <option key={size} value={size}>
@@ -55,12 +55,12 @@ export function TablePagination({
           className="size-8"
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
-          aria-label="Previous page"
+          aria-label="Halaman sebelumnya"
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="whitespace-nowrap tabular-nums">
-          {from}–{to} of {total}
+        <span className="num whitespace-nowrap">
+          {from}–{to} dari {total}
         </span>
         <Button
           variant="outline"
@@ -68,7 +68,7 @@ export function TablePagination({
           className="size-8"
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
-          aria-label="Next page"
+          aria-label="Halaman berikutnya"
         >
           <ChevronRight className="size-4" />
         </Button>
