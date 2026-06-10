@@ -77,7 +77,7 @@ whose brand mark + active markers pick up the accent, **Plus Jakarta Sans** font
   No. resi/Terkirim/Batalkan · Penjualan(Kasir)/Keranjang/Tunai · Pembelian(PO)/Pemasok/Terima/Modal ·
   Retur/Restok · Rekaman/video packing · Laporan/Omzet/Laba/Margin/HPP · Pengaturan/Akun/Masuk/Keluar/
   Cari/Simpan/Batal/Buat/Tambah/Ubah/Hapus · Aktif/Nonaktif/opsional/wajib. Keep verbatim: SKU, barcode,
-  codes (S00001), brand "Olshop", "marketplace", provider names (Shopee/Tokopedia/Lazada).
+  codes (S00001), brand "Falka", "marketplace", provider names (Shopee/Tokopedia/Lazada).
 
 ## Shell & auth
 - `components/layout/`: `AppSidebar` (collapses to a 64px **icon rail** via `useUiStore.sidebarOpen`;

@@ -1,12 +1,12 @@
 import { MarketplaceProvider, PrismaClient, RecordingStatus, UserRole } from '@prisma/client';
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@olshop/config/limits';
+import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
 import argon2 from 'argon2';
 
 import { DEMO_SHOP_ID, DEMO_USER_EMAIL, DEMO_VARIANTS } from './demo-data';
 
 const prisma = new PrismaClient();
 
-const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@olshop.local';
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@falka.local';
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 const SEED_DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? 'Demo123!';
 
@@ -157,7 +157,7 @@ async function main() {
         noResi: 'SEED-RESI-001',
         generatedFilename: 'seed-recording-001.webm',
         storageProvider: 'cloudflare-r2',
-        storageBucket: 'olshop-recordings',
+        storageBucket: 'falka-recordings',
         storageKey: `users/${demoUser.id}/seed-recording-001.webm`,
         publicUrl: 'https://example.r2.dev/users/seed-recording-001.webm',
         mimeType: 'video/webm',

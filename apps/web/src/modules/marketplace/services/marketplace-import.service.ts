@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
+import { prisma } from '@falka/db';
 import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

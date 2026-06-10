@@ -1,6 +1,6 @@
 # Environment Variables
 
-Olshop separates **public** (client) and **server-only** environment variables with Zod validation in `@olshop/config`.
+Falka separates **public** (client) and **server-only** environment variables with Zod validation in `@falka/config`.
 
 ## File layout
 
@@ -61,9 +61,9 @@ Olshop separates **public** (client) and **server-only** environment variables w
 
 ## Validation
 
-Server env is validated at runtime via `getServerEnv()` in `@olshop/config/env.server`.
+Server env is validated at runtime via `getServerEnv()` in `@falka/config/env.server`.
 
-Client env is validated via `getClientEnv()` in `@olshop/config/env.client`.
+Client env is validated via `getClientEnv()` in `@falka/config/env.client`.
 
 ## Generating secrets
 

@@ -1,6 +1,6 @@
 # Disaster recovery strategy
 
-Olshop is a modular monolith. Recovery focuses on PostgreSQL, R2 object storage, and Redis queue state.
+Falka is a modular monolith. Recovery focuses on PostgreSQL, R2 object storage, and Redis queue state.
 
 ## Recovery priorities
 
@@ -32,7 +32,7 @@ Never point production at local Docker Postgres.
 **Recommendation:**
 
 - Enable object versioning or periodic bucket sync to secondary bucket/account
-- Document bucket name per environment (`olshop-recordings` vs `olshop-recordings-prod`)
+- Document bucket name per environment (`falka-recordings` vs `falka-recordings-prod`)
 - Use lifecycle rules for incomplete multipart uploads
 
 **Orphan handling:**
@@ -53,7 +53,7 @@ Redis holds BullMQ queues, rate-limit counters, and lightweight metrics.
 **Recovery:**
 
 1. Restart Redis / Upstash instance
-2. Restart worker (`pnpm --filter @olshop/worker start`)
+2. Restart worker (`pnpm --filter @falka/worker start`)
 3. Schedulers re-register repeat jobs on boot
 4. Failed jobs remain in BullMQ failed set if persistence enabled
 5. Rate limits and metrics counters reset (acceptable)

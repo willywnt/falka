@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { APP_NAME } from '@olshop/config/constants';
+import { APP_NAME } from '@falka/config/constants';
 import { Boxes, PackageCheck, RefreshCw } from 'lucide-react';
 
 const HIGHLIGHTS = [
@@ -39,7 +39,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative space-y-8">
           <div className="space-y-3">
             <h2 className="text-3xl font-semibold tracking-tight text-balance">
-              Inventory &amp; fulfillment, in one place.
+              See sharper. Sell calmer.
             </h2>
             <p className="text-primary-foreground/70 max-w-sm text-pretty">
               Orders from every store in, accurate stock in sync, a packing video out.

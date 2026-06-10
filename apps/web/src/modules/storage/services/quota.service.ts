@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
-import { isWithinQuota, quotaUsagePercent, remainingQuotaBytes } from '@olshop/utils/storage';
+import { prisma } from '@falka/db';
+import { isWithinQuota, quotaUsagePercent, remainingQuotaBytes } from '@falka/utils/storage';
 
 import { StorageError } from '../errors/storage-errors';
 import type { StorageQuotaSnapshot } from '../types';

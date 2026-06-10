@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
-import { generateId, hashString } from '@olshop/utils/crypto';
+import { prisma } from '@falka/db';
+import { generateId, hashString } from '@falka/utils/crypto';
 import { RecordingStatus } from '@prisma/client';
 import type { RecordingShareLink } from '@prisma/client';
 

@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@olshop/config/limits';
-import { prisma } from '@olshop/db';
+import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
+import { prisma } from '@falka/db';
 import type { UserRole } from '@prisma/client';
 
 import { AuthError } from '../errors/auth-errors';

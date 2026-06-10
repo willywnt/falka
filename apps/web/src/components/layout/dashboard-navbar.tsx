@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { APP_NAME } from '@olshop/config/constants';
+import { APP_NAME } from '@falka/config/constants';
 import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 

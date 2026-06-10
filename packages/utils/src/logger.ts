@@ -1,1 +1,1 @@
-export * from '@olshop/logger/server';
+export * from '@falka/logger/server';

@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
-import { buildManualRetryEventId, enqueuePropagateInventoryStock } from '@olshop/queue';
+import { prisma } from '@falka/db';
+import { buildManualRetryEventId, enqueuePropagateInventoryStock } from '@falka/queue';
 import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

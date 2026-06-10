@@ -16,7 +16,7 @@ import { PairingError } from '@/modules/scanner-pairing/errors/pairing-errors';
 import { pairingService } from '@/modules/scanner-pairing/services/pairing.service';
 import { pairingCodeSchema, pairingIdSchema } from '@/modules/scanner-pairing/validators/pairing';
 import { getRequestIp } from '@/lib/api/request-context';
-import { logger } from '@olshop/logger/server';
+import { logger } from '@falka/logger/server';
 
 const credentialsSchema = loginSchema.extend({
   email: z.string().email(),

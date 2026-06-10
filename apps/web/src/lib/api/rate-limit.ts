@@ -6,13 +6,13 @@ import {
   LOGIN_RATE_LIMIT_WINDOW_SECONDS,
   RECORDING_RATE_LIMIT_PER_MINUTE,
   UPLOAD_RATE_LIMIT_PER_MINUTE,
-} from '@olshop/config/limits';
+} from '@falka/config/limits';
 import {
   buildIpRateLimitKey,
   buildUserRateLimitKey,
   checkRateLimit,
   type RateLimitResult,
-} from '@olshop/rate-limit';
+} from '@falka/rate-limit';
 
 import { AppError } from '@/lib/errors';
 

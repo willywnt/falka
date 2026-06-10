@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@olshop/config/limits';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@falka/config/limits';
 import { z } from 'zod';
 
 /** Page params for the orders list (newest first; tenant-scoped in the service). */

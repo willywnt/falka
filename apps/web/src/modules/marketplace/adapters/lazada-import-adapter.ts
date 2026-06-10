@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { getServerEnv } from '@olshop/config/env.server';
-import { createLazadaClient, isLazadaSuccess } from '@olshop/marketplace-providers';
-import type { LazadaClient } from '@olshop/marketplace-providers';
+import { getServerEnv } from '@falka/config/env.server';
+import { createLazadaClient, isLazadaSuccess } from '@falka/marketplace-providers';
+import type { LazadaClient } from '@falka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { MarketplaceError } from '../errors/marketplace-errors';

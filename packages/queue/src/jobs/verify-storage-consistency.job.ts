@@ -1,6 +1,6 @@
-import { prisma } from '@olshop/db';
-import { logger } from '@olshop/logger/server';
-import { getObjectStorageProvider } from '@olshop/storage';
+import { prisma } from '@falka/db';
+import { logger } from '@falka/logger/server';
+import { getObjectStorageProvider } from '@falka/storage';
 
 import type { JobResultMetadata } from '../types/index.js';
 import {

@@ -1,4 +1,4 @@
-import { getPlatformHealthSnapshot } from '@olshop/health';
+import { getPlatformHealthSnapshot } from '@falka/health';
 
 import { apiSuccess } from '@/lib/api-response';
 

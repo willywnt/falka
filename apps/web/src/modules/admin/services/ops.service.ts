@@ -1,10 +1,10 @@
 import 'server-only';
 
-import { STALE_RECORDING_SESSION_HOURS } from '@olshop/config/limits';
-import { prisma } from '@olshop/db';
-import { getMetricsSnapshot } from '@olshop/metrics';
-import { getFailedJobsSummary, getQueueObservabilitySnapshot } from '@olshop/queue';
-import { getObjectStorageProvider } from '@olshop/storage';
+import { STALE_RECORDING_SESSION_HOURS } from '@falka/config/limits';
+import { prisma } from '@falka/db';
+import { getMetricsSnapshot } from '@falka/metrics';
+import { getFailedJobsSummary, getQueueObservabilitySnapshot } from '@falka/queue';
+import { getObjectStorageProvider } from '@falka/storage';
 
 export async function getFailedUploadsReport(limit = 50) {
   // Computed per request — a module-level constant would freeze the cutoff at

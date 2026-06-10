@@ -1,6 +1,6 @@
 # Worker deployment guide
 
-Olshop background jobs run in a **persistent Node.js worker process** (`apps/worker`). They must **not** run inside Vercel serverless functions.
+Falka background jobs run in a **persistent Node.js worker process** (`apps/worker`). They must **not** run inside Vercel serverless functions.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ WORKER_ENABLE_SCHEDULERS=true
 
 ```
 
-`AUTH_SECRET` is still required by `@olshop/config/env.server` validation today.
+`AUTH_SECRET` is still required by `@falka/config/env.server` validation today.
 
 ## Local development
 
@@ -88,9 +88,9 @@ curl http://localhost:3001/health
 
 1. Create a **Worker** service from the monorepo root.
 
-2. **Build command:** `pnpm install --prod=false && pnpm --filter @olshop/worker build`
+2. **Build command:** `pnpm install --prod=false && pnpm --filter @falka/worker build`
 
-3. **Start command:** `pnpm --filter @olshop/worker start`
+3. **Start command:** `pnpm --filter @falka/worker start`
 
 4. Attach Redis plugin or set `REDIS_URL` to Upstash/Redis Cloud.
 
@@ -106,7 +106,7 @@ curl http://localhost:3001/health
 
 3. Build: same as Railway.
 
-4. Start: `pnpm --filter @olshop/worker start`
+4. Start: `pnpm --filter @falka/worker start`
 
 5. Add managed Redis or external `REDIS_URL`.
 
@@ -116,7 +116,7 @@ curl http://localhost:3001/health
 
 [Unit]
 
-Description=Olshop Worker
+Description=Falka Worker
 
 After=network.target
 
@@ -126,13 +126,13 @@ After=network.target
 
 Type=simple
 
-User=olshop
+User=falka
 
-WorkingDirectory=/opt/olshop
+WorkingDirectory=/opt/falka
 
-EnvironmentFile=/opt/olshop/.env
+EnvironmentFile=/opt/falka/.env
 
-ExecStart=/usr/bin/pnpm --filter @olshop/worker start
+ExecStart=/usr/bin/pnpm --filter @falka/worker start
 
 Restart=always
 
@@ -170,7 +170,7 @@ WantedBy=multi-user.target
 
 ## Future-ready queues (not implemented)
 
-The `@olshop/queue` package reserves architecture for:
+The `@falka/queue` package reserves architecture for:
 
 - Marketplace token refresh
 

@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/config",
+  "name": "@falka/config",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -39,8 +39,8 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "eslint": "^9.24.0",
     "typescript": "^5.8.3"
   }

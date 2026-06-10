@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { getWorkerHealthSnapshot } from '@olshop/queue';
-import { logger } from '@olshop/utils/logger';
+import { getWorkerHealthSnapshot } from '@falka/queue';
+import { logger } from '@falka/utils/logger';
 
 export function startHealthServer(port: number): ReturnType<typeof createServer> {
   const server = createServer(async (request: IncomingMessage, response: ServerResponse) => {

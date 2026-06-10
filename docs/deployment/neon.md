@@ -4,20 +4,20 @@
 
 Use **separate databases** for each environment:
 
-| Environment | Neon resource         | Connection                                             |
-| ----------- | --------------------- | ------------------------------------------------------ |
-| Local       | Docker Compose        | `postgresql://postgres:postgres@localhost:5432/olshop` |
-| Preview     | Neon branch or dev DB | Pooled URL in Vercel Preview env                       |
-| Production  | Neon main project     | Pooled URL in Vercel Production env                    |
+| Environment | Neon resource         | Connection                                            |
+| ----------- | --------------------- | ----------------------------------------------------- |
+| Local       | Docker Compose        | `postgresql://postgres:postgres@localhost:5432/falka` |
+| Preview     | Neon branch or dev DB | Pooled URL in Vercel Preview env                      |
+| Production  | Neon main project     | Pooled URL in Vercel Production env                   |
 
 ## Setup
 
 1. Create a [Neon](https://neon.tech) project
-2. Create database `olshop` (or use default)
+2. Create database `falka` (or use default)
 3. Copy the **pooled connection string** (recommended for Vercel serverless):
 
 ```
-postgresql://USER:PASSWORD@ep-xxx-pooler.region.aws.neon.tech/olshop?sslmode=require
+postgresql://USER:PASSWORD@ep-xxx-pooler.region.aws.neon.tech/falka?sslmode=require
 ```
 
 4. Set `DATABASE_URL` in Vercel Production environment variables
@@ -77,7 +77,7 @@ For long-running workers (future VPS/BullMQ), use the direct connection string.
 
 Schema: `packages/db/prisma/schema.prisma`
 
-The Prisma client singleton lives in `@olshop/db` and is shared across the monorepo.
+The Prisma client singleton lives in `@falka/db` and is shared across the monorepo.
 
 ## Backup
 

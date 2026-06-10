@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/node';
-import { isServerSentryEnabled } from '@olshop/config/sentry';
-import { sanitizeForLogging } from '@olshop/logger/sanitize';
+import { isServerSentryEnabled } from '@falka/config/sentry';
+import { sanitizeForLogging } from '@falka/logger/sanitize';
 
 export function initWorkerSentry(): void {
   if (!isServerSentryEnabled()) return;

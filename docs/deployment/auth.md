@@ -1,6 +1,6 @@
 # Auth.js Production Configuration
 
-Olshop uses **Auth.js v5** with JWT sessions and a Credentials provider.
+Falka uses **Auth.js v5** with JWT sessions and a Credentials provider.
 
 ## Required environment variables
 

@@ -42,7 +42,7 @@ import { OperationalStatusBadge } from './operational-status-badge';
 import { mapRecoveryUploadToOperational } from '../types/operational-recording-status';
 import { usePersistedToggle } from '../hooks/use-persisted-toggle';
 
-const PENDING_SECTION_STORAGE_KEY = 'olshop-pending-uploads-expanded';
+const PENDING_SECTION_STORAGE_KEY = 'falka-pending-uploads-expanded';
 
 type PendingUploadsSectionProps = {
   recordings: TemporaryRecording[];

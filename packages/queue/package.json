@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/queue",
+  "name": "@falka/queue",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,20 +16,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olshop/config": "workspace:*",
-    "@olshop/db": "workspace:*",
-    "@olshop/logger": "workspace:*",
-    "@olshop/marketplace-providers": "workspace:*",
-    "@olshop/metrics": "workspace:*",
-    "@olshop/storage": "workspace:*",
-    "@olshop/utils": "workspace:*",
+    "@falka/config": "workspace:*",
+    "@falka/db": "workspace:*",
+    "@falka/logger": "workspace:*",
+    "@falka/marketplace-providers": "workspace:*",
+    "@falka/metrics": "workspace:*",
+    "@falka/storage": "workspace:*",
+    "@falka/utils": "workspace:*",
     "bullmq": "^5.49.1",
     "ioredis": "^5.6.1",
     "zod": "^3.24.3"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "@types/node": "^22.14.1",
     "eslint": "^9.24.0",
     "typescript": "^5.8.3"

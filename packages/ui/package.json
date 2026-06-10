@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/ui",
+  "name": "@falka/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -24,8 +24,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.24.0",

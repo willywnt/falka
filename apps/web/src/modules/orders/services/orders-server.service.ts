@@ -5,8 +5,8 @@ import {
   prisma,
   type PaginatedResult,
   type TransactionClient,
-} from '@olshop/db';
-import { enqueuePropagateInventoryStock } from '@olshop/queue';
+} from '@falka/db';
+import { enqueuePropagateInventoryStock } from '@falka/queue';
 import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

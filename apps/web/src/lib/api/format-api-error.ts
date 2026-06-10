@@ -1,4 +1,4 @@
-import type { ApiError } from '@olshop/types';
+import type { ApiError } from '@falka/types';
 
 export function formatApiErrorMessage(error: ApiError): string {
   if (error.details && typeof error.details === 'object') {

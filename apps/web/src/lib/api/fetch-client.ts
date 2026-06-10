@@ -1,4 +1,4 @@
-import type { ApiError, ApiResponse } from '@olshop/types';
+import type { ApiError, ApiResponse } from '@falka/types';
 
 import { AppError, DomainError } from '@/lib/errors';
 

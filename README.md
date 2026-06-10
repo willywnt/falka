@@ -1,4 +1,4 @@
-# Olshop Monorepo
+# Falka Monorepo
 
 Production-ready Turborepo for a browser-based operational recording and marketplace integration SaaS platform.
 

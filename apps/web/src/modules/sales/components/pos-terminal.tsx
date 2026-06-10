@@ -46,7 +46,7 @@ import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sa
 import { usePosScanner, type PosScannerStatus } from '../hooks/use-pos-scanner';
 import type { ScannedSaleItem, SellableVariant } from '../types';
 
-const SCAN_SOUND_STORAGE_KEY = 'olshop-pos-scan-sound';
+const SCAN_SOUND_STORAGE_KEY = 'falka-pos-scan-sound';
 
 /** Per-state copy + accent for the POS phone-scanner indicator. */
 const SCAN_STATUS_META: Record<

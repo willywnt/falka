@@ -13,13 +13,16 @@ export default function RegisterPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Create account</CardTitle>
-        <CardDescription>Get started with Olshop</CardDescription>
+        <CardDescription>Get started with Falka</CardDescription>
       </CardHeader>
       <CardContent>
         <RegisterForm />
         <p className="text-muted-foreground mt-6 text-center text-sm">
           Already have an account?{' '}
-          <Link href="/login" className="text-foreground font-medium underline-offset-4 hover:underline">
+          <Link
+            href="/login"
+            className="text-foreground font-medium underline-offset-4 hover:underline"
+          >
             Sign in
           </Link>
         </p>

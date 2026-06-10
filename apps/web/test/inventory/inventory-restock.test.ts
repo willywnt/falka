@@ -21,8 +21,8 @@ const { txMock, warnMock } = vi.hoisted(() => ({
   warnMock: vi.fn(),
 }));
 
-vi.mock('@olshop/db', () => ({ prisma: {} }));
-vi.mock('@olshop/queue', () => ({ enqueuePropagateInventoryStock: vi.fn() }));
+vi.mock('@falka/db', () => ({ prisma: {} }));
+vi.mock('@falka/queue', () => ({ enqueuePropagateInventoryStock: vi.fn() }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: warnMock, error: vi.fn(), debug: vi.fn() },
 }));

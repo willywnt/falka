@@ -45,11 +45,7 @@ function tryStartWindowsPostgresService() {
     exit 0
   `;
 
-  const result = spawnSync(
-    'powershell',
-    ['-NoProfile', '-Command', script],
-    { stdio: 'inherit' },
-  );
+  const result = spawnSync('powershell', ['-NoProfile', '-Command', script], { stdio: 'inherit' });
 
   return result.status === 0;
 }
@@ -112,7 +108,7 @@ export async function ensureDatabase() {
   console.error('     pnpm db:migrate:dev');
   console.error('     pnpm db:seed\n');
   console.error('Example DATABASE_URL:');
-  console.error('  postgresql://postgres:YOUR_PASSWORD@localhost:5432/olshop\n');
+  console.error('  postgresql://postgres:YOUR_PASSWORD@localhost:5432/falka\n');
   process.exit(1);
 }
 

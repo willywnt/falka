@@ -1,12 +1,12 @@
 import type { Job } from 'bullmq';
-import { METRIC_KEYS, incrementMetric } from '@olshop/metrics';
+import { METRIC_KEYS, incrementMetric } from '@falka/metrics';
 import {
   extendCorrelationContext,
   logEvents,
   logger,
   runWithRequestId,
-} from '@olshop/logger/server';
-import { sanitizeForLogging } from '@olshop/logger/sanitize';
+} from '@falka/logger/server';
+import { sanitizeForLogging } from '@falka/logger/sanitize';
 
 import type { JobResultMetadata } from '../types/index.js';
 

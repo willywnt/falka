@@ -8,7 +8,7 @@ import {
   getDefaultRecalculateStoragePayload,
   JOB_NAMES,
   QUEUE_NAMES,
-} from '@olshop/queue';
+} from '@falka/queue';
 
 const dryRun = !process.argv.includes('--live');
 

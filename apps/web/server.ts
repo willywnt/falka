@@ -36,7 +36,7 @@ function createNodeServer(useHttps: boolean): HttpServerInstance {
     return createHttpServer();
   }
 
-  const cert = selfsigned.generate([{ name: 'commonName', value: 'olshop-local-dev' }], {
+  const cert = selfsigned.generate([{ name: 'commonName', value: 'falka-local-dev' }], {
     days: 365,
     keySize: 2048,
   });

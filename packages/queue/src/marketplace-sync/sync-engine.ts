@@ -1,6 +1,6 @@
-import { getServerEnv } from '@olshop/config/env.server';
-import { decrypt } from '@olshop/utils/crypto';
-import { logger } from '@olshop/utils/logger';
+import { getServerEnv } from '@falka/config/env.server';
+import { decrypt } from '@falka/utils/crypto';
+import { logger } from '@falka/utils/logger';
 
 import { getProviderRateLimiter } from './rate-limit.js';
 import { normalizeStockUpdateRequest } from './stock-normalizer.js';
@@ -87,7 +87,7 @@ export async function executeStockSync(
     });
 
     // Real provider adapters need the DECRYPTED token; stub adapters ignore it.
-    // Token-crypto is shared via @olshop/utils so the worker can open it here.
+    // Token-crypto is shared via @falka/utils so the worker can open it here.
     // Fall back to an empty token when decryption fails (e.g. seeded/stub
     // connections whose stored value isn't real ciphertext) — the Dev stub
     // ignores it, and a real adapter surfaces its own auth error instead of

@@ -23,7 +23,7 @@ export const SOCKET_PATH = '/api/socket';
  * Deliberately distinct from the session-cookie name so the socket handshake token
  * is decoupled from the cookie auth mechanism; mint and verify must share it.
  */
-export const SOCKET_AUTH_TOKEN_SALT = 'olshop.scanner-socket.v1';
+export const SOCKET_AUTH_TOKEN_SALT = 'falka.scanner-socket.v1';
 
 /** Lifetime of a handshake auth token (seconds). Refreshed on each (re)connect. */
 export const SOCKET_AUTH_TOKEN_TTL_SECONDS = 120;

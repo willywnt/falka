@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/utils",
+  "name": "@falka/utils",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -32,12 +32,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olshop/logger": "workspace:*",
+    "@falka/logger": "workspace:*",
     "pino": "^9.6.0"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "eslint": "^9.24.0",
     "typescript": "^5.8.3"
   }

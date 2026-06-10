@@ -1,14 +1,14 @@
 import 'server-only';
 
-import { getRequestId, logger } from '@olshop/logger/server';
-import { sanitizeError } from '@olshop/logger/sanitize';
-import type { ApiError } from '@olshop/types';
+import { getRequestId, logger } from '@falka/logger/server';
+import { sanitizeError } from '@falka/logger/sanitize';
+import type { ApiError } from '@falka/types';
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 import { DomainError } from '@/lib/errors';
 
-import { REQUEST_ID_HEADER } from '@olshop/logger';
+import { REQUEST_ID_HEADER } from '@falka/logger';
 
 function attachRequestId(response: NextResponse, requestId?: string): NextResponse {
   if (requestId) {

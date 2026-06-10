@@ -14,7 +14,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your Olshop account</CardDescription>
+        <CardDescription>Sign in to your Falka account</CardDescription>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<p className="text-muted-foreground text-sm">Loading…</p>}>

@@ -8,8 +8,8 @@ import { MobileScannerView } from '@/modules/scanner-pairing/components/mobile-s
 import { pairingCodeSchema, pairingIdSchema } from '@/modules/scanner-pairing/validators/pairing';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 
-const PAIRING_STORAGE_KEY = 'olshop-mobile-pairing-id';
-const PAIRING_CODE_STORAGE_KEY = 'olshop-mobile-pairing-code';
+const PAIRING_STORAGE_KEY = 'falka-mobile-pairing-id';
+const PAIRING_CODE_STORAGE_KEY = 'falka-mobile-pairing-code';
 
 function parseCodeParam(raw: string): string {
   try {

@@ -14,7 +14,7 @@ let staleLockClearedOnInit = false;
 function getTabId(): string {
   if (typeof window === 'undefined') return 'server';
 
-  const key = 'olshop-recording-tab-id';
+  const key = 'falka-recording-tab-id';
   const existing = sessionStorage.getItem(key);
 
   if (existing) return existing;

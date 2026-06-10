@@ -1,4 +1,4 @@
-import type { UserRole } from '@olshop/types';
+import type { UserRole } from '@falka/types';
 
 export interface UserListItem {
   id: string;

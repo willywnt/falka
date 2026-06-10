@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { getServerEnv } from '@olshop/config/env.server';
-import { decrypt, encrypt } from '@olshop/utils/crypto';
+import { getServerEnv } from '@falka/config/env.server';
+import { decrypt, encrypt } from '@falka/utils/crypto';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
 

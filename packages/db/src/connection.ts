@@ -1,4 +1,4 @@
-import { getServerEnv } from '@olshop/config/env.server';
+import { getServerEnv } from '@falka/config/env.server';
 
 import { prisma } from './client.js';
 

@@ -41,48 +41,48 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1054.0
         version: 3.1054.0
+      '@falka/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@falka/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@falka/health':
+        specifier: workspace:*
+        version: link:../../packages/health
+      '@falka/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@falka/marketplace-providers':
+        specifier: workspace:*
+        version: link:../../packages/marketplace-providers
+      '@falka/metrics':
+        specifier: workspace:*
+        version: link:../../packages/metrics
+      '@falka/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      '@falka/rate-limit':
+        specifier: workspace:*
+        version: link:../../packages/rate-limit
+      '@falka/redis':
+        specifier: workspace:*
+        version: link:../../packages/redis
+      '@falka/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@falka/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@falka/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@fontsource-variable/plus-jakarta-sans':
         specifier: ^5.2.8
         version: 5.2.8
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.76.1(react@19.2.6))
-      '@olshop/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@olshop/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@olshop/health':
-        specifier: workspace:*
-        version: link:../../packages/health
-      '@olshop/logger':
-        specifier: workspace:*
-        version: link:../../packages/logger
-      '@olshop/marketplace-providers':
-        specifier: workspace:*
-        version: link:../../packages/marketplace-providers
-      '@olshop/metrics':
-        specifier: workspace:*
-        version: link:../../packages/metrics
-      '@olshop/queue':
-        specifier: workspace:*
-        version: link:../../packages/queue
-      '@olshop/rate-limit':
-        specifier: workspace:*
-        version: link:../../packages/rate-limit
-      '@olshop/redis':
-        specifier: workspace:*
-        version: link:../../packages/redis
-      '@olshop/storage':
-        specifier: workspace:*
-        version: link:../../packages/storage
-      '@olshop/types':
-        specifier: workspace:*
-        version: link:../../packages/types
-      '@olshop/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -192,10 +192,10 @@ importers:
         specifier: ^5.0.3
         version: 5.0.13(@types/react@19.2.15)(immer@11.1.8)(react@19.2.6)(use-sync-external-store@1.6.0(react@19.2.6))
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@tailwindcss/postcss':
@@ -237,19 +237,19 @@ importers:
 
   apps/worker:
     dependencies:
-      '@olshop/config':
+      '@falka/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@olshop/db':
+      '@falka/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@olshop/logger':
+      '@falka/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@olshop/queue':
+      '@falka/queue':
         specifier: workspace:*
         version: link:../../packages/queue
-      '@olshop/utils':
+      '@falka/utils':
         specifier: workspace:*
         version: link:../../packages/utils
       '@sentry/node':
@@ -259,10 +259,10 @@ importers:
         specifier: ^16.5.0
         version: 16.6.1
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@types/node':
@@ -284,10 +284,10 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -299,7 +299,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@olshop/config':
+      '@falka/config':
         specifier: workspace:*
         version: link:../config
       '@prisma/client':
@@ -312,10 +312,10 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       argon2:
@@ -372,20 +372,20 @@ importers:
 
   packages/health:
     dependencies:
-      '@olshop/db':
+      '@falka/db':
         specifier: workspace:*
         version: link:../db
-      '@olshop/storage':
+      '@falka/storage':
         specifier: workspace:*
         version: link:../storage
       ioredis:
         specifier: ^5.6.1
         version: 5.11.0
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -401,10 +401,10 @@ importers:
         specifier: ^9.6.0
         version: 9.14.0
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -419,10 +419,10 @@ importers:
 
   packages/marketplace-providers:
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -437,14 +437,14 @@ importers:
 
   packages/metrics:
     dependencies:
-      '@olshop/redis':
+      '@falka/redis':
         specifier: workspace:*
         version: link:../redis
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -456,25 +456,25 @@ importers:
 
   packages/queue:
     dependencies:
-      '@olshop/config':
+      '@falka/config':
         specifier: workspace:*
         version: link:../config
-      '@olshop/db':
+      '@falka/db':
         specifier: workspace:*
         version: link:../db
-      '@olshop/logger':
+      '@falka/logger':
         specifier: workspace:*
         version: link:../logger
-      '@olshop/marketplace-providers':
+      '@falka/marketplace-providers':
         specifier: workspace:*
         version: link:../marketplace-providers
-      '@olshop/metrics':
+      '@falka/metrics':
         specifier: workspace:*
         version: link:../metrics
-      '@olshop/storage':
+      '@falka/storage':
         specifier: workspace:*
         version: link:../storage
-      '@olshop/utils':
+      '@falka/utils':
         specifier: workspace:*
         version: link:../utils
       bullmq:
@@ -487,10 +487,10 @@ importers:
         specifier: ^3.24.3
         version: 3.25.76
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -505,17 +505,17 @@ importers:
 
   packages/rate-limit:
     dependencies:
-      '@olshop/config':
+      '@falka/config':
         specifier: workspace:*
         version: link:../config
-      '@olshop/redis':
+      '@falka/redis':
         specifier: workspace:*
         version: link:../redis
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -534,10 +534,10 @@ importers:
         specifier: ^5.6.1
         version: 5.11.0
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
@@ -555,17 +555,17 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.787.0
         version: 3.1054.0
-      '@olshop/config':
+      '@falka/config':
         specifier: workspace:*
         version: link:../config
-      '@olshop/utils':
+      '@falka/utils':
         specifier: workspace:*
         version: link:../utils
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -577,10 +577,10 @@ importers:
 
   packages/types:
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:
@@ -594,10 +594,10 @@ importers:
 
   packages/ui:
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       '@types/react':
@@ -621,17 +621,17 @@ importers:
 
   packages/utils:
     dependencies:
-      '@olshop/logger':
+      '@falka/logger':
         specifier: workspace:*
         version: link:../logger
       pino:
         specifier: ^9.6.0
         version: 9.14.0
     devDependencies:
-      '@olshop/eslint-config':
+      '@falka/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@olshop/typescript-config':
+      '@falka/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
       eslint:

@@ -1,6 +1,6 @@
 # Onboarding
 
-Get Olshop running locally in under 10 minutes.
+Get Falka running locally in under 10 minutes.
 
 ## Prerequisites
 
@@ -17,8 +17,8 @@ Optional: [Make](https://gnuwin32.sourceforge.net/packages/make.htm) for `make s
 
 ```bash
 # 1. Clone and install
-git clone <repo-url> olshop
-cd olshop
+git clone <repo-url> falka
+cd falka
 pnpm install
 
 # 2. Environment files
@@ -41,10 +41,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Default seed accounts (after `pnpm db:seed`):
 
-| Email                | Password    |
-| -------------------- | ----------- |
-| `admin@olshop.local` | `Admin123!` |
-| `demo@olshop.local`  | `Demo123!`  |
+| Email               | Password    |
+| ------------------- | ----------- |
+| `admin@falka.local` | `Admin123!` |
+| `demo@falka.local`  | `Demo123!`  |
 
 ## Daily workflow
 
@@ -96,7 +96,7 @@ See [deployment/r2.md](./deployment/r2.md) for production setup.
 **Next.js 500 / stale cache**
 
 ```bash
-pnpm --filter @olshop/web clean
+pnpm --filter @falka/web clean
 pnpm dev
 ```
 

@@ -1,4 +1,4 @@
-import { ALLOWED_UPLOAD_MIME_TYPES } from '@olshop/config/limits';
+import { ALLOWED_UPLOAD_MIME_TYPES } from '@falka/config/limits';
 
 export const ALLOWED_MIME_TYPES = ALLOWED_UPLOAD_MIME_TYPES;
 

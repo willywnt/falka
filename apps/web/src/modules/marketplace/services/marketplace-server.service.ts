@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@olshop/db';
+import { prisma } from '@falka/db';
 import type { MarketplaceProvider, MarketplaceConnection } from '@prisma/client';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
@@ -54,7 +54,10 @@ export class MarketplaceServerService {
     return connections.map(mapConnection);
   }
 
-  async getConnectionById(userId: string, connectionId: string): Promise<MarketplaceConnectionDetail> {
+  async getConnectionById(
+    userId: string,
+    connectionId: string,
+  ): Promise<MarketplaceConnectionDetail> {
     const connection = await this.getOwnedConnection(connectionId, userId);
     return mapConnection(connection);
   }
@@ -141,7 +144,10 @@ export class MarketplaceServerService {
     return mapConnection(connection);
   }
 
-  async disconnectConnection(userId: string, connectionId: string): Promise<MarketplaceConnectionDetail> {
+  async disconnectConnection(
+    userId: string,
+    connectionId: string,
+  ): Promise<MarketplaceConnectionDetail> {
     const connection = await this.getOwnedConnection(connectionId, userId);
 
     if (!connection.isActive) {

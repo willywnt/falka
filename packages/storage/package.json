@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/storage",
+  "name": "@falka/storage",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,12 +17,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.787.0",
-    "@olshop/config": "workspace:*",
-    "@olshop/utils": "workspace:*"
+    "@falka/config": "workspace:*",
+    "@falka/utils": "workspace:*"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "eslint": "^9.24.0",
     "typescript": "^5.8.3"
   }

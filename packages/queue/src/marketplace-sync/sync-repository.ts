@@ -1,4 +1,4 @@
-import { prisma } from '@olshop/db';
+import { prisma } from '@falka/db';
 import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 export type SyncReadyMapping = {

@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@olshop/config/limits';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@falka/config/limits';
 import { z } from 'zod';
 
 /** Decimal(12,2) caps the storable money value just under 10^10. */

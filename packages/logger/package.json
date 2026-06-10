@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/logger",
+  "name": "@falka/logger",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -35,8 +35,8 @@
     "pino": "^9.6.0"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "eslint": "^9.24.0",
     "pino-pretty": "^13.0.0",
     "typescript": "^5.8.3"

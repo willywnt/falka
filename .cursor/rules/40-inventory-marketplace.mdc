@@ -159,7 +159,7 @@ throw so BullMQ retries.
   old rows keep stale URLs → re-upload.
 - **BullMQ custom jobId CANNOT contain `:`** → job-id builders use `-` (DB idempotency keys keep `:`).
 - A real provider adapter needs the **DECRYPTED token** → lift marketplace token-crypto into a
-  shared `@olshop/*` package (the engine passes the encrypted token; stubs ignore it).
+  shared `@falka/*` package (the engine passes the encrypted token; stubs ignore it).
 - A running dev server (`tsx watch server.ts`) holds the Prisma query-engine DLL on Windows →
   `prisma generate` fails `EPERM`. Stop it before generate/migrate; restart after. BUT an
   index-only / no-client-change migration can run with `prisma migrate dev --skip-generate`
@@ -214,7 +214,7 @@ return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed
 per-supplier lead time), auto **cost update** on receive (moving-average → profit reporting), PO
 edit/DRAFT, supplier invoice (faktur) printing, landed cost; **POS**: VOID/refund a sale, printable
 receipt/nota, per-sale discount/tax; reorder velocity is a simple EWMA (could add seasonality); real
-provider adapters need the decrypted token → lift token-crypto to `@olshop/*`; queue package has no
+provider adapters need the decrypted token → lift token-crypto to `@falka/*`; queue package has no
 vitest (engine is gate-checked only).
 
 > Done this round (was deferred): `cost` + lead-time/MOQ on variants; reorder intelligence;

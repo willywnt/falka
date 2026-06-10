@@ -1,4 +1,4 @@
-import { ALLOWED_UPLOAD_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES } from '@olshop/config/limits';
+import { ALLOWED_UPLOAD_EXTENSIONS, MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
 import { z } from 'zod';
 
 import { detectDangerousFilename, validateUploadFilename } from '../utils/file-validation';

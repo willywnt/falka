@@ -1,7 +1,7 @@
-import { prisma } from '@olshop/db';
-import { RECORDING_RETENTION_DAYS } from '@olshop/config/limits';
+import { prisma } from '@falka/db';
+import { RECORDING_RETENTION_DAYS } from '@falka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider } from '@olshop/storage';
+import { getObjectStorageProvider } from '@falka/storage';
 
 import {
   cleanupRecordingsJobSchema,

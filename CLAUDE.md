@@ -1,4 +1,4 @@
-# Olshop — Project Rules (read fully every session)
+# Falka — Project Rules (read fully every session)
 
 Modular-monolith, pnpm@9 + Turborepo, Node ≥20. Edit code to match surrounding
 style. These rules are derived from the actual refactored code — keep them true.
@@ -9,7 +9,7 @@ style. These rules are derived from the actual refactored code — keep them tru
   `apps/web/server.ts` (run via `tsx watch server.ts`) attaches Socket.IO.
   Prod build = `next build` (Vercel) — **the custom server is NOT run on Vercel**.
 - **apps/worker** — BullMQ background jobs.
-- **packages/** = shared `@olshop/*`: `db` (Prisma+schema), `config` (env+limits),
+- **packages/** = shared `@falka/*`: `db` (Prisma+schema), `config` (env+limits),
   `logger`, `types`, `utils`, `metrics`, `health`, `queue`, `storage`, `rate-limit`,
   `redis`, `ui`, `eslint-config`, `typescript-config`.
 - Server state → **TanStack Query v5**. UI state → **Zustand v5**.
@@ -35,12 +35,12 @@ Modules: `admin audit auth catalog inventory marketplace orders purchasing recor
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
   another module's deep internals.
-- Cross-cutting/shared logic lives in `@olshop/*` packages or `apps/web/src/lib` —
+- Cross-cutting/shared logic lives in `@falka/*` packages or `apps/web/src/lib` —
   never duplicated per module.
 - A submodule (e.g. `recordings/recovery/`, has its own `index.ts`) is internal to
   its parent domain; outside code goes through the parent.
 - **CONFLICT RULE: preserve the boundary over removing duplication.** If dedup would
-  force a boundary-breaking cross-import, keep the duplication (or lift to `@olshop/*`)
+  force a boundary-breaking cross-import, keep the duplication (or lift to `@falka/*`)
   and flag it as a separate suggestion.
 
 ## 4. Folder & naming per module (real structure)
@@ -63,7 +63,7 @@ Files kebab-case. **Shared non-module:** `src/lib` (api infra, errors, logger, e
 | **Hooks** `hooks/`                      | useQuery/useMutation, query keys, invalidation, call fetch-client                           | business rules, Prisma              |
 | **Route Handler** `app/api/**/route.ts` | `withApiRoute`, Zod-parse input, call ONE service, return `apiSuccess`/`apiValidationError` | business logic, Prisma, manual auth |
 | **Service** `services/*.service.ts`     | business logic, throw module errors                                                         | import `next/server`, touch HTTP    |
-| **Repository / data**                   | Prisma queries (`@olshop/db`)                                                               | leak Prisma types past the module   |
+| **Repository / data**                   | Prisma queries (`@falka/db`)                                                                | leak Prisma types past the module   |
 | **Validators** `validators/`            | Zod schema = single input source; `z.infer` types                                           | —                                   |
 
 Prisma belongs in the data layer — a `repository` where one exists (scanner-pairing),
@@ -125,7 +125,7 @@ if (!result.success) throw new Error(formatApiErrorMessage(result.error));
 // onSuccess: queryClient.invalidateQueries({ queryKey: recordingKeys.active })
 ```
 
-**Logging:** `appLogger`/`logger` from `@olshop/logger`; structured `('event.name', { ctx })`.
+**Logging:** `appLogger`/`logger` from `@falka/logger`; structured `('event.name', { ctx })`.
 Never `console.log`; never log secrets (errors go through `sanitizeError`).
 
 **R2 presigned upload:** client → `POST /api/v1/uploads/presign` →

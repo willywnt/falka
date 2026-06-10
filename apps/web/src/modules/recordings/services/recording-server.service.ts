@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { buildPaginatedResult, prisma } from '@olshop/db';
-import { getServerEnv } from '@olshop/config/env.server';
-import { ALLOWED_UPLOAD_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } from '@olshop/config/limits';
-import { generateId } from '@olshop/utils/crypto';
+import { buildPaginatedResult, prisma } from '@falka/db';
+import { getServerEnv } from '@falka/config/env.server';
+import { ALLOWED_UPLOAD_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
+import { generateId } from '@falka/utils/crypto';
 import { RecordingStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 

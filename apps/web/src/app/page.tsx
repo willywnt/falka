@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { APP_NAME } from '@olshop/config/constants';
+import { APP_NAME } from '@falka/config/constants';
 import {
   ArrowRight,
   Boxes,

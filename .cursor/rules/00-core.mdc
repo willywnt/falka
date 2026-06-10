@@ -3,10 +3,10 @@ description: Core architecture, structure, state, quality gate, hard constraints
 alwaysApply: true
 ---
 
-# Olshop core rules (see CLAUDE.md for full detail + code examples)
+# Falka core rules (see CLAUDE.md for full detail + code examples)
 
 Modular-monolith: pnpm@9 + Turborepo, Node ≥20. apps/web (Next.js 15 App Router,
-React 19, custom server.ts for Socket.IO), apps/worker (BullMQ), packages/* = `@olshop/*`.
+React 19, custom server.ts for Socket.IO), apps/worker (BullMQ), packages/* = `@falka/*`.
 
 ## TypeScript (packages/typescript-config/base.json)
 strict · moduleResolution bundler · ESNext · ES2022 · isolatedModules ·
@@ -18,7 +18,7 @@ noUncheckedIndexedAccess · noImplicitOverride · verbatimModuleSyntax. Alias `@
 admin · audit · auth · marketplace · recordings · scanner-pairing · storage · users.
 - Cross-module talk ONLY via the other module's `services/`/`hooks/`/`validators/`/`types/`.
   Never import another module's deep internals.
-- Shared logic → `@olshop/*` or `apps/web/src/lib`, never duplicated per module.
+- Shared logic → `@falka/*` or `apps/web/src/lib`, never duplicated per module.
 - CONFLICT RULE: **preserve boundary over removing duplication** (then flag the dup).
 
 ## Folders per module

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { APP_NAME } from '@olshop/config/constants';
+import { APP_NAME } from '@falka/config/constants';
 import { PackageCheck, ShieldAlert } from 'lucide-react';
 
 import { recordingShareService } from '@/modules/recordings/services/recording-share.service';

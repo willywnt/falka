@@ -1,4 +1,4 @@
-import { generateId } from '@olshop/utils/crypto';
+import { generateId } from '@falka/utils/crypto';
 
 /**
  * Generates a unique recording filename.

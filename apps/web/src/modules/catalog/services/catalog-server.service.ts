@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { buildPaginatedResult, notDeleted, prisma, type PaginatedResult } from '@olshop/db';
+import { buildPaginatedResult, notDeleted, prisma, type PaginatedResult } from '@falka/db';
 import { Prisma, type Inventory, type Product, type ProductVariant } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

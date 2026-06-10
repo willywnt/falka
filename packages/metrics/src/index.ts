@@ -1,4 +1,4 @@
-import { closeOptionalRedis, withOptionalRedis } from '@olshop/redis';
+import { closeOptionalRedis, withOptionalRedis } from '@falka/redis';
 
 export const METRIC_KEYS = {
   UPLOADS_TOTAL: 'metrics:uploads:total',

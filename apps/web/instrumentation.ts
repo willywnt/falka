@@ -1,8 +1,8 @@
-import { isServerSentryEnabled } from '@olshop/config/sentry';
+import { isServerSentryEnabled } from '@falka/config/sentry';
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { validateServerEnvOnStartup } = await import('@olshop/config/env.server');
+    const { validateServerEnvOnStartup } = await import('@falka/config/env.server');
     validateServerEnvOnStartup();
 
     if (isServerSentryEnabled()) {

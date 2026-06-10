@@ -1,8 +1,8 @@
 import * as Sentry from '@sentry/nextjs';
 
-import { sanitizeForLogging } from '@olshop/logger/sanitize';
+import { sanitizeForLogging } from '@falka/logger/sanitize';
 
-import { isClientSentryEnabled } from '@olshop/config/sentry';
+import { isClientSentryEnabled } from '@falka/config/sentry';
 
 if (isClientSentryEnabled()) {
   Sentry.init({

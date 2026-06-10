@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE } from '@olshop/config/limits';
+import { DEFAULT_PAGE_SIZE } from '@falka/config/limits';
 
 import type { ListRecordingsQuery } from '../validators/list-recordings';
 import { listRecordingsQuerySchema } from '../validators/list-recordings';

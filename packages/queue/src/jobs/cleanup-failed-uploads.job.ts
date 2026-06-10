@@ -1,7 +1,7 @@
-import { prisma } from '@olshop/db';
-import { FAILED_UPLOAD_RETENTION_DAYS, STALE_RECORDING_SESSION_HOURS } from '@olshop/config/limits';
+import { prisma } from '@falka/db';
+import { FAILED_UPLOAD_RETENTION_DAYS, STALE_RECORDING_SESSION_HOURS } from '@falka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider } from '@olshop/storage';
+import { getObjectStorageProvider } from '@falka/storage';
 
 import {
   cleanupFailedUploadsJobSchema,

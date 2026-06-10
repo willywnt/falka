@@ -1,7 +1,7 @@
 import {
   getDefaultRecalculateStoragePayload,
   processRecalculateStorageJob,
-} from '@olshop/queue';
+} from '@falka/queue';
 
 const dryRun = process.argv.includes('--dry-run');
 const userIdArg = process.argv.find((arg) => arg.startsWith('--user='));

@@ -1,6 +1,6 @@
-import { getServerEnv } from '@olshop/config/env.server';
-import { createLazadaClient, isLazadaSuccess } from '@olshop/marketplace-providers';
-import type { LazadaClient, LazadaResponse } from '@olshop/marketplace-providers';
+import { getServerEnv } from '@falka/config/env.server';
+import { createLazadaClient, isLazadaSuccess } from '@falka/marketplace-providers';
+import type { LazadaClient, LazadaResponse } from '@falka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import type { NormalizedStockUpdateResponse } from '../stock-normalizer.js';

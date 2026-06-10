@@ -1,5 +1,5 @@
-import { prisma } from '@olshop/db';
-import { AUDIT_LOG_RETENTION_DAYS } from '@olshop/config/limits';
+import { prisma } from '@falka/db';
+import { AUDIT_LOG_RETENTION_DAYS } from '@falka/config/limits';
 
 import {
   cleanupAuditLogsJobSchema,

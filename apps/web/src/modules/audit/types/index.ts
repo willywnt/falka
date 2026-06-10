@@ -1,5 +1,5 @@
-import { DEFAULT_PAGE_SIZE } from '@olshop/config/limits';
-import type { AuditAction } from '@olshop/types';
+import { DEFAULT_PAGE_SIZE } from '@falka/config/limits';
+import type { AuditAction } from '@falka/types';
 
 export interface AuditLogListItem {
   id: string;

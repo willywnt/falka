@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_SIZE_BYTES } from '@olshop/config/limits';
+import { MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
 import { z } from 'zod';
 
 import { webmMimeTypeSchema } from '@/modules/storage/validators/mime-type';
@@ -19,7 +19,11 @@ export const saveRecordingMetadataSchema = z.object({
     .int()
     .positive()
     .max(MAX_UPLOAD_SIZE_BYTES, 'File exceeds the 500 MB upload limit'),
-  durationSeconds: z.number().int().nonnegative().max(30 * 60),
+  durationSeconds: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(30 * 60),
   mimeType: webmMimeTypeSchema,
 });
 

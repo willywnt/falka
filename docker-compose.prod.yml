@@ -18,10 +18,10 @@ x-app: &app
     args:
       # NEXT_PUBLIC_* must be present at BUILD time (inlined into the client bundle).
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Olshop}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Falka}
       NEXT_PUBLIC_ENABLE_MOBILE_SCANNER: ${NEXT_PUBLIC_ENABLE_MOBILE_SCANNER:-true}
       DATABASE_URL: ${DATABASE_URL}
-  image: olshop-app:latest
+  image: falka-app:latest
   env_file: [.env.production]
   restart: unless-stopped
 
@@ -30,7 +30,7 @@ services:
   migrate:
     <<: *app
     restart: 'no'
-    command: ['pnpm', '--filter', '@olshop/db', 'db:migrate:deploy']
+    command: ['pnpm', '--filter', '@falka/db', 'db:migrate:deploy']
     depends_on:
       postgres: { condition: service_healthy }
 
@@ -47,7 +47,7 @@ services:
 
   worker:
     <<: *app
-    command: ['pnpm', '--filter', '@olshop/worker', 'start']
+    command: ['pnpm', '--filter', '@falka/worker', 'start']
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

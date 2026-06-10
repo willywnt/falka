@@ -27,14 +27,14 @@ function shouldUsePrettyLogs(): boolean {
 
 function createPinoInstance(options: CreateLoggerOptions = {}): PinoLogger {
   const base = {
-    service: 'olshop',
+    service: 'falka',
     env: process.env.NODE_ENV ?? 'development',
     ...(options.component ? { component: options.component } : {}),
   };
 
   if (shouldUsePrettyLogs()) {
     return pino({
-      name: options.name ?? 'olshop',
+      name: options.name ?? 'falka',
       level: resolveLogLevel(),
       base,
       timestamp: pino.stdTimeFunctions.isoTime,
@@ -50,7 +50,7 @@ function createPinoInstance(options: CreateLoggerOptions = {}): PinoLogger {
   }
 
   return pino({
-    name: options.name ?? 'olshop',
+    name: options.name ?? 'falka',
     level: resolveLogLevel(),
     base,
     timestamp: pino.stdTimeFunctions.isoTime,

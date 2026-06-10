@@ -1,5 +1,5 @@
-import { getServerEnv } from '@olshop/config/env.server';
-import { logger } from '@olshop/utils/logger';
+import { getServerEnv } from '@falka/config/env.server';
+import { logger } from '@falka/utils/logger';
 
 import { LazadaStockProvider } from './providers/lazada-stock-provider.js';
 import { registerMarketplaceStockProvider } from './stock-provider.registry.js';

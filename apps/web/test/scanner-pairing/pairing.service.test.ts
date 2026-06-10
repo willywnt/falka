@@ -27,7 +27,7 @@ const { repoMock } = vi.hoisted(() => ({
 vi.mock('@/modules/scanner-pairing/repositories/pairing.repository', () => ({
   pairingRepository: repoMock,
 }));
-vi.mock('@olshop/logger/server', () => ({
+vi.mock('@falka/logger/server', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }));
 

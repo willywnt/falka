@@ -5,7 +5,7 @@ import type {
   Prisma,
   UserRole,
 } from '@prisma/client';
-import { prisma } from '@olshop/db';
+import { prisma } from '@falka/db';
 
 export type PairingSessionUser = {
   id: string;

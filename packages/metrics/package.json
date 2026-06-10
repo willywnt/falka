@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/metrics",
+  "name": "@falka/metrics",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,11 +16,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olshop/redis": "workspace:*"
+    "@falka/redis": "workspace:*"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "eslint": "^9.24.0",
     "typescript": "^5.8.3"
   }

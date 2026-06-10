@@ -1,3 +1,3 @@
 import 'server-only';
 
-export { getServerEnv } from '@olshop/config/env.server';
+export { getServerEnv } from '@falka/config/env.server';

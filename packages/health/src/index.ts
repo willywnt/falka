@@ -1,5 +1,5 @@
-import { healthCheckDb } from '@olshop/db';
-import { getObjectStorageProvider } from '@olshop/storage';
+import { healthCheckDb } from '@falka/db';
+import { getObjectStorageProvider } from '@falka/storage';
 
 export type DependencyStatus = 'ok' | 'degraded' | 'unavailable' | 'skipped';
 

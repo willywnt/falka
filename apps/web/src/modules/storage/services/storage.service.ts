@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { MAX_UPLOAD_SIZE_BYTES } from '@olshop/config/limits';
+import { MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
 
 import { StorageError } from '../errors/storage-errors';
 import { appLogger } from '@/lib/logger';

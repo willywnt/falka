@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { prisma, type TransactionClient } from '@olshop/db';
-import { enqueuePropagateInventoryStock } from '@olshop/queue';
+import { prisma, type TransactionClient } from '@falka/db';
+import { enqueuePropagateInventoryStock } from '@falka/queue';
 import type { Inventory, StockLedger } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

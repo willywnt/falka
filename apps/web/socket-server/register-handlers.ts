@@ -1,5 +1,5 @@
 import type { Server, Socket } from 'socket.io';
-import { createLogger } from '@olshop/logger/server';
+import { createLogger } from '@falka/logger/server';
 
 import { resolveAuthToken } from './resolve-auth-token';
 import { verifyScannerSocketToken } from './socket-auth-token';

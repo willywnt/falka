@@ -7,12 +7,12 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { getServerEnv } from '@olshop/config/env.server';
+import { getServerEnv } from '@falka/config/env.server';
 import {
   PRESIGNED_ACCESS_EXPIRY_SECONDS,
   PRESIGNED_UPLOAD_EXPIRY_SECONDS,
-} from '@olshop/config/limits';
-import { buildPublicUrl } from '@olshop/utils/storage';
+} from '@falka/config/limits';
+import { buildPublicUrl } from '@falka/utils/storage';
 
 import { StorageError } from '../errors/storage-errors';
 import type {

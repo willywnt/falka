@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@olshop/config/limits';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@falka/config/limits';
 import { z } from 'zod';
 
 export const RECORDING_STATUS_FILTERS = [
@@ -11,18 +11,18 @@ export const RECORDING_STATUS_FILTERS = [
 
 export type RecordingStatusFilter = (typeof RECORDING_STATUS_FILTERS)[number];
 
-export const RECORDING_SORT_FIELDS = ['createdAt', 'durationSeconds', 'fileSizeBytes', 'noResi'] as const;
+export const RECORDING_SORT_FIELDS = [
+  'createdAt',
+  'durationSeconds',
+  'fileSizeBytes',
+  'noResi',
+] as const;
 
 export type RecordingSortField = (typeof RECORDING_SORT_FIELDS)[number];
 
 export const listRecordingsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(MAX_PAGE_SIZE)
-    .default(DEFAULT_PAGE_SIZE),
+  pageSize: z.coerce.number().int().positive().max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
   search: z.string().trim().max(100).optional(),
   status: z.enum(RECORDING_STATUS_FILTERS).default('ALL'),
   sortBy: z.enum(RECORDING_SORT_FIELDS).default('createdAt'),

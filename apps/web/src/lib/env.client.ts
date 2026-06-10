@@ -1,1 +1,1 @@
-export { getClientEnv } from '@olshop/config/env.client';
+export { getClientEnv } from '@falka/config/env.client';

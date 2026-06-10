@@ -1,5 +1,5 @@
 {
-  "name": "@olshop/worker",
+  "name": "@falka/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,22 +7,22 @@
     "build": "tsc",
     "dev": "node scripts/with-env.mjs tsx watch src/index.ts",
     "start": "node scripts/with-env.mjs node dist/index.js",
-    "enqueue": "pnpm --filter @olshop/queue build && node scripts/with-env.mjs node scripts/enqueue-test.mjs",
+    "enqueue": "pnpm --filter @falka/queue build && node scripts/with-env.mjs node scripts/enqueue-test.mjs",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olshop/config": "workspace:*",
-    "@olshop/db": "workspace:*",
-    "@olshop/logger": "workspace:*",
-    "@olshop/queue": "workspace:*",
-    "@olshop/utils": "workspace:*",
+    "@falka/config": "workspace:*",
+    "@falka/db": "workspace:*",
+    "@falka/logger": "workspace:*",
+    "@falka/queue": "workspace:*",
+    "@falka/utils": "workspace:*",
     "@sentry/node": "^9.30.0",
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
-    "@olshop/eslint-config": "workspace:*",
-    "@olshop/typescript-config": "workspace:*",
+    "@falka/eslint-config": "workspace:*",
+    "@falka/typescript-config": "workspace:*",
     "@types/node": "^22.14.1",
     "eslint": "^9.24.0",
     "tsx": "^4.19.4",

@@ -1,12 +1,12 @@
 import 'server-only';
 
-import { logEvents } from '@olshop/logger/server';
+import { logEvents } from '@falka/logger/server';
 import {
   buildIpRateLimitKey,
   buildUserRateLimitKey,
   getRateLimitStatus,
   incrementRateLimitCounter,
-} from '@olshop/rate-limit';
+} from '@falka/rate-limit';
 
 const FAILED_LOGIN_WINDOW_SECONDS = 15 * 60;
 const FAILED_LOGIN_ALERT_THRESHOLD = 5;

@@ -1,4 +1,4 @@
-import { signLazadaRequest } from '@olshop/marketplace-providers';
+import { signLazadaRequest } from '@falka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

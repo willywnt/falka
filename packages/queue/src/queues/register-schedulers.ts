@@ -1,4 +1,4 @@
-import { logger } from '@olshop/utils/logger';
+import { logger } from '@falka/utils/logger';
 
 import { createQueue } from '../queues/create-queue.js';
 import { buildScheduledJobId } from '../utils/index.js';

@@ -9,10 +9,10 @@ import '@/styles/globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Olshop',
-    template: '%s | Olshop',
+    default: 'Falka',
+    template: '%s | Falka',
   },
-  description: 'Operational recording and marketplace integration platform',
+  description: 'Stok akurat di semua channel, kasir, dan bukti packing untuk pedagang online.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

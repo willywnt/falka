@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 
-import { formatBytes, formatDate, formatDuration } from '@olshop/utils/date';
+import { formatBytes, formatDate, formatDuration } from '@falka/utils/date';
 
 export { formatDate, formatDuration, formatBytes as formatFileSize };
 

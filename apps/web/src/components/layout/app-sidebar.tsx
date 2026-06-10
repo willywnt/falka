@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { APP_NAME } from '@olshop/config/constants';
+import { APP_NAME } from '@falka/config/constants';
 import { Boxes, Plus, ShoppingBag, Video } from 'lucide-react';
 
 import { SidebarNav } from '@/components/layout/sidebar-nav';

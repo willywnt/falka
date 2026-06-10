@@ -44,7 +44,7 @@ docker compose version            # verify Compose v2
 ## 2. Get the code and configure env
 
 ```bash
-git clone <your-repo-url> olshop && cd olshop
+git clone <your-repo-url> falka && cd falka
 cp .env.production.vps.example .env.production
 # Edit .env.production — fill DOMAIN, AUTH_SECRET (openssl rand -base64 32),
 # POSTGRES_PASSWORD, DATABASE_URL, R2_*, and set NEXT_PUBLIC_APP_URL=https://<DOMAIN>.

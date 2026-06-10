@@ -29,14 +29,14 @@ These choices make migration straightforward:
 Deploy Next.js as a standalone Node.js app:
 
 ```bash
-pnpm turbo build --filter=@olshop/web
+pnpm turbo build --filter=@falka/web
 node apps/web/.next/standalone/server.js  # if standalone output enabled
 ```
 
 Or use Coolify with:
 
-- Build: `pnpm turbo build --filter=@olshop/web`
-- Start: `pnpm --filter @olshop/web start`
+- Build: `pnpm turbo build --filter=@falka/web`
+- Start: `pnpm --filter @falka/web start`
 - Keep Neon + R2
 
 ### Phase 2 — Self-host database and Redis
