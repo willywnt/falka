@@ -1,4 +1,6 @@
-import type { StockLedgerReason, StockLedgerSource } from '@prisma/client';
+import type { StockLedgerReason, StockLedgerSource, StockOpnameStatus } from '@prisma/client';
+
+export type { StockOpnameStatus };
 
 import type { ReorderStatus } from '../utils/reorder-math';
 
@@ -177,4 +179,65 @@ export type ReorderSummary = {
 export type ReorderReport = {
   summary: ReorderSummary;
   items: ReorderItem[];
+};
+
+// ── Stock opname (cycle count) ───────────────────────────────────────────────
+
+/** A variant offered for counting — current system stock + identity, for the picker/scan. */
+export type CountableVariant = {
+  variantId: string;
+  sku: string;
+  name: string;
+  productName: string;
+  variantGroup: string | null;
+  /** Available stock the system currently shows. */
+  systemQuantity: number;
+  imageUrl: string | null;
+};
+
+export type StockOpnameListItem = {
+  id: string;
+  code: string;
+  status: StockOpnameStatus;
+  note: string | null;
+  itemCount: number;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export type StockOpnameItemDetail = {
+  id: string;
+  variantId: string;
+  sku: string;
+  name: string;
+  variantGroup: string | null;
+  imageUrl: string | null;
+  systemQuantity: number;
+  countedQuantity: number;
+  /** countedQuantity − systemQuantity (negative = shrinkage, positive = surplus). */
+  variance: number;
+};
+
+/** Roll-up shown on the session header. */
+export type StockOpnameSummary = {
+  itemCount: number;
+  /** Lines whose count differs from the system. */
+  varianceItemCount: number;
+  /** Sum of negative variances (units short), as a positive magnitude. */
+  shortageUnits: number;
+  /** Sum of positive variances (units over). */
+  surplusUnits: number;
+  /** Net unit delta the count would post (surplus − shortage). */
+  netUnits: number;
+};
+
+export type StockOpnameDetail = {
+  id: string;
+  code: string;
+  status: StockOpnameStatus;
+  note: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  summary: StockOpnameSummary;
+  items: StockOpnameItemDetail[];
 };

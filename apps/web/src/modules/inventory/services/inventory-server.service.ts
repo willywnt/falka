@@ -331,6 +331,43 @@ export class InventoryServerService {
   }
 
   /**
+   * Apply a stock-opname / reconcile correction WITHIN the caller's transaction:
+   * shift available by `delta` (counted − system) and record a RECONCILE ledger
+   * row (source MANUAL) carrying the variance. Available may move to whatever the
+   * physical count implies. Returns the new balance + the ledger entry id; does NOT
+   * enqueue propagation (the caller does that after commit). The caller skips a zero
+   * delta — a no-variance line writes nothing.
+   */
+  async applyReconcileTx(
+    tx: TransactionClient,
+    params: { userId: string; variantId: string; delta: number; note?: string },
+  ): Promise<{ availableStock: number; ledgerId: string }> {
+    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const balanceAfter = (existing?.availableStock ?? 0) + params.delta;
+    const now = new Date();
+
+    await tx.inventory.upsert({
+      where: { variantId: params.variantId },
+      create: { variantId: params.variantId, availableStock: balanceAfter, lastAdjustedAt: now },
+      update: { availableStock: balanceAfter, lastAdjustedAt: now },
+    });
+
+    const entry = await tx.stockLedger.create({
+      data: {
+        userId: params.userId,
+        variantId: params.variantId,
+        delta: params.delta,
+        balanceAfter,
+        reason: 'RECONCILE',
+        source: 'MANUAL',
+        note: params.note ?? null,
+      },
+    });
+
+    return { availableStock: balanceAfter, ledgerId: entry.id };
+  }
+
+  /**
    * Reserves stock for a paid marketplace order WITHIN the caller's transaction:
    * the units are committed, so available drops (no longer sellable) and reserved
    * rises (held until shipped) — on-hand (available + reserved) is unchanged.

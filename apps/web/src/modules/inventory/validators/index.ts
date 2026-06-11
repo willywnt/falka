@@ -13,3 +13,18 @@ export {
   parseStockActivityQuery,
   type StockActivityQuery,
 } from './list-activity';
+export {
+  createStockOpnameSchema,
+  upsertOpnameItemSchema,
+  stockOpnameIdSchema,
+  stockOpnameItemParamsSchema,
+  listStockOpnameQuerySchema,
+  parseListStockOpnameQuery,
+  searchCountableVariantsSchema,
+  parseSearchCountableVariantsQuery,
+  resolveCountableCodeSchema,
+  type CreateStockOpnameInput,
+  type UpsertOpnameItemInput,
+  type ListStockOpnameQuery,
+  type SearchCountableVariantsQuery,
+} from './stock-opname';
