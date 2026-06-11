@@ -387,6 +387,26 @@
   }
 }
 
+/*
+ * Sonner richColors → Ombak/Suar tokens. Sonner reads these CSS vars per toast
+ * type; pointing them at theme tokens keeps toasts on-palette in both modes
+ * (success = signed-up, not generic SaaS green; warning = suar, error = destructive).
+ */
+[data-sonner-toaster] {
+  --success-bg: color-mix(in oklab, var(--signed-up) 9%, var(--background));
+  --success-border: color-mix(in oklab, var(--signed-up) 35%, var(--border));
+  --success-text: var(--signed-up);
+  --error-bg: color-mix(in oklab, var(--destructive) 9%, var(--background));
+  --error-border: color-mix(in oklab, var(--destructive) 35%, var(--border));
+  --error-text: var(--destructive);
+  --warning-bg: color-mix(in oklab, var(--highlight) 12%, var(--background));
+  --warning-border: color-mix(in oklab, var(--highlight) 40%, var(--border));
+  --warning-text: var(--highlight-strong);
+  --info-bg: color-mix(in oklab, var(--status-info) 9%, var(--background));
+  --info-border: color-mix(in oklab, var(--status-info) 35%, var(--border));
+  --info-text: var(--status-info);
+}
+
 /* Mobile scanner aim frame — a scan line sweeping top↓bottom inside the reticle. */
 @keyframes scan-line-sweep {
   0% {

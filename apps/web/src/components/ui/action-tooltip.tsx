@@ -34,7 +34,16 @@ export function EllipsisTooltip({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn('block truncate', className)}>{text}</span>
+        {/* Focusable so keyboard (and tap-to-focus on touch) can reveal the full text. */}
+        <span
+          tabIndex={0}
+          className={cn(
+            'focus-visible:ring-ring/50 block truncate rounded-sm focus-visible:ring-2 focus-visible:outline-none',
+            className,
+          )}
+        >
+          {text}
+        </span>
       </TooltipTrigger>
       <TooltipContent className={cn('max-w-sm break-words', contentClassName)}>
         {text}
