@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "sale_items" ADD COLUMN     "discountAmount" DECIMAL(12,2) NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "sales" ADD COLUMN     "discountAmount" DECIMAL(14,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "subtotalAmount" DECIMAL(14,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "taxAmount" DECIMAL(14,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "taxInclusive" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "taxRate" DECIMAL(5,2) NOT NULL DEFAULT 0;
