@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { ErrorState } from '@/components/error-state';
 import { useMarketplaceConnectionsQuery } from '@/modules/marketplace/hooks/use-marketplace-connections';
 
 import { usePullFromConnectionsMutation } from '../hooks/use-orders';
@@ -25,7 +26,7 @@ export function PullOrdersDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data: connections } = useMarketplaceConnectionsQuery();
+  const { data: connections, isLoading, error, refetch } = useMarketplaceConnectionsQuery();
   const activeStores = (connections ?? []).filter((connection) => connection.isActive);
   const pullMutation = usePullFromConnectionsMutation();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -81,7 +82,16 @@ export function PullOrdersDialog({
           <DialogDescription>Pilih toko terhubung yang mau ditarik pesanannya.</DialogDescription>
         </DialogHeader>
 
-        {activeStores.length === 0 ? (
+        {isLoading ? (
+          <p className="text-muted-foreground text-sm">Memuat toko...</p>
+        ) : error ? (
+          <ErrorState
+            title="Gagal memuat toko"
+            description={error instanceof Error ? error.message : undefined}
+            onRetry={() => void refetch()}
+            className="p-6"
+          />
+        ) : activeStores.length === 0 ? (
           <p className="text-muted-foreground text-sm">Belum ada toko aktif yang terhubung.</p>
         ) : (
           <div className="space-y-2">

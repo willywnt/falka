@@ -5,6 +5,7 @@ import { Plus, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 
 import type { MarketplaceConnectionListItem } from '../types';
 import {
@@ -23,7 +24,7 @@ export function MarketplaceDashboard() {
     null,
   );
 
-  const { data, isLoading, error } = useMarketplaceConnectionsQuery();
+  const { data, isLoading, error, refetch } = useMarketplaceConnectionsQuery();
   const disconnectMutation = useDisconnectMarketplaceMutation();
 
   async function handleDisconnectConfirm() {
@@ -53,7 +54,9 @@ export function MarketplaceDashboard() {
           <p className="text-muted-foreground text-sm">
             {isLoading
               ? 'Memuat toko terhubung...'
-              : `${activeCount} toko aktif · ${data?.length ?? 0} total`}
+              : error
+                ? 'Toko marketplace yang terhubung'
+                : `${activeCount} toko aktif · ${data?.length ?? 0} total`}
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
@@ -62,19 +65,18 @@ export function MarketplaceDashboard() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat koneksi marketplace.{' '}
-          {error instanceof Error ? error.message : 'Silakan coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Gagal memuat koneksi marketplace"
+          description={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
+        />
       ) : isEmpty ? (
         <EmptyState
           icon={ShoppingBag}

@@ -23,6 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DateRangePicker } from '@/components/date-range-picker';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { NumberDelta } from '@/components/number-delta';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -86,7 +87,7 @@ export function StockActivity() {
     to: filters.to,
   };
 
-  const { data, isLoading, error } = useStockActivityQuery(query);
+  const { data, isLoading, error, refetch } = useStockActivityQuery(query);
 
   const items = data?.items ?? [];
   const total = data?.meta?.total ?? 0;
@@ -185,18 +186,14 @@ export function StockActivity() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat aktivitas. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState title="Gagal memuat aktivitas stok" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={ScrollText}

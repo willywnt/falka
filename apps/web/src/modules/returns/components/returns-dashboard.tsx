@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
@@ -34,7 +35,7 @@ const FILTERS: ReadonlyArray<{ label: string; value: ReturnStatus | 'ALL' }> = [
 export function ReturnsDashboard() {
   const [filter, setFilter] = useState<ReturnStatus | 'ALL'>('ALL');
   const { page, setPage, pageSize, setPageSize } = usePagination();
-  const { data, isLoading, error } = useReturnsQuery(
+  const { data, isLoading, error, refetch } = useReturnsQuery(
     filter === 'ALL' ? undefined : filter,
     page,
     pageSize,
@@ -65,18 +66,18 @@ export function ReturnsDashboard() {
         ))}
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat retur. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Gagal memuat retur"
+          description={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
+        />
       ) : isEmpty ? (
         <EmptyState
           icon={Undo2}

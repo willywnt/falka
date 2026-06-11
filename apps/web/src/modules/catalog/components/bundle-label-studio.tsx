@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -30,7 +31,12 @@ export function BundleLabelStudio() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
   const { page, setPage, pageSize, setPageSize } = usePagination(10);
-  const { data: results, isLoading } = useBundleLabelsQuery(debouncedSearch, page, pageSize);
+  const {
+    data: results,
+    isLoading,
+    error,
+    refetch,
+  } = useBundleLabelsQuery(debouncedSearch, page, pageSize);
 
   // A new search resets to the first page.
   useEffect(() => {
@@ -126,6 +132,12 @@ export function BundleLabelStudio() {
                   <Skeleton key={index} className="h-12 w-full" />
                 ))}
               </div>
+            ) : error ? (
+              <ErrorState
+                title="Gagal memuat bundel"
+                onRetry={() => void refetch()}
+                className="p-6"
+              />
             ) : bundles.length === 0 ? (
               <p className="text-muted-foreground py-6 text-center text-sm">
                 {debouncedSearch

@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { LowStockBadge } from '@/components/low-stock-badge';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
@@ -61,7 +62,7 @@ export function InventoryOverview() {
   }, [debouncedSearch, filters.search, setFilters]);
 
   const lowStockOnly = filters.low === '1';
-  const { data, isLoading, error } = useStockOverviewQuery(
+  const { data, isLoading, error, refetch } = useStockOverviewQuery(
     filters.search.trim() || undefined,
     lowStockOnly,
   );
@@ -100,18 +101,14 @@ export function InventoryOverview() {
         </div>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat stok. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState title="Gagal memuat stok" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={PackageSearch}

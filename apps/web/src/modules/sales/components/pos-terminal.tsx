@@ -25,6 +25,7 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -130,7 +131,12 @@ export function PosTerminal() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
   const { page, setPage, pageSize, setPageSize } = usePagination(10);
-  const { data: results, isLoading } = useSellableVariantsQuery(debouncedSearch, page, pageSize);
+  const {
+    data: results,
+    isLoading,
+    error: variantsError,
+    refetch: refetchVariants,
+  } = useSellableVariantsQuery(debouncedSearch, page, pageSize);
 
   // A new search resets to the first page.
   useEffect(() => {
@@ -142,12 +148,12 @@ export function PosTerminal() {
 
   // Bundles for the Bundling tab (debounced search). A separate unfiltered query
   // decides whether the tab is worth showing at all (≥1 bundle exists).
-  const { data: bundlesData, isLoading: bundlesLoading } = useBundlesQuery(
-    debouncedSearch,
-    'all',
-    1,
-    100,
-  );
+  const {
+    data: bundlesData,
+    isLoading: bundlesLoading,
+    error: bundlesError,
+    refetch: refetchBundles,
+  } = useBundlesQuery(debouncedSearch, 'all', 1, 100);
   const { data: bundleExistsData } = useBundlesQuery('', 'all', 1, 1);
   const hasBundles = (bundleExistsData?.summary.total ?? 0) > 0;
   const resolveBundleDetail = useResolveBundleDetail();
@@ -450,6 +456,8 @@ export function PosTerminal() {
                 <ProductResults
                   variants={variants}
                   isLoading={isLoading}
+                  error={variantsError}
+                  onRetry={() => void refetchVariants()}
                   hasSearch={Boolean(debouncedSearch)}
                   onAdd={addVariantToCart}
                 />
@@ -458,6 +466,8 @@ export function PosTerminal() {
                 <BundleResults
                   bundles={bundlesData?.items.filter((bundle) => bundle.isActive)}
                   isLoading={bundlesLoading}
+                  error={bundlesError}
+                  onRetry={() => void refetchBundles()}
                   hasSearch={Boolean(debouncedSearch)}
                   isAdding={resolveBundleDetail.isPending}
                   onAdd={handleAddBundleFromList}
@@ -468,6 +478,8 @@ export function PosTerminal() {
             <ProductResults
               variants={variants}
               isLoading={isLoading}
+              error={variantsError}
+              onRetry={() => void refetchVariants()}
               hasSearch={Boolean(debouncedSearch)}
               onAdd={addVariantToCart}
             />
@@ -575,11 +587,15 @@ export function PosTerminal() {
 function ProductResults({
   variants,
   isLoading,
+  error,
+  onRetry,
   hasSearch,
   onAdd,
 }: {
   variants: SellableVariant[] | undefined;
   isLoading: boolean;
+  error: Error | null;
+  onRetry: () => void;
   hasSearch: boolean;
   onAdd: (variant: SellableVariant) => void;
 }) {
@@ -591,6 +607,10 @@ function ProductResults({
         ))}
       </div>
     );
+  }
+
+  if (error) {
+    return <ErrorState className="p-6" title="Gagal memuat produk" onRetry={onRetry} />;
   }
 
   if ((variants?.length ?? 0) === 0) {
@@ -633,12 +653,16 @@ function ProductResults({
 function BundleResults({
   bundles,
   isLoading,
+  error,
+  onRetry,
   hasSearch,
   isAdding,
   onAdd,
 }: {
   bundles: BundleListItem[] | undefined;
   isLoading: boolean;
+  error: Error | null;
+  onRetry: () => void;
   hasSearch: boolean;
   isAdding: boolean;
   onAdd: (bundle: BundleListItem) => void;
@@ -651,6 +675,10 @@ function BundleResults({
         ))}
       </div>
     );
+  }
+
+  if (error) {
+    return <ErrorState className="p-6" title="Gagal memuat bundel" onRetry={onRetry} />;
   }
 
   if ((bundles?.length ?? 0) === 0) {

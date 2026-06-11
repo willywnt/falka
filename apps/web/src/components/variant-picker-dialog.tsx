@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/error-state';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useStockOverviewQuery } from '@/modules/inventory/hooks/use-inventory';
 
@@ -41,7 +42,10 @@ export function VariantPickerDialog({
 }) {
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, 300);
-  const { data, isLoading } = useStockOverviewQuery(debounced.trim() || undefined, false);
+  const { data, isLoading, error, refetch } = useStockOverviewQuery(
+    debounced.trim() || undefined,
+    false,
+  );
   const variants = (data ?? []).slice(0, limit);
 
   return (
@@ -72,6 +76,12 @@ export function VariantPickerDialog({
             Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} className="h-11 w-full" />
             ))
+          ) : error ? (
+            <ErrorState
+              title="Gagal memuat varian"
+              onRetry={() => void refetch()}
+              className="p-6"
+            />
           ) : variants.length === 0 ? (
             <p className="text-muted-foreground p-3 text-sm">Varian tidak ditemukan.</p>
           ) : (

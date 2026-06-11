@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
@@ -36,7 +37,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const { data, isLoading, error } = useOrderQuery(orderId);
   const resolveMutation = useResolveOrderItemMutation(orderId);
   const createReturnMutation = useCreateReturnMutation();
-  const { data: packingVideos } = useRecordingsByResiQuery(data?.noResi ?? null);
+  const {
+    data: packingVideos,
+    isLoading: isPackingVideosLoading,
+    error: packingVideosError,
+    refetch: refetchPackingVideos,
+  } = useRecordingsByResiQuery(data?.noResi ?? null);
   const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
 
   async function handleCreateReturn() {
@@ -236,7 +242,15 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                 <CardTitle className="text-base">Video packing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                {packingVideos && packingVideos.length > 0 ? (
+                {isPackingVideosLoading ? (
+                  <p className="text-muted-foreground text-xs">Memuat video...</p>
+                ) : packingVideosError ? (
+                  <ErrorState
+                    title="Gagal memuat video packing"
+                    onRetry={() => void refetchPackingVideos()}
+                    className="p-4"
+                  />
+                ) : packingVideos && packingVideos.length > 0 ? (
                   <>
                     <p className="text-muted-foreground text-xs">
                       {packingVideos.length} rekaman untuk resi ini — bukti sengketa.

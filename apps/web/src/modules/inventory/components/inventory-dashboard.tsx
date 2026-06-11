@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CompositionBar } from '@/components/charts/bars';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { NumberDelta } from '@/components/number-delta';
 import { StatCard, type StatTone } from '@/components/stat-card';
@@ -31,7 +32,7 @@ const StockFlowChart = dynamic(
 );
 
 export function InventoryDashboard() {
-  const { data, isLoading, error } = useInventoryDashboardQuery();
+  const { data, isLoading, error, refetch } = useInventoryDashboardQuery();
   const reorderQuery = useReorderReportQuery({
     windowDays: REORDER_DEFAULTS.windowDays,
     leadTimeDays: REORDER_DEFAULTS.leadTimeDays,
@@ -52,11 +53,7 @@ export function InventoryDashboard() {
   }
 
   if (error || !data) {
-    return (
-      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-        {error instanceof Error ? error.message : 'Gagal memuat dashboard.'}
-      </div>
-    );
+    return <ErrorState title="Gagal memuat dashboard" onRetry={() => void refetch()} />;
   }
 
   const { summary, lowStock, recentMovements, dailyMovement } = data;

@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { ArrowRight, Banknote, Coins, Info, Percent, TrendingDown, Wallet } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatCard } from '@/components/stat-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -107,17 +108,21 @@ export function ProfitReport({
   params: ProfitReportParams;
   onSeeChannels?: () => void;
 }) {
-  const { data, isLoading, error } = useProfitReportQuery(params);
+  const { data, isLoading, error, refetch } = useProfitReportQuery(params);
+
+  if (isLoading) return <ProfitSkeleton />;
 
   if (error) {
     return (
-      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-        Gagal memuat laporan laba. {error instanceof Error ? error.message : 'Coba lagi.'}
-      </div>
+      <ErrorState
+        title="Gagal memuat laporan laba"
+        description={error instanceof Error ? error.message : undefined}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
-  if (isLoading || !data) return <ProfitSkeleton />;
+  if (!data) return <ProfitSkeleton />;
 
   return <ProfitContent data={data} onSeeChannels={onSeeChannels} />;
 }

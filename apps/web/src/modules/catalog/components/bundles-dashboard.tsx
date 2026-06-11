@@ -34,6 +34,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
 import { StatCard } from '@/components/stat-card';
 import { TablePagination } from '@/components/table-pagination';
@@ -56,7 +57,12 @@ export function BundlesDashboard() {
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
   const [status, setStatus] = useState<BundleStatusFilter>('all');
   const { page, setPage, pageSize, setPageSize } = usePagination(10);
-  const { data, isLoading, error } = useBundlesQuery(debouncedSearch, status, page, pageSize);
+  const { data, isLoading, error, refetch } = useBundlesQuery(
+    debouncedSearch,
+    status,
+    page,
+    pageSize,
+  );
   const deleteBundle = useDeleteBundleMutation();
   const markPrinted = useMarkBundleLabelsPrintedMutation();
   const [qrTarget, setQrTarget] = useState<BundleListItem | null>(null);
@@ -149,18 +155,14 @@ export function BundlesDashboard() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat bundel. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState title="Gagal memuat bundel" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={Layers}

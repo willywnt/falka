@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Boxes, Coins, Download, Info, PackageSearch, Warehouse } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,17 @@ import { inventoryValuationExportUrl, useInventoryValuationQuery } from '../hook
 import type { InventoryValuationReport as InventoryValuationData } from '../types';
 
 export function InventoryValuationReport() {
-  const { data, isLoading, error } = useInventoryValuationQuery();
+  const { data, isLoading, error, refetch } = useInventoryValuationQuery();
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Gagal memuat nilai stok"
+        description={error instanceof Error ? error.message : undefined}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -36,12 +47,6 @@ export function InventoryValuationReport() {
           </a>
         </Button>
       </div>
-
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat nilai stok. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
 
       {isLoading || !data ? <ValuationSkeleton /> : <ValuationContent data={data} />}
     </div>

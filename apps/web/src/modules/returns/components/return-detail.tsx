@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { formatDateTime } from '@/lib/formatters';
 
@@ -42,7 +43,12 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
   const { data, isLoading, error } = useReturnQuery(returnId);
   const processMutation = useProcessReturnMutation(returnId);
   const rejectMutation = useRejectReturnMutation(returnId);
-  const { data: packingVideos } = useRecordingsByResiQuery(data?.noResi ?? null);
+  const {
+    data: packingVideos,
+    isLoading: isPackingVideosLoading,
+    error: packingVideosError,
+    refetch: refetchPackingVideos,
+  } = useRecordingsByResiQuery(data?.noResi ?? null);
   // returnItemId → resellable? (true = RESTOCK, false = DAMAGED). Defaults to restock.
   const [resellable, setResellable] = useState<Record<string, boolean>>({});
 
@@ -200,11 +206,21 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
               </div>
               {data.noResi ? (
                 <>
-                  <p className="text-muted-foreground text-xs">
-                    {packingVideos && packingVideos.length > 0
-                      ? `${packingVideos.length} video packing untuk resi ini.`
-                      : 'Tidak ada video packing untuk resi ini.'}
-                  </p>
+                  {isPackingVideosLoading ? (
+                    <p className="text-muted-foreground text-xs">Memuat video...</p>
+                  ) : packingVideosError ? (
+                    <ErrorState
+                      title="Gagal memuat video packing"
+                      onRetry={() => void refetchPackingVideos()}
+                      className="p-4"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      {packingVideos && packingVideos.length > 0
+                        ? `${packingVideos.length} video packing untuk resi ini.`
+                        : 'Tidak ada video packing untuk resi ini.'}
+                    </p>
+                  )}
                   <Button variant="outline" size="sm" asChild className="w-full">
                     <Link href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}>
                       <Video className="size-4" />

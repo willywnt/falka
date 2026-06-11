@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { Banknote, Crown, Percent, Receipt, Store, Wallet } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,17 +35,21 @@ const ChannelTrendChart = dynamic(
 );
 
 export function ChannelPerformanceReport({ params }: { params: ProfitReportParams }) {
-  const { data, isLoading, error } = useChannelPerformanceQuery(params);
+  const { data, isLoading, error, refetch } = useChannelPerformanceQuery(params);
+
+  if (isLoading) return <ChannelSkeleton />;
 
   if (error) {
     return (
-      <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-        Gagal memuat laporan channel. {error instanceof Error ? error.message : 'Coba lagi.'}
-      </div>
+      <ErrorState
+        title="Gagal memuat laporan channel"
+        description={error instanceof Error ? error.message : undefined}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
-  if (isLoading || !data) return <ChannelSkeleton />;
+  if (!data) return <ChannelSkeleton />;
 
   return <ChannelContent data={data} />;
 }

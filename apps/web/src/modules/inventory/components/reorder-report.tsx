@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { StatCard } from '@/components/stat-card';
 import { cn } from '@/lib/utils';
@@ -59,7 +60,7 @@ export function ReorderReport() {
   const [windowDays, setWindowDays] = useState<number>(REORDER_DEFAULTS.windowDays);
   const [reorderOnly, setReorderOnly] = useState(false);
 
-  const { data, isLoading, error } = useReorderReportQuery({
+  const { data, isLoading, error, refetch } = useReorderReportQuery({
     windowDays,
     leadTimeDays: REORDER_DEFAULTS.leadTimeDays,
     targetCoverDays: REORDER_DEFAULTS.targetCoverDays,
@@ -134,18 +135,14 @@ export function ReorderReport() {
         </div>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat laporan restok. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState title="Gagal memuat laporan restok" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={PackageSearch}

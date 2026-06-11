@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatCard } from '@/components/stat-card';
 import { STATUS_BADGE_TONES, StatusBadge } from '@/components/status-badge';
 import { VariantPickerDialog } from '@/components/variant-picker-dialog';
@@ -159,14 +160,30 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     (listing) => listing.mapping?.mappingStatus === 'NEEDS_REVIEW',
   ).length;
 
+  const backLink = (
+    <Button variant="ghost" size="sm" asChild className="-ml-2">
+      <Link href="/dashboard/marketplace">
+        <ArrowLeft className="size-4" />
+        Kembali ke channel
+      </Link>
+    </Button>
+  );
+
+  if (connectionQuery.error) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <ErrorState
+          title="Gagal memuat detail channel"
+          onRetry={() => void connectionQuery.refetch()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link href="/dashboard/marketplace">
-          <ArrowLeft className="size-4" />
-          Kembali ke channel
-        </Link>
-      </Button>
+      {backLink}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -230,6 +247,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : listingsQuery.error ? (
+        <ErrorState title="Gagal memuat listing" onRetry={() => void listingsQuery.refetch()} />
       ) : listings.length === 0 ? (
         <EmptyState
           icon={DownloadCloud}

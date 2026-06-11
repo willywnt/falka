@@ -3,6 +3,7 @@
 import { AlertTriangle, HardDrive } from 'lucide-react';
 
 import { formatStoragePercent, formatStorageUsage } from '@/lib/formatters';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useStorageQuotaQuery } from '../hooks/use-storage-quota';
@@ -36,7 +37,7 @@ export function StorageQuotaIndicator({
   className?: string;
   variant?: 'full' | 'warning-only';
 }) {
-  const { data, isLoading, isError } = useStorageQuotaQuery();
+  const { data, isLoading, isError, refetch } = useStorageQuotaQuery();
 
   if (isLoading) {
     if (variant === 'warning-only') return null;
@@ -50,7 +51,23 @@ export function StorageQuotaIndicator({
     );
   }
 
-  if (isError || !data) return null;
+  if (isError || !data) {
+    if (variant === 'warning-only') return null;
+
+    return (
+      <div
+        className={`border-destructive/30 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${className ?? ''}`}
+      >
+        <p className="text-destructive flex items-center gap-2">
+          <AlertTriangle className="size-4 shrink-0" />
+          Gagal memuat info penyimpanan.
+        </p>
+        <Button variant="outline" size="sm" onClick={() => void refetch()}>
+          Coba lagi
+        </Button>
+      </div>
+    );
+  }
 
   const level = getStorageQuotaLevel(data.usagePercent);
   const warningMessage = getStorageQuotaWarningMessage(level);

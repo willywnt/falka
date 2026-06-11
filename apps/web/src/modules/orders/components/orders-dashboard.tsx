@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
@@ -27,7 +28,7 @@ import { PullOrdersDialog } from './pull-orders-dialog';
 
 export function OrdersDashboard() {
   const { page, setPage, pageSize, setPageSize } = usePagination();
-  const { data, isLoading, error } = useOrdersQuery(page, pageSize);
+  const { data, isLoading, error, refetch } = useOrdersQuery(page, pageSize);
   const [pullOpen, setPullOpen] = useState(false);
 
   const orders = data?.items ?? [];
@@ -43,18 +44,18 @@ export function OrdersDashboard() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat pesanan. {error instanceof Error ? error.message : 'Silakan coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Gagal memuat pesanan"
+          description={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
+        />
       ) : isEmpty ? (
         <EmptyState
           icon={ShoppingCart}

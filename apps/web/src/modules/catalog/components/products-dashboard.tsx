@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { StatusBadge } from '@/components/status-badge';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useUrlFilters } from '@/hooks/use-url-filters';
@@ -44,7 +45,7 @@ export function ProductsDashboard() {
     if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch });
   }, [debouncedSearch, filters.search, setFilters]);
 
-  const { data, isLoading, error } = useProductsQuery(filters.search.trim() || undefined);
+  const { data, isLoading, error, refetch } = useProductsQuery(filters.search.trim() || undefined);
   const deleteMutation = useDeleteProductMutation();
 
   async function handleDeleteConfirm() {
@@ -79,18 +80,14 @@ export function ProductsDashboard() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat produk. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
-
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState title="Gagal memuat produk" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={Package}
