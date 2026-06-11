@@ -5,11 +5,13 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme "Ombak — Ledger on Paper": a faintly-warm paper canvas, hairline
- * structure (borders over shadows), the teal brand accent kept verbatim, a
- * charcoal sidebar, and a disciplined signed-up/down pair (calm green / ember)
- * for ledger numerics — ember is hue-separated from destructive red so a
- * negative delta never reads as an error.
+ * Theme "Suar Dermaga" (Ombak v2 — harbor light over the ledger): the warm
+ * paper canvas, hairline structure (borders over shadows), teal accent and
+ * signed-up/down pair stay verbatim from "Ledger on Paper"; the sea enters
+ * only as light and line — a faint sea-glass horizon wash, a navy "hull at
+ * dusk" sidebar (hue locked ≤252 so it never drifts purple), and an amber
+ * "suar" beacon pair for genuine attention states. Ember stays hue-separated
+ * from destructive red so a negative delta never reads as an error.
  */
 :root {
   --radius: 0.875rem;
@@ -17,6 +19,13 @@
   /* Warm paper canvas (hue ~95) — distinct from the pure-white card. */
   --background: oklch(0.992 0.004 95);
   --foreground: oklch(0.21 0.006 255);
+
+  /*
+   * Sea-glass: the only "water" fill in the system. Used exclusively for the
+   * dashboard horizon wash (fading to paper within ~320px) and Pandu surfaces
+   * — never as a card/table background. ΔL vs --background ≤ 0.02 by design.
+   */
+  --sea-glass: oklch(0.972 0.012 200);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.21 0.006 255);
@@ -48,6 +57,22 @@
   --highlight: oklch(0.8 0.13 80);
   --highlight-foreground: oklch(0.26 0.05 70);
 
+  /*
+   * Suar (beacon) text pair: --highlight stays a FILL-only amber; this darker
+   * partner is the AA-safe (≥4.5:1 on white and on highlight tints) text/icon
+   * color for warning chips — `bg-highlight/15 text-highlight-strong`.
+   */
+  --highlight-strong: oklch(0.51 0.11 70);
+
+  /*
+   * Status tokens — the only allowed source for status badge colors (the
+   * shared StatusBadge maps module enums onto these; never raw palette).
+   * ok/warn alias the ledger pair + suar so the hue story stays one system.
+   */
+  --status-info: oklch(0.5 0.1 240);
+  --status-warn: var(--highlight-strong);
+  --status-ok: var(--signed-up);
+
   /* Ledger signed numerics — calm green up, ember down (≠ destructive red). */
   --signed-up: oklch(0.55 0.13 155);
   --signed-up-foreground: oklch(0.99 0.01 155);
@@ -65,36 +90,40 @@
   --chart-4: oklch(0.6 0.12 245);
   --chart-5: oklch(0.6 0.13 340);
 
-  --sidebar: oklch(0.23 0.006 260);
-  --sidebar-foreground: oklch(0.92 0.004 250);
+  /* "Hull at dusk": charcoal lightness kept, a faint navy chroma added (hue ≤252). */
+  --sidebar: oklch(0.22 0.02 252);
+  --sidebar-foreground: oklch(0.93 0.008 240);
   --sidebar-primary: oklch(0.58 0.1 205);
   --sidebar-primary-foreground: oklch(0.99 0.005 200);
-  --sidebar-accent: oklch(0.29 0.008 260);
+  --sidebar-accent: oklch(0.28 0.024 252);
   --sidebar-accent-foreground: oklch(0.98 0.003 250);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.58 0.1 205);
 }
 
 .dark {
-  --background: oklch(0.178 0.006 285);
+  /* Dark neutrals follow the hull: hue 285 → 250 (de-violet), L/C kept. */
+  --background: oklch(0.175 0.01 250);
   --foreground: oklch(0.96 0.003 250);
 
-  --card: oklch(0.215 0.006 285);
+  --sea-glass: oklch(0.205 0.018 230);
+
+  --card: oklch(0.215 0.01 250);
   --card-foreground: oklch(0.96 0.003 250);
 
-  --popover: oklch(0.215 0.006 285);
+  --popover: oklch(0.215 0.01 250);
   --popover-foreground: oklch(0.96 0.003 250);
 
   --primary: oklch(0.7 0.1 200);
   --primary-foreground: oklch(0.17 0.02 220);
 
-  --secondary: oklch(0.27 0.006 285);
+  --secondary: oklch(0.27 0.01 250);
   --secondary-foreground: oklch(0.96 0.003 250);
 
-  --muted: oklch(0.255 0.006 285);
+  --muted: oklch(0.255 0.01 250);
   --muted-foreground: oklch(0.7 0.01 255);
 
-  --accent: oklch(0.31 0.008 285);
+  --accent: oklch(0.31 0.01 250);
   --accent-foreground: oklch(0.96 0.003 250);
 
   --destructive: oklch(0.66 0.18 25);
@@ -106,6 +135,10 @@
 
   --highlight: oklch(0.8 0.13 80);
   --highlight-foreground: oklch(0.22 0.04 70);
+
+  --highlight-strong: oklch(0.82 0.12 80);
+
+  --status-info: oklch(0.74 0.1 240);
 
   --signed-up: oklch(0.72 0.12 155);
   --signed-up-foreground: oklch(0.17 0.02 155);
@@ -119,11 +152,11 @@
   --chart-4: oklch(0.7 0.12 245);
   --chart-5: oklch(0.7 0.13 340);
 
-  --sidebar: oklch(0.15 0.005 260);
-  --sidebar-foreground: oklch(0.92 0.004 250);
+  --sidebar: oklch(0.14 0.016 250);
+  --sidebar-foreground: oklch(0.93 0.008 240);
   --sidebar-primary: oklch(0.7 0.1 200);
   --sidebar-primary-foreground: oklch(0.17 0.02 220);
-  --sidebar-accent: oklch(0.25 0.008 260);
+  --sidebar-accent: oklch(0.25 0.012 250);
   --sidebar-accent-foreground: oklch(0.97 0.003 250);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.7 0.1 200);
@@ -138,6 +171,8 @@
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* "Tide" easing — fast rise, long settle; for entrances/overlays/dock. */
+  --ease-tide: cubic-bezier(0.25, 0.8, 0.3, 1);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -156,6 +191,11 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-strong: var(--highlight-strong);
+  --color-sea-glass: var(--sea-glass);
+  --color-status-info: var(--status-info);
+  --color-status-warn: var(--status-warn);
+  --color-status-ok: var(--status-ok);
   --color-signed-up: var(--signed-up);
   --color-signed-up-foreground: var(--signed-up-foreground);
   --color-signed-down: var(--signed-down);
@@ -195,6 +235,28 @@
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+}
+
+/*
+ * Hero numerals — confident mono display size for StatCard values and POS
+ * totals (the KPI anatomy: eyebrow label → num-display value → delta row).
+ */
+@utility num-display {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
+  line-height: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/*
+ * Horizon wash — the sea-glass canvas treatment. Dashboard main area ONLY
+ * (cards stay pure white so hairline elevation keeps reading); fades back to
+ * paper within 320px so it registers as light, not as a gradient.
+ */
+@utility horizon-wash {
+  background-image: linear-gradient(to bottom, var(--sea-glass), var(--background) 320px);
 }
 
 @layer base {
@@ -282,6 +344,46 @@
     top: 0;
     left: 0;
     width: 100%;
+  }
+}
+
+/*
+ * Skeleton "shimmer on water" — a slow, low-contrast sea-glass sheen drifting
+ * across loading surfaces; replaces the generic pulse. Static under reduced
+ * motion (the global guard below freezes the animation; the tint remains).
+ */
+@keyframes shimmer-water {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer-water {
+  background-image: linear-gradient(
+    105deg,
+    transparent 35%,
+    color-mix(in oklab, var(--sea-glass) 60%, transparent) 50%,
+    transparent 65%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-water 2.6s linear infinite;
+}
+
+/*
+ * Global reduced-motion guard: every animation/transition collapses to an
+ * imperceptible tick (animationend/transitionend still fire, so Radix exit
+ * states keep working). Component-level guards stay as defense in depth.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

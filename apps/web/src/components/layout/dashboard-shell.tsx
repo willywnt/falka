@@ -25,7 +25,7 @@ export function DashboardShell({
             <AppSidebar />
             <div className="flex min-w-0 flex-1 flex-col">
               <DashboardNavbar />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+              <main className="horizon-wash flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
             </div>
           </div>
         </SidebarProvider>
