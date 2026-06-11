@@ -201,10 +201,23 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
   recording **station shows a pack view** (the matched order's items), and orders/returns show the
   packing video as **dispute evidence**. Links work both ways.
 - **Offline sales / POS** (`sales` module — `Sale`/`SaleItem`, `SalePaymentMethod` CASH/QRIS/TRANSFER,
-  `SaleStatus` COMPLETED/VOID): a counter sale **decrements the SoT immediately** (`available−`, ledger
-  reason `SALE` / source `POS`, ref = saleId) in one tx, then propagates to **all** channels (selling
-  in-store can't oversell online). Oversell is allowed — goods are in hand. Code `S00001` per-user.
-  Velocity counts `SALE` too (`SALES_LEDGER_REASONS` = `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN`+`SALE`).
+  `SaleStatus` COMPLETED/VOID/**PARTIALLY_REFUNDED**): a counter sale **decrements the SoT immediately**
+  (`available−`, ledger reason `SALE` / source `POS`, ref = saleId) in one tx, then propagates to **all**
+  channels (selling in-store can't oversell online). Oversell is allowed — goods are in hand. Code
+  `S00001` per-user. Velocity counts `SALE` too (`SALES_LEDGER_REASONS` =
+  `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN`+`SALE`).
+  - **Discount + PPN**: a sale carries `subtotalAmount`/`discountAmount`/`taxRate`/`taxAmount`/
+    `taxInclusive`; `SaleItem.discountAmount` is the cart discount allocated per line. The math lives in
+    ONE shared pure util `modules/sales/utils/sale-totals.ts` (`computeSaleTotals` + `allocateProportionally`),
+    used by BOTH the POS preview and the server so they agree to the rupiah. **Net revenue = `totalAmount −
+taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved out, total unchanged);
+    the profit report reads POS lines at their effective NET unit so omzet/margin are net.
+  - **Refund** (`SaleRefund`/`SaleRefundItem`, code `RF00001` per-user): per-item/qty refund (not just
+    all-or-nothing VOID) → restocks via `applyOfflineSaleReversalTx` per qty (ledger note `Refund RF…`),
+    flips status to `PARTIALLY_REFUNDED`; cash valued at the line's NET unit (`refundLineAmount`). **VOID
+    is refused once a refund exists** (it would double-restock). Refunds enter the profit report as
+    negative-qty net lines (revenue + COGS reverse) at refund time. **Receipt (struk)**: 58mm printable
+    via the shared `[data-print-root]` isolation on sale detail; CASH checkout has a kembalian calculator.
 - **Purchasing / restock** (`purchasing` module — `PurchaseOrder`/`PurchaseOrderItem`,
   `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED): lights up the **`incomingStock`**
   bucket. Create a PO → `adjustIncomingTx(+qty)` per line (forecast bucket, **no ledger row**, available

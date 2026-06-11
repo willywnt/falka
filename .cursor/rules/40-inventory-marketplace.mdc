@@ -212,8 +212,7 @@ split (part restock + part damaged), partial-quantity returns, refund/money trac
 return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed at scale (the
 `(userId, reason, createdAt)` index serves reorder); **purchasing**: Supplier entity (contacts,
 per-supplier lead time), auto **cost update** on receive (moving-average → profit reporting), PO
-edit/DRAFT, supplier invoice (faktur) printing, landed cost; **POS**: VOID/refund a sale, printable
-receipt/nota, per-sale discount/tax; reorder velocity is a simple EWMA (could add seasonality); real
+edit/DRAFT, supplier invoice (faktur) printing, landed cost; reorder velocity is a simple EWMA (could add seasonality); real
 provider adapters need the decrypted token → lift token-crypto to `@falka/*`; queue package has no
 vitest (engine is gate-checked only).
 
@@ -237,3 +236,17 @@ vitest (engine is gate-checked only).
 > cross-module delete-guardrail preflight (mapping/reserved/incoming/open-return = block), `EllipsisTooltip`
 > + collapsible "Connections" (marketplace) column, and a **per-variant photo** in a separate PUBLIC R2
 > bucket (client-compressed WebP, `VariantImage` popover by the name).
+>
+> **POS finance (was deferred)**: per-cart **discount** (% / fixed) + **PPN** (inclusive/exclusive) at
+> checkout — `Sale` gains `subtotalAmount`/`discountAmount`/`taxRate`/`taxAmount`/`taxInclusive`,
+> `SaleItem.discountAmount` (allocated per line); shared pure util `sale-totals.ts`
+> (`computeSaleTotals`/`allocateProportionally`/`refundLineAmount`) so POS preview == server. **Net
+> revenue = `totalAmount − taxAmount`**; profit report reads POS lines at effective net. **Partial /
+> per-item refund** (`SaleRefund`/`SaleRefundItem`, `RF00001`, `PARTIALLY_REFUNDED`): restock per qty via
+> `applyOfflineSaleReversalTx`, refunds enter the profit report as negative-qty net lines; **VOID refused
+> once a refund exists**. **Receipt (struk)** 58mm printable on sale detail; CASH kembalian calculator.
+>
+> **Kasir & Pesanan pack**: orders list **search + status filter** (case-insensitive resi/id/buyer);
+> products list **pagination** (hook surfaces server meta); marketplace **per-connection sync-health
+> badges** (NEEDS_REVIEW/FAILED groupBy); below-cost flag at sale-create (`sales.below_cost` warn log);
+> variant-picker shows the `grup · subvarian` label; 0-quota storage no longer renders as "100% full".

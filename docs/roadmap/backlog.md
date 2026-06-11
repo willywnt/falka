@@ -8,31 +8,39 @@
 > 🟡 needs a schema migration (HARD CONSTRAINT #1 — confirm first) · 🔴 external dependency (partner /
 > API key / WhatsApp approval / strategic decision).
 
-## ✅ Shipped this session (2026-06-07, on `main`)
+## ✅ Shipped (2026-06-07, on `main`)
 
 Correctness pack (orders/returns pagination, marketplace token-expiry guard, returns-netting in the
 profit report) · inventory-valuation report · share-evidence on order/return dispute panels · manual
 order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-off. Detail in
 `inventory-mvp.md` (§13 hardening bullet) + `CLAUDE.md §12`.
 
-## 🚧 In progress
+## ✅ Shipped (2026-06-11)
 
-- **UI/UX redesign** — a fresh, non-generic visual system (keep the teal "Ombak" accent, add harmonizing
-  complementary colors), redesigned shell + landing → all feature pages, global-component dedup, friendlier
-  wording, and structural affordances reserved for the backlog below. Direction + phased plan being
-  established; foundation + shell + landing first, then per-page polish. See `.cursor/rules/50-ui-design-system.mdc`.
+- **UI/UX redesign "Suar Dermaga"** (on `main`) — full-brand evolution of the Ombak ledger system:
+  sea-glass horizon wash, navy "hull" sidebar, suar attention tokens, `BrandMark` + favicon/og/manifest,
+  branded error/404 routes, `StatusBadge`/`ErrorState` primitives, mobile bottom tab bar + card-list
+  pattern, maritime empty-state art, and the **Pandu** assistant pattern (honest stub: deterministic
+  nudges + keyword router, permanent "Pratinjau" label). Detail in `.cursor/rules/50-ui-design-system.mdc`
+  - `docs/roadmap/falka-redesign.md` + memory `falka-redesign-suar-dermaga`.
+- **Kasir & Pesanan pack** (on `main`) — orders list search + status filter; products list pagination;
+  marketplace per-connection sync-health badges; below-cost flag at sale-create; `grup · subvarian`
+  picker label; 0-quota storage display fix.
+- **Discount + PPN at POS** (on `main`) — per-cart discount (% / fixed) + PPN (inclusive/exclusive);
+  `Sale`/`SaleItem` net fields; shared `sale-totals` util (POS preview == server); profit report reads
+  net; printable struk + CASH kembalian calculator.
+- **Partial / per-item POS refund** (branch `feat/pos-partial-refund`) — `SaleRefund`/`SaleRefundItem` +
+  `PARTIALLY_REFUNDED`; restock per qty; refunds net the profit report; VOID refused once a refund exists.
 
 ## 🎯 Mid-size features (1 session each)
 
-| #   | Item                                                              | Module              | Effort | Gate | Notes                                                                                                                                                                                                   |
-| --- | ----------------------------------------------------------------- | ------------------- | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Discount + PPN/tax at POS checkout**                            | sales               | M      | 🟡   | Per-cart discount (% / fixed) + tax rate (inclusive/exclusive); `Sale`/`SaleItem` gain discount/tax/net fields. Required for ID compliance. Profit report must read net.                                |
-| 2   | **Partial / per-item POS refund**                                 | sales               | M      | 🟡   | `voidSale` is all-or-nothing today. Add `SaleRefund`/`SaleRefundItem` + `PARTIALLY_REFUNDED`; reuse `applyOfflineSaleReversalTx` per refunded qty; net the profit report (after #1's netting approach). |
-| 3   | **Stock opname / cycle count**                                    | inventory           | L      | 🟡   | `StockOpname`/`StockOpnameItem` (system vs counted vs variance); count by SKU/barcode via the existing scanner; variance posts a RECONCILE/MANUAL_ADJUST ledger row. Variance report.                   |
-| 4   | **Per-channel performance report**                                | reporting           | M      | 🟢   | Beyond profit-by-channel: payment-method mix, return rate by channel, fulfillment time, turnover. Charts (see redesign).                                                                                |
-| 5   | **Dead-stock & ABC analysis**                                     | inventory/reporting | M      | 🟢   | No-sales-in-N-days report + ABC classification; complements the reorder report + valuation.                                                                                                             |
-| 6   | **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace   | L      | 🟢   | Daily per-connection drift detect (pull external → compare → log); connection test endpoint (Lazada `validateStockSync` exists, unused) + health widget. High-value once real adapters live.            |
-| 7   | **Supplier entity + per-supplier lead time**                      | purchasing          | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.                        |
+| #   | Item                                                              | Module              | Effort | Gate | Notes                                                                                                                                                                                        |
+| --- | ----------------------------------------------------------------- | ------------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Stock opname / cycle count**                                    | inventory           | L      | 🟡   | `StockOpname`/`StockOpnameItem` (system vs counted vs variance); count by SKU/barcode via the existing scanner; variance posts a RECONCILE/MANUAL_ADJUST ledger row. Variance report.        |
+| 2   | **Per-channel performance report**                                | reporting           | M      | 🟢   | Beyond profit-by-channel: payment-method mix, return rate by channel, fulfillment time, turnover. Charts (see redesign).                                                                     |
+| 3   | **Dead-stock & ABC analysis**                                     | inventory/reporting | M      | 🟢   | No-sales-in-N-days report + ABC classification; complements the reorder report + valuation.                                                                                                  |
+| 4   | **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace   | L      | 🟢   | Daily per-connection drift detect (pull external → compare → log); connection test endpoint (Lazada `validateStockSync` exists, unused) + health widget. High-value once real adapters live. |
+| 5   | **Supplier entity + per-supplier lead time**                      | purchasing          | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.             |
 
 ## 🛰️ Big bets (multi-session / gated, sequenced later)
 
@@ -50,10 +58,10 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 ## ⚡ Quick wins (sub-hour)
 
 - `@@index([userId, createdAt])` on `StockLedger` (activity-log scans) — index-only migration 🟡.
-- Connection-level sync-health summary badge on the marketplace dashboard (read-only) 🟢.
-- Standing below-cost alert at sale-create (log/flag when `unitPrice < unitCost`) 🟢.
-- Show the "group · subvariant" label in POS / PO / inventory pickers (UI-only, reuse `formatVariantLabel`) 🟢.
-- Archived-variant view + restore on product detail 🟢.
+- Archived-variant view + restore on product detail 🟢 (needs a new unarchive service+route — SKU
+  un-mangle + collision check; not a true sub-hour, scope before picking up).
+- _(shipped 2026-06-11: marketplace sync-health badge · below-cost alert at sale-create ·
+  `grup · subvarian` picker label.)_
 
 ## Locked decisions (don't relitigate without a reason)
 
