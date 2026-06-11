@@ -253,6 +253,31 @@ export function SaleDetail({ saleId }: { saleId: string }) {
               <CardTitle className="text-base">Penjualan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {Number(data.discountAmount) > 0 || Number(data.taxAmount) > 0 ? (
+                <>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="num text-right">{formatCurrency(data.subtotalAmount)}</span>
+                  </div>
+                  {Number(data.discountAmount) > 0 ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Diskon</span>
+                      <span className="num text-signed-down text-right">
+                        −{formatCurrency(data.discountAmount)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {Number(data.taxAmount) > 0 ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        PPN <span className="num">{data.taxRate}%</span>
+                        {data.taxInclusive ? ' (termasuk)' : ''}
+                      </span>
+                      <span className="num text-right">{formatCurrency(data.taxAmount)}</span>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Total harga</span>
                 <span className="num text-right font-semibold">

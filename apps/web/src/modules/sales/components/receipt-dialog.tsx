@@ -89,6 +89,29 @@ export function ReceiptDialog({
 
           <div className="my-2 border-t border-dashed border-zinc-400" />
 
+          {Number(sale.discountAmount) > 0 || Number(sale.taxAmount) > 0 ? (
+            <>
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>{formatCurrency(sale.subtotalAmount)}</span>
+              </div>
+              {Number(sale.discountAmount) > 0 ? (
+                <div className="flex justify-between">
+                  <span>Diskon</span>
+                  <span>-{formatCurrency(sale.discountAmount)}</span>
+                </div>
+              ) : null}
+              {Number(sale.taxAmount) > 0 ? (
+                <div className="flex justify-between">
+                  <span>
+                    PPN {sale.taxRate}%{sale.taxInclusive ? ' (termasuk)' : ''}
+                  </span>
+                  <span>{formatCurrency(sale.taxAmount)}</span>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
           <div className="flex justify-between text-xs font-bold">
             <span>Total</span>
             <span>{formatCurrency(sale.totalAmount)}</span>

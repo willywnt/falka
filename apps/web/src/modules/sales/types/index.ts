@@ -54,5 +54,14 @@ export type SaleListItem = {
 
 export type SaleDetail = SaleListItem & {
   note: string | null;
+  /** Gross sum of lines before discount/tax. */
+  subtotalAmount: string;
+  /** Cart-level discount in rupiah (0 = none). */
+  discountAmount: string;
+  /** PPN rate in percent (0 = no tax). */
+  taxRate: number;
+  /** Resolved PPN in rupiah (contained in totalAmount when taxInclusive). */
+  taxAmount: string;
+  taxInclusive: boolean;
   items: SaleItemDetail[];
 };

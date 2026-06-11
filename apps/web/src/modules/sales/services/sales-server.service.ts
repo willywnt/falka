@@ -12,6 +12,7 @@ import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-alloca
 import type { BundleResolution } from '@/modules/catalog/types';
 
 import { SaleError } from '../errors/sale-errors';
+import { allocateProportionally, computeSaleTotals } from '../utils/sale-totals';
 import type { CreateSaleInput } from '../validators/create-sale';
 import type { SearchVariantsQuery } from '../validators/search-variants';
 import type {
@@ -52,6 +53,11 @@ function mapDetail(row: SaleRow): SaleDetail {
     customerName: row.customerName,
     paymentMethod: row.paymentMethod,
     status: row.status,
+    subtotalAmount: row.subtotalAmount.toString(),
+    discountAmount: row.discountAmount.toString(),
+    taxRate: Number(row.taxRate),
+    taxAmount: row.taxAmount.toString(),
+    taxInclusive: row.taxInclusive,
     totalAmount: row.totalAmount.toString(),
     itemCount: row.items.length,
     note: row.note,
@@ -267,10 +273,24 @@ export class SalesServerService {
     // A bundle explodes into one sale line per component (stock + accounting are per-variant);
     // its single price is allocated across components so per-variant revenue stays correct.
     const lines = this.buildSaleLines(variantItems, bundleItems, variantById, bundles);
-    const totalAmount = lines.reduce(
-      (sum, line) => sum + Number(line.unitPrice) * line.quantity,
-      0,
+    const subtotal = lines.reduce((sum, line) => sum + Number(line.unitPrice) * line.quantity, 0);
+
+    // Cart-level discount + PPN, resolved server-side so the persisted rupiah
+    // are authoritative; the discount is then allocated per line (by gross,
+    // largest remainder) so per-variant net revenue stays exact for reports.
+    const totals = computeSaleTotals(
+      subtotal,
+      input.discount ?? null,
+      input.taxRate ?? 0,
+      input.taxInclusive ?? false,
     );
+    const lineDiscounts = allocateProportionally(
+      totals.discountAmount,
+      lines.map((line) => Number(line.unitPrice) * line.quantity),
+    );
+    lines.forEach((line, index) => {
+      line.discountAmount = lineDiscounts[index] ?? 0;
+    });
 
     const created = await prisma.$transaction(async (tx) => {
       const count = await tx.sale.count({ where: { userId } });
@@ -282,7 +302,12 @@ export class SalesServerService {
           code,
           customerName: input.customerName ?? null,
           paymentMethod: input.paymentMethod,
-          totalAmount,
+          subtotalAmount: totals.subtotal,
+          discountAmount: totals.discountAmount,
+          taxRate: input.taxRate ?? 0,
+          taxAmount: totals.taxAmount,
+          taxInclusive: input.taxInclusive ?? false,
+          totalAmount: totals.totalAmount,
           note: input.note ?? null,
           items: { create: lines },
         },

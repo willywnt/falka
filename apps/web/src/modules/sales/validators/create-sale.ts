@@ -23,6 +23,17 @@ export const createSaleSchema = z.object({
   paymentMethod: z.nativeEnum(SalePaymentMethod),
   customerName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(500).optional(),
+  /** Cart-level discount; the server resolves it to rupiah and allocates per line. */
+  discount: z
+    .object({
+      type: z.enum(['PERCENT', 'AMOUNT']),
+      value: z.number().nonnegative(),
+    })
+    .optional(),
+  /** PPN rate in percent (0–100); omitted/0 = no tax. */
+  taxRate: z.number().min(0).max(100).optional(),
+  /** true = prices already contain PPN (tax carved out, total unchanged). */
+  taxInclusive: z.boolean().optional(),
 });
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -48,6 +49,7 @@ import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/conne
 
 import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sales';
 import { usePosScanner, type PosScannerStatus } from '../hooks/use-pos-scanner';
+import { computeSaleTotals } from '../utils/sale-totals';
 import type { ScannedSaleItem, SellableVariant } from '../types';
 
 const SCAN_SOUND_STORAGE_KEY = 'falka-pos-scan-sound';
@@ -186,6 +188,12 @@ export function PosTerminal() {
   const [customerName, setCustomerName] = useState('');
   // Change calculator (CASH only) — pure client math, never sent to the server.
   const [cashReceived, setCashReceived] = useState(0);
+  // Cart-level discount (reset per sale) + PPN settings (sticky per register).
+  const [discountType, setDiscountType] = useState<'PERCENT' | 'AMOUNT'>('PERCENT');
+  const [discountValue, setDiscountValue] = useState(0);
+  const [taxEnabled, setTaxEnabled] = useState(false);
+  const [taxRate, setTaxRate] = useState(11);
+  const [taxInclusive, setTaxInclusive] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const { soundOn, toggleSound } = useScanSoundPref(SCAN_SOUND_STORAGE_KEY);
 
@@ -200,10 +208,22 @@ export function PosTerminal() {
 
   const createSale = useCreateSaleMutation();
 
-  const total = useMemo(
+  const subtotal = useMemo(
     () => cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
     [cart],
   );
+  // Mirrors the server's authoritative math exactly (same shared util).
+  const totals = useMemo(
+    () =>
+      computeSaleTotals(
+        subtotal,
+        discountValue > 0 ? { type: discountType, value: discountValue } : null,
+        taxEnabled ? taxRate : 0,
+        taxInclusive,
+      ),
+    [subtotal, discountType, discountValue, taxEnabled, taxRate, taxInclusive],
+  );
+  const total = totals.totalAmount;
 
   // Total demand and known availability PER variant across the whole cart, so a
   // variant sold both standalone AND inside a bundle warns once their combined
@@ -404,6 +424,8 @@ export function PosTerminal() {
         ),
         paymentMethod,
         customerName: customerName.trim() || undefined,
+        ...(discountValue > 0 ? { discount: { type: discountType, value: discountValue } } : {}),
+        ...(taxEnabled && taxRate > 0 ? { taxRate, taxInclusive } : {}),
       });
       toast.success(`Penjualan ${sale.code} tercatat`, {
         description: `${formatCurrency(sale.totalAmount)} · stok diperbarui`,
@@ -411,6 +433,8 @@ export function PosTerminal() {
       setCart([]);
       setCustomerName('');
       setCashReceived(0);
+      // Discount is per-sale; the PPN setting stays (a register-level habit).
+      setDiscountValue(0);
       setSearchInput('');
     } catch (error) {
       toast.error('Pembayaran gagal', {
@@ -585,6 +609,93 @@ export function PosTerminal() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 items-end gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="discount-value">Diskon</Label>
+                <div className="flex gap-1.5">
+                  <Select
+                    value={discountType}
+                    onChange={(event) =>
+                      setDiscountType(event.target.value as 'PERCENT' | 'AMOUNT')
+                    }
+                    className="w-18 shrink-0"
+                    aria-label="Jenis diskon"
+                  >
+                    <option value="PERCENT">%</option>
+                    <option value="AMOUNT">Rp</option>
+                  </Select>
+                  <NumberInput
+                    id="discount-value"
+                    value={discountValue}
+                    onChange={(value) => setDiscountValue(Math.max(0, value))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex h-5 items-center gap-2">
+                  <Switch id="tax-enabled" checked={taxEnabled} onCheckedChange={setTaxEnabled} />
+                  <Label htmlFor="tax-enabled">PPN</Label>
+                </div>
+                {taxEnabled ? (
+                  <div className="flex gap-1.5">
+                    <NumberInput
+                      value={taxRate}
+                      onChange={(value) => setTaxRate(Math.min(100, Math.max(0, value)))}
+                      className="w-16 shrink-0"
+                      aria-label="Tarif PPN (persen)"
+                    />
+                    <Select
+                      value={taxInclusive ? 'inclusive' : 'exclusive'}
+                      onChange={(event) => setTaxInclusive(event.target.value === 'inclusive')}
+                      aria-label="Cara hitung PPN"
+                    >
+                      <option value="exclusive">Ditambahkan</option>
+                      <option value="inclusive">Termasuk harga</option>
+                    </Select>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground pt-1.5 text-xs">Nonaktif</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1 border-t pt-3">
+              {totals.discountAmount > 0 || (taxEnabled && taxRate > 0) ? (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="num">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  {totals.discountAmount > 0 ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Diskon{discountType === 'PERCENT' ? ` ${discountValue}%` : ''}
+                      </span>
+                      <span className="num text-signed-down">
+                        −{formatCurrency(totals.discountAmount)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {taxEnabled && taxRate > 0 ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        PPN <span className="num">{taxRate}%</span>
+                        {taxInclusive ? ' (termasuk)' : ''}
+                      </span>
+                      <span className="num">
+                        {taxInclusive ? '' : '+'}
+                        {formatCurrency(totals.taxAmount)}
+                      </span>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-muted-foreground text-sm">Total harga</span>
+                <span className="num text-lg font-semibold">{formatCurrency(total)}</span>
+              </div>
+            </div>
+
             {paymentMethod === 'CASH' ? (
               <div className="grid grid-cols-2 items-end gap-2">
                 <div className="space-y-1.5">
@@ -616,11 +727,6 @@ export function PosTerminal() {
                 </p>
               </div>
             ) : null}
-
-            <div className="flex items-center justify-between border-t pt-3">
-              <span className="text-muted-foreground text-sm">Total harga</span>
-              <span className="num text-lg font-semibold">{formatCurrency(total)}</span>
-            </div>
 
             <Button
               className="w-full"
