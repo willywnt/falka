@@ -242,3 +242,18 @@ export type StockOpnameDetail = {
   summary: StockOpnameSummary;
   items: StockOpnameItemDetail[];
 };
+
+/** What a scan matched + the running count after the +1 (for the scan toast). */
+export type OpnameScanMatch = {
+  sku: string;
+  name: string;
+  productName: string;
+  variantGroup: string | null;
+  countedQuantity: number;
+};
+
+/** Result of a scan-to-count: `matched`/`detail` are null when the code resolved to nothing. */
+export type OpnameScanResult = {
+  matched: OpnameScanMatch | null;
+  detail: StockOpnameDetail | null;
+};

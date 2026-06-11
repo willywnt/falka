@@ -10,6 +10,7 @@ import { inventoryServerService } from './inventory-server.service';
 import { StockOpnameError } from '../errors/stock-opname-errors';
 import type {
   CountableVariant,
+  OpnameScanResult,
   StockOpnameDetail,
   StockOpnameItemDetail,
   StockOpnameListItem,
@@ -272,6 +273,70 @@ export class StockOpnameService {
     }
 
     return this.getOpname(userId, id);
+  }
+
+  /**
+   * Scan-to-count: resolve a barcode/SKU and add +1 to that variant's counted qty
+   * (creating the line at 1 on first scan, snapshotting the system qty then). Tally
+   * each physical unit. DRAFT only; returns `matched: null` when nothing resolves so
+   * the caller can buzz an error.
+   */
+  async scanCountItem(userId: string, id: string, code: string): Promise<OpnameScanResult> {
+    const opname = await prisma.stockOpname.findFirst({
+      where: { id, userId },
+      select: { id: true, status: true },
+    });
+    if (!opname) throw StockOpnameError.notFound();
+    if (opname.status !== 'DRAFT') throw StockOpnameError.validation('Opname ini sudah ditutup.');
+
+    const variant = await this.resolveCountableVariant(userId, code);
+    if (!variant) return { matched: null, detail: null };
+
+    const counted = await prisma.$transaction(async (tx) => {
+      const existing = await tx.stockOpnameItem.findUnique({
+        where: {
+          stockOpnameId_productVariantId: {
+            stockOpnameId: id,
+            productVariantId: variant.variantId,
+          },
+        },
+        select: { id: true, systemQuantity: true, countedQuantity: true },
+      });
+
+      if (existing) {
+        const newCounted = existing.countedQuantity + 1;
+        await tx.stockOpnameItem.update({
+          where: { id: existing.id },
+          data: { countedQuantity: newCounted, variance: newCounted - existing.systemQuantity },
+        });
+        return newCounted;
+      }
+
+      await tx.stockOpnameItem.create({
+        data: {
+          stockOpnameId: id,
+          productVariantId: variant.variantId,
+          sku: variant.sku,
+          name: variant.name,
+          systemQuantity: variant.systemQuantity,
+          countedQuantity: 1,
+          variance: 1 - variant.systemQuantity,
+        },
+      });
+      return 1;
+    });
+
+    const detail = await this.getOpname(userId, id);
+    return {
+      matched: {
+        sku: variant.sku,
+        name: variant.name,
+        productName: variant.productName,
+        variantGroup: variant.variantGroup,
+        countedQuantity: counted,
+      },
+      detail,
+    };
   }
 
   /** Remove a counted line (DRAFT only). A wrong/stale itemId is a no-op. */
