@@ -19,7 +19,9 @@ import { cn } from '@/lib/utils';
 import { useLabelVariantsQuery, useMarkLabelsPrintedMutation } from '../hooks/use-products';
 import { useQrCodes } from '../hooks/use-qr-codes';
 import type { LabelVariant } from '../types';
-import { LabelSheet, labelCodeFor, type PrintableLabel } from './label-sheet';
+import { LabelSheet, labelCodeFor, type LabelColumns, type PrintableLabel } from './label-sheet';
+
+const COLUMN_OPTIONS: LabelColumns[] = [1, 2, 3, 4];
 
 /**
  * Phase A of POS QR-scan: pick variants and print an A4 sheet of QR labels
@@ -43,6 +45,7 @@ export function LabelStudio() {
   }, [debouncedSearch, setPage]);
 
   const [selected, setSelected] = useState<Map<string, LabelVariant>>(new Map());
+  const [columns, setColumns] = useState<LabelColumns>(4);
   const picked = useMemo(() => [...selected.values()], [selected]);
   const labels = useMemo<PrintableLabel[]>(
     () =>
@@ -102,7 +105,23 @@ export function LabelStudio() {
           placeholder="Cari nama produk, varian, atau sku..."
           className="sm:max-w-xs"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground mr-1 text-sm">Kolom</span>
+            {COLUMN_OPTIONS.map((n) => (
+              <Button
+                key={n}
+                variant={columns === n ? 'default' : 'outline'}
+                size="icon"
+                className="size-8"
+                onClick={() => setColumns(n)}
+                aria-label={`${n} kolom`}
+                aria-pressed={columns === n}
+              >
+                {n}
+              </Button>
+            ))}
+          </div>
           <Button variant="outline" onClick={selectPage} disabled={variants.length === 0}>
             Pilih halaman ini
           </Button>
@@ -212,7 +231,7 @@ export function LabelStudio() {
               className="print:hidden"
             />
           ) : (
-            <LabelSheet labels={labels} qrCodes={qrCodes} />
+            <LabelSheet labels={labels} qrCodes={qrCodes} columns={columns} />
           )}
         </div>
       </div>
