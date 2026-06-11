@@ -14,8 +14,8 @@ e.g. `findSessionUser`) · services (`pairing.service.ts`, `scanner-socket-manag
 (`scanner-pairing.store.ts` = UI only) · types · utils (`resolve-public-origin.ts`) · validators
 (`scannedCodeSchema` = lenient scan gate; `pairingPurposeSchema`).
 
-This pairing flow is **reused by 3 stations** — recordings, POS scan-to-cart, and New-PO
-scan-to-order — kept apart by `PairingSession.purpose` (see below). It is NOT recordings-only.
+This pairing flow is **reused by 4 stations** — recordings, POS scan-to-cart, New-PO scan-to-order,
+and **opname scan-to-count** — kept apart by `PairingSession.purpose` (see below). It is NOT recordings-only.
 
 ## 🔒 HAPPY FLOW 2 — Mobile Scanner (behavior MUST NOT change)
 desktop shows QR → phone opens `/mobile/connect` (auto sign-in via pairing code) →
@@ -32,15 +32,31 @@ RECORDING pairing** (server gates on `session.purpose`); the client also no long
 to optimistically show the countdown — the phone's station phase is driven authoritatively by
 `station_recording_state`, so a duplicate-resi reject leaves the phone scanning (not stuck).
 
-## Pairing purpose (RECORDING | POS | PURCHASING)
-`PairingSession.purpose` (Prisma enum `PairingPurpose`) keeps the 3 stations apart so one scan
+## Pairing purpose (RECORDING | POS | PURCHASING | OPNAME)
+`PairingSession.purpose` (Prisma enum `PairingPurpose`) keeps the 4 stations apart so one scan
 never fires on the wrong page. `createSession(userId, purpose)` (POST body `{purpose}`, validated
 by `pairingPurposeSchema`); the **connect dialog carries a `purpose` prop** and only reuses an
 active session when its purpose matches (else mints a fresh one, superseding the other — one active
 session per user). Each desktop consumer gates on the active session's purpose
 (`activePairing.session.purpose === '…'`) before acting. Copy is purpose-aware via `station-purpose.ts`.
 POS/PO scan-to-cart/order live in the **sales / purchasing** modules (`usePosScanner` /
-`usePurchaseScanner` + `…/variants/resolve?code=` resolvers) — see `40-inventory-marketplace.mdc`.
+`usePurchaseScanner` + `…/variants/resolve?code=` resolvers); **opname scan-to-count** is
+`useOpnameScanner` (inventory module) — each scan tallies **+1** via `POST /inventory/opname/:id/scan`.
+See `40-inventory-marketplace.mdc`.
+
+**Hardening (don't regress):**
+- **Phone re-auths as the session OWNER on every QR scan** (`useMobilePairingQrAuth`): the pairing-code
+  credential sign-in runs even when a *different* account is already signed in on the phone — otherwise a
+  stale login made every pairing 403 (`getSessionForUser`/`connectMobile` assert ownership). `isAuthenticated`
+  stays false until the claim settles so the connect flow + session GET never fire as the wrong user. This is
+  a CLIENT hook calling `signIn` — it does NOT touch Auth.js config (HARD #2).
+- **Desktop "connected" indicator is purpose-gated** (`isConnected = displaySession.purpose === purpose && …`)
+  so a leftover CONNECTED session of another station doesn't show a false "Ponsel terhubung".
+- **The connect URL carries `purpose`** (display-only; the session is still authoritative) so the phone shows
+  the right "Menghubungkan ke <station>…" copy before the session loads.
+- **Release on leave**: `useReleasePairingOnNavigate(session)` disconnects the purpose-matched session on
+  client-side navigation away from a scan page, but PRESERVES it across a full refresh/close (beforeunload /
+  pagehide) so a reload re-attaches. Wired into the POS / PO / opname scanner hooks (recordings excluded).
 
 ## Scan handling — verbatim codes, formats, history, sound
 - **Verbatim**: scanned codes are relayed/stored as-typed (only trimmed). `normalizeBarcodeValue`

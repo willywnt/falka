@@ -241,6 +241,19 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
 - **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty, honours per-variant
   `leadTimeDays`/`minOrderQty`); stock activity log (filter + paginate + CSV); variant editing. Demand
   velocity sums `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN` (net), excludes the delta-0 `ORDER_SHIP`.
+- **Stock opname / cycle count** (`inventory`): `StockOpname`/`StockOpnameItem` + `StockOpnameStatus`
+  (DRAFT/COMPLETED/CANCELLED), code `OP00001` per-user. A session at `/dashboard/inventory/opname`: add
+  lines (system qty snapshotted ONCE at add) via search-to-add or **scan-to-count** (a phone on an
+  **`OPNAME`** pairing — each scan **tallies +1**; `scanCountItem` resolves barcode/SKU + increments
+  atomically), edit the counted qty inline (a `= sistem` shortcut + live variance), then **post** → every
+  line's variance writes a `RECONCILE`/source `MANUAL` ledger row via the new
+  `inventoryServerService.applyReconcileTx` and corrects the Inventory cache (then propagates), or cancel.
+  **No new ledger reason** (`RECONCILE` already existed). Posted/cancelled = read-only variance report.
+- **Reporting** (`reporting` module, read-only, under "Insights"): profit/margin, per-channel performance,
+  inventory valuation, and **dead-stock & ABC**. Dead-stock = in-stock variants idle ≥ N days (REAL
+  days-since-last-sale from the `SALE`/`ORDER_RESERVE` ledger) valued at moving-avg cost; ABC = Pareto by
+  net revenue (A/B/C over positive revenue). Pure aggregates (unit-tested) + CSV export; the sales reports
+  reuse `loadSoldLines` so processed returns net out.
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
@@ -255,7 +268,7 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   (⋯ action) tables; re-print ("Print again") stays allowed. **Scan-to-cart / scan-to-order**: a phone
   paired via **`scanner-pairing`** adds a line by scanning a product label — POS (`usePosScanner`) and New
   PO (`usePurchaseScanner`); a repeat scan **bumps qty**. Each pairing carries a **`PairingPurpose`
-  (RECORDING | POS | PURCHASING)** so a scan only drives its own station (gated client-side; `recording_
+  (RECORDING | POS | PURCHASING | OPNAME)** so a scan only drives its own station (gated client-side; `recording_
 triggered` fires ONLY for RECORDING — contracts unchanged, HARD CONSTRAINT #4 intact). Scanned codes are
   relayed **verbatim** (lenient `scannedCodeSchema`; strict resi `noResiSchema` only gates recording-create
   - manual/hardware-wedge entry — `normalizeBarcodeValue` was removed). The mobile reader accepts QR + 1D.
@@ -263,6 +276,15 @@ triggered` fires ONLY for RECORDING — contracts unchanged, HARD CONSTRAINT #4 
     Scan feedback (beep + countdown ticks) is **browser-only** via `@/lib/scan-sound`. Realtime needs the
     socket host (`server.ts`, gated off on Vercel) → dev/VPS only; labels work anywhere. Detail in
     `.cursor/rules/30-scanner-pairing.mdc` + `…/40-inventory-marketplace.mdc`.
+  - **Pairing robustness**: a phone QR scan ALWAYS (re)claims the session **owner** via the pairing-code
+    credential — overriding a stale different-account login (else every pairing 403'd); the desktop
+    "connected" indicator is **purpose-gated**; the QR carries `purpose` so the phone shows the right
+    "Menghubungkan…" label immediately; **leaving a scan page (client nav) disconnects the phone**, a
+    refresh keeps it (`useReleasePairingOnNavigate`).
+  - **QR print**: `QrCodeDialog` prints ONE label through an isolated **iframe** (always a single centered
+    page — the in-page modal print fought the page height) with a **Kecil/Sedang/Besar = 30/50/70 mm** size
+    **dropdown** on Cetak; the label **studio** A4 sheet has a **1–4 column** size selector (fewer = bigger).
+    Both variant + bundle dialogs show `labelPrintedAt` ("Terakhir dicetak").
 - **Gotchas**: BullMQ jobId can't contain `:`; the dev server locks the Prisma engine DLL — stop it
   before `prisma generate`/migrate (index-only migration can use `--skip-generate` WITHOUT stopping);
   after adding a `page.tsx`/route, **typed routes** make `tsc` fail on `Route` literals until
@@ -283,8 +305,9 @@ always behind an AlertDialog confirm; two-column detail pages w/ eyebrow headers
 skeletons; data tables collapse to card lists under `sm` (table stays `sm+`); `StatCard`
 (num-display) / `EmptyState` / `DateRangePicker` (1 month <sm + presets) / `LowStockBadge`
 (popover) / `BrandMark` / `WaveHairline` (hero/auth only) / `ChartLegend` + `useReducedMotion`.
-Paginated tables: `usePagination` + `TablePagination`. QR: `QrImage` + `QrCodeDialog`. Truncated
-cells: `EllipsisTooltip`. Per-variant photo: `VariantImage` popover. Scanner sound:
+Paginated tables: `usePagination` + `TablePagination`. QR: `QrImage` + `QrCodeDialog` (prints one
+label via an isolated iframe — always one centered page — with a Kecil/Sedang/Besar size dropdown;
+the labels-studio sheet picks 1–4 columns). Truncated cells: `EllipsisTooltip`. Per-variant photo: `VariantImage` popover. Scanner sound:
 `@/lib/scan-sound` + `useSoundUnlock` + `useScanSoundPref` (per-station keys). **Pandu**
 assistant = honest stub (`components/pandu/`): deterministic nudges over existing queries +
 keyword router, permanent "Pratinjau" label — never fake AI answers. Copy = informal ID "kamu";

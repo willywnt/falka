@@ -56,7 +56,20 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   log** (`inventory-activity.service` — filter reason/source/direction/date + paginate + CSV export).
   Demand reasons for velocity are centralised in `SALES_LEDGER_REASONS` (ORDER_RESERVE + ORDER_RELEASE
   + RETURN + SALE, NOT delta-0 ORDER_SHIP — avoids double-count; nets returns + counts offline POS
-  sales). Pure `utils/stock-math.ts` + `utils/reorder-math.ts` are unit-tested.
+  sales). Pure `utils/stock-math.ts` + `utils/reorder-math.ts` are unit-tested. **Stock opname /
+  cycle count**: `StockOpname`/`StockOpnameItem` (+ `StockOpnameStatus` DRAFT/COMPLETED/CANCELLED), a
+  session at `/dashboard/inventory/opname` — add lines (system qty snapshotted at add) via search OR
+  **scan-to-count** (`useOpnameScanner` on an `OPNAME` pairing, **+1 per scan**, `POST /inventory/opname/
+:id/scan` → `scanCountItem` resolve+increment in a tx), edit counted inline (a `= sistem` shortcut, live
+  variance), then **post** writes each line's variance as a `RECONCILE`/source `MANUAL` ledger row via the
+  new `applyReconcileTx(tx,{delta})` (no new ledger reason — RECONCILE existed) + propagates; cancel for a
+  draft. Posted/cancelled = read-only variance report. Code `OP00001` per-user. Endpoints under
+  `/inventory/opname` (list/create/detail, items upsert/delete, scan, complete, cancel, variants[/resolve]).
+- **reporting** (read-only, "Insights") — profit/margin, per-channel performance, inventory valuation, and
+  **dead-stock & ABC**. Dead-stock = in-stock variants idle ≥ a threshold by REAL days-since-last-sale (max
+  `SALE`/`ORDER_RESERVE` ledger row) valued at moving-avg cost; ABC = Pareto by net revenue (A/B/C, cumulative
+  over positive revenue so return-heavy SKUs fall to C). Pure aggregates unit-tested + per-report CSV; the
+  sales reports share `loadSoldLines` (revenue recognition + processed-return netting).
 - **marketplace** — connections (`MarketplaceConnection`; now also `lastOrdersPulledAt`) +
   `MarketplaceProduct` (listing snapshot) + `MarketplaceProductMapping` (listing↔variant). Mapping
   is **1:1 on the listing** (`marketplaceProductId @unique`) but ONE variant MAY map to many
@@ -250,3 +263,13 @@ vitest (engine is gate-checked only).
 > products list **pagination** (hook surfaces server meta); marketplace **per-connection sync-health
 > badges** (NEEDS_REVIEW/FAILED groupBy); below-cost flag at sale-create (`sales.below_cost` warn log);
 > variant-picker shows the `grup · subvarian` label; 0-quota storage no longer renders as "100% full".
+>
+> **Reporting + opname (2026-06-11/12)**: **dead-stock & ABC** report (reporting module) — pure
+> `aggregateDeadStock`/`aggregateAbc` (unit-tested) + CSV; distinct from the reorder report's coarse
+> age-proxy `DEAD` flag. **Stock opname / cycle count** (inventory) — `StockOpname`/`StockOpnameItem` +
+> `StockOpnameStatus`; post writes `RECONCILE` via new `applyReconcileTx`; **phase 2** added an `OPNAME`
+> `PairingPurpose` so a phone tallies **+1 per scan** (`scanCountItem`). **QR print**: `QrCodeDialog` prints
+> one label via an isolated **iframe** (one centered page) with a **Kecil/Sedang/Besar = 30/50/70 mm** size
+> dropdown; the labels-studio A4 sheet picks **1–4 columns** (fewer = bigger); bundle dialog now shows
+> `labelPrintedAt`. **Pairing fixes**: phone re-auths as the session owner on scan, release-on-navigate,
+> purpose-gated "connected", connect-URL `purpose` for the right connecting label (see `30-scanner-pairing.mdc`).

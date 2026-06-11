@@ -6,8 +6,10 @@
 > COGS snapshots, profit/margin report), VOID/refund, bundles/kits** shipped + **operations & finance
 > hardening (2026-06-07)** shipped (§13: list pagination, marketplace token-expiry guard, returns-netting
 > in profit, inventory-valuation report, share-evidence on dispute panels, manual order actions, DAMAGE
-> write-off) · Started 2026-06-03 · Owner: @willywnt · Next: see [`backlog.md`](./backlog.md) ·
-> Phase 6 (automation/reporting) still partly open.
+> write-off) · **discount + PPN at POS, partial/per-item refund** shipped · **reporting (per-channel
+> performance + dead-stock & ABC)** and **stock opname / cycle count** (with a phone `OPNAME` pairing that
+> tallies +1 per scan) shipped (2026-06-11/12) · Started 2026-06-03 · Owner: @willywnt · Next: see
+> [`backlog.md`](./backlog.md) · Phase 6 (scheduled reconciliation / provider-health) still partly open.
 >
 > This is the working reference for the next big MVP: an **internal inventory system
 > that is the source of truth**, integrating stock across marketplaces (Shopee,

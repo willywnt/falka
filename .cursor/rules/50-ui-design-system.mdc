@@ -73,7 +73,9 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
   failed query must NEVER render as "Belum ada…") · **StatusBadge** · **NumberDelta** ·
   **LowStockBadge** (Popover, warn tone — keyboard/touch reachable) · **DateRangePicker** (1
   month <sm + preset chips Hari ini/7 hari/30 hari/Bulan ini) · **TablePagination** ·
-  **QrImage** (Skeleton loading + distinct failed state) + **QrCodeDialog** ·
+  **QrImage** (Skeleton loading + distinct failed state) + **QrCodeDialog** (prints ONE label through an
+  isolated iframe — always a single centered page, not the in-page modal — with a Kecil/Sedang/Besar =
+  30/50/70 mm size dropdown on Cetak; the labels-studio A4 sheet picks 1–4 columns, fewer = bigger) ·
   **VariantPickerDialog** · **ImageUploadPopover** · **BrandMark** · **WaveHairline** ·
   **maritime-art** · **error-screen** · charts: **ChartLegend** (every multi-series chart shows a
   visible legend — touch has no hover), chart wrappers carry `role="img"` + ID aria-label.
@@ -107,7 +109,8 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
   stays English; no i18n framework. Canonical glossary as before plus: Bayar (checkout) ·
   payment labels via `paymentMethodLabel` (Tunai/QRIS/Transfer…) · "Rekam packing" (nav) ·
   "Laporan" (section) · "Fulfillment" badge label stays (user-approved) · sinkronisasi ·
-  Terhubung/Terputus/Token kedaluwarsa. Dates/relative times go through `lib/formatters` (id-ID;
+  Terhubung/Terputus/Token kedaluwarsa · the phone-scan CTA is **"Scan dengan ponsel"** everywhere
+  (POS/PO/opname/recordings) · "Opname stok" (nav) · "Tampilkan QR code" (row action). Dates/relative times go through `lib/formatters` (id-ID;
   date-fns `id` locale) — never `en-US` formatting.
 
 ## Shell & auth
