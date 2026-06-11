@@ -22,11 +22,23 @@ export function DashboardShell({
           defaultCollapsed={defaultCollapsed}
           defaultCollapsedSections={defaultCollapsedSections}
         >
-          <div className="flex h-screen overflow-hidden">
+          <a
+            href="#main-content"
+            className="bg-primary text-primary-foreground sr-only z-[60] rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
+          >
+            Langsung ke konten
+          </a>
+          <div className="flex h-dvh overflow-hidden">
             <AppSidebar />
             <div className="flex min-w-0 flex-1 flex-col">
               <DashboardNavbar />
-              <main className="horizon-wash flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="horizon-wash flex-1 overflow-y-auto p-4 outline-none md:p-6"
+              >
+                {children}
+              </main>
             </div>
           </div>
           <PanduDock />

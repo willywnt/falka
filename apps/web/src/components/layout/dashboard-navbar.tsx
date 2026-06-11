@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
 import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
@@ -20,17 +21,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 export function DashboardNavbar() {
   const { toggle } = useSidebar();
-  const { setTheme, theme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const { user } = useCurrentUser();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 flex h-14 items-center gap-4 border-b px-4 backdrop-blur md:px-6">
       <div className="flex items-center gap-2">
-        <Sheet>
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden">
               <Menu className="size-4" />
@@ -49,9 +58,10 @@ export function DashboardNavbar() {
                 />
                 {APP_NAME}
               </SheetTitle>
+              <SheetDescription className="sr-only">Navigasi utama</SheetDescription>
             </SheetHeader>
-            <div className="py-4">
-              <SidebarNav />
+            <div className="sidebar-scroll flex-1 overflow-y-auto py-4">
+              <SidebarNav onNavigate={() => setMobileNavOpen(false)} />
             </div>
           </SheetContent>
         </Sheet>
@@ -69,7 +79,7 @@ export function DashboardNavbar() {
           variant="ghost"
           size="icon"
           className="relative"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
         >
           <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />

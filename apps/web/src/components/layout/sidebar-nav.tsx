@@ -110,7 +110,10 @@ export function SidebarNav({
   const { collapsedSections, toggleSection } = useSidebar();
 
   return (
-    <nav className={cn('flex flex-col gap-4', collapsed ? 'px-2' : 'px-3')}>
+    <nav
+      aria-label="Navigasi utama"
+      className={cn('flex flex-col gap-4', collapsed ? 'px-2' : 'px-3')}
+    >
       {sidebarNavSections.map((section, index) => {
         const label = section.label;
         const sectionCollapsed = label ? collapsedSections.has(label) : false;
@@ -124,7 +127,7 @@ export function SidebarNav({
                 type="button"
                 onClick={() => toggleSection(label)}
                 aria-expanded={!sectionCollapsed}
-                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/80 eyebrow flex w-full items-center justify-between gap-2 px-3 pb-1 transition-colors"
+                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/80 eyebrow focus-visible:ring-sidebar-ring flex w-full items-center justify-between gap-2 rounded-sm px-3 pb-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
                 {label}
                 <ChevronRight
@@ -147,7 +150,7 @@ export function SidebarNav({
                       onClick={onNavigate}
                       title={collapsed ? item.title : undefined}
                       className={cn(
-                        'flex items-center rounded-lg text-sm font-medium transition-colors',
+                        'focus-visible:ring-sidebar-ring flex items-center rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none',
                         collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2',
                         isActive
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground'
