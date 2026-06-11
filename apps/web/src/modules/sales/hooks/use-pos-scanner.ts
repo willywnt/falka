@@ -7,6 +7,7 @@ import { playScanError, playScanSuccess } from '@/lib/scan-sound';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-desktop-scanner-socket';
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
+import { useReleasePairingOnNavigate } from '@/modules/scanner-pairing/hooks/use-release-pairing-on-navigate';
 import type { BarcodeScannedServerPayload } from '@/modules/scanner-pairing/socket/events';
 
 import { useResolveScanMutation } from './use-sales';
@@ -42,6 +43,8 @@ export function usePosScanner({
   const { data: activePairing } = useActivePairingQuery(scannerEnabled);
   const session =
     scannerEnabled && activePairing?.session?.purpose === 'POS' ? activePairing.session : null;
+  // Leaving the till (client nav) releases the phone; refresh keeps it.
+  useReleasePairingOnNavigate(session);
   const resolve = useResolveScanMutation();
 
   const soundRef = useRef(soundEnabled);

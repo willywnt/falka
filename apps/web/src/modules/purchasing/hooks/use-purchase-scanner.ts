@@ -7,6 +7,7 @@ import { playScanError, playScanSuccess } from '@/lib/scan-sound';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-desktop-scanner-socket';
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
+import { useReleasePairingOnNavigate } from '@/modules/scanner-pairing/hooks/use-release-pairing-on-navigate';
 import type { BarcodeScannedServerPayload } from '@/modules/scanner-pairing/socket/events';
 
 import { useResolvePurchaseScanMutation } from './use-purchase-orders';
@@ -36,6 +37,8 @@ export function usePurchaseScanner({ onResolved, soundEnabled }: UsePurchaseScan
     scannerEnabled && activePairing?.session?.purpose === 'PURCHASING'
       ? activePairing.session
       : null;
+  // Leaving the New PO page (client nav) releases the phone; refresh keeps it.
+  useReleasePairingOnNavigate(session);
   const resolve = useResolvePurchaseScanMutation();
 
   const soundRef = useRef(soundEnabled);

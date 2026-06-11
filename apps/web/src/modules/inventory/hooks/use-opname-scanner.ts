@@ -8,6 +8,7 @@ import { formatProductVariantLabel } from '@/lib/variant-label';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 import { useDesktopScannerSocket } from '@/modules/scanner-pairing/hooks/use-desktop-scanner-socket';
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
+import { useReleasePairingOnNavigate } from '@/modules/scanner-pairing/hooks/use-release-pairing-on-navigate';
 import type { BarcodeScannedServerPayload } from '@/modules/scanner-pairing/socket/events';
 
 import { useScanCountMutation } from './use-stock-opname';
@@ -36,6 +37,8 @@ export function useOpnameScanner({ opnameId, soundEnabled }: UseOpnameScannerOpt
   const { data: activePairing } = useActivePairingQuery(scannerEnabled);
   const session =
     scannerEnabled && activePairing?.session?.purpose === 'OPNAME' ? activePairing.session : null;
+  // Leaving the opname page (client nav) releases the phone; refresh keeps it.
+  useReleasePairingOnNavigate(session);
   const scanMutation = useScanCountMutation(opnameId);
 
   const soundRef = useRef(soundEnabled);
