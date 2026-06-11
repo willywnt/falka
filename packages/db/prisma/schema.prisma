@@ -56,6 +56,7 @@ model User {
   purchaseOrders             PurchaseOrder[]
   recordingShareLinks        RecordingShareLink[]
   bundles                    Bundle[]
+  stockOpnames               StockOpname[]
 
   @@map("users")
 }
@@ -264,6 +265,7 @@ model ProductVariant {
   saleRefundItems     SaleRefundItem[]
   purchaseOrderItems  PurchaseOrderItem[]
   bundleItems         BundleItem[]
+  stockOpnameItems    StockOpnameItem[]
 
   @@unique([userId, sku])
   @@index([userId])
@@ -751,4 +753,60 @@ model PurchaseOrderItem {
   @@index([purchaseOrderId])
   @@index([productVariantId])
   @@map("purchase_order_items")
+}
+
+enum StockOpnameStatus {
+  DRAFT // counting in progress
+  COMPLETED // posted — variances written to the ledger
+  CANCELLED
+}
+
+/**
+ * A stock-opname (cycle-count) session: a physical count reconciled against the
+ * system. Each line snapshots what the system said when the item was added and
+ * what was physically counted; posting (COMPLETED) writes the variance to the
+ * append-only StockLedger as a RECONCILE row and corrects the Inventory cache.
+ */
+model StockOpname {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  /** Readable reference (e.g. OP00001), generated per-user at create. */
+  code        String
+  status      StockOpnameStatus @default(DRAFT)
+  note        String?
+  startedAt   DateTime          @default(now())
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  items StockOpnameItem[]
+
+  @@index([userId])
+  @@index([code])
+  @@index([status])
+  @@map("stock_opnames")
+}
+
+model StockOpnameItem {
+  id               String         @id @default(cuid())
+  stockOpnameId    String
+  stockOpname      StockOpname    @relation(fields: [stockOpnameId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  /** Snapshot of the variant at count time, for stable history. */
+  sku              String
+  name             String
+  /** Available stock the system showed when this line was added to the count. */
+  systemQuantity   Int
+  countedQuantity  Int
+  /** countedQuantity − systemQuantity, stored for stable history + the variance report. */
+  variance         Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([stockOpnameId, productVariantId])
+  @@index([stockOpnameId])
+  @@index([productVariantId])
+  @@map("stock_opname_items")
 }
