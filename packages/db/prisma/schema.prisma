@@ -73,6 +73,7 @@ enum PairingPurpose {
   RECORDING
   POS
   PURCHASING
+  OPNAME
 }
 
 model PairingSession {

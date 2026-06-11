@@ -21,7 +21,7 @@ export const pairingCodeSchema = z.preprocess(
 );
 
 /** Which station a new pairing drives; defaults to recordings for back-compat. */
-export const pairingPurposeSchema = z.enum(['RECORDING', 'POS', 'PURCHASING']);
+export const pairingPurposeSchema = z.enum(['RECORDING', 'POS', 'PURCHASING', 'OPNAME']);
 
 export const createPairingSchema = z.object({
   purpose: pairingPurposeSchema.default('RECORDING'),

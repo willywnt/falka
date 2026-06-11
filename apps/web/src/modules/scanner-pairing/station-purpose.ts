@@ -56,6 +56,16 @@ export const STATION_PURPOSE_META: Record<PairingPurpose, StationPurposeMeta> = 
     unreachableLabel: 'Pembelian (PO) nggak bisa dihubungi.',
     mobileScanSuccess: (barcode) => `${barcode} — masuk ke PO`,
   },
+  OPNAME: {
+    label: 'Opname stok',
+    shortLabel: 'Opname',
+    description: 'Scan label QR atau barcode produk buat menambah hitungan opname (+1 per scan).',
+    mobileTitle: 'Scanner opname',
+    scanHint: 'Arahkan kamera ke label QR atau barcode produk',
+    connectingLabel: 'Menghubungkan ke opname stok…',
+    unreachableLabel: 'Stasiun opname nggak bisa dihubungi.',
+    mobileScanSuccess: (barcode) => `${barcode} — hitungan bertambah`,
+  },
 };
 
 /** Meta for a purpose, defaulting to recordings (the legacy/back-compat station). */
