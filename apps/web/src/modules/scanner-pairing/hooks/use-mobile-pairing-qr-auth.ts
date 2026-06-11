@@ -22,76 +22,76 @@ async function waitForClientSession(maxAttempts = 8): Promise<boolean> {
   return false;
 }
 
+/**
+ * Signs the phone in as the OWNER of a scanned pairing QR. A scan IS the
+ * authorization: we (re)claim via the pairing-code credentials provider even when
+ * a different account is already signed in on this device — otherwise a stale
+ * login makes every pairing request 403 (the session belongs to the desktop user,
+ * not the phone's). `claimPending` keeps `isAuthLoading` true until the claim for
+ * the current code settles, so the connect flow never fires as the wrong user.
+ */
 export function useMobilePairingQrAuth({ pairingId, pairingCode }: UseMobilePairingQrAuthOptions) {
-  const { data: session, status, update } = useSession();
+  const { status, update } = useSession();
   const [claimError, setClaimError] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
-  const attemptedKeyRef = useRef<string | null>(null);
+  // The (pairingId:pairingCode) we've finished a claim attempt for. A fresh QR
+  // clears it (re-claim); resolving it lets the connect flow proceed.
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
+  const attemptingRef = useRef(false);
 
-  const hasSession = Boolean(session?.user?.id);
+  const attemptKey = pairingId && pairingCode ? `${pairingId}:${pairingCode}` : null;
+  const claimPending = attemptKey !== null && resolvedKey !== attemptKey;
 
   const runClaim = useCallback(async () => {
-    if (!pairingId || !pairingCode) return;
+    if (!pairingId || !pairingCode || attemptingRef.current) return;
+    const key = `${pairingId}:${pairingCode}`;
 
-    const attemptKey = `${pairingId}:${pairingCode}`;
-    if (attemptedKeyRef.current === attemptKey) return;
-
-    const existing = await getSession();
-    if (existing?.user?.id) {
-      setClaimError(null);
-      return;
-    }
-
-    attemptedKeyRef.current = attemptKey;
+    attemptingRef.current = true;
     setIsClaiming(true);
     setClaimError(null);
 
-    const result = await signIn('credentials', {
-      pairingId,
-      pairingCode,
-      redirect: false,
-    });
+    try {
+      // The QR is the credential — this re-issues the session cookie for the
+      // pairing's owner, overriding whatever (if anything) was signed in before.
+      const result = await signIn('credentials', { pairingId, pairingCode, redirect: false });
+      await update();
+      await waitForClientSession();
 
-    await update();
-
-    const signedIn = (await waitForClientSession()) || Boolean((await getSession())?.user?.id);
-
-    setIsClaiming(false);
-
-    if (signedIn) {
-      setClaimError(null);
-      return;
-    }
-
-    if (!result?.ok || result?.error) {
+      // `ok && !error` is the real signal: a stale different-user session would
+      // otherwise look "signed in" even though THIS claim failed.
+      setClaimError(result?.ok && !result.error ? null : CLAIM_ERROR_MESSAGE);
+    } catch {
       setClaimError(CLAIM_ERROR_MESSAGE);
+    } finally {
+      setIsClaiming(false);
+      setResolvedKey(key);
+      attemptingRef.current = false;
     }
   }, [pairingCode, pairingId, update]);
 
+  // A new code (re)scan resets the resolved marker so it claims as the new owner.
   useEffect(() => {
-    if (!pairingId || !pairingCode) return;
-    if (hasSession || status === 'authenticated') {
-      setClaimError(null);
-      return;
-    }
-    if (status === 'loading' || isClaiming) return;
+    setResolvedKey(null);
+  }, [attemptKey]);
 
+  useEffect(() => {
+    if (!attemptKey || status === 'loading') return;
+    if (resolvedKey === attemptKey || attemptingRef.current) return;
     void runClaim();
-  }, [hasSession, isClaiming, pairingCode, pairingId, runClaim, status]);
+  }, [attemptKey, resolvedKey, runClaim, status]);
 
   const retryClaim = useCallback(() => {
-    attemptedKeyRef.current = null;
+    setResolvedKey(null);
     setClaimError(null);
-    void runClaim();
-  }, [runClaim]);
+  }, []);
 
-  const isAuthenticated = hasSession || status === 'authenticated';
+  const isAuthenticated = status === 'authenticated' && !claimPending;
 
   return {
     isAuthenticated,
-    isAuthLoading: status === 'loading' || isClaiming,
+    isAuthLoading: status === 'loading' || isClaiming || claimPending,
     isClaiming,
-    claimError: isAuthenticated ? null : claimError,
+    claimError,
     retryClaim,
   };
 }

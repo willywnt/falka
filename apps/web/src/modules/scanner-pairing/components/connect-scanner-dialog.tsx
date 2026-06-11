@@ -60,7 +60,11 @@ export function ConnectScannerDialog({
   const disconnectPairing = useDisconnectPairingMutation();
 
   const displaySession = activePairing?.session ?? null;
-  const isConnected = connectionState === 'connected' || displaySession?.status === 'CONNECTED';
+  // Only "connected" when the active session drives THIS station — a leftover
+  // CONNECTED session of another purpose (e.g. POS) must not light up this dialog.
+  const isConnected =
+    displaySession?.purpose === purpose &&
+    (connectionState === 'connected' || displaySession?.status === 'CONNECTED');
 
   // Only reuse the active session when it drives the SAME station; a mismatch
   // (e.g. a recordings session while opening the POS dialog) forces a fresh
