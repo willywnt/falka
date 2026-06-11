@@ -147,9 +147,36 @@ export function QrCodeDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xs">
-        <DialogHeader className="pr-8 text-left">
-          <DialogTitle>QR Code</DialogTitle>
-          <DialogDescription className="truncate">{name}</DialogDescription>
+        <DialogHeader className="pr-8">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <DialogTitle>QR Code</DialogTitle>
+              <DialogDescription className="truncate">{name}</DialogDescription>
+            </div>
+
+            <div className="w-[150px]">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" className="w-full" disabled={printing}>
+                    <Printer className="size-4" />
+                    {printing ? 'Menyiapkan…' : lastPrintedAt ? 'Cetak lagi' : 'Cetak'}
+                    <ChevronDown className="ml-auto size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-[var(--radix-dropdown-menu-trigger-width)]"
+                >
+                  {SIZE_OPTIONS.map((option) => (
+                    <DropdownMenuItem key={option.mm} onClick={() => void handlePrint(option.mm)}>
+                      {option.label}
+                      <span className="text-muted-foreground ml-auto text-xs">{option.mm} mm</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center">
@@ -157,24 +184,6 @@ export function QrCodeDialog({
           <QrImage value={value} size={208} />
           <div className="num text-muted-foreground text-sm">{sku}</div>
         </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" className="w-full" disabled={printing}>
-              <Printer className="size-4" />
-              {printing ? 'Menyiapkan…' : lastPrintedAt ? 'Cetak lagi' : 'Cetak'}
-              <ChevronDown className="ml-auto size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-            {SIZE_OPTIONS.map((option) => (
-              <DropdownMenuItem key={option.mm} onClick={() => void handlePrint(option.mm)}>
-                {option.label}
-                <span className="text-muted-foreground ml-auto text-xs">{option.mm} mm</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         <p className="text-muted-foreground text-center text-xs" suppressHydrationWarning>
           {lastPrintedAt
