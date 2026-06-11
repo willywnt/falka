@@ -1,19 +1,25 @@
 import 'server-only';
 
 import { prisma } from '@falka/db';
+import { StockLedgerReason } from '@prisma/client';
 
 import type {
+  AbcReport,
   ChannelPerformanceReport,
+  DeadStockReport,
   InventoryValuationReport,
   ProfitBySku,
   ProfitChannel,
   ProfitReport,
 } from '../types';
+import type { DeadStockQuery } from '../validators/dead-stock';
 import type { ProfitReportQuery } from '../validators/profit-report';
+import { aggregateAbc } from '../utils/abc-aggregate';
 import {
   aggregateChannelPerformance,
   type TransactionsByChannel,
 } from '../utils/channel-performance-aggregate';
+import { aggregateDeadStock, type DeadStockVariant } from '../utils/dead-stock-aggregate';
 import {
   aggregateInventoryValuation,
   type ValuationVariant,
@@ -22,6 +28,19 @@ import { aggregateProfit, aggregateProfitBySku, type SoldLine } from '../utils/p
 
 const DEFAULT_RANGE_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Outbound-demand ledger reasons that count as a real sale for "last sold":
+ * SALE (offline/POS) and ORDER_RESERVE (a paid marketplace order). RETURN /
+ * ORDER_RELEASE are inbound reversals and ORDER_SHIP carries a delta of 0, so
+ * none of them mark a fresh sale.
+ */
+const SOLD_LEDGER_REASONS = [StockLedgerReason.SALE, StockLedgerReason.ORDER_RESERVE] as const;
+
+/** Whole days between two instants, floored and never negative. */
+function daysBetween(earlier: Date, later: Date): number {
+  return Math.max(0, Math.floor((later.getTime() - earlier.getTime()) / DAY_MS));
+}
 
 function startOfDay(date: Date): Date {
   const next = new Date(date);
@@ -325,6 +344,72 @@ export class ReportingServerService {
     }));
 
     return aggregateInventoryValuation(lines);
+  }
+
+  /**
+   * Dead-stock scan: every live variant still holding stock, with its days since
+   * the last sale (the most recent SALE/ORDER_RESERVE ledger row). The aggregate
+   * keeps only those idle past `staleDays` and values the stuck capital at the
+   * moving-average cost. A snapshot — no date range.
+   */
+  async getDeadStock(userId: string, query: DeadStockQuery): Promise<DeadStockReport> {
+    const now = new Date();
+
+    const [variants, lastSoldRows] = await Promise.all([
+      prisma.productVariant.findMany({
+        where: { userId, deletedAt: null },
+        select: {
+          id: true,
+          productId: true,
+          name: true,
+          sku: true,
+          variantGroup: true,
+          cost: true,
+          createdAt: true,
+          product: { select: { name: true } },
+          inventory: { select: { availableStock: true } },
+        },
+      }),
+      // Last genuine outbound sale per variant, served by the (userId, reason,
+      // createdAt) ledger index.
+      prisma.stockLedger.groupBy({
+        by: ['variantId'],
+        where: { userId, reason: { in: [...SOLD_LEDGER_REASONS] } },
+        _max: { createdAt: true },
+      }),
+    ]);
+
+    const lastSoldByVariant = new Map(
+      lastSoldRows.map((row) => [row.variantId, row._max.createdAt]),
+    );
+
+    const rows: DeadStockVariant[] = variants.map((variant) => {
+      const lastSoldAt = lastSoldByVariant.get(variant.id) ?? null;
+      return {
+        variantId: variant.id,
+        productId: variant.productId,
+        productName: variant.product.name,
+        variantName: variant.name,
+        variantGroup: variant.variantGroup,
+        sku: variant.sku,
+        available: variant.inventory?.availableStock ?? 0,
+        cost: variant.cost == null ? null : Number(variant.cost),
+        daysSinceLastSale: lastSoldAt ? daysBetween(lastSoldAt, now) : null,
+        ageDays: daysBetween(variant.createdAt, now),
+      };
+    });
+
+    return aggregateDeadStock(rows, { staleDays: query.staleDays });
+  }
+
+  /**
+   * ABC analysis: rank SKUs by their share of net revenue over the range and
+   * bucket them A/B/C (Pareto). Reuses the profit report's realized-sale lines,
+   * so processed returns net each SKU down — same recognition + range handling.
+   */
+  async getAbcAnalysis(userId: string, query: ProfitReportQuery): Promise<AbcReport> {
+    const { lines, from, to } = await this.loadSoldLines(userId, query);
+    return aggregateAbc(lines, { from, to });
   }
 }
 
