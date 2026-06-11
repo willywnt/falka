@@ -107,9 +107,21 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-12 w-64" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -139,7 +151,8 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
             Bundel
           </Link>
         </Button>
-        <div className="mt-2 flex items-center gap-3">
+        <p className="eyebrow text-primary mt-2">Katalog</p>
+        <div className="mt-1 flex items-center gap-3">
           <BundleImage bundleId={bundleId} imageUrl={data.imageUrl} label={data.name} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -268,7 +281,12 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void handleDelete()}>Hapus</AlertDialogAction>
+                    <AlertDialogAction
+                      onClick={() => void handleDelete()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Hapus
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

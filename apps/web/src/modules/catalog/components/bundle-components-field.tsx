@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { ImageThumb } from '@/components/image-thumb';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { cn } from '@/lib/utils';
 
 import { useLabelVariantsQuery } from '../hooks/use-products';
 import type { LabelVariant } from '../types';
@@ -116,9 +117,17 @@ export function BundleComponentsField({
                 <div className="truncate text-sm font-medium">{component.name}</div>
                 <div className="text-muted-foreground truncate text-xs">
                   {component.sku}
-                  {component.availableStock !== undefined
-                    ? ` · ${component.availableStock} tersedia`
-                    : ''}
+                  {component.availableStock !== undefined ? (
+                    <>
+                      {' · '}
+                      <span
+                        className={cn('num', component.availableStock === 0 && 'text-status-warn')}
+                      >
+                        {component.availableStock}
+                      </span>{' '}
+                      tersedia
+                    </>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-2">

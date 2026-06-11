@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Boxes, Layers, MoreHorizontal, Plus, QrCode, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ import { QrCodeDialog } from '@/components/qr-code-dialog';
 import { StatCard } from '@/components/stat-card';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { usePagination } from '@/hooks/use-pagination';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -52,13 +52,53 @@ import {
 import type { BundleListItem } from '../types';
 import { BundleImage } from './bundle-image';
 
+/** Lightweight stand-in matching the page rhythm while the URL-synced filters hydrate. */
+function BundlesDashboardFallback() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-24 w-full" />
+        ))}
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Skeleton className="h-9 w-full sm:max-w-xs" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-12 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function BundlesDashboard() {
-  const [searchInput, setSearchInput] = useState('');
+  return (
+    <Suspense fallback={<BundlesDashboardFallback />}>
+      <BundlesDashboardContent />
+    </Suspense>
+  );
+}
+
+function BundlesDashboardContent() {
+  const [filters, setFilters] = useUrlFilters({ search: '', status: 'all', page: '1' });
+  const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
-  const [status, setStatus] = useState<BundleStatusFilter>('all');
-  const { page, setPage, pageSize, setPageSize } = usePagination(10);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Push the debounced search into the URL-synced filters (resetting paging).
+  useEffect(() => {
+    if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch, page: '1' });
+  }, [debouncedSearch, filters.search, setFilters]);
+
+  const status: BundleStatusFilter =
+    filters.status === 'available' || filters.status === 'unavailable' ? filters.status : 'all';
+  const page = Number(filters.page) || 1;
+
   const { data, isLoading, error, refetch } = useBundlesQuery(
-    debouncedSearch,
+    filters.search,
     status,
     page,
     pageSize,
@@ -68,15 +108,11 @@ export function BundlesDashboard() {
   const [qrTarget, setQrTarget] = useState<BundleListItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BundleListItem | null>(null);
 
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, status, setPage]);
-
   const bundles = data?.items ?? [];
   const meta = data?.meta;
   const summary = data?.summary;
   const isEmpty = !isLoading && bundles.length === 0;
-  const isFiltered = Boolean(debouncedSearch) || status !== 'all';
+  const isFiltered = Boolean(filters.search) || status !== 'all';
 
   async function handleDelete(bundle: BundleListItem) {
     try {
@@ -94,50 +130,54 @@ export function BundlesDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        {(
-          [
-            {
-              key: 'all',
-              label: 'Semua bundel',
-              value: summary?.total ?? 0,
-              tone: 'muted',
-              icon: Layers,
-            },
-            {
-              key: 'available',
-              label: 'Tersedia',
-              value: summary?.available ?? 0,
-              tone: 'emerald',
-              icon: Boxes,
-            },
-            {
-              key: 'unavailable',
-              label: 'Stok habis',
-              value: summary?.unavailable ?? 0,
-              tone: 'amber',
-              icon: AlertTriangle,
-            },
-          ] as const
-        ).map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            onClick={() => setStatus(card.key)}
-            aria-pressed={status === card.key}
-            className="rounded-xl text-left focus-visible:outline-none"
-          >
-            <StatCard
-              label={card.label}
-              value={card.value}
-              icon={card.icon}
-              tone={card.tone}
-              className={cn(
-                'h-full transition-colors',
-                status === card.key ? 'ring-primary ring-2' : 'hover:border-primary/40',
-              )}
-            />
-          </button>
-        ))}
+        {summary
+          ? (
+              [
+                {
+                  key: 'all',
+                  label: 'Semua bundel',
+                  value: summary.total,
+                  tone: 'muted',
+                  icon: Layers,
+                },
+                {
+                  key: 'available',
+                  label: 'Tersedia',
+                  value: summary.available,
+                  tone: 'emerald',
+                  icon: Boxes,
+                },
+                {
+                  key: 'unavailable',
+                  label: 'Stok habis',
+                  value: summary.unavailable,
+                  tone: 'amber',
+                  icon: AlertTriangle,
+                },
+              ] as const
+            ).map((card) => (
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => setFilters({ status: card.key, page: '1' })}
+                aria-pressed={status === card.key}
+                className="focus-visible:ring-ring rounded-xl text-left focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <StatCard
+                  label={card.label}
+                  value={card.value}
+                  icon={card.icon}
+                  tone={card.tone}
+                  className={cn(
+                    'h-full transition-colors',
+                    status === card.key ? 'ring-primary ring-2' : 'hover:border-primary/40',
+                  )}
+                />
+              </button>
+            ))
+          : Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-24 w-full" />
+            ))}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -266,8 +306,11 @@ export function BundlesDashboard() {
               page={meta.page}
               pageSize={pageSize}
               total={meta.total}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
+              onPageChange={(nextPage) => setFilters({ page: String(nextPage) })}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setFilters({ page: '1' });
+              }}
             />
           ) : null}
         </>
@@ -305,6 +348,7 @@ export function BundlesDashboard() {
             <AlertDialogAction
               onClick={() => deleteTarget && void handleDelete(deleteTarget)}
               disabled={deleteBundle.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Hapus
             </AlertDialogAction>
