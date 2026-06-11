@@ -29,6 +29,7 @@ import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordi
 import { useCreateReturnMutation } from '@/modules/returns/hooks/use-returns';
 
 import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
+import type { OrderItemDetail } from '../types';
 import { OrderActionsMenu } from './order-actions-menu';
 import { OrderStatusBadge } from './order-status-badge';
 
@@ -72,6 +73,103 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
+  }
+
+  function openMapDialog(item: OrderItemDetail) {
+    setMapTarget({
+      id: item.id,
+      label: `${item.externalName}${item.externalSku ? ` · ${item.externalSku}` : ''}`,
+    });
+  }
+
+  /** Item name + external SKU — shared by the table row and the mobile card. */
+  function renderItemName(item: OrderItemDetail) {
+    return (
+      <div className="min-w-0">
+        <div className="font-medium break-words">{item.externalName}</div>
+        {item.externalSku ? (
+          <div className="num text-muted-foreground text-xs">{item.externalSku}</div>
+        ) : null}
+      </div>
+    );
+  }
+
+  /** Mapping state (variant chip OR warn badge + Kaitkan) — shared so table and card can't drift. */
+  function renderItemMapping(item: OrderItemDetail, fullWidthAction: boolean) {
+    if (item.variant) {
+      return (
+        <div className="flex items-center gap-3">
+          <ImageThumb src={item.variant.imageUrl} alt={item.variant.name} />
+          <div className="min-w-0">
+            <Badge variant="secondary" className="num">
+              {item.variant.sku}
+            </Badge>
+            <div className="text-muted-foreground text-xs">
+              {item.variant.productName} / {item.variant.name}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={fullWidthAction ? 'space-y-2' : 'flex items-center gap-2'}>
+        <StatusBadge tone="warn">Belum dikaitkan</StatusBadge>
+        <Button
+          variant="outline"
+          size={fullWidthAction ? 'default' : 'sm'}
+          className={fullWidthAction ? 'w-full' : undefined}
+          onClick={() => openMapDialog(item)}
+        >
+          <Link2 className="size-4" />
+          Kaitkan
+        </Button>
+      </div>
+    );
+  }
+
+  /** Line total (qty × unit price); '—' when the channel didn't send a price. */
+  function formatLineTotal(item: OrderItemDetail) {
+    return item.unitPrice ? formatCurrency(Number(item.unitPrice) * item.quantity) : '—';
+  }
+
+  function renderItemRow(item: OrderItemDetail) {
+    return (
+      <TableRow key={item.id}>
+        <TableCell>{renderItemName(item)}</TableCell>
+        <TableCell className="num text-right">{item.quantity}</TableCell>
+        <TableCell className="num text-right">
+          {item.unitPrice ? formatCurrency(item.unitPrice) : '—'}
+        </TableCell>
+        <TableCell>{renderItemMapping(item, false)}</TableCell>
+      </TableRow>
+    );
+  }
+
+  /** One item card (<sm) — same data as the table row, the map action gets a full-width target. */
+  function renderItemCard(item: OrderItemDetail) {
+    return (
+      <article key={item.id} className="bg-card space-y-3 rounded-xl border p-4">
+        {renderItemName(item)}
+
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">Harga</span>
+            <span className="num">
+              {item.quantity} × {item.unitPrice ? formatCurrency(item.unitPrice) : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">Total</span>
+            <span className="num font-medium">{formatLineTotal(item)}</span>
+          </div>
+        </div>
+
+        <div className="space-y-2 border-t pt-3">
+          <p className="text-muted-foreground text-xs">Dikaitkan ke</p>
+          {renderItemMapping(item, true)}
+        </div>
+      </article>
+    );
   }
 
   if (isLoading) {
@@ -147,9 +245,14 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Item <span className="text-muted-foreground">· {data.items.length}</span>
+            Item{' '}
+            <span className="text-muted-foreground">
+              · <span className="num">{data.items.length}</span>
+            </span>
           </p>
-          <div className="rounded-xl border">
+
+          {/* Desktop table — the same items render as cards below sm. */}
+          <div className="hidden overflow-x-auto rounded-xl border sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -159,53 +262,13 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                   <TableHead>Dikaitkan ke</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="font-medium">{item.externalName}</div>
-                      {item.externalSku ? (
-                        <div className="text-muted-foreground text-xs">{item.externalSku}</div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="num text-right">{item.quantity}</TableCell>
-                    <TableCell className="num text-right">
-                      {item.unitPrice ? formatCurrency(item.unitPrice) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {item.variant ? (
-                        <div className="flex items-center gap-3">
-                          <ImageThumb src={item.variant.imageUrl} alt={item.variant.name} />
-                          <div className="min-w-0">
-                            <Badge variant="secondary">{item.variant.sku}</Badge>
-                            <div className="text-muted-foreground text-xs">
-                              {item.variant.productName} / {item.variant.name}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <StatusBadge tone="warn">Belum dikaitkan</StatusBadge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setMapTarget({
-                                id: item.id,
-                                label: `${item.externalName}${item.externalSku ? ` · ${item.externalSku}` : ''}`,
-                              })
-                            }
-                          >
-                            <Link2 className="size-4" />
-                            Kaitkan
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <TableBody>{data.items.map((item) => renderItemRow(item))}</TableBody>
             </Table>
+          </div>
+
+          {/* Mobile card list — same data + Kaitkan action, full-width touch targets. */}
+          <div className="space-y-3 sm:hidden">
+            {data.items.map((item) => renderItemCard(item))}
           </div>
         </div>
 

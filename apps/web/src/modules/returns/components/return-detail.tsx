@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -42,6 +43,7 @@ import {
   useRejectReturnMutation,
   useReturnQuery,
 } from '../hooks/use-returns';
+import type { ReturnItemDetail } from '../types';
 import { ReturnStatusBadge } from './return-status-badge';
 
 function dispositionLabel(disposition: ReturnDisposition | null): string {
@@ -91,6 +93,96 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
         description: err instanceof Error ? err.message : 'Terjadi kesalahan.',
       });
     }
+  }
+
+  /** Thumb + name + SKU — shared by the table row and the mobile card. */
+  function renderLineIdentity(item: ReturnItemDetail) {
+    return (
+      <div className="flex items-center gap-3">
+        <ImageThumb src={item.imageUrl} alt={item.externalName} />
+        <div className="min-w-0">
+          <div className="font-medium break-words">{item.externalName}</div>
+          <div className="text-muted-foreground text-xs">
+            {item.sku ? <span className="num">{item.sku}</span> : 'belum dikaitkan'}
+            {item.productName ? ` · ${item.productName}` : ''}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /** The Restok/Rusak switch — same wiring everywhere so table and card can't drift. */
+  function renderResellableSwitch(item: ReturnItemDetail, id?: string) {
+    return (
+      <Switch
+        id={id}
+        checked={resellable[item.id] ?? true}
+        onCheckedChange={(on) => setResellable((prev) => ({ ...prev, [item.id]: on }))}
+        aria-label={`Restok ${item.externalName}`}
+      />
+    );
+  }
+
+  function resellableLabel(item: ReturnItemDetail) {
+    return (resellable[item.id] ?? true) ? 'Restok' : 'Rusak';
+  }
+
+  function renderDispositionBadge(item: ReturnItemDetail) {
+    return (
+      <Badge variant={item.disposition === 'RESTOCK' ? 'secondary' : 'outline'}>
+        {dispositionLabel(item.disposition)}
+      </Badge>
+    );
+  }
+
+  function renderLineRow(item: ReturnItemDetail) {
+    return (
+      <TableRow key={item.id}>
+        <TableCell>{renderLineIdentity(item)}</TableCell>
+        <TableCell className="num text-right">{item.quantity}</TableCell>
+        <TableCell className="text-right">
+          {isPending ? (
+            <div className="flex items-center justify-end gap-2">
+              {renderResellableSwitch(item)}
+              <span className="text-muted-foreground text-xs">{resellableLabel(item)}</span>
+            </div>
+          ) : (
+            renderDispositionBadge(item)
+          )}
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  /** One line card (<sm) — same data + Switch, with a tap-friendly labeled toggle row. */
+  function renderLineCard(item: ReturnItemDetail) {
+    return (
+      <article key={item.id} className="bg-card space-y-3 rounded-xl border p-4">
+        {renderLineIdentity(item)}
+
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <span className="text-muted-foreground">Qty</span>
+          <span className="num font-medium">{item.quantity}</span>
+        </div>
+
+        <div className="border-t pt-3">
+          {isPending ? (
+            <div className="flex min-h-9 items-center justify-between gap-4">
+              <Label htmlFor={`resellable-${item.id}`} className="text-sm font-normal">
+                Bisa dijual lagi?{' '}
+                <span className="text-muted-foreground">· {resellableLabel(item)}</span>
+              </Label>
+              {renderResellableSwitch(item, `resellable-${item.id}`)}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Penanganan</span>
+              {renderDispositionBadge(item)}
+            </div>
+          )}
+        </div>
+      </article>
+    );
   }
 
   if (isLoading) {
@@ -166,9 +258,14 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Item <span className="text-muted-foreground">· {data.items.length}</span>
+            Item{' '}
+            <span className="text-muted-foreground">
+              · <span className="num">{data.items.length}</span>
+            </span>
           </p>
-          <div className="rounded-xl border">
+
+          {/* Desktop table — the same lines render as cards below sm. */}
+          <div className="hidden overflow-x-auto rounded-xl border sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -179,50 +276,17 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {data.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <ImageThumb src={item.imageUrl} alt={item.externalName} />
-                        <div className="min-w-0">
-                          <div className="font-medium">{item.externalName}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {item.sku ? `${item.sku}` : 'belum dikaitkan'}
-                            {item.productName ? ` · ${item.productName}` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="num text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      {isPending ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <Switch
-                            checked={resellable[item.id] ?? true}
-                            onCheckedChange={(on) =>
-                              setResellable((prev) => ({ ...prev, [item.id]: on }))
-                            }
-                            aria-label={`Restok ${item.externalName}`}
-                          />
-                          <span className="text-muted-foreground text-xs">
-                            {(resellable[item.id] ?? true) ? 'Restok' : 'Rusak'}
-                          </span>
-                        </div>
-                      ) : (
-                        <Badge variant={item.disposition === 'RESTOCK' ? 'secondary' : 'outline'}>
-                          {dispositionLabel(item.disposition)}
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <TableBody>{data.items.map((item) => renderLineRow(item))}</TableBody>
             </Table>
           </div>
 
+          {/* Mobile card list — same data + Switch wiring, tap-friendly toggle rows. */}
+          <div className="space-y-3 sm:hidden">
+            {data.items.map((item) => renderLineCard(item))}
+          </div>
+
           {isPending ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button onClick={() => void handleProcess()} disabled={busy}>
                 <PackageCheck className="size-4" />
                 {processMutation.isPending ? 'Memproses...' : 'Terima & update stok'}
