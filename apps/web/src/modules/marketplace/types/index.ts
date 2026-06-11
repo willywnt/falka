@@ -20,6 +20,10 @@ export type MarketplaceConnectionListItem = {
   connectionStatus: MarketplaceConnectionStatus;
   createdAt: string;
   updatedAt: string;
+  /** Listings whose auto-map needs a human look (list endpoint only). */
+  needsReviewCount?: number;
+  /** Listings whose last stock push failed (list endpoint only). */
+  failedSyncCount?: number;
 };
 
 export type MarketplaceConnectionDetail = MarketplaceConnectionListItem;

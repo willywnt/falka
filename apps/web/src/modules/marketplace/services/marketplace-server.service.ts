@@ -43,15 +43,40 @@ function mapConnection(connection: MarketplaceConnection): MarketplaceConnection
 
 export class MarketplaceServerService {
   async listConnections(userId: string): Promise<MarketplaceConnectionListItem[]> {
-    const connections = await prisma.marketplaceConnection.findMany({
-      where: {
-        userId,
-        deletedAt: null,
-      },
-      orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
-    });
+    // Sync-health rollup per store: listings awaiting review + failed pushes,
+    // so the connections list can flag trouble without opening each detail.
+    const [connections, reviewCounts, failedCounts] = await Promise.all([
+      prisma.marketplaceConnection.findMany({
+        where: {
+          userId,
+          deletedAt: null,
+        },
+        orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
+      }),
+      prisma.marketplaceProductMapping.groupBy({
+        by: ['marketplaceConnectionId'],
+        where: { userId, mappingStatus: 'NEEDS_REVIEW' },
+        _count: { _all: true },
+      }),
+      prisma.marketplaceProductMapping.groupBy({
+        by: ['marketplaceConnectionId'],
+        where: { userId, lastSyncStatus: 'FAILED' },
+        _count: { _all: true },
+      }),
+    ]);
 
-    return connections.map(mapConnection);
+    const reviewByConnection = new Map(
+      reviewCounts.map((row) => [row.marketplaceConnectionId, row._count._all]),
+    );
+    const failedByConnection = new Map(
+      failedCounts.map((row) => [row.marketplaceConnectionId, row._count._all]),
+    );
+
+    return connections.map((connection) => ({
+      ...mapConnection(connection),
+      needsReviewCount: reviewByConnection.get(connection.id) ?? 0,
+      failedSyncCount: failedByConnection.get(connection.id) ?? 0,
+    }));
   }
 
   async getConnectionById(

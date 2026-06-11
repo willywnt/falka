@@ -100,7 +100,19 @@ export function MarketplaceTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <MarketplaceStatusBadge status={connection.connectionStatus} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <MarketplaceStatusBadge status={connection.connectionStatus} />
+                    {(connection.failedSyncCount ?? 0) > 0 ? (
+                      <StatusBadge tone="danger">
+                        <span className="num">{connection.failedSyncCount}</span> gagal sinkron
+                      </StatusBadge>
+                    ) : null}
+                    {(connection.needsReviewCount ?? 0) > 0 ? (
+                      <StatusBadge tone="warn">
+                        <span className="num">{connection.needsReviewCount}</span> perlu ditinjau
+                      </StatusBadge>
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm" suppressHydrationWarning>
@@ -145,6 +157,16 @@ export function MarketplaceTable({
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <MarketplaceProviderBadge provider={connection.provider} />
               <MarketplaceStatusBadge status={connection.connectionStatus} />
+              {(connection.failedSyncCount ?? 0) > 0 ? (
+                <StatusBadge tone="danger">
+                  <span className="num">{connection.failedSyncCount}</span> gagal sinkron
+                </StatusBadge>
+              ) : null}
+              {(connection.needsReviewCount ?? 0) > 0 ? (
+                <StatusBadge tone="warn">
+                  <span className="num">{connection.needsReviewCount}</span> perlu ditinjau
+                </StatusBadge>
+              ) : null}
               {isExpiringSoon(connection) ? (
                 <StatusBadge tone="warn">Segera kedaluwarsa</StatusBadge>
               ) : null}
