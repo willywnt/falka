@@ -42,8 +42,10 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   `/dashboard/inventory/opname`: scan/type or search to add a line (system qty snapshotted at add), edit the
   counted qty inline with a live variance, then **post** → each line's variance writes a `RECONCILE`/`MANUAL`
   ledger row via a new `applyReconcileTx` and corrects the Inventory cache (then propagates), or cancel.
-  Posted/cancelled sessions render read-only as the variance report. Counting input = manual + hardware-wedge
-  (phone-scan via an `OPNAME` PairingPurpose deferred to phase 2).
+  Posted/cancelled sessions render read-only as the variance report. **Phase 2 (shipped):** an `OPNAME`
+  `PairingPurpose` + `useOpnameScanner` so a paired phone (or the manual field) **tallies +1 per scan**
+  (`scanCountItem` resolves + increments atomically; `POST …/opname/:id/scan`); the search picker still
+  sets counted to the system qty. Socket.IO contracts unchanged.
 
 ## 🎯 Mid-size features (1 session each)
 
