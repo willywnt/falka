@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { auth } from '@/auth';
+import { BrandBadge } from '@/components/brand-mark';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -55,9 +56,7 @@ export default async function HomePage() {
       <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
-              {APP_NAME.charAt(0)}
-            </span>
+            <BrandBadge />
             <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
           </Link>
           <div className="flex items-center gap-2">

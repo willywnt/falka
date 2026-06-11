@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
+import { BrandBadge } from '@/components/brand-mark';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Avatar } from '@/components/ui/avatar';
@@ -42,9 +43,10 @@ export function DashboardNavbar() {
           >
             <SheetHeader className="border-sidebar-border border-b px-5 py-4">
               <SheetTitle className="text-sidebar-foreground flex items-center gap-2.5">
-                <span className="bg-sidebar-primary text-sidebar-primary-foreground flex size-7 items-center justify-center rounded-lg text-xs font-bold">
-                  {APP_NAME.charAt(0)}
-                </span>
+                <BrandBadge
+                  className="bg-sidebar-primary text-sidebar-primary-foreground size-7"
+                  markClassName="size-4"
+                />
                 {APP_NAME}
               </SheetTitle>
             </SheetHeader>

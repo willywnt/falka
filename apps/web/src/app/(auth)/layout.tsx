@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
 import { Boxes, PackageCheck, RefreshCw } from 'lucide-react';
 
+import { BrandBadge } from '@/components/brand-mark';
+
 const HIGHLIGHTS = [
   {
     icon: Boxes,
@@ -30,9 +32,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <Link href="/" className="relative flex items-center gap-2.5">
-          <span className="text-primary flex size-9 items-center justify-center rounded-lg bg-white text-base font-bold">
-            {APP_NAME.charAt(0)}
-          </span>
+          <BrandBadge className="text-primary size-9 bg-white" markClassName="size-6" />
           <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
         </Link>
 
@@ -70,9 +70,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-6">
           <Link href="/" className="flex items-center justify-center gap-2 lg:hidden">
-            <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
-              {APP_NAME.charAt(0)}
-            </span>
+            <BrandBadge />
             <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
           </Link>
           {children}

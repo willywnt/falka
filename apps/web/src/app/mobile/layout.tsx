@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Mobile Scanner',
-  description: 'Connect to the recording station and scan logistics barcodes.',
+  title: 'Scanner HP',
+  description: 'Sambungkan ke station dan scan barcode resi atau label produk.',
 };
 
 export default function MobileScannerLayout({ children }: { children: React.ReactNode }) {
@@ -11,7 +11,7 @@ export default function MobileScannerLayout({ children }: { children: React.Reac
   // instance made every toast appear twice (top + bottom) on the phone.
   return (
     <div className="bg-background text-foreground min-h-dvh">
-      <Suspense fallback={<div className="text-muted-foreground p-6 text-sm">Loading…</div>}>
+      <Suspense fallback={<div className="text-muted-foreground p-6 text-sm">Memuat…</div>}>
         {children}
       </Suspense>
     </div>

@@ -3,6 +3,7 @@ import { APP_NAME } from '@falka/config/constants';
 import { PackageCheck, ShieldAlert } from 'lucide-react';
 
 import { recordingShareService } from '@/modules/recordings/services/recording-share.service';
+import { BrandBadge } from '@/components/brand-mark';
 import { formatDateTime, formatDuration } from '@/lib/formatters';
 
 // Always render per-request: each view validates the token, mints a fresh
@@ -12,6 +13,12 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Video packing',
   robots: { index: false, follow: false },
+  // Chat-preview framing only — the og image is deliberately data-free so no
+  // resi/order detail ever leaks into a link unfurl.
+  openGraph: {
+    title: 'Bukti packing — Falka',
+    description: 'Video packing pesanan, dibagikan sebagai bukti sengketa.',
+  },
 };
 
 type Params = { token: string };
@@ -24,9 +31,7 @@ export default async function SharedRecordingPage({ params }: { params: Promise<
     <main className="bg-muted/30 flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="mb-4 flex items-center gap-2">
-          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold">
-            {APP_NAME.charAt(0)}
-          </span>
+          <BrandBadge />
           <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
         </div>
 

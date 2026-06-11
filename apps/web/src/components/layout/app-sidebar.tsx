@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
 import { Boxes, Plus, ShoppingBag, Video } from 'lucide-react';
 
+import { BrandBadge } from '@/components/brand-mark';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Button } from '@/components/ui/button';
@@ -77,9 +78,7 @@ export function AppSidebar({ className }: { className?: string }) {
         )}
       >
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-bold shadow-sm">
-            {APP_NAME.charAt(0)}
-          </span>
+          <BrandBadge />
           {collapsed ? null : (
             <span className="text-base font-semibold tracking-tight">{APP_NAME}</span>
           )}
