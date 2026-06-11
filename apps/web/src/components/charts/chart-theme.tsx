@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCurrency } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 
 /** Shared axis tick style for recharts — muted ink, small, tabular handled by formatter. */
 export const AXIS_TICK = { fontSize: 11, fill: 'var(--muted-foreground)' } as const;
@@ -20,6 +21,41 @@ export function shortRupiah(value: number): string {
   if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace('.', ',')}jt`;
   if (abs >= 1_000) return `${Math.round(value / 1_000)}rb`;
   return String(value);
+}
+
+export type ChartLegendItem = { label: string; color: string };
+
+/**
+ * Compact dot+label legend row — series colors must be decodable without
+ * hover (touch has no tooltip until tap). Mount under/above every multi-series
+ * chart; readable by assistive tech alongside the chart's aria-label.
+ */
+export function ChartLegend({
+  items,
+  className,
+}: {
+  items: ChartLegendItem[];
+  className?: string;
+}) {
+  return (
+    <ul
+      className={cn(
+        'text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs',
+        className,
+      )}
+    >
+      {items.map((item) => (
+        <li key={item.label} className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: item.color }}
+          />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 type TooltipItem = {

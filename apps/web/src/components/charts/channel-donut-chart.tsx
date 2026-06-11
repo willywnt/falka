@@ -2,6 +2,8 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
 import { CurrencyTooltip } from './chart-theme';
 
 export type ChannelDonutDatum = {
@@ -25,8 +27,10 @@ export function ChannelDonutChart({
   centerPrimary: string;
   centerSecondary?: string;
 }) {
+  const reducedMotion = useReducedMotion();
+
   return (
-    <div className="relative">
+    <div className="relative" role="img" aria-label="Diagram donat porsi omzet per channel">
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Tooltip content={<CurrencyTooltip />} />
@@ -39,6 +43,7 @@ export function ChannelDonutChart({
             paddingAngle={1.5}
             strokeWidth={2}
             stroke="var(--card)"
+            isAnimationActive={!reducedMotion}
           >
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.color} />
