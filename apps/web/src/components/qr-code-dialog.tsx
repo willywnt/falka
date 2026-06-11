@@ -64,13 +64,14 @@ export function QrCodeDialog({
           </div>
         </DialogHeader>
 
-        <div
-          data-print-root
-          className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center"
-        >
-          <div className="text-sm font-medium text-balance">{name}</div>
-          <QrImage value={value} size={208} />
-          <div className="num text-muted-foreground text-sm">{sku}</div>
+        {/* The wrapper is the print-root: in print it fills the page and centers
+            the label box (see globals.css `[data-print-center]`). */}
+        <div data-print-root data-print-center>
+          <div className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center">
+            <div className="text-sm font-medium text-balance">{name}</div>
+            <QrImage value={value} size={208} />
+            <div className="num text-muted-foreground text-sm">{sku}</div>
+          </div>
         </div>
 
         <p className="text-muted-foreground text-center text-xs" suppressHydrationWarning>

@@ -351,7 +351,12 @@
 
   [data-slot='dialog-content'] {
     position: static !important;
+    /* Tailwind v4 centers via the `translate` property, which `transform: none`
+       does NOT reset — without this the dialog stays shifted -50%/-50% and the
+       label prints half off the page (the "cut in half" bug). */
     transform: none !important;
+    translate: none !important;
+    inset: auto !important;
     max-height: none !important;
     overflow: visible !important;
   }
@@ -361,6 +366,18 @@
     top: 0;
     left: 0;
     width: 100%;
+  }
+
+  /*
+   * A single label (the QR dialog) fills the printable page and centers the label
+   * box on it — instead of the top-left grid the multi-label sheet uses.
+   */
+  [data-print-root][data-print-center] {
+    inset: 0;
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
