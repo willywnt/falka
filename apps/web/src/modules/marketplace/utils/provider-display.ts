@@ -9,9 +9,9 @@ export const MARKETPLACE_PROVIDER_LABELS: Record<MarketplaceProvider, string> = 
 };
 
 export const MARKETPLACE_PROVIDER_DESCRIPTIONS: Record<MarketplaceProvider, string> = {
-  SHOPEE: 'Connect a Shopee seller store for future inventory and order sync.',
-  TOKOPEDIA: 'Connect a Tokopedia shop for future inventory and order sync.',
-  LAZADA: 'Connect a Lazada seller store for inventory and order sync.',
+  SHOPEE: 'Hubungkan toko seller Shopee kamu untuk sinkronisasi stok dan pesanan nanti.',
+  TOKOPEDIA: 'Hubungkan toko Tokopedia kamu untuk sinkronisasi stok dan pesanan nanti.',
+  LAZADA: 'Hubungkan toko seller Lazada kamu untuk sinkronisasi stok dan pesanan.',
 };
 
 export const MARKETPLACE_PROVIDER_ICONS: Record<MarketplaceProvider, LucideIcon> = {

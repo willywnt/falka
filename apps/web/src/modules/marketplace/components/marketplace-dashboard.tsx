@@ -52,11 +52,16 @@ export function MarketplaceDashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-muted-foreground text-sm">
-            {isLoading
-              ? 'Memuat toko terhubung...'
-              : error
-                ? 'Toko marketplace yang terhubung'
-                : `${activeCount} toko aktif · ${data?.length ?? 0} total`}
+            {isLoading ? (
+              'Memuat toko terhubung...'
+            ) : error ? (
+              'Toko marketplace yang terhubung'
+            ) : (
+              <>
+                <span className="num">{activeCount}</span> toko aktif ·{' '}
+                <span className="num">{data?.length ?? 0}</span> total
+              </>
+            )}
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>

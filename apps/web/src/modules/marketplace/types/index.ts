@@ -25,9 +25,9 @@ export type MarketplaceConnectionListItem = {
 export type MarketplaceConnectionDetail = MarketplaceConnectionListItem;
 
 export const MARKETPLACE_CONNECTION_STATUS_LABELS: Record<MarketplaceConnectionStatus, string> = {
-  connected: 'Connected',
-  disconnected: 'Disconnected',
-  expired: 'Token expired',
+  connected: 'Terhubung',
+  disconnected: 'Terputus',
+  expired: 'Token kedaluwarsa',
 };
 
 export type MarketplaceListingMapping = {

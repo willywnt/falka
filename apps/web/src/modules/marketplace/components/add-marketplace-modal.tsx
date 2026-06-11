@@ -42,6 +42,15 @@ type AddMarketplaceModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/**
+ * `datetime-local` value from LOCAL date parts — `toISOString()` is UTC and
+ * would show the time 7 hours off in WIB.
+ */
+function toDatetimeLocalValue(date: Date): string {
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalProps) {
   const createMutation = useCreateMarketplaceConnectionMutation();
 
@@ -103,14 +112,20 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Provider</FormLabel>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div
+                    role="radiogroup"
+                    aria-label="Provider"
+                    className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                  >
                     {SUPPORTED_MARKETPLACE_PROVIDERS.map((provider) => (
                       <button
                         key={provider}
                         type="button"
+                        role="radio"
+                        aria-checked={field.value === provider}
                         onClick={() => field.onChange(provider)}
                         className={cn(
-                          'rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                          'focus-visible:ring-ring/50 rounded-lg border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-none',
                           field.value === provider
                             ? 'border-primary bg-primary/5'
                             : 'hover:bg-muted/50',
@@ -134,7 +149,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
                 name="shopId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ID Toko</FormLabel>
+                    <FormLabel>ID toko</FormLabel>
                     <FormControl>
                       <Input placeholder="123456789" autoComplete="off" {...field} />
                     </FormControl>
@@ -210,7 +225,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
                       type="datetime-local"
                       value={
                         field.value instanceof Date && !Number.isNaN(field.value.getTime())
-                          ? field.value.toISOString().slice(0, 16)
+                          ? toDatetimeLocalValue(field.value)
                           : ''
                       }
                       onChange={(event) => {

@@ -29,8 +29,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { StatCard } from '@/components/stat-card';
-import { STATUS_BADGE_TONES, StatusBadge } from '@/components/status-badge';
+import { StatusBadge } from '@/components/status-badge';
 import { VariantPickerDialog } from '@/components/variant-picker-dialog';
+import { formatDateTime } from '@/lib/formatters';
 
 import { useMarketplaceConnectionQuery } from '../hooks/use-marketplace-connections';
 import {
@@ -42,7 +43,7 @@ import {
   useSyncNowMutation,
   useUnmapListingMutation,
 } from '../hooks/use-marketplace-listings';
-import type { MarketplaceListingMapping } from '../types';
+import type { MarketplaceListingItem, MarketplaceListingMapping } from '../types';
 import { MarketplaceProviderBadge } from './marketplace-provider-badge';
 
 function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
@@ -51,14 +52,20 @@ function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
     return <StatusBadge tone="ok">Sudah sinkron</StatusBadge>;
   }
   if (mapping.lastSyncStatus === 'FAILED') {
+    const badge = <StatusBadge tone="danger">Sinkronisasi gagal</StatusBadge>;
+    if (!mapping.lastSyncError) return badge;
     return (
-      <Badge
-        variant="outline"
-        className={STATUS_BADGE_TONES.danger}
-        title={mapping.lastSyncError ?? undefined}
-      >
-        Sinkronisasi gagal
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            tabIndex={0}
+            className="focus-visible:ring-ring/50 inline-flex cursor-default rounded-md focus-visible:ring-[3px] focus-visible:outline-none"
+          >
+            {badge}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs text-xs">{mapping.lastSyncError}</TooltipContent>
+      </Tooltip>
     );
   }
   return <Badge variant="outline">Menunggu sinkronisasi</Badge>;
@@ -160,6 +167,128 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     (listing) => listing.mapping?.mappingStatus === 'NEEDS_REVIEW',
   ).length;
 
+  // Mapping summary (SKU badge + status + last-sync stamp) — shared by table & cards.
+  function renderMappingInfo(mapping: MarketplaceListingMapping | null) {
+    if (!mapping) return <Badge variant="outline">Belum dikaitkan</Badge>;
+
+    return (
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{mapping.variantSku}</Badge>
+          {mapping.autoMapped ? (
+            <span className="text-muted-foreground text-xs">otomatis</span>
+          ) : null}
+          {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
+            <StatusBadge tone="warn">Tinjau</StatusBadge>
+          ) : null}
+        </div>
+        {mapping.syncEnabled || mapping.lastSyncedAt ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <SyncStatusBadge mapping={mapping} />
+            {mapping.lastSyncedAt ? (
+              <span className="text-muted-foreground text-xs">
+                Sinkron <span suppressHydrationWarning>{formatDateTime(mapping.lastSyncedAt)}</span>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Row actions (sync switch + icon buttons, or the map buttons) — shared by table & cards.
+  function renderListingActions(listing: MarketplaceListingItem) {
+    const mapping = listing.mapping;
+    const suggested = listing.suggestedVariant;
+
+    if (mapping) {
+      return (
+        <div className="flex items-center justify-end gap-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center gap-2">
+                <Switch
+                  checked={mapping.syncEnabled}
+                  disabled={
+                    syncToggleMutation.isPending || mapping.mappingStatus === 'NEEDS_REVIEW'
+                  }
+                  onCheckedChange={(checked) =>
+                    void handleToggleSync(listing.marketplaceProductId, checked)
+                  }
+                  aria-label="Sinkronisasi stok ke listing ini"
+                />
+                <span className="text-muted-foreground text-xs">Sinkronisasi</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {mapping.mappingStatus === 'NEEDS_REVIEW'
+                ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
+                : mapping.syncEnabled
+                  ? 'Stok dikirim ke listing ini.'
+                  : 'Aktifkan untuk kirim stok ke listing ini.'}
+            </TooltipContent>
+          </Tooltip>
+          {mapping.syncEnabled ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={syncNowMutation.isPending}
+                  onClick={() => void handleSyncNow(listing.marketplaceProductId)}
+                >
+                  <RefreshCw className="size-4" />
+                  <span className="sr-only">Kirim stok sekarang</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Kirim stok sekarang</TooltipContent>
+            </Tooltip>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={unmapMutation.isPending}
+                onClick={() => void handleUnmap(listing.marketplaceProductId)}
+              >
+                <Link2Off className="size-4" />
+                <span className="sr-only">Lepas listing ini</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Lepas listing ini</TooltipContent>
+          </Tooltip>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap justify-end gap-2">
+        {suggested ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 sm:h-8"
+            disabled={mapMutation.isPending}
+            onClick={() => void handleMap(listing.marketplaceProductId, suggested.id)}
+          >
+            <Link2 className="size-4" />
+            Kaitkan ke {suggested.sku}
+            {suggested.quality === 'NORMALIZED' ? ' (mirip)' : ''}
+          </Button>
+        ) : null}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 sm:h-8"
+          onClick={() => setMapTarget(listing.marketplaceProductId)}
+        >
+          Pilih…
+        </Button>
+      </div>
+    );
+  }
+
   const backLink = (
     <Button variant="ghost" size="sm" asChild className="-ml-2">
       <Link href="/dashboard/marketplace">
@@ -185,15 +314,20 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     <div className="space-y-6">
       {backLink}
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           {connection ? (
             <>
-              <div className="flex items-center gap-3">
+              <p className="eyebrow text-primary">Channel penjualan</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight text-balance">
+                  {connection.shopName}
+                </h1>
                 <MarketplaceProviderBadge provider={connection.provider} />
-                <h2 className="text-xl font-semibold tracking-tight">{connection.shopName}</h2>
               </div>
-              <p className="text-muted-foreground text-sm">ID Toko: {connection.shopId}</p>
+              <p className="text-muted-foreground text-sm">
+                ID toko: <span className="num">{connection.shopId}</span>
+              </p>
             </>
           ) : (
             <Skeleton className="h-8 w-48" />
@@ -262,22 +396,19 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
           }
         />
       ) : (
-        <div className="rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Listing</TableHead>
-                <TableHead className="text-right">Stok</TableHead>
-                <TableHead>Dikaitkan ke</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listings.map((listing) => {
-                const mapping = listing.mapping;
-                const suggested = listing.suggestedVariant;
-
-                return (
+        <>
+          <div className="hidden rounded-xl border sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Listing</TableHead>
+                  <TableHead className="text-right">Stok</TableHead>
+                  <TableHead>Dikaitkan ke</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {listings.map((listing) => (
                   <TableRow key={listing.marketplaceProductId}>
                     <TableCell>
                       <div className="font-medium">{listing.externalProductName}</div>
@@ -287,113 +418,35 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                       </div>
                     </TableCell>
                     <TableCell className="num text-right">{listing.stock}</TableCell>
-                    <TableCell>
-                      {mapping ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{mapping.variantSku}</Badge>
-                            {mapping.autoMapped ? (
-                              <span className="text-muted-foreground text-xs">otomatis</span>
-                            ) : null}
-                            {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
-                              <StatusBadge tone="warn">Tinjau</StatusBadge>
-                            ) : null}
-                          </div>
-                          <SyncStatusBadge mapping={mapping} />
-                        </div>
-                      ) : (
-                        <Badge variant="outline">Belum dikaitkan</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {mapping ? (
-                        <div className="flex items-center justify-end gap-3">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-2">
-                                <Switch
-                                  checked={mapping.syncEnabled}
-                                  disabled={
-                                    syncToggleMutation.isPending ||
-                                    mapping.mappingStatus === 'NEEDS_REVIEW'
-                                  }
-                                  onCheckedChange={(checked) =>
-                                    void handleToggleSync(listing.marketplaceProductId, checked)
-                                  }
-                                  aria-label="Sinkronisasi stok ke listing ini"
-                                />
-                                <span className="text-muted-foreground text-xs">Sinkronisasi</span>
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {mapping.mappingStatus === 'NEEDS_REVIEW'
-                                ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
-                                : mapping.syncEnabled
-                                  ? 'Stok dikirim ke listing ini.'
-                                  : 'Aktifkan untuk kirim stok ke listing ini.'}
-                            </TooltipContent>
-                          </Tooltip>
-                          {mapping.syncEnabled ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={syncNowMutation.isPending}
-                                  onClick={() => void handleSyncNow(listing.marketplaceProductId)}
-                                >
-                                  <RefreshCw className="size-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Kirim stok sekarang</TooltipContent>
-                            </Tooltip>
-                          ) : null}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={unmapMutation.isPending}
-                                onClick={() => void handleUnmap(listing.marketplaceProductId)}
-                              >
-                                <Link2Off className="size-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Lepas listing ini</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      ) : (
-                        <div className="flex justify-end gap-2">
-                          {suggested ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={mapMutation.isPending}
-                              onClick={() =>
-                                void handleMap(listing.marketplaceProductId, suggested.id)
-                              }
-                            >
-                              <Link2 className="size-4" />
-                              Kaitkan ke {suggested.sku}
-                              {suggested.quality === 'NORMALIZED' ? ' (mirip)' : ''}
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setMapTarget(listing.marketplaceProductId)}
-                          >
-                            Pilih…
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableCell>{renderMappingInfo(listing.mapping)}</TableCell>
+                    <TableCell className="text-right">{renderListingActions(listing)}</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-3 sm:hidden">
+            {listings.map((listing) => (
+              <div key={listing.marketplaceProductId} className="bg-card rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{listing.externalProductName}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {listing.externalVariantName ?? '—'}
+                      {listing.externalSku ? ` · ${listing.externalSku}` : ''}
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground shrink-0 text-sm">
+                    Stok <span className="num text-foreground font-medium">{listing.stock}</span>
+                  </p>
+                </div>
+                <div className="mt-3">{renderMappingInfo(listing.mapping)}</div>
+                <div className="mt-3">{renderListingActions(listing)}</div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {mapTarget ? (
