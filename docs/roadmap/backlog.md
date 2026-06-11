@@ -31,16 +31,23 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   net; printable struk + CASH kembalian calculator.
 - **Partial / per-item POS refund** (branch `feat/pos-partial-refund`) — `SaleRefund`/`SaleRefundItem` +
   `PARTIALLY_REFUNDED`; restock per qty; refunds net the profit report; VOID refused once a refund exists.
+- **Dead-stock & ABC analysis** (branch `feat/dead-stock-abc-report`) — read-only `reporting` report at
+  `/dashboard/reports/dead-stock` (two `?tab`-synced lenses). Dead-stock: in-stock variants idle past an
+  idle-days threshold (real days-since-last-sale from the `SALE`/`ORDER_RESERVE` ledger, or age when never
+  sold), capital valued at moving-average cost. ABC: SKUs ranked by net revenue and bucketed A/B/C by
+  cumulative share (Pareto, over positive revenue so return-heavy SKUs fall to C). Pure aggregates + 9 unit
+  tests; CSV export each; no schema change. Distinct from the reorder report's coarse age-proxy `DEAD` flag.
 
 ## 🎯 Mid-size features (1 session each)
 
-| #   | Item                                                              | Module              | Effort | Gate | Notes                                                                                                                                                                                        |
-| --- | ----------------------------------------------------------------- | ------------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Stock opname / cycle count**                                    | inventory           | L      | 🟡   | `StockOpname`/`StockOpnameItem` (system vs counted vs variance); count by SKU/barcode via the existing scanner; variance posts a RECONCILE/MANUAL_ADJUST ledger row. Variance report.        |
-| 2   | **Per-channel performance report**                                | reporting           | M      | 🟢   | Beyond profit-by-channel: payment-method mix, return rate by channel, fulfillment time, turnover. Charts (see redesign).                                                                     |
-| 3   | **Dead-stock & ABC analysis**                                     | inventory/reporting | M      | 🟢   | No-sales-in-N-days report + ABC classification; complements the reorder report + valuation.                                                                                                  |
-| 4   | **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace   | L      | 🟢   | Daily per-connection drift detect (pull external → compare → log); connection test endpoint (Lazada `validateStockSync` exists, unused) + health widget. High-value once real adapters live. |
-| 5   | **Supplier entity + per-supplier lead time**                      | purchasing          | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.             |
+| #   | Item                                                              | Module            | Effort | Gate | Notes                                                                                                                                                                                        |
+| --- | ----------------------------------------------------------------- | ----------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Stock opname / cycle count**                                    | inventory         | L      | 🟡   | `StockOpname`/`StockOpnameItem` (system vs counted vs variance); count by SKU/barcode via the existing scanner; variance posts a RECONCILE/MANUAL_ADJUST ledger row. Variance report.        |
+| 2   | **Per-channel performance report**                                | reporting         | M      | 🟢   | Beyond profit-by-channel: payment-method mix, return rate by channel, fulfillment time, turnover. Charts (see redesign). (Partly shipped: revenue share, AOV, return rate, trend matrix.)    |
+| 3   | **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace | L      | 🟢   | Daily per-connection drift detect (pull external → compare → log); connection test endpoint (Lazada `validateStockSync` exists, unused) + health widget. High-value once real adapters live. |
+| 4   | **Supplier entity + per-supplier lead time**                      | purchasing        | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.             |
+
+> _Shipped from this table: **Dead-stock & ABC analysis** (2026-06-11, `feat/dead-stock-abc-report`)._
 
 ## 🛰️ Big bets (multi-session / gated, sequenced later)
 
