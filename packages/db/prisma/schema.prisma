@@ -52,6 +52,7 @@ model User {
   orders                     Order[]
   returns                    Return[]
   sales                      Sale[]
+  saleRefunds                SaleRefund[]
   purchaseOrders             PurchaseOrder[]
   recordingShareLinks        RecordingShareLink[]
   bundles                    Bundle[]
@@ -260,6 +261,7 @@ model ProductVariant {
   marketplaceMappings MarketplaceProductMapping[]
   orderItems          OrderItem[]
   saleItems           SaleItem[]
+  saleRefundItems     SaleRefundItem[]
   purchaseOrderItems  PurchaseOrderItem[]
   bundleItems         BundleItem[]
 
@@ -598,6 +600,8 @@ enum SalePaymentMethod {
 enum SaleStatus {
   COMPLETED
   VOID
+  /** At least one line has been partially/fully refunded (sale itself stands). */
+  PARTIALLY_REFUNDED
 }
 
 model Sale {
@@ -625,7 +629,8 @@ model Sale {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  items SaleItem[]
+  items   SaleItem[]
+  refunds SaleRefund[]
 
   @@index([userId])
   @@index([code])
@@ -650,9 +655,52 @@ model SaleItem {
   /** Snapshot of the bundle this line came from (null = a standalone variant line). */
   bundleName       String?
 
+  refundItems SaleRefundItem[]
+
   @@index([saleId])
   @@index([productVariantId])
   @@map("sale_items")
+}
+
+/** A partial/per-item refund against a counter sale (the sale itself stands). */
+model SaleRefund {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  saleId      String
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  /** Readable reference (e.g. RF00001), generated per-user at create. */
+  code        String
+  /** Cash returned to the buyer (sum of line amounts, incl. their PPN share). */
+  totalAmount Decimal  @db.Decimal(14, 2)
+  note        String?
+  createdAt   DateTime @default(now())
+
+  items SaleRefundItem[]
+
+  @@index([userId])
+  @@index([saleId])
+  @@map("sale_refunds")
+}
+
+model SaleRefundItem {
+  id               String         @id @default(cuid())
+  refundId         String
+  refund           SaleRefund     @relation(fields: [refundId], references: [id], onDelete: Cascade)
+  saleItemId       String
+  saleItem         SaleItem       @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+  /** Snapshots at refund time, for stable history. */
+  sku              String
+  name             String
+  quantity         Int
+  /** Cash refunded for this line: qty x net unit (discount netted, PPN share included). */
+  amount           Decimal        @db.Decimal(12, 2)
+
+  @@index([refundId])
+  @@index([productVariantId])
+  @@map("sale_refund_items")
 }
 
 enum PurchaseOrderStatus {
