@@ -6,6 +6,17 @@ import { ArrowLeft, PackageCheck, Video, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReturnDisposition } from '@prisma/client';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,9 +95,34 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-40" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-8 w-64 max-w-full" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-3 lg:col-span-2">
+            <Skeleton className="h-5 w-16" />
+            <div className="overflow-hidden rounded-xl border">
+              <Skeleton className="h-10 w-full rounded-none" />
+              <div className="divide-y">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-4 px-4 py-3.5">
+                    <Skeleton className="size-9 shrink-0 rounded-md" />
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="ml-auto h-4 w-10" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <aside className="space-y-4">
+            <Skeleton className="h-44 w-full rounded-xl" />
+            <Skeleton className="h-44 w-full rounded-xl" />
+          </aside>
+        </div>
       </div>
     );
   }
@@ -116,10 +152,15 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
         </Link>
       </Button>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">Retur · {data.externalOrderId}</h2>
-        <ReturnStatusBadge status={data.status} />
-        {data.autoDetected ? <Badge variant="outline">Terdeteksi otomatis</Badge> : null}
+      <div className="space-y-1">
+        <p className="eyebrow text-primary">Fulfillment</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Retur · <span className="num">{data.externalOrderId}</span>
+          </h2>
+          <ReturnStatusBadge status={data.status} />
+          {data.autoDetected ? <Badge variant="outline">Terdeteksi otomatis</Badge> : null}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -186,10 +227,31 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                 <PackageCheck className="size-4" />
                 {processMutation.isPending ? 'Memproses...' : 'Terima & update stok'}
               </Button>
-              <Button variant="outline" onClick={() => void handleReject()} disabled={busy}>
-                <XCircle className="size-4" />
-                Tolak
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-destructive" disabled={busy}>
+                    <XCircle className="size-4" />
+                    Tolak
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tolak retur ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Retur ditutup tanpa pengembalian stok. Tindakan ini tidak bisa dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => void handleReject()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Tolak retur
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : null}
         </div>
@@ -202,7 +264,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">No. resi</span>
-                <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
+                <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
               {data.noResi ? (
                 <>
@@ -244,7 +306,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                 <span className="text-muted-foreground">Pesanan</span>
                 <Link
                   href={`/dashboard/orders/${data.orderId}`}
-                  className="truncate text-right font-medium hover:underline"
+                  className="num truncate text-right font-medium hover:underline"
                 >
                   {data.externalOrderId}
                 </Link>

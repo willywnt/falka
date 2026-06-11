@@ -23,8 +23,17 @@ import { usePagination } from '@/hooks/use-pagination';
 import { formatDateTime } from '@/lib/formatters';
 
 import { useOrdersQuery } from '../hooks/use-orders';
+import type { OrderListItem } from '../types';
 import { OrderStatusBadge } from './order-status-badge';
 import { PullOrdersDialog } from './pull-orders-dialog';
+
+/** Stock-sync state — shared by the sm+ table cell and the <sm card line. */
+function StockSyncState({ order, placeholder }: { order: OrderListItem; placeholder?: boolean }) {
+  if (order.inventoryApplied) return <Badge variant="secondary">Sudah sinkron</Badge>;
+  if (order.status === 'PAID')
+    return <span className="text-muted-foreground text-xs">belum sinkron</span>;
+  return placeholder ? <span className="text-muted-foreground text-xs">—</span> : null;
+}
 
 export function OrdersDashboard() {
   const { page, setPage, pageSize, setPageSize } = usePagination();
@@ -45,10 +54,18 @@ export function OrdersDashboard() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-12 w-full" />
-          ))}
+        <div className="overflow-hidden rounded-xl border">
+          <Skeleton className="h-10 w-full rounded-none" />
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="flex items-center gap-4 px-4 py-3.5">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="ml-auto h-4 w-24" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : error ? (
         <ErrorState
@@ -70,7 +87,7 @@ export function OrdersDashboard() {
         />
       ) : (
         <div className="space-y-3">
-          <div className="rounded-xl border">
+          <div className="hidden overflow-x-auto rounded-xl border sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -89,7 +106,7 @@ export function OrdersDashboard() {
                     <TableCell>
                       <Link
                         href={`/dashboard/orders/${order.id}`}
-                        className="font-medium hover:underline"
+                        className="num font-medium hover:underline"
                       >
                         {order.externalOrderId}
                       </Link>
@@ -108,18 +125,12 @@ export function OrdersDashboard() {
                       <span className="num">{order.itemCount}</span>
                       {order.unresolvedCount > 0 ? (
                         <StatusBadge tone="warn" className="ml-2">
-                          {order.unresolvedCount} belum dikaitkan
+                          <span className="num">{order.unresolvedCount}</span> belum dikaitkan
                         </StatusBadge>
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      {order.inventoryApplied ? (
-                        <Badge variant="secondary">Sudah sinkron</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">
-                          {order.status === 'PAID' ? 'belum sinkron' : '—'}
-                        </span>
-                      )}
+                      <StockSyncState order={order} placeholder />
                     </TableCell>
                     <TableCell className="whitespace-nowrap" suppressHydrationWarning>
                       {formatDateTime(order.placedAt)}
@@ -135,6 +146,55 @@ export function OrdersDashboard() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile: stacked cards — same data as the table rows. */}
+          <div className="space-y-3 sm:hidden">
+            {orders.map((order) => (
+              <article key={order.id} className="bg-card space-y-3 rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/orders/${order.id}`}
+                      className="num block truncate py-1 font-medium hover:underline"
+                    >
+                      {order.externalOrderId}
+                    </Link>
+                    <p className="text-muted-foreground truncate text-xs">{order.shopName}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                    <OrderStatusBadge status={order.status} />
+                    {order.fulfilledAt ? <StatusBadge tone="info">Fulfillment</StatusBadge> : null}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+                  <span className="text-muted-foreground">
+                    Pembeli{' '}
+                    <span className="text-foreground font-medium">{order.buyerName ?? '—'}</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    Item <span className="num text-foreground font-medium">{order.itemCount}</span>
+                  </span>
+                  {order.unresolvedCount > 0 ? (
+                    <StatusBadge tone="warn">
+                      <span className="num">{order.unresolvedCount}</span> belum dikaitkan
+                    </StatusBadge>
+                  ) : null}
+                  <StockSyncState order={order} />
+                </div>
+
+                <p className="text-muted-foreground text-xs">
+                  <span suppressHydrationWarning>Dibuat {formatDateTime(order.placedAt)}</span>
+                  {order.lastPulledAt ? (
+                    <span suppressHydrationWarning>
+                      {' '}
+                      · ditarik {formatDateTime(order.lastPulledAt)}
+                    </span>
+                  ) : null}
+                </p>
+              </article>
+            ))}
           </div>
 
           <TablePagination

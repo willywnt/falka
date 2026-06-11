@@ -76,9 +76,33 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-44" />
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-8 w-64 max-w-full" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-3 lg:col-span-2">
+            <Skeleton className="h-5 w-20" />
+            <div className="overflow-hidden rounded-xl border">
+              <Skeleton className="h-10 w-full rounded-none" />
+              <div className="divide-y">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-4 px-4 py-3.5">
+                    <Skeleton className="h-4 w-2/5" />
+                    <Skeleton className="ml-auto h-4 w-10" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <aside className="space-y-4">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </aside>
+        </div>
       </div>
     );
   }
@@ -108,12 +132,15 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         </Link>
       </Button>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
-        <OrderStatusBadge status={data.status} />
-        {data.fulfilledAt ? <StatusBadge tone="info">Fulfillment</StatusBadge> : null}
-        <div className="ml-auto">
-          <OrderActionsMenu order={data} />
+      <div className="space-y-1">
+        <p className="eyebrow text-primary">Channel penjualan</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="num text-2xl font-semibold tracking-tight">{data.externalOrderId}</h2>
+          <OrderStatusBadge status={data.status} />
+          {data.fulfilledAt ? <StatusBadge tone="info">Fulfillment</StatusBadge> : null}
+          <div className="ml-auto">
+            <OrderActionsMenu order={data} />
+          </div>
         </div>
       </div>
 
@@ -189,8 +216,8 @@ export function OrderDetail({ orderId }: { orderId: string }) {
             </div>
           ) : data.status === 'PAID' && data.unresolvedCount > 0 ? (
             <div className="border-highlight/40 bg-highlight/15 text-status-warn rounded-lg border p-3 text-sm">
-              {data.unresolvedCount} item belum dikaitkan ke produk, jadi stok belum diperbarui.
-              Kaitkan listing-nya, lalu tarik pesanan lagi.
+              <span className="num">{data.unresolvedCount}</span> item belum dikaitkan ke produk,
+              jadi stok belum diperbarui. Kaitkan listing-nya, lalu tarik pesanan lagi.
             </div>
           ) : data.status === 'PAID' ? (
             <div className="text-muted-foreground rounded-lg border p-3 text-sm">
@@ -225,7 +252,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">No. resi</span>
-                <span className="truncate text-right font-medium">{data.noResi ?? '—'}</span>
+                <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
               {data.status === 'CANCELLED' && data.cancelReason ? (
                 <div className="flex items-start justify-between gap-4">
