@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Receipt } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { BuoyArt } from '@/components/maritime-art';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -49,7 +50,7 @@ export function SalesDashboard() {
         <ErrorState title="Gagal memuat penjualan" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
-          icon={Receipt}
+          art={<BuoyArt />}
           title="Belum ada penjualan"
           description="Catat penjualan di toko — stoknya langsung kepotong dan ikut tersinkronisasi ke marketplace kamu."
           action={

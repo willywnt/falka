@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { GullArt } from '@/components/maritime-art';
 import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
@@ -125,8 +126,9 @@ function ReturnsDashboardContent() {
         />
       ) : isEmpty ? (
         <EmptyState
-          icon={Undo2}
-          title="Belum ada retur"
+          icon={status === 'ALL' ? undefined : Undo2}
+          art={status === 'ALL' ? <GullArt /> : undefined}
+          title={status === 'ALL' ? 'Nggak ada retur — pertahankan!' : 'Belum ada retur'}
           description={
             status === 'ALL'
               ? 'Retur terbuka otomatis kalau pesanan yang sudah dikirim dibatalkan, atau kamu bisa buka sendiri dari halaman pesanan.'

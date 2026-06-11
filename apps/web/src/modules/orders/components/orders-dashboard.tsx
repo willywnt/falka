@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { DownloadCloud, ShoppingCart } from 'lucide-react';
+import { DownloadCloud } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { BuoyArt } from '@/components/maritime-art';
 import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
@@ -75,9 +76,9 @@ export function OrdersDashboard() {
         />
       ) : isEmpty ? (
         <EmptyState
-          icon={ShoppingCart}
-          title="Belum ada pesanan — tarik dari toko kamu dulu"
-          description="Tarik pesanan dari toko yang terhubung biar stoknya ikut kekelola di sini."
+          art={<BuoyArt />}
+          title="Pelabuhan masih sepi"
+          description="Tarik pesanan dari toko kamu yang terhubung biar stoknya ikut kekelola di sini."
           action={
             <Button onClick={() => setPullOpen(true)}>
               <DownloadCloud className="size-4" />

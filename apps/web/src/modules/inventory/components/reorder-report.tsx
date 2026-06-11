@@ -21,6 +21,7 @@ import {
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
+import { GullArt } from '@/components/maritime-art';
 import { StatCard } from '@/components/stat-card';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { cn } from '@/lib/utils';
@@ -188,8 +189,9 @@ function ReorderReportContent() {
         <ErrorState title="Gagal memuat laporan restok" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
-          icon={PackageSearch}
-          title="Tidak ada yang ditampilkan"
+          icon={reorderOnly ? undefined : PackageSearch}
+          art={reorderOnly ? <GullArt /> : undefined}
+          title={reorderOnly ? 'Stok aman' : 'Tidak ada yang ditampilkan'}
           description={
             reorderOnly
               ? 'Tidak ada varian yang perlu direstok sekarang.'

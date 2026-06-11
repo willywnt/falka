@@ -40,6 +40,7 @@ import { ShareEvidenceDialog } from './share-evidence-dialog';
 import { OperationalStatusBadge } from './operational-status-badge';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { BuoyArt } from '@/components/maritime-art';
 import { TablePagination } from '@/components/table-pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -309,7 +310,8 @@ export function RecordingsDashboard() {
         </div>
       ) : isEmpty ? (
         <EmptyState
-          icon={Video}
+          icon={hasSearch ? Video : undefined}
+          art={hasSearch ? undefined : <BuoyArt />}
           title={hasSearch ? 'Tidak ada rekaman yang cocok' : 'Belum ada rekaman'}
           description={
             hasSearch

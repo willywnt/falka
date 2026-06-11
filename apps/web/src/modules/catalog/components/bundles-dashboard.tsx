@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { BuoyArt } from '@/components/maritime-art';
 import { QrCodeDialog } from '@/components/qr-code-dialog';
 import { StatCard } from '@/components/stat-card';
 import { TablePagination } from '@/components/table-pagination';
@@ -205,7 +206,8 @@ function BundlesDashboardContent() {
         <ErrorState title="Gagal memuat bundel" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
-          icon={Layers}
+          icon={isFiltered ? Layers : undefined}
+          art={isFiltered ? undefined : <BuoyArt />}
           title={isFiltered ? 'Tidak ada bundel yang cocok' : 'Belum ada bundel'}
           description={
             isFiltered

@@ -80,6 +80,7 @@ export function RevenueTrendChart({ data }: { data: RevenueTrendDatum[] }) {
             strokeWidth={2}
             fill="url(#revenueArea)"
             isAnimationActive={!reducedMotion}
+            animationDuration={600}
           />
           <Line
             type="monotone"
@@ -89,6 +90,7 @@ export function RevenueTrendChart({ data }: { data: RevenueTrendDatum[] }) {
             strokeWidth={2}
             dot={false}
             isAnimationActive={!reducedMotion}
+            animationDuration={600}
           />
         </ComposedChart>
       </ResponsiveContainer>

@@ -44,6 +44,7 @@ export function ChannelDonutChart({
             strokeWidth={2}
             stroke="var(--card)"
             isAnimationActive={!reducedMotion}
+            animationDuration={600}
           >
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.color} />

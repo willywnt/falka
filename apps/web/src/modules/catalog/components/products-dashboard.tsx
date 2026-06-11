@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { BuoyArt } from '@/components/maritime-art';
 import { StatusBadge } from '@/components/status-badge';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useUrlFilters } from '@/hooks/use-url-filters';
@@ -122,7 +123,8 @@ export function ProductsDashboard() {
         <ErrorState title="Gagal memuat produk" onRetry={() => void refetch()} />
       ) : isEmpty ? (
         <EmptyState
-          icon={Package}
+          icon={filters.search ? Package : undefined}
+          art={filters.search ? undefined : <BuoyArt />}
           title="Belum ada produk"
           description={
             filters.search

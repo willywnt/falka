@@ -3,15 +3,22 @@ import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-/** Consistent empty / zero-results placeholder with an icon, copy and optional action. */
+/**
+ * Consistent empty / zero-results placeholder with an icon, copy and optional
+ * action. `art` (a maritime line-art from components/maritime-art) replaces
+ * the icon circle for the handful of hero empty states — personality at
+ * low-stakes moments only; most lists keep the plain icon.
+ */
 export function EmptyState({
   icon: Icon,
+  art,
   title,
   description,
   action,
   className,
 }: {
   icon?: LucideIcon;
+  art?: ReactNode;
   title: string;
   description?: ReactNode;
   action?: ReactNode;
@@ -24,7 +31,9 @@ export function EmptyState({
         className,
       )}
     >
-      {Icon ? (
+      {art ? (
+        <div className="text-muted-foreground/50">{art}</div>
+      ) : Icon ? (
         <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
           <Icon className="size-6" />
         </div>

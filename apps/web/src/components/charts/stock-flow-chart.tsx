@@ -56,6 +56,7 @@ export function StockFlowChart({ data }: { data: StockFlowDatum[] }) {
             fill="var(--signed-up)"
             radius={[3, 3, 0, 0]}
             isAnimationActive={!reducedMotion}
+            animationDuration={600}
           />
           <Bar
             name="Keluar"
@@ -63,6 +64,7 @@ export function StockFlowChart({ data }: { data: StockFlowDatum[] }) {
             fill="var(--signed-down)"
             radius={[3, 3, 0, 0]}
             isAnimationActive={!reducedMotion}
+            animationDuration={600}
           />
         </BarChart>
       </ResponsiveContainer>

@@ -75,6 +75,7 @@ export function ChannelTrendChart({
               fillOpacity={0.18}
               strokeWidth={1.5}
               isAnimationActive={!reducedMotion}
+              animationDuration={600}
             />
           ))}
         </AreaChart>

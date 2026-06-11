@@ -28,6 +28,61 @@ export function WaveHairline({ className }: { className?: string }) {
   );
 }
 
+/** Pelampung (buoy) — calm "belum ada apa-apa" empty states. */
+export function BuoyArt({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+      className={cn('size-20', className)}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* mast + light */}
+      <path d="M48 18v12" />
+      <circle cx="48" cy="14" r="3.5" />
+      {/* body */}
+      <path d="M38 30h20l4 18H34l4-18Z" />
+      <path d="M36 39h24" />
+      {/* waterline through the base */}
+      <path d="M30 56c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0" opacity="0.9" />
+      <path d="M10 56c4.5-4.8 9-4.8 13.5 0" opacity="0.9" />
+      {/* riak below */}
+      <path d="M18 70c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0 9 4.8 13.5 0" />
+      <path d="M30 82c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0" />
+    </svg>
+  );
+}
+
+/** Camar (gull) — light, positive "semua beres / laut tenang" moments. */
+export function GullArt({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+      className={cn('size-20', className)}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* two gulls */}
+      <path d="M28 34c5-6 11-6 15 0 4-6 10-6 15 0" />
+      <path d="M56 22c3.5-4 7.5-4 10.5 0 3-4 7-4 10.5 0" opacity="0.7" />
+      {/* horizon + sun */}
+      <circle cx="26" cy="48" r="6" opacity="0.7" />
+      <path d="M8 62h80" opacity="0.5" strokeDasharray="2.5 5" />
+      {/* riak */}
+      <path d="M18 72c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0 9 4.8 13.5 0" />
+      <path d="M32 84c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0" />
+    </svg>
+  );
+}
+
 /** Mercusuar — the "suar" beacon for branded error/404 screens. */
 export function LighthouseArt({ className }: { className?: string }) {
   return (
