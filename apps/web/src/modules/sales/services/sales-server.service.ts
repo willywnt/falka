@@ -108,6 +108,7 @@ export class SalesServerService {
       productName: variant.product.name,
       variantGroup: variant.variantGroup,
       price: variant.price.toString(),
+      cost: variant.cost?.toString() ?? null,
       availableStock: variant.inventory?.availableStock ?? 0,
       incomingStock: variant.inventory?.incomingStock ?? 0,
       imageUrl: variant.imageUrl,
@@ -151,6 +152,7 @@ export class SalesServerService {
       productName: variant.product.name,
       variantGroup: variant.variantGroup,
       price: variant.price.toString(),
+      cost: variant.cost?.toString() ?? null,
       availableStock: variant.inventory?.availableStock ?? 0,
       incomingStock: variant.inventory?.incomingStock ?? 0,
       imageUrl: variant.imageUrl,
@@ -304,6 +306,25 @@ export class SalesServerService {
       code: created.code,
       items: lines.length,
     });
+
+    // Standing below-cost alert: flag lines sold under their cost snapshot so
+    // margin leaks are visible in the logs even when the cashier overrides price.
+    const belowCostLines = lines.filter(
+      (line) => line.unitCost != null && Number(line.unitPrice) < Number(line.unitCost),
+    );
+    if (belowCostLines.length > 0) {
+      appLogger.warn('sales.below_cost', {
+        userId,
+        saleId: created.id,
+        code: created.code,
+        lines: belowCostLines.map((line) => ({
+          sku: line.sku,
+          quantity: line.quantity,
+          unitPrice: Number(line.unitPrice),
+          unitCost: Number(line.unitCost),
+        })),
+      });
+    }
 
     await this.propagateAffected(userId, [...new Set(lines.map((line) => line.productVariantId))]);
     return this.getSale(userId, created.id);

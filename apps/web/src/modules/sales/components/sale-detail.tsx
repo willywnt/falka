@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban, Boxes } from 'lucide-react';
+import { ArrowLeft, Ban, Boxes, ReceiptText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -35,6 +35,7 @@ import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
 import type { SaleItemDetail } from '../types';
 import { paymentMethodLabel } from './pos-terminal';
+import { ReceiptDialog } from './receipt-dialog';
 
 /** A run of consecutive items sharing a bundle origin, or a single standalone item. */
 type ItemGroup =
@@ -63,6 +64,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
   const { data, isLoading, error } = useSaleQuery(saleId);
   const voidMutation = useVoidSaleMutation();
   const [voidOpen, setVoidOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   async function handleVoid() {
     try {
@@ -168,6 +170,15 @@ export function SaleDetail({ saleId }: { saleId: string }) {
           <h1 className="num text-2xl font-semibold tracking-tight">{data.code}</h1>
           <Badge variant="secondary">{paymentMethodLabel(data.paymentMethod)}</Badge>
           {data.status === 'VOID' ? <StatusBadge tone="danger">Dibatalkan</StatusBadge> : null}
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setReceiptOpen(true)}
+          >
+            <ReceiptText className="size-4" />
+            Struk
+          </Button>
         </div>
       </div>
 
@@ -314,6 +325,8 @@ export function SaleDetail({ saleId }: { saleId: string }) {
           ) : null}
         </aside>
       </div>
+
+      <ReceiptDialog sale={data} open={receiptOpen} onOpenChange={setReceiptOpen} />
     </div>
   );
 }

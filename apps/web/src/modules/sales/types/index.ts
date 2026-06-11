@@ -13,6 +13,8 @@ export type SellableVariant = {
   /** Parent group label when this is a subvariant; null = standalone. */
   variantGroup: string | null;
   price: string;
+  /** Unit cost (modal) snapshot for the below-cost warning; null = not set. */
+  cost: string | null;
   availableStock: number;
   /** Units on order from suppliers (not yet received). */
   incomingStock: number;

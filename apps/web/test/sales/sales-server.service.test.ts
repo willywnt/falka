@@ -236,6 +236,7 @@ describe('searchSellableVariants', () => {
         name: 'Black / S',
         productName: 'Cotton Tee',
         price: '100000',
+        cost: null,
         availableStock: 12,
         incomingStock: 20,
       },

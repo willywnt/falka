@@ -92,6 +92,8 @@ type VariantCartLine = {
   productName: string;
   variantGroup: string | null;
   unitPrice: number;
+  /** Unit cost (modal) snapshot; null = unknown — drives the below-cost warning. */
+  cost: number | null;
   quantity: number;
   availableStock: number;
   incomingStock: number;
@@ -182,6 +184,8 @@ export function PosTerminal() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<SalePaymentMethod>('CASH');
   const [customerName, setCustomerName] = useState('');
+  // Change calculator (CASH only) — pure client math, never sent to the server.
+  const [cashReceived, setCashReceived] = useState(0);
   const [scannerOpen, setScannerOpen] = useState(false);
   const { soundOn, toggleSound } = useScanSoundPref(SCAN_SOUND_STORAGE_KEY);
 
@@ -258,6 +262,7 @@ export function PosTerminal() {
           productName: variant.productName,
           variantGroup: variant.variantGroup,
           unitPrice: Number(variant.price),
+          cost: variant.cost != null ? Number(variant.cost) : null,
           quantity: 1,
           availableStock: variant.availableStock,
           incomingStock: variant.incomingStock,
@@ -405,6 +410,7 @@ export function PosTerminal() {
       });
       setCart([]);
       setCustomerName('');
+      setCashReceived(0);
       setSearchInput('');
     } catch (error) {
       toast.error('Pembayaran gagal', {
@@ -578,6 +584,38 @@ export function PosTerminal() {
                 />
               </div>
             </div>
+
+            {paymentMethod === 'CASH' ? (
+              <div className="grid grid-cols-2 items-end gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cash-received">Uang diterima</Label>
+                  <NumberInput
+                    id="cash-received"
+                    value={cashReceived}
+                    onChange={(value) => setCashReceived(Math.max(0, value))}
+                  />
+                </div>
+                <p className="pb-2.5 text-right text-sm" aria-live="polite">
+                  {cashReceived <= 0 ? (
+                    <span className="text-muted-foreground">Kembalian —</span>
+                  ) : cashReceived >= total ? (
+                    <span className="text-muted-foreground">
+                      Kembalian{' '}
+                      <span className="num text-signed-up font-semibold">
+                        {formatCurrency(cashReceived - total)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-status-warn">
+                      Kurang{' '}
+                      <span className="num font-semibold">
+                        {formatCurrency(total - cashReceived)}
+                      </span>
+                    </span>
+                  )}
+                </p>
+              </div>
+            ) : null}
 
             <div className="flex items-center justify-between border-t pt-3">
               <span className="text-muted-foreground text-sm">Total harga</span>
@@ -871,6 +909,14 @@ function VariantCartRow({
           className="border-highlight/40 bg-highlight/15 text-status-warn mt-2"
         >
           Melebihi stok (boleh, barangnya ada di tangan) · sisa {line.availableStock} di sistem
+        </Badge>
+      ) : null}
+      {line.cost != null && line.unitPrice < line.cost ? (
+        <Badge
+          variant="outline"
+          className="border-highlight/40 bg-highlight/15 text-status-warn mt-2"
+        >
+          Di bawah modal (<span className="num">{formatCurrency(line.cost)}</span>) — margin minus
         </Badge>
       ) : null}
     </div>
