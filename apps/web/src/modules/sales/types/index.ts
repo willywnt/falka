@@ -34,11 +34,26 @@ export type SaleItemDetail = {
   name: string;
   quantity: number;
   unitPrice: string;
+  /** This line's allocated share of the cart discount. */
+  discountAmount: string;
   lineTotal: string;
+  /** Units already refunded across all refunds (refundable = quantity − this). */
+  refundedQuantity: number;
   /** Snapshot of the bundle this line came from (null = a standalone variant line). */
   bundleName: string | null;
   /** Variant photo public URL; null = none. */
   imageUrl: string | null;
+};
+
+/** One refund event against a sale (summary for the detail aside). */
+export type SaleRefundSummary = {
+  id: string;
+  code: string;
+  totalAmount: string;
+  note: string | null;
+  createdAt: string;
+  /** Total units returned in this refund. */
+  itemCount: number;
 };
 
 export type SaleListItem = {
@@ -64,4 +79,7 @@ export type SaleDetail = SaleListItem & {
   taxAmount: string;
   taxInclusive: boolean;
   items: SaleItemDetail[];
+  refunds: SaleRefundSummary[];
+  /** Total cash returned across all refunds. */
+  refundedAmount: string;
 };

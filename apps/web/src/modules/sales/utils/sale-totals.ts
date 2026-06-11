@@ -53,6 +53,25 @@ export function computeSaleTotals(
 }
 
 /**
+ * Cash value of refunding `refundQty` units of a sale line: the line's net
+ * unit value (gross minus its allocated discount share) times qty, plus the
+ * PPN the buyer paid on it when the sale added PPN on top (inclusive prices
+ * already contain it). Mirrors createSale's math so refunds never give back
+ * more than was charged.
+ */
+export function refundLineAmount(
+  line: { unitPrice: number; quantity: number; discountAmount: number },
+  refundQty: number,
+  taxRate: number,
+  taxInclusive: boolean,
+): number {
+  if (line.quantity <= 0 || refundQty <= 0) return 0;
+  const perUnitNet = (line.unitPrice * line.quantity - line.discountAmount) / line.quantity;
+  const multiplier = !taxInclusive && taxRate > 0 ? 1 + taxRate / 100 : 1;
+  return round2(Math.max(0, refundQty * perUnitNet * multiplier));
+}
+
+/**
  * Split an amount across lines proportionally to their weights using integer
  * cents + largest remainder, so the parts always sum exactly to the whole
  * (mirrors the bundle price allocation; duplicated here because catalog's

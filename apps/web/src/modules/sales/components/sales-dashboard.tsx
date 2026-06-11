@@ -92,6 +92,11 @@ export function SalesDashboard() {
                             Dibatalkan
                           </StatusBadge>
                         ) : null}
+                        {sale.status === 'PARTIALLY_REFUNDED' ? (
+                          <StatusBadge tone="warn" className="px-1.5 py-0 text-[10px]">
+                            Refund sebagian
+                          </StatusBadge>
+                        ) : null}
                       </div>
                       <div className="text-muted-foreground text-xs">
                         {sale.customerName ?? 'Pelanggan langsung'}
@@ -134,6 +139,11 @@ export function SalesDashboard() {
                       {sale.status === 'VOID' ? (
                         <StatusBadge tone="danger" className="px-1.5 py-0 text-[10px]">
                           Dibatalkan
+                        </StatusBadge>
+                      ) : null}
+                      {sale.status === 'PARTIALLY_REFUNDED' ? (
+                        <StatusBadge tone="warn" className="px-1.5 py-0 text-[10px]">
+                          Refund sebagian
                         </StatusBadge>
                       ) : null}
                     </div>

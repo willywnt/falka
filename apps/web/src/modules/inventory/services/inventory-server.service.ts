@@ -573,14 +573,15 @@ export class InventoryServerService {
   }
 
   /**
-   * Reverses an offline sale WITHIN the caller's transaction — used when a counter
-   * sale is voided: the goods come back, so available rises again. Records a
-   * positive `SALE` row (source `POS`) that nets the original sale out of demand
-   * velocity. Returns the new balance; the caller propagates after commit.
+   * Reverses (part of) an offline sale WITHIN the caller's transaction — used when
+   * a counter sale is voided or a line is refunded: the goods come back, so
+   * available rises again. Records a positive `SALE` row (source `POS`) that nets
+   * the original sale out of demand velocity. Returns the new balance; the caller
+   * propagates after commit.
    */
   async applyOfflineSaleReversalTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; saleId: string },
+    params: { userId: string; variantId: string; quantity: number; saleId: string; note?: string },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
@@ -601,7 +602,7 @@ export class InventoryServerService {
         reason: 'SALE',
         source: 'POS',
         referenceId: params.saleId,
-        note: 'Sale voided',
+        note: params.note ?? 'Sale voided',
       },
     });
 

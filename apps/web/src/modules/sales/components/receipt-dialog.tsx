@@ -124,6 +124,11 @@ export function ReceiptDialog({
           {sale.status === 'VOID' ? (
             <p className="mt-2 text-center font-bold">*** DIBATALKAN ***</p>
           ) : null}
+          {Number(sale.refundedAmount) > 0 ? (
+            <p className="mt-2 text-center">
+              *** Refund {formatCurrency(sale.refundedAmount)} sudah diberikan ***
+            </p>
+          ) : null}
 
           <div className="my-2 border-t border-dashed border-zinc-400" />
           <p className="text-center">Terima kasih sudah belanja!</p>

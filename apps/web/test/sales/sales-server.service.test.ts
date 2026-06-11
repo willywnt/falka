@@ -171,6 +171,7 @@ describe('voidSale', () => {
       code: 'S00001',
       status: 'COMPLETED',
       items: [{ productVariantId: 'v1', quantity: 2 }],
+      refunds: [],
     });
 
     await service.voidSale(USER, 's1');
@@ -184,6 +185,22 @@ describe('voidSale', () => {
     );
     expect(enqueueMock).toHaveBeenCalledTimes(1);
     expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+  });
+
+  it('refuses to void a sale that already has refunds (would double-restock)', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue({
+      id: 's1',
+      code: 'S00001',
+      status: 'PARTIALLY_REFUNDED',
+      items: [{ productVariantId: 'v1', quantity: 2 }],
+      refunds: [{ id: 'rf1' }],
+    });
+
+    await expect(service.voidSale(USER, 's1')).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
+    expect(txMock.sale.update).not.toHaveBeenCalled();
   });
 
   it('is a no-op for an already-voided sale', async () => {

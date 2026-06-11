@@ -12,8 +12,9 @@ import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-alloca
 import type { BundleResolution } from '@/modules/catalog/types';
 
 import { SaleError } from '../errors/sale-errors';
-import { allocateProportionally, computeSaleTotals } from '../utils/sale-totals';
+import { allocateProportionally, computeSaleTotals, refundLineAmount } from '../utils/sale-totals';
 import type { CreateSaleInput } from '../validators/create-sale';
+import type { RefundSaleInput } from '../validators/refund-sale';
 import type { SearchVariantsQuery } from '../validators/search-variants';
 import type {
   SaleDetail,
@@ -30,11 +31,26 @@ const DETAIL_INCLUDE = {
     orderBy: { id: 'asc' },
     include: { productVariant: { select: { imageUrl: true } } },
   },
+  refunds: {
+    orderBy: { createdAt: 'asc' },
+    include: { items: { select: { saleItemId: true, quantity: true } } },
+  },
 } satisfies Prisma.SaleInclude;
 
 type SaleRow = Prisma.SaleGetPayload<{ include: typeof DETAIL_INCLUDE }>;
 
 function mapDetail(row: SaleRow): SaleDetail {
+  // Refunded qty per sale line (across all refunds) — drives the remaining-qty UI.
+  const refundedByItem = new Map<string, number>();
+  for (const refund of row.refunds) {
+    for (const item of refund.items) {
+      refundedByItem.set(
+        item.saleItemId,
+        (refundedByItem.get(item.saleItemId) ?? 0) + item.quantity,
+      );
+    }
+  }
+
   const items: SaleItemDetail[] = row.items.map((item) => ({
     id: item.id,
     productVariantId: item.productVariantId,
@@ -42,7 +58,9 @@ function mapDetail(row: SaleRow): SaleDetail {
     name: item.name,
     quantity: item.quantity,
     unitPrice: item.unitPrice.toString(),
+    discountAmount: item.discountAmount.toString(),
     lineTotal: (Number(item.unitPrice) * item.quantity).toString(),
+    refundedQuantity: refundedByItem.get(item.id) ?? 0,
     bundleName: item.bundleName,
     imageUrl: item.productVariant?.imageUrl ?? null,
   }));
@@ -63,6 +81,17 @@ function mapDetail(row: SaleRow): SaleDetail {
     note: row.note,
     createdAt: row.createdAt.toISOString(),
     items,
+    refunds: row.refunds.map((refund) => ({
+      id: refund.id,
+      code: refund.code,
+      totalAmount: refund.totalAmount.toString(),
+      note: refund.note,
+      createdAt: refund.createdAt.toISOString(),
+      itemCount: refund.items.reduce((sum, item) => sum + item.quantity, 0),
+    })),
+    refundedAmount: row.refunds
+      .reduce((sum, refund) => sum + Number(refund.totalAmount), 0)
+      .toString(),
   };
 }
 
@@ -212,10 +241,20 @@ export class SalesServerService {
   async voidSale(userId: string, saleId: string): Promise<SaleDetail> {
     const sale = await prisma.sale.findFirst({
       where: { id: saleId, userId },
-      include: { items: { select: { productVariantId: true, quantity: true } } },
+      include: {
+        items: { select: { productVariantId: true, quantity: true } },
+        refunds: { select: { id: true } },
+      },
     });
     if (!sale) throw SaleError.notFound();
     if (sale.status === 'VOID') return this.getSale(userId, saleId);
+    // A void restocks EVERY line — combined with a refund's restock that would
+    // double-credit stock. Once a refund exists, only further refunds are allowed.
+    if (sale.refunds.length > 0) {
+      throw SaleError.validation(
+        'Penjualan ini sudah punya refund — refund sisa itemnya saja, jangan dibatalkan penuh.',
+      );
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
@@ -233,6 +272,125 @@ export class SalesServerService {
 
     await this.propagateAffected(userId, [
       ...new Set(sale.items.map((item) => item.productVariantId)),
+    ]);
+    return this.getSale(userId, saleId);
+  }
+
+  /**
+   * Refund part of a counter sale: the chosen quantities go back to sellable
+   * stock and the cash returned is valued at each line's NET unit (its
+   * discount share netted out; the PPN the buyer paid on top added back).
+   * The sale itself stands — status moves to PARTIALLY_REFUNDED.
+   */
+  async createSaleRefund(
+    userId: string,
+    saleId: string,
+    input: RefundSaleInput,
+  ): Promise<SaleDetail> {
+    const sale = await prisma.sale.findFirst({
+      where: { id: saleId, userId },
+      include: {
+        items: true,
+        refunds: { include: { items: { select: { saleItemId: true, quantity: true } } } },
+      },
+    });
+    if (!sale) throw SaleError.notFound();
+    if (sale.status === 'VOID') {
+      throw SaleError.validation('Penjualan yang dibatalkan tidak bisa di-refund.');
+    }
+
+    const uniqueIds = new Set(input.items.map((entry) => entry.saleItemId));
+    if (uniqueIds.size !== input.items.length) {
+      throw SaleError.validation('Ada item refund yang dobel.');
+    }
+
+    const itemById = new Map(sale.items.map((item) => [item.id, item]));
+    const refundedByItem = new Map<string, number>();
+    for (const refund of sale.refunds) {
+      for (const refundItem of refund.items) {
+        refundedByItem.set(
+          refundItem.saleItemId,
+          (refundedByItem.get(refundItem.saleItemId) ?? 0) + refundItem.quantity,
+        );
+      }
+    }
+
+    const taxRate = Number(sale.taxRate);
+    const lines = input.items.map((entry) => {
+      const item = itemById.get(entry.saleItemId);
+      if (!item) throw SaleError.validation('Item penjualan tidak ditemukan.');
+
+      const remaining = item.quantity - (refundedByItem.get(item.id) ?? 0);
+      if (entry.quantity > remaining) {
+        throw SaleError.validation(
+          `Qty refund "${item.name}" melebihi sisa yang bisa di-refund (${remaining}).`,
+        );
+      }
+
+      const amount = refundLineAmount(
+        {
+          unitPrice: Number(item.unitPrice),
+          quantity: item.quantity,
+          discountAmount: Number(item.discountAmount),
+        },
+        entry.quantity,
+        taxRate,
+        sale.taxInclusive,
+      );
+      return { item, quantity: entry.quantity, amount };
+    });
+
+    const totalAmount = Math.round(lines.reduce((sum, line) => sum + line.amount, 0) * 100) / 100;
+
+    const created = await prisma.$transaction(async (tx) => {
+      const count = await tx.saleRefund.count({ where: { userId } });
+      const code = `RF${(count + 1).toString().padStart(5, '0')}`;
+
+      const refund = await tx.saleRefund.create({
+        data: {
+          userId,
+          saleId: sale.id,
+          code,
+          totalAmount,
+          note: input.note ?? null,
+          items: {
+            create: lines.map((line) => ({
+              saleItemId: line.item.id,
+              productVariantId: line.item.productVariantId,
+              sku: line.item.sku,
+              name: line.item.name,
+              quantity: line.quantity,
+              amount: line.amount,
+            })),
+          },
+        },
+      });
+
+      for (const line of lines) {
+        await inventoryServerService.applyOfflineSaleReversalTx(tx, {
+          userId,
+          variantId: line.item.productVariantId,
+          quantity: line.quantity,
+          saleId: sale.id,
+          note: `Refund ${code}`,
+        });
+      }
+
+      await tx.sale.update({ where: { id: sale.id }, data: { status: 'PARTIALLY_REFUNDED' } });
+      return refund;
+    });
+
+    appLogger.info('sales.refunded', {
+      userId,
+      saleId: sale.id,
+      refundId: created.id,
+      code: created.code,
+      items: lines.length,
+      totalAmount,
+    });
+
+    await this.propagateAffected(userId, [
+      ...new Set(lines.map((line) => line.item.productVariantId)),
     ]);
     return this.getSale(userId, saleId);
   }

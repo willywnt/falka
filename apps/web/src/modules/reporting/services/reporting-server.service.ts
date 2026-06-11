@@ -52,9 +52,15 @@ export class ReportingServerService {
     const to = endOfDay(query.to ?? new Date());
     const from = startOfDay(query.from ?? new Date(to.getTime() - DEFAULT_RANGE_DAYS * DAY_MS));
 
-    const [saleItems, orderItems, returns] = await Promise.all([
+    const [saleItems, saleRefundItems, orderItems, returns] = await Promise.all([
       prisma.saleItem.findMany({
-        where: { sale: { userId, status: 'COMPLETED', createdAt: { gte: from, lte: to } } },
+        where: {
+          sale: {
+            userId,
+            status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] },
+            createdAt: { gte: from, lte: to },
+          },
+        },
         select: {
           quantity: true,
           unitPrice: true,
@@ -64,6 +70,37 @@ export class ReportingServerService {
           name: true,
           productVariantId: true,
           sale: { select: { createdAt: true, taxRate: true, taxInclusive: true } },
+        },
+      }),
+      // POS refunds net their sale back out (recognized when the refund was
+      // made), valued at the SAME effective net unit as the sale line above.
+      prisma.saleRefundItem.findMany({
+        where: {
+          refund: {
+            userId,
+            createdAt: { gte: from, lte: to },
+            sale: { status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] } },
+          },
+        },
+        select: {
+          quantity: true,
+          sku: true,
+          name: true,
+          productVariantId: true,
+          saleItem: {
+            select: {
+              quantity: true,
+              unitPrice: true,
+              unitCost: true,
+              discountAmount: true,
+            },
+          },
+          refund: {
+            select: {
+              createdAt: true,
+              sale: { select: { taxRate: true, taxInclusive: true } },
+            },
+          },
         },
       }),
       prisma.orderItem.findMany({
@@ -143,6 +180,29 @@ export class ReportingServerService {
           quantity: item.quantity,
           unitPrice: item.quantity > 0 ? net / item.quantity : 0,
           unitCost: item.unitCost == null ? null : Number(item.unitCost),
+        };
+      }),
+      // Negative-qty lines reversing refunded units at the same net unit value
+      // (revenue AND COGS come back out, mirroring the marketplace-return path).
+      ...saleRefundItems.map((item) => {
+        const saleLine = item.saleItem;
+        const gross = Number(saleLine.unitPrice) * saleLine.quantity;
+        const afterDiscount = Math.max(0, gross - Number(saleLine.discountAmount));
+        const taxRate = Number(item.refund.sale.taxRate);
+        const net =
+          item.refund.sale.taxInclusive && taxRate > 0
+            ? afterDiscount * (100 / (100 + taxRate))
+            : afterDiscount;
+
+        return {
+          date: item.refund.createdAt,
+          channel: 'POS' as ProfitChannel,
+          variantId: item.productVariantId,
+          sku: item.sku,
+          name: item.name,
+          quantity: -item.quantity,
+          unitPrice: saleLine.quantity > 0 ? net / saleLine.quantity : 0,
+          unitCost: saleLine.unitCost == null ? null : Number(saleLine.unitCost),
         };
       }),
       ...orderItems.map((item) => ({

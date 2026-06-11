@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban, Boxes, ReceiptText } from 'lucide-react';
+import { ArrowLeft, Ban, Boxes, ReceiptText, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -36,6 +36,7 @@ import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
 import type { SaleItemDetail } from '../types';
 import { paymentMethodLabel } from './pos-terminal';
 import { ReceiptDialog } from './receipt-dialog';
+import { RefundSaleDialog } from './refund-sale-dialog';
 
 /** A run of consecutive items sharing a bundle origin, or a single standalone item. */
 type ItemGroup =
@@ -65,6 +66,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
   const voidMutation = useVoidSaleMutation();
   const [voidOpen, setVoidOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   async function handleVoid() {
     try {
@@ -130,7 +132,14 @@ export function SaleDetail({ saleId }: { saleId: string }) {
           </div>
         </div>
       </TableCell>
-      <TableCell className="num text-right">{item.quantity}</TableCell>
+      <TableCell className="text-right">
+        <span className="num">{item.quantity}</span>
+        {item.refundedQuantity > 0 ? (
+          <div className="text-status-warn text-xs whitespace-nowrap">
+            <span className="num">{item.refundedQuantity}</span> di-refund
+          </div>
+        ) : null}
+      </TableCell>
       <TableCell className="num text-right">{formatCurrency(item.unitPrice)}</TableCell>
       <TableCell className="num text-right font-medium">{formatCurrency(item.lineTotal)}</TableCell>
     </TableRow>
@@ -153,6 +162,11 @@ export function SaleDetail({ saleId }: { saleId: string }) {
         </span>
         <span className="num font-medium">{formatCurrency(item.lineTotal)}</span>
       </div>
+      {item.refundedQuantity > 0 ? (
+        <p className="text-status-warn text-xs">
+          <span className="num">{item.refundedQuantity}</span> di-refund
+        </p>
+      ) : null}
     </div>
   );
 
@@ -170,15 +184,22 @@ export function SaleDetail({ saleId }: { saleId: string }) {
           <h1 className="num text-2xl font-semibold tracking-tight">{data.code}</h1>
           <Badge variant="secondary">{paymentMethodLabel(data.paymentMethod)}</Badge>
           {data.status === 'VOID' ? <StatusBadge tone="danger">Dibatalkan</StatusBadge> : null}
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-auto"
-            onClick={() => setReceiptOpen(true)}
-          >
-            <ReceiptText className="size-4" />
-            Struk
-          </Button>
+          {data.status === 'PARTIALLY_REFUNDED' ? (
+            <StatusBadge tone="warn">Refund sebagian</StatusBadge>
+          ) : null}
+          <div className="ml-auto flex items-center gap-2">
+            {data.status !== 'VOID' &&
+            data.items.some((item) => item.quantity - item.refundedQuantity > 0) ? (
+              <Button variant="outline" size="sm" onClick={() => setRefundOpen(true)}>
+                <Undo2 className="size-4" />
+                Refund
+              </Button>
+            ) : null}
+            <Button variant="outline" size="sm" onClick={() => setReceiptOpen(true)}>
+              <ReceiptText className="size-4" />
+              Struk
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -284,6 +305,14 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                   {formatCurrency(data.totalAmount)}
                 </span>
               </div>
+              {Number(data.refundedAmount) > 0 ? (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Total refund</span>
+                  <span className="num text-signed-down text-right font-medium">
+                    −{formatCurrency(data.refundedAmount)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pembayaran</span>
                 <span className="text-right font-medium">
@@ -306,6 +335,25 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground">Catatan</span>
                   <span className="truncate text-right font-medium">{data.note}</span>
+                </div>
+              ) : null}
+              {data.refunds.length > 0 ? (
+                <div className="space-y-1.5 border-t pt-3">
+                  <p className="text-muted-foreground text-xs font-medium">Riwayat refund</p>
+                  {data.refunds.map((refund) => (
+                    <div
+                      key={refund.id}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="min-w-0 truncate">
+                        <span className="num font-medium">{refund.code}</span>{' '}
+                        <span className="text-muted-foreground" suppressHydrationWarning>
+                          · {formatDateTime(refund.createdAt)}
+                        </span>
+                      </span>
+                      <span className="num shrink-0">−{formatCurrency(refund.totalAmount)}</span>
+                    </div>
+                  ))}
                 </div>
               ) : null}
             </CardContent>
@@ -352,6 +400,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
       </div>
 
       <ReceiptDialog sale={data} open={receiptOpen} onOpenChange={setReceiptOpen} />
+      <RefundSaleDialog sale={data} open={refundOpen} onOpenChange={setRefundOpen} />
     </div>
   );
 }

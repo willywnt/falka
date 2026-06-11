@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { allocateProportionally, computeSaleTotals } from '@/modules/sales/utils/sale-totals';
+import {
+  allocateProportionally,
+  computeSaleTotals,
+  refundLineAmount,
+} from '@/modules/sales/utils/sale-totals';
 
 describe('computeSaleTotals', () => {
   it('passes through with no discount and no tax', () => {
@@ -48,6 +52,28 @@ describe('computeSaleTotals', () => {
     expect(totals.discountAmount).toBe(0);
     expect(totals.taxAmount).toBe(0);
     expect(totals.totalAmount).toBe(10_000);
+  });
+});
+
+describe('refundLineAmount', () => {
+  const line = { unitPrice: 10_000, quantity: 4, discountAmount: 4_000 };
+
+  it('refunds the net unit value times qty (discount share netted out)', () => {
+    // Net per unit = (40.000 - 4.000) / 4 = 9.000.
+    expect(refundLineAmount(line, 2, 0, false)).toBe(18_000);
+  });
+
+  it('adds the PPN share back when the sale charged PPN on top', () => {
+    expect(refundLineAmount(line, 2, 11, false)).toBe(19_980);
+  });
+
+  it('does not inflate inclusive-PPN refunds (price already contained it)', () => {
+    expect(refundLineAmount(line, 2, 11, true)).toBe(18_000);
+  });
+
+  it('returns 0 for zero/invalid quantities', () => {
+    expect(refundLineAmount(line, 0, 11, false)).toBe(0);
+    expect(refundLineAmount({ ...line, quantity: 0 }, 1, 0, false)).toBe(0);
   });
 });
 

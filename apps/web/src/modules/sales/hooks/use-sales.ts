@@ -10,6 +10,7 @@ import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { saleKeys } from './sale-keys';
 import type { CreateSaleInput } from '../validators/create-sale';
+import type { RefundSaleInput } from '../validators/refund-sale';
 import type { SaleDetail, SaleListItem, ScannedSaleItem, SellableVariant } from '../types';
 
 /** A page of POS-picker variants (mirror of the server's PaginatedResult). */
@@ -99,6 +100,26 @@ export function useVoidSaleMutation() {
     mutationFn: async (saleId: string) => {
       const result = await apiFetch<SaleDetail>(`${apiRoutes.sales}/${saleId}/void`, {
         method: 'POST',
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: saleKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+/** Refund chosen quantities from a sale — restocks them and records the cash returned. */
+export function useRefundSaleMutation(saleId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: RefundSaleInput) => {
+      const result = await apiFetch<SaleDetail>(`${apiRoutes.sales}/${saleId}/refund`, {
+        method: 'POST',
+        body: input,
       });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
