@@ -37,7 +37,7 @@ export function ScannerStatusWidget({
   const isWaiting = !isConnected && session?.status === 'PENDING';
 
   const dot = isConnected ? 'bg-status-ok' : isWaiting ? 'bg-highlight' : 'bg-muted-foreground/40';
-  const cta = isConnected ? 'Ponsel terhubung' : isWaiting ? 'Tampilkan QR' : 'Scan pakai ponsel';
+  const cta = isConnected ? 'Ponsel terhubung' : isWaiting ? 'Tampilkan QR' : 'Scan dengan ponsel';
 
   return (
     <div className="flex items-center gap-1.5">

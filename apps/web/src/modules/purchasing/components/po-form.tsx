@@ -57,7 +57,7 @@ import type { PurchasableVariant, ScannedPurchaseItem } from '../types';
 const SCAN_STATUS_META: Record<PoScannerStatus, { dot: string; cta: string; hint: string | null }> =
   {
     off: { dot: '', cta: '', hint: null },
-    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
+    idle: { dot: 'bg-muted-foreground/40', cta: 'Scan dengan ponsel', hint: null },
     waiting: { dot: 'bg-highlight', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
     connected: {
       dot: 'bg-status-ok',
