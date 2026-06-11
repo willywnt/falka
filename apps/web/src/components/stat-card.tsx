@@ -58,7 +58,7 @@ export function StatCard({
             </span>
           ) : null}
         </div>
-        <CardTitle className={cn('num text-2xl', accentClassName)}>{value}</CardTitle>
+        <CardTitle className={cn('num-display', accentClassName)}>{value}</CardTitle>
       </CardHeader>
       {hint || delta != null ? (
         <CardContent className="pt-0">
