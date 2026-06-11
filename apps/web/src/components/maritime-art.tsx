@@ -6,6 +6,28 @@ import { cn } from '@/lib/utils';
  * long-job loading. Never inside tables, badges, or forms.
  */
 
+/**
+ * Riak divider — THE one structural wave motif. Budgeted to hero/landing/auth
+ * section breaks only; never inside tables, cards, or forms.
+ */
+export function WaveHairline({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 1200 12"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className={cn('text-primary/30 h-3 w-full', className)}
+      fill="none"
+    >
+      <path
+        d="M0 6c25-7 50-7 75 0s50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0 50-7 75 0 50 7 75 0"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 /** Mercusuar — the "suar" beacon for branded error/404 screens. */
 export function LighthouseArt({ className }: { className?: string }) {
   return (

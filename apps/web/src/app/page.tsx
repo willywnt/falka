@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 
 import { auth } from '@/auth';
-import { BrandBadge } from '@/components/brand-mark';
+import { BrandBadge, BrandMark } from '@/components/brand-mark';
+import { WaveHairline } from '@/components/maritime-art';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -82,15 +83,17 @@ export default async function HomePage() {
       </header>
 
       <section className="relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="bg-primary/10 absolute -top-32 left-1/2 size-[36rem] -translate-x-1/2 rounded-full blur-3xl" />
-        </div>
+        {/* Horizon wash — sea-glass light fading to paper, no SaaS blur-blobs. */}
+        <div
+          aria-hidden
+          className="from-sea-glass pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b to-transparent"
+        />
         <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
           <span className="border-primary/20 bg-primary/5 text-primary eyebrow inline-flex items-center rounded-full border px-3 py-1">
             Stok · Marketplace · Packing
           </span>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Jaga stok kamu tetap akurat di semua marketplace.
+            Lihat lebih tajam, jualan lebih tenang.
           </h1>
           <p className="text-muted-foreground mx-auto mt-5 max-w-xl text-lg text-pretty">
             {APP_NAME} menjaga stok kamu tetap akurat dari hulu ke hilir: pesanan dari setiap toko
@@ -119,6 +122,9 @@ export default async function HomePage() {
             )}
           </div>
         </div>
+        <div className="mx-auto max-w-6xl px-6 pb-2">
+          <WaveHairline />
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-24">
@@ -143,6 +149,23 @@ export default async function HomePage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Pandu teaser — honest "coming" banner, no fake AI interactivity. */}
+        <div className="bg-sea-glass mt-10 flex flex-col gap-4 rounded-lg border p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3.5">
+            <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+              <BrandMark className="size-5" />
+            </span>
+            <div className="space-y-1">
+              <p className="eyebrow text-primary">Segera hadir</p>
+              <h3 className="font-semibold tracking-tight">Pandu — pemandu tokomu</h3>
+              <p className="text-muted-foreground max-w-xl text-sm text-pretty">
+                Asisten dengan mata elang untuk stokmu: &ldquo;Stok kaos hitam M habis ±2 hari lagi
+                — buatkan PO?&rdquo; Pandu mengawasi angkanya, kamu yang memutuskan.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
