@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Boxes,
   ClipboardCheck,
+  Equal,
   Minus,
   Plus,
   Scale,
@@ -14,6 +15,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { ActionTooltip } from '@/components/ui/action-tooltip';
 
 import {
   AlertDialog,
@@ -299,10 +302,16 @@ function useCountedField(opnameId: string, item: StockOpnameItemDetail) {
   const [counted, setCounted] = useState(item.countedQuantity);
   const upsert = useUpsertOpnameItemMutation(opnameId);
 
-  function commit() {
-    if (counted === item.countedQuantity) return;
+  // Keep the field in sync when the count changes server-side (e.g. a phone scan
+  // tallies +1) — without this the row would show a stale number after a scan.
+  useEffect(() => {
+    setCounted(item.countedQuantity);
+  }, [item.countedQuantity]);
+
+  function save(next: number) {
+    if (next === item.countedQuantity) return;
     upsert.mutate(
-      { variantId: item.variantId, countedQuantity: counted },
+      { variantId: item.variantId, countedQuantity: next },
       {
         onError: (err) => {
           setCounted(item.countedQuantity);
@@ -314,7 +323,17 @@ function useCountedField(opnameId: string, item: StockOpnameItemDetail) {
     );
   }
 
-  return { counted, setCounted, commit };
+  function commit() {
+    save(counted);
+  }
+
+  /** Shortcut: set the count equal to the system stock (no variance). */
+  function matchSystem() {
+    setCounted(item.systemQuantity);
+    save(item.systemQuantity);
+  }
+
+  return { counted, setCounted, commit, matchSystem, isSaving: upsert.isPending };
 }
 
 function OpnameItemRow({
@@ -326,7 +345,7 @@ function OpnameItemRow({
   item: StockOpnameItemDetail;
   editable: boolean;
 }) {
-  const { counted, setCounted, commit } = useCountedField(opnameId, item);
+  const { counted, setCounted, commit, matchSystem } = useCountedField(opnameId, item);
   const remove = useRemoveOpnameItemMutation(opnameId);
   // While editing, show the live variance from the field; the row's stored value once posted.
   const variance = editable ? counted - item.systemQuantity : item.variance;
@@ -340,17 +359,31 @@ function OpnameItemRow({
       <TableCell className="num text-right">{item.systemQuantity}</TableCell>
       <TableCell className="text-right">
         {editable ? (
-          <div className="ml-auto w-20">
-            <NumberInput
-              value={counted}
-              onChange={setCounted}
-              onBlur={commit}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') event.currentTarget.blur();
-              }}
-              className="text-right"
-              aria-label={`Jumlah dihitung untuk ${item.sku}`}
-            />
+          <div className="ml-auto flex w-fit items-center justify-end gap-1">
+            <ActionTooltip label={`Samakan dengan sistem (${item.systemQuantity})`}>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 shrink-0"
+                onClick={matchSystem}
+                aria-label="Samakan dengan sistem"
+              >
+                <Equal className="size-4" />
+              </Button>
+            </ActionTooltip>
+            <div className="w-20">
+              <NumberInput
+                value={counted}
+                onChange={setCounted}
+                onBlur={commit}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                }}
+                className="text-right"
+                aria-label={`Jumlah dihitung untuk ${item.sku}`}
+              />
+            </div>
           </div>
         ) : (
           <span className="num">{item.countedQuantity}</span>
@@ -385,7 +418,7 @@ function OpnameItemCard({
   item: StockOpnameItemDetail;
   editable: boolean;
 }) {
-  const { counted, setCounted, commit } = useCountedField(opnameId, item);
+  const { counted, setCounted, commit, matchSystem } = useCountedField(opnameId, item);
   const remove = useRemoveOpnameItemMutation(opnameId);
   const variance = editable ? counted - item.systemQuantity : item.variance;
 
@@ -417,17 +450,31 @@ function OpnameItemCard({
         <div>
           <div className="text-muted-foreground text-xs">Dihitung</div>
           {editable ? (
-            <div className="w-20">
-              <NumberInput
-                value={counted}
-                onChange={setCounted}
-                onBlur={commit}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') event.currentTarget.blur();
-                }}
-                className="text-right"
-                aria-label={`Jumlah dihitung untuk ${item.sku}`}
-              />
+            <div className="flex items-center gap-1">
+              <ActionTooltip label={`Samakan dengan sistem (${item.systemQuantity})`}>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 shrink-0"
+                  onClick={matchSystem}
+                  aria-label="Samakan dengan sistem"
+                >
+                  <Equal className="size-4" />
+                </Button>
+              </ActionTooltip>
+              <div className="w-20">
+                <NumberInput
+                  value={counted}
+                  onChange={setCounted}
+                  onBlur={commit}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                  }}
+                  className="text-right"
+                  aria-label={`Jumlah dihitung untuk ${item.sku}`}
+                />
+              </div>
             </div>
           ) : (
             <div className="num">{item.countedQuantity}</div>

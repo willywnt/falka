@@ -31,7 +31,7 @@ const SCAN_STATUS_META: Record<
   { dot: string; cta: string; hint: string | null }
 > = {
   off: { dot: '', cta: '', hint: null },
-  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan pakai ponsel', hint: null },
+  idle: { dot: 'bg-muted-foreground/40', cta: 'Scan dengan ponsel', hint: null },
   waiting: { dot: 'bg-highlight', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
   connected: {
     dot: 'bg-status-ok',
@@ -61,17 +61,13 @@ export function OpnameAddItem({
     pageSize,
   );
 
-  const [scanCode, setScanCode] = useState('');
   const upsert = useUpsertOpnameItemMutation(opnameId);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const { soundOn, toggleSound } = useScanSoundPref('falka-opname-scan-sound');
   useSoundUnlock();
   // Phone scan-to-count: a paired phone scans a product label → tally +1.
-  const { scannerEnabled, status, scan, isScanning } = useOpnameScanner({
-    opnameId,
-    soundEnabled: soundOn,
-  });
+  const { scannerEnabled, status } = useOpnameScanner({ opnameId, soundEnabled: soundOn });
   const scanMeta = SCAN_STATUS_META[status];
 
   // A new search resets to the first page.
@@ -95,14 +91,6 @@ export function OpnameAddItem({
           }),
       },
     );
-  }
-
-  function handleScanSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    const code = scanCode.trim();
-    if (!code) return;
-    void scan(code);
-    setScanCode('');
   }
 
   const variants = data?.items ?? [];
@@ -137,19 +125,6 @@ export function OpnameAddItem({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <form onSubmit={handleScanSubmit} className="flex gap-2">
-          <Input
-            value={scanCode}
-            onChange={(event) => setScanCode(event.target.value)}
-            placeholder="Scan / ketik barcode atau SKU lalu Enter (+1)"
-            aria-label="Scan barcode atau SKU"
-            autoFocus
-          />
-          <Button type="submit" variant="outline" disabled={isScanning || !scanCode.trim()}>
-            <ScanLine className="size-4" />
-            +1
-          </Button>
-        </form>
         {scannerEnabled && scanMeta.hint ? (
           <p
             className={cn(
@@ -164,7 +139,7 @@ export function OpnameAddItem({
         <Input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Atau cari SKU / nama produk..."
+          placeholder="Cari SKU / nama produk untuk ditambahkan..."
         />
 
         {error ? (
