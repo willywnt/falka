@@ -54,8 +54,8 @@ export function usePosScanner({
       const scanned = await resolve.mutateAsync(payload.barcode);
       if (!scanned) {
         if (soundRef.current) playScanError();
-        toast.warning('No matching product', {
-          description: `Code ${payload.barcode} didn't match any SKU or barcode.`,
+        toast.warning('Produk tidak ditemukan', {
+          description: `Kode ${payload.barcode} gak cocok dengan SKU atau barcode mana pun.`,
         });
         return;
       }
@@ -65,11 +65,11 @@ export function usePosScanner({
         scanned.kind === 'variant'
           ? `${scanned.variant.productName} · ${scanned.variant.name}`
           : scanned.bundle.name;
-      toast.success('Added to cart', { description });
+      toast.success('Masuk keranjang', { description });
     } catch (error) {
       if (soundRef.current) playScanError();
-      toast.error('Scan failed', {
-        description: error instanceof Error ? error.message : 'Unknown error',
+      toast.error('Scan gagal', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -88,8 +88,8 @@ export function usePosScanner({
     } else if (wasConnectedRef.current && sessionStatus !== 'PENDING') {
       wasConnectedRef.current = false;
       setDropped(true);
-      toast.warning('Phone scanner disconnected', {
-        description: 'The phone went offline. Reopen the scanner link or rescan the QR.',
+      toast.warning('Scanner ponsel terputus', {
+        description: 'Ponsel kamu offline. Buka ulang link scanner atau scan ulang QR-nya.',
       });
     }
   }, [sessionStatus]);

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Banknote,
   Boxes,
-  PackageSearch,
   Plus,
   ScanLine,
   ShoppingCart,
@@ -15,6 +15,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { SalePaymentMethod } from '@prisma/client';
 
+import { ActionTooltip } from '@/components/ui/action-tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { ErrorState } from '@/components/error-state';
 import { ImageThumb } from '@/components/image-thumb';
 import { TablePagination } from '@/components/table-pagination';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { usePagination } from '@/hooks/use-pagination';
 import { useScanSoundPref } from '@/hooks/use-scan-sound-pref';
 import { useSoundUnlock } from '@/hooks/use-sound-unlock';
@@ -63,13 +65,13 @@ const SCAN_STATUS_META: Record<
   },
   connected: {
     dot: 'bg-status-ok',
-    cta: 'ponsel terhubung',
-    hint: 'ponsel terhubung — scan label produk buat masukin ke keranjang.',
+    cta: 'Ponsel terhubung',
+    hint: 'Ponsel terhubung — scan label produk buat masukin ke keranjang.',
   },
   disconnected: {
     dot: 'bg-destructive',
     cta: 'Hubungkan ulang',
-    hint: 'ponsel terputus. Ketuk Hubungkan ulang buat tampilin QR baru.',
+    hint: 'Ponsel terputus. Ketuk Hubungkan ulang buat tampilin QR baru.',
   },
 };
 
@@ -108,13 +110,18 @@ type BundleCartLine = {
 
 type CartLine = VariantCartLine | BundleCartLine;
 
-const PAYMENT_OPTIONS: ReadonlyArray<{ value: SalePaymentMethod; label: string }> = [
+export const PAYMENT_OPTIONS: ReadonlyArray<{ value: SalePaymentMethod; label: string }> = [
   { value: 'CASH', label: 'Tunai' },
   { value: 'QRIS', label: 'QRIS' },
   { value: 'TRANSFER', label: 'Transfer' },
   { value: 'CARD', label: 'Kartu' },
   { value: 'OTHER', label: 'Lainnya' },
 ];
+
+/** Human label for a payment-method enum — the single source for list/detail too. */
+export function paymentMethodLabel(method: SalePaymentMethod): string {
+  return PAYMENT_OPTIONS.find((option) => option.value === method)?.label ?? method;
+}
 
 /** Fetch a bundle's components on demand (Bundling-tab "Add" needs the full composition). */
 function useResolveBundleDetail() {
@@ -142,6 +149,19 @@ export function PosTerminal() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, setPage]);
+
+  // Auto-focus the search box on desktop only — on a phone it would pop the
+  // keyboard over the page on load. (autoFocus can't wait for matchMedia, so
+  // focus imperatively once the query resolves to desktop.)
+  const isDesktop = useMediaQuery('(min-width: 640px)');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const didAutoFocusRef = useRef(false);
+  useEffect(() => {
+    if (isDesktop && !didAutoFocusRef.current) {
+      didAutoFocusRef.current = true;
+      searchInputRef.current?.focus();
+    }
+  }, [isDesktop]);
 
   const variants = results?.items ?? [];
   const meta = results?.meta;
@@ -386,14 +406,14 @@ export function PosTerminal() {
       setCustomerName('');
       setSearchInput('');
     } catch (error) {
-      toast.error('Checkout gagal', {
+      toast.error('Pembayaran gagal', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="grid gap-6 pb-24 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       {/* Product picker */}
       <Card>
         <CardHeader>
@@ -401,20 +421,18 @@ export function PosTerminal() {
             <CardTitle className="text-base">Cari produk</CardTitle>
             {scannerEnabled ? (
               <div className="flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={toggleSound}
-                  aria-label={soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}
-                  title={soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}
-                >
-                  {soundOn ? (
-                    <Volume2 className="size-4" />
-                  ) : (
-                    <VolumeX className="text-muted-foreground size-4" />
-                  )}
-                </Button>
+                <ActionTooltip label={soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}>
+                  <Button variant="ghost" size="icon" className="size-8" onClick={toggleSound}>
+                    {soundOn ? (
+                      <Volume2 className="size-4" />
+                    ) : (
+                      <VolumeX className="text-muted-foreground size-4" />
+                    )}
+                    <span className="sr-only">
+                      {soundOn ? 'Bisukan suara scan' : 'Aktifkan suara scan'}
+                    </span>
+                  </Button>
+                </ActionTooltip>
                 <Button variant="outline" size="sm" onClick={openScanner}>
                   <span className={cn('size-2 rounded-full', scanMeta.dot)} aria-hidden />
                   <ScanLine className="size-4" />
@@ -426,10 +444,10 @@ export function PosTerminal() {
         </CardHeader>
         <CardContent className="space-y-3">
           <Input
+            ref={searchInputRef}
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Cari SKU atau nama produk..."
-            autoFocus
           />
           {scannerEnabled && scanMeta.hint ? (
             <p
@@ -571,12 +589,34 @@ export function PosTerminal() {
               onClick={() => void handleCheckout()}
               disabled={cart.length === 0 || createSale.isPending}
             >
-              <PackageSearch className="size-4" />
-              {createSale.isPending ? 'Memproses...' : 'Checkout'}
+              <Banknote className="size-4" />
+              {createSale.isPending ? 'Memproses...' : 'Bayar'}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Sticky mobile checkout — the cart total + pay button stay reachable while
+          the cart scrolls; same handler + disabled conditions as the card button. */}
+      {cart.length > 0 ? (
+        <div className="bg-card fixed inset-x-0 bottom-0 z-30 border-t p-3 sm:hidden">
+          <div className="mx-auto flex w-full max-w-xl items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs">Total</p>
+              <p className="num-display truncate">{formatCurrency(total)}</p>
+            </div>
+            <Button
+              size="lg"
+              className="shrink-0"
+              onClick={() => void handleCheckout()}
+              disabled={cart.length === 0 || createSale.isPending}
+            >
+              <Banknote className="size-4" />
+              {createSale.isPending ? 'Memproses...' : 'Bayar'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <ConnectScannerDialog open={scannerOpen} onOpenChange={setScannerOpen} purpose="POS" />
     </div>
@@ -749,21 +789,26 @@ function VariantCartRow({
             </div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
-          <Trash2 className="size-4" />
-        </Button>
+        <ActionTooltip label="Hapus dari keranjang">
+          <Button size="icon" variant="ghost" onClick={onRemove}>
+            <Trash2 className="size-4" />
+            <span className="sr-only">Hapus dari keranjang</span>
+          </Button>
+        </ActionTooltip>
       </div>
       <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
         <div className="space-y-1.5">
-          <Label>Qty</Label>
+          <Label htmlFor={`cart-qty-${line.variantId}`}>Qty</Label>
           <NumberInput
+            id={`cart-qty-${line.variantId}`}
             value={line.quantity}
             onChange={(value) => onPatch({ quantity: Math.max(1, value) })}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Harga satuan</Label>
+          <Label htmlFor={`cart-price-${line.variantId}`}>Harga satuan</Label>
           <NumberInput
+            id={`cart-price-${line.variantId}`}
             value={line.unitPrice}
             onChange={(value) => onPatch({ unitPrice: Math.max(0, value) })}
           />
@@ -816,9 +861,12 @@ function BundleCartRow({
             <div className="text-muted-foreground text-xs">{line.sku}</div>
           </div>
         </div>
-        <Button size="icon" variant="ghost" onClick={onRemove} aria-label="Hapus">
-          <Trash2 className="size-4" />
-        </Button>
+        <ActionTooltip label="Hapus dari keranjang">
+          <Button size="icon" variant="ghost" onClick={onRemove}>
+            <Trash2 className="size-4" />
+            <span className="sr-only">Hapus dari keranjang</span>
+          </Button>
+        </ActionTooltip>
       </div>
 
       <ul className="bg-muted/40 mt-2 space-y-1 rounded-md px-2.5 py-2">
@@ -835,15 +883,17 @@ function BundleCartRow({
 
       <div className="mt-2 grid grid-cols-[5rem_1fr_auto] items-center gap-2">
         <div className="space-y-1.5">
-          <Label>Qty</Label>
+          <Label htmlFor={`cart-qty-${line.bundleId}`}>Qty</Label>
           <NumberInput
+            id={`cart-qty-${line.bundleId}`}
             value={line.quantity}
             onChange={(value) => onPatch({ quantity: Math.max(1, value) })}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Harga bundel</Label>
+          <Label htmlFor={`cart-price-${line.bundleId}`}>Harga bundel</Label>
           <NumberInput
+            id={`cart-price-${line.bundleId}`}
             value={line.unitPrice}
             onChange={(value) => onPatch({ unitPrice: Math.max(0, value) })}
           />

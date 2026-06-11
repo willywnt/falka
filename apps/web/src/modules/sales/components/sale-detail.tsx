@@ -34,6 +34,7 @@ import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
 import type { SaleItemDetail } from '../types';
+import { paymentMethodLabel } from './pos-terminal';
 
 /** A run of consecutive items sharing a bundle origin, or a single standalone item. */
 type ItemGroup =
@@ -76,10 +77,24 @@ export function SaleDetail({ saleId }: { saleId: string }) {
   }
 
   if (isLoading) {
+    // Mirrors the loaded layout: back link → eyebrow + title → items column + aside.
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-8 w-56" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-3 lg:col-span-2">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-9 w-full rounded-md" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -119,27 +134,54 @@ export function SaleDetail({ saleId }: { saleId: string }) {
     </TableRow>
   );
 
+  // Mobile twin of renderSaleItemRow — same data, stacked.
+  const renderSaleItemCard = (item: SaleItemDetail) => (
+    <div key={item.id} className="space-y-2 p-4">
+      <div className="flex items-center gap-3">
+        <ImageThumb src={item.imageUrl} alt={item.name} />
+        <div className="min-w-0">
+          <div className="truncate font-medium">{item.name}</div>
+          <div className="text-muted-foreground text-xs">{item.sku}</div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+        <span className="text-muted-foreground">
+          <span className="num text-foreground font-medium">{item.quantity}</span> ×{' '}
+          <span className="num">{formatCurrency(item.unitPrice)}</span>
+        </span>
+        <span className="num font-medium">{formatCurrency(item.lineTotal)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link href="/dashboard/sales">
-          <ArrowLeft className="size-4" />
-          Kembali ke penjualan
-        </Link>
-      </Button>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">Penjualan {data.code}</h2>
-        <Badge variant="secondary">{data.paymentMethod}</Badge>
-        {data.status === 'VOID' ? <StatusBadge tone="danger">Dibatalkan</StatusBadge> : null}
+      <div>
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link href="/dashboard/sales">
+            <ArrowLeft className="size-4" />
+            Kembali ke penjualan
+          </Link>
+        </Button>
+        <p className="eyebrow text-primary mt-2">Penjualan</p>
+        <div className="mt-1 flex flex-wrap items-center gap-3">
+          <h1 className="num text-2xl font-semibold tracking-tight">{data.code}</h1>
+          <Badge variant="secondary">{paymentMethodLabel(data.paymentMethod)}</Badge>
+          {data.status === 'VOID' ? <StatusBadge tone="danger">Dibatalkan</StatusBadge> : null}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <p className="text-sm font-medium">
-            Item <span className="text-muted-foreground">· {data.items.length}</span>
+            Item{' '}
+            <span className="text-muted-foreground">
+              · <span className="num">{data.items.length}</span>
+            </span>
           </p>
-          <div className="rounded-xl border">
+
+          {/* Desktop: the full table. */}
+          <div className="hidden rounded-xl border sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -170,6 +212,28 @@ export function SaleDetail({ saleId }: { saleId: string }) {
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile: stacked cards — same data, bundle lines stay grouped. */}
+          <div className="space-y-3 sm:hidden">
+            {groups.map((group) =>
+              group.kind === 'bundle' ? (
+                <div
+                  key={`bundle-${group.bundleName}-${group.items[0]?.id}`}
+                  className="bg-card overflow-hidden rounded-xl border"
+                >
+                  <div className="text-muted-foreground bg-muted/30 flex items-center gap-1.5 border-b px-4 py-2 text-xs font-medium">
+                    <Boxes className="size-3.5 text-violet-500 dark:text-violet-400" />
+                    Bundel · {group.bundleName}
+                  </div>
+                  <div className="divide-y">{group.items.map(renderSaleItemCard)}</div>
+                </div>
+              ) : (
+                <div key={group.item.id} className="bg-card rounded-xl border">
+                  {renderSaleItemCard(group.item)}
+                </div>
+              ),
+            )}
+          </div>
         </div>
 
         <aside className="space-y-4">
@@ -186,7 +250,9 @@ export function SaleDetail({ saleId }: { saleId: string }) {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pembayaran</span>
-                <span className="text-right font-medium">{data.paymentMethod}</span>
+                <span className="text-right font-medium">
+                  {paymentMethodLabel(data.paymentMethod)}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pelanggan</span>
@@ -222,7 +288,9 @@ export function SaleDetail({ saleId }: { saleId: string }) {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Batalkan penjualan {data.code}?</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    Batalkan penjualan <span className="num">{data.code}</span>?
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
                     Semua item bakal direstok ke stok tersedia dan penjualan ini gak dihitung lagi
                     di laporan laba. Aksi ini gak bisa diurungkan.
