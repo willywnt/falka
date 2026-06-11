@@ -18,7 +18,7 @@ function WarningText({ level, message }: { level: StorageQuotaLevel; message: st
   return (
     <p
       className={`flex items-start gap-2 text-xs leading-snug ${
-        level === 'warning' ? 'text-amber-950 dark:text-amber-100' : 'text-destructive'
+        level === 'warning' ? 'text-status-warn' : 'text-destructive'
       }`}
     >
       <AlertTriangle className="mt-0.5 size-4 shrink-0" />

@@ -1,3 +1,5 @@
+import { STATUS_BADGE_TONES } from '@/components/status-badge';
+
 import type { ReorderStatus } from '../types';
 
 type ReorderStatusDisplay = {
@@ -7,13 +9,10 @@ type ReorderStatusDisplay = {
 };
 
 const REORDER_STATUS_DISPLAY: Record<ReorderStatus, ReorderStatusDisplay> = {
-  URGENT: { label: 'Mendesak', className: 'border-transparent bg-destructive text-white' },
-  SOON: { label: 'Segera restok', className: 'border-transparent bg-amber-500 text-white' },
-  OK: {
-    label: 'Aman',
-    className: 'border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
-  },
-  DEAD: { label: 'Stok mati', className: 'border-transparent bg-muted text-muted-foreground' },
+  URGENT: { label: 'Mendesak', className: STATUS_BADGE_TONES.urgent },
+  SOON: { label: 'Segera restok', className: STATUS_BADGE_TONES.warn },
+  OK: { label: 'Aman', className: STATUS_BADGE_TONES.ok },
+  DEAD: { label: 'Stok mati', className: STATUS_BADGE_TONES.neutral },
   NO_DATA: { label: 'Tanpa data', className: 'bg-background text-muted-foreground border-border' },
 };
 

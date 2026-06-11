@@ -36,11 +36,7 @@ export function ScannerStatusWidget({
     Boolean(session) && (session?.status === 'CONNECTED' || connectionState === 'connected');
   const isWaiting = !isConnected && session?.status === 'PENDING';
 
-  const dot = isConnected
-    ? 'bg-emerald-500'
-    : isWaiting
-      ? 'bg-amber-500'
-      : 'bg-muted-foreground/40';
+  const dot = isConnected ? 'bg-status-ok' : isWaiting ? 'bg-highlight' : 'bg-muted-foreground/40';
   const cta = isConnected ? 'Ponsel terhubung' : isWaiting ? 'Tampilkan QR' : 'Scan pakai ponsel';
 
   return (

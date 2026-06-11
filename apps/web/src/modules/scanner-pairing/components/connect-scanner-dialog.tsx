@@ -240,7 +240,7 @@ export function ConnectScannerDialog({
               ) : (
                 <p className="text-muted-foreground mt-3 flex items-center justify-center gap-1.5 text-center text-xs">
                   {isConnected ? (
-                    <Wifi className="size-3.5 shrink-0 text-emerald-600" />
+                    <Wifi className="text-status-ok size-3.5 shrink-0" />
                   ) : (
                     <WifiOff className="size-3.5 shrink-0" />
                   )}

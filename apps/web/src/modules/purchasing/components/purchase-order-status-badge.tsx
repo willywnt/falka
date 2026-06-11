@@ -1,28 +1,15 @@
 import type { PurchaseOrderStatus } from '@prisma/client';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge, type StatusTone } from '@/components/status-badge';
 
-type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
-
-const STATUS_CONFIG: Record<
-  PurchaseOrderStatus,
-  { label: string; variant?: BadgeVariant; className?: string }
-> = {
-  ORDERED: { label: 'Dipesan', variant: 'outline', className: 'border-sky-500 text-sky-600' },
-  PARTIALLY_RECEIVED: {
-    label: 'Diterima sebagian',
-    variant: 'outline',
-    className: 'border-amber-500 text-amber-600',
-  },
-  RECEIVED: { label: 'Diterima', className: 'bg-emerald-600 text-white hover:bg-emerald-600' },
-  CANCELLED: { label: 'Dibatalkan', variant: 'destructive' },
+const STATUS_CONFIG: Record<PurchaseOrderStatus, { label: string; tone: StatusTone }> = {
+  ORDERED: { label: 'Dipesan', tone: 'info' },
+  PARTIALLY_RECEIVED: { label: 'Diterima sebagian', tone: 'warn' },
+  RECEIVED: { label: 'Diterima', tone: 'ok' },
+  CANCELLED: { label: 'Dibatalkan', tone: 'danger' },
 };
 
 export function PurchaseOrderStatusBadge({ status }: { status: PurchaseOrderStatus }) {
   const config = STATUS_CONFIG[status];
-  return (
-    <Badge variant={config.variant} className={config.className}>
-      {config.label}
-    </Badge>
-  );
+  return <StatusBadge tone={config.tone}>{config.label}</StatusBadge>;
 }

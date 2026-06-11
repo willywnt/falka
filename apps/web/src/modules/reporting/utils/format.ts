@@ -6,6 +6,6 @@ export function formatPct(value: number | null): string {
 /** Text class for a margin/profit cell: muted when unknown, ember when negative. */
 export function marginClass(value: number | null): string | undefined {
   if (value === null) return 'text-muted-foreground';
-  if (value < 0) return 'text-destructive';
+  if (value < 0) return 'text-signed-down';
   return undefined;
 }

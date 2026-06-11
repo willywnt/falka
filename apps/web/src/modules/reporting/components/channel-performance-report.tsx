@@ -109,7 +109,7 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
           value={formatCurrency(summary.totalGrossProfit)}
           icon={Wallet}
           tone="emerald"
-          accentClassName={Number(summary.totalGrossProfit) < 0 ? 'text-destructive' : undefined}
+          accentClassName={Number(summary.totalGrossProfit) < 0 ? 'text-signed-down' : undefined}
           hint={
             <span className="inline-flex items-center gap-1">
               <Percent className="size-3" />
@@ -266,7 +266,7 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
                   <TableCell
                     className={cn(
                       'num text-right font-medium',
-                      Number(row.grossProfit) < 0 && 'text-destructive',
+                      Number(row.grossProfit) < 0 && 'text-signed-down',
                     )}
                   >
                     {formatCurrency(row.grossProfit)}
@@ -283,14 +283,7 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
                   <TableCell className="num text-right">
                     {formatCurrency(row.avgOrderValue)}
                   </TableCell>
-                  <TableCell
-                    className={cn(
-                      'num text-right',
-                      row.returnRatePct && row.returnRatePct > 0
-                        ? 'text-destructive'
-                        : 'text-muted-foreground',
-                    )}
-                  >
+                  <TableCell className="text-muted-foreground num text-right">
                     {formatPct(row.returnRatePct)}
                   </TableCell>
                 </TableRow>

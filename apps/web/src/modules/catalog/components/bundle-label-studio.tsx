@@ -162,7 +162,7 @@ export function BundleLabelStudio() {
                           </span>
                           {bundle.labelPrintedAt ? (
                             <span
-                              className="block truncate text-[11px] text-amber-600"
+                              className="text-status-warn block truncate text-[11px]"
                               suppressHydrationWarning
                             >
                               Dicetak {formatRelativeTime(bundle.labelPrintedAt)}

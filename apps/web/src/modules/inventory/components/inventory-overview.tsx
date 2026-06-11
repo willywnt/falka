@@ -179,7 +179,7 @@ export function InventoryOverview() {
                   </TableCell>
                   <TableCell className="num text-right whitespace-nowrap">
                     {item.damagedStock > 0 ? (
-                      <span className="text-destructive" title="Dari retur">
+                      <span className="text-status-warn" title="Dari retur">
                         {item.damagedStock}
                       </span>
                     ) : (
@@ -188,7 +188,7 @@ export function InventoryOverview() {
                   </TableCell>
                   <TableCell className="num text-right whitespace-nowrap">
                     {item.incomingStock > 0 ? (
-                      <span className="text-sky-600" title="Lagi dipesan ke supplier">
+                      <span className="text-status-info" title="Lagi dipesan ke supplier">
                         {item.incomingStock}
                       </span>
                     ) : (

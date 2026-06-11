@@ -25,7 +25,7 @@ export function CameraHealthIndicator() {
   if (!isActiveSession && !mediaStream) {
     return (
       <div className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Circle className="size-2.5 fill-current text-zinc-400" />
+        <Circle className="text-muted-foreground/40 size-2.5 fill-current" />
         Kamera siaga
       </div>
     );
@@ -33,10 +33,10 @@ export function CameraHealthIndicator() {
 
   return (
     <div
-      className={`flex items-center gap-2 text-sm ${connected ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive'}`}
+      className={`flex items-center gap-2 text-sm ${connected ? 'text-status-ok' : 'text-destructive'}`}
     >
       <Circle
-        className={`size-2.5 fill-current ${connected ? 'text-emerald-500' : 'text-destructive'}`}
+        className={`size-2.5 fill-current ${connected ? 'text-status-ok' : 'text-destructive'}`}
       />
       {connected ? 'Kamera terhubung' : 'Kamera terputus'}
     </div>

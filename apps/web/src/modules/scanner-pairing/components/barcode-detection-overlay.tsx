@@ -15,7 +15,7 @@ export function BarcodeDetectionOverlay({ bounds, detected }: BarcodeDetectionOv
     <div className="pointer-events-none absolute inset-0">
       <div
         className={`absolute rounded-md border-2 transition-colors duration-150 ${
-          detected ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.35)]' : 'border-white/50'
+          detected ? 'border-destructive ring-destructive/35 ring-2' : 'border-white/50'
         }`}
         style={{
           left: `${box.left}%`,
@@ -26,7 +26,7 @@ export function BarcodeDetectionOverlay({ bounds, detected }: BarcodeDetectionOv
       />
       {detected ? (
         <div
-          className="absolute rounded-md bg-red-500/10"
+          className="bg-destructive/10 absolute rounded-md"
           style={{
             left: `${box.left}%`,
             top: `${box.top}%`,

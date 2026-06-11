@@ -207,7 +207,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={canReceive ? 6 : 5} className="bg-muted/30 py-2">
                           <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                            <Boxes className="size-3.5 text-violet-500" />
+                            <Boxes className="size-3.5 text-violet-500 dark:text-violet-400" />
                             Bundel · {group.bundleName}
                           </div>
                         </TableCell>

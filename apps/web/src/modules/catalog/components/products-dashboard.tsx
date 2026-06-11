@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 
@@ -136,12 +137,9 @@ export function ProductsDashboard() {
                   </TableCell>
                   <TableCell className="text-right">
                     {product.variantCount === 0 ? (
-                      <Badge
-                        variant="outline"
-                        className="border-amber-300 bg-amber-50 font-normal text-amber-700"
-                      >
+                      <StatusBadge tone="warn" className="font-normal">
                         Tanpa varian
-                      </Badge>
+                      </StatusBadge>
                     ) : (
                       <span className="num">{product.variantCount}</span>
                     )}

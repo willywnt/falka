@@ -19,6 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ImageThumb } from '@/components/image-thumb';
+import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 import { VariantPickerDialog } from '@/components/variant-picker-dialog';
@@ -104,9 +105,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold tracking-tight">{data.externalOrderId}</h2>
         <OrderStatusBadge status={data.status} />
-        {data.fulfilledAt ? (
-          <Badge className="bg-sky-600 text-white hover:bg-sky-600">Fulfillment</Badge>
-        ) : null}
+        {data.fulfilledAt ? <StatusBadge tone="info">Fulfillment</StatusBadge> : null}
         <div className="ml-auto">
           <OrderActionsMenu order={data} />
         </div>
@@ -153,9 +152,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="border-amber-500 text-amber-600">
-                            Belum dikaitkan
-                          </Badge>
+                          <StatusBadge tone="warn">Belum dikaitkan</StatusBadge>
                           <Button
                             variant="outline"
                             size="sm"
@@ -181,11 +178,11 @@ export function OrderDetail({ orderId }: { orderId: string }) {
 
         <aside className="space-y-4">
           {data.inventoryApplied ? (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700">
+            <div className="border-status-ok/30 bg-status-ok/10 text-status-ok rounded-lg border p-3 text-sm">
               Stok sudah diperbarui untuk pesanan ini.
             </div>
           ) : data.status === 'PAID' && data.unresolvedCount > 0 ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700">
+            <div className="border-highlight/40 bg-highlight/15 text-status-warn rounded-lg border p-3 text-sm">
               {data.unresolvedCount} item belum dikaitkan ke produk, jadi stok belum diperbarui.
               Kaitkan listing-nya, lalu tarik pesanan lagi.
             </div>

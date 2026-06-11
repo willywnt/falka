@@ -28,7 +28,7 @@ export function LocalStorageUsageIndicator() {
 
   return (
     <div
-      className={`rounded-lg border px-4 py-3 text-sm ${quotaWarning ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-muted/30'}`}
+      className={`rounded-lg border px-4 py-3 text-sm ${quotaWarning ? 'border-highlight/40 bg-highlight/15' : 'border-border bg-muted/30'}`}
     >
       <p>
         Upload yang tertunda makan{' '}
@@ -36,7 +36,7 @@ export function LocalStorageUsageIndicator() {
         <span className="text-muted-foreground"> · {temporaryRecordings.length} item</span>
       </p>
       {quotaWarning ? (
-        <p className="mt-2 flex items-start gap-2 text-amber-900 dark:text-amber-100">
+        <p className="text-status-warn mt-2 flex items-start gap-2">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           Penyimpanan lokal hampir penuh. Upload atau buang rekaman yang tertunda biar lega lagi.
         </p>

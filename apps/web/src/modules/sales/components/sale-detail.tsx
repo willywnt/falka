@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ImageThumb } from '@/components/image-thumb';
+import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
@@ -130,7 +131,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold tracking-tight">Penjualan {data.code}</h2>
         <Badge variant="secondary">{data.paymentMethod}</Badge>
-        {data.status === 'VOID' ? <Badge variant="destructive">Dibatalkan</Badge> : null}
+        {data.status === 'VOID' ? <StatusBadge tone="danger">Dibatalkan</StatusBadge> : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -155,7 +156,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={4} className="bg-muted/30 py-2">
                           <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                            <Boxes className="size-3.5 text-violet-500" />
+                            <Boxes className="size-3.5 text-violet-500 dark:text-violet-400" />
                             Bundel · {group.bundleName}
                           </div>
                         </TableCell>

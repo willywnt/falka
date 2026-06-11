@@ -41,7 +41,7 @@ function MetricCells({ metrics }: { metrics: ProfitMetrics }) {
       <TableCell
         className={cn(
           'num text-right font-medium',
-          Number(metrics.grossProfit) < 0 && 'text-destructive',
+          Number(metrics.grossProfit) < 0 && 'text-signed-down',
         )}
       >
         {formatCurrency(metrics.grossProfit)}
@@ -176,7 +176,7 @@ function ProfitContent({
           value={formatCurrency(summary.grossProfit)}
           icon={Wallet}
           tone="emerald"
-          accentClassName={Number(summary.grossProfit) < 0 ? 'text-destructive' : undefined}
+          accentClassName={Number(summary.grossProfit) < 0 ? 'text-signed-down' : undefined}
         />
         <StatCard
           label="Margin kotor"
@@ -278,7 +278,7 @@ function ProfitContent({
                       {formatCurrency(row.unitPrice)}
                     </TableCell>
                     <TableCell className="num text-right">{formatCurrency(row.unitCost)}</TableCell>
-                    <TableCell className="text-destructive num text-right font-medium">
+                    <TableCell className="text-signed-down num text-right font-medium">
                       {formatCurrency(row.lossPerUnit)}
                     </TableCell>
                     <TableCell className="num text-right">{row.units}</TableCell>

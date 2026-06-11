@@ -28,6 +28,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState } from '@/components/empty-state';
 import { StatCard } from '@/components/stat-card';
+import { STATUS_BADGE_TONES, StatusBadge } from '@/components/status-badge';
 import { VariantPickerDialog } from '@/components/variant-picker-dialog';
 
 import { useMarketplaceConnectionQuery } from '../hooks/use-marketplace-connections';
@@ -46,11 +47,15 @@ import { MarketplaceProviderBadge } from './marketplace-provider-badge';
 function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
   if (!mapping.syncEnabled) return null;
   if (mapping.lastSyncStatus === 'SYNCED') {
-    return <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Sudah sinkron</Badge>;
+    return <StatusBadge tone="ok">Sudah sinkron</StatusBadge>;
   }
   if (mapping.lastSyncStatus === 'FAILED') {
     return (
-      <Badge variant="destructive" title={mapping.lastSyncError ?? undefined}>
+      <Badge
+        variant="outline"
+        className={STATUS_BADGE_TONES.danger}
+        title={mapping.lastSyncError ?? undefined}
+      >
         Sinkronisasi gagal
       </Badge>
     );
@@ -214,7 +219,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             value={reviewCount}
             icon={Wand2}
             tone="amber"
-            accentClassName={reviewCount > 0 ? 'text-amber-600' : undefined}
+            accentClassName={reviewCount > 0 ? 'text-status-warn' : undefined}
           />
         </div>
       ) : null}
@@ -272,9 +277,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                               <span className="text-muted-foreground text-xs">otomatis</span>
                             ) : null}
                             {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
-                              <Badge variant="outline" className="border-amber-500 text-amber-600">
-                                Tinjau
-                              </Badge>
+                              <StatusBadge tone="warn">Tinjau</StatusBadge>
                             ) : null}
                           </div>
                           <SyncStatusBadge mapping={mapping} />

@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -86,9 +87,9 @@ export function SalesDashboard() {
                         {sale.code}
                       </Link>
                       {sale.status === 'VOID' ? (
-                        <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
+                        <StatusBadge tone="danger" className="px-1.5 py-0 text-[10px]">
                           Dibatalkan
-                        </Badge>
+                        </StatusBadge>
                       ) : null}
                     </div>
                     <div className="text-muted-foreground text-xs">

@@ -163,7 +163,7 @@ export function RecordingPanel() {
             <CameraHealthIndicator />
 
             {anotherTabRecording ? (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100">
+              <div className="border-highlight/40 bg-highlight/15 text-status-warn rounded-lg border px-4 py-3 text-sm">
                 Lagi ada rekaman aktif di tab lain. Tutup tab itu dulu atau tunggu sampai selesai
                 sebelum mulai rekam di sini.
               </div>

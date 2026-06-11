@@ -56,12 +56,12 @@ const SCAN_STATUS_META: Record<
   off: { dot: '', cta: '', hint: null },
   idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
   waiting: {
-    dot: 'bg-amber-500',
+    dot: 'bg-highlight',
     cta: 'Tampilkan QR',
     hint: 'Menunggu ponsel kamu terhubung…',
   },
   connected: {
-    dot: 'bg-emerald-500',
+    dot: 'bg-status-ok',
     cta: 'ponsel terhubung',
     hint: 'ponsel terhubung — scan label produk buat masukin ke keranjang.',
   },
@@ -746,7 +746,10 @@ function VariantCartRow({
         </div>
       </div>
       {oversold ? (
-        <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
+        <Badge
+          variant="outline"
+          className="border-highlight/40 bg-highlight/15 text-status-warn mt-2"
+        >
           Melebihi stok (boleh, barangnya ada di tangan) · sisa {line.availableStock} di sistem
         </Badge>
       ) : null}
@@ -823,7 +826,10 @@ function BundleCartRow({
         </div>
       </div>
       {oversold ? (
-        <Badge variant="outline" className="mt-2 border-amber-500 text-amber-600">
+        <Badge
+          variant="outline"
+          className="border-highlight/40 bg-highlight/15 text-status-warn mt-2"
+        >
           Melebihi stok (boleh, barangnya ada di tangan) · ada komponen yang kurang
         </Badge>
       ) : null}

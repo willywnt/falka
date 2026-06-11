@@ -1,18 +1,14 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { StatusBadge, type StatusTone } from '@/components/status-badge';
 
 import type { MarketplaceConnectionStatus } from '../types';
 import { MARKETPLACE_CONNECTION_STATUS_LABELS } from '../types';
 
-const STATUS_VARIANTS: Record<
-  MarketplaceConnectionStatus,
-  'default' | 'secondary' | 'destructive' | 'outline'
-> = {
-  connected: 'default',
-  disconnected: 'secondary',
-  expired: 'destructive',
+const STATUS_TONES: Record<MarketplaceConnectionStatus, StatusTone> = {
+  connected: 'ok',
+  disconnected: 'neutral',
+  expired: 'danger',
 };
 
 export function MarketplaceStatusBadge({
@@ -23,8 +19,8 @@ export function MarketplaceStatusBadge({
   className?: string;
 }) {
   return (
-    <Badge variant={STATUS_VARIANTS[status]} className={cn('font-medium', className)}>
+    <StatusBadge tone={STATUS_TONES[status]} className={className}>
       {MARKETPLACE_CONNECTION_STATUS_LABELS[status]}
-    </Badge>
+    </StatusBadge>
   );
 }

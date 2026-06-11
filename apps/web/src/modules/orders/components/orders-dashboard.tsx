@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
 import { formatDateTime } from '@/lib/formatters';
@@ -97,9 +98,7 @@ export function OrdersDashboard() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <OrderStatusBadge status={order.status} />
                         {order.fulfilledAt ? (
-                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">
-                            Fulfillment
-                          </Badge>
+                          <StatusBadge tone="info">Fulfillment</StatusBadge>
                         ) : null}
                       </div>
                     </TableCell>
@@ -107,9 +106,9 @@ export function OrdersDashboard() {
                     <TableCell className="text-right">
                       <span className="num">{order.itemCount}</span>
                       {order.unresolvedCount > 0 ? (
-                        <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
+                        <StatusBadge tone="warn" className="ml-2">
                           {order.unresolvedCount} belum dikaitkan
-                        </Badge>
+                        </StatusBadge>
                       ) : null}
                     </TableCell>
                     <TableCell>

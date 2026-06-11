@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Undo2 } from 'lucide-react';
 import type { ReturnStatus } from '@prisma/client';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -17,9 +16,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { EmptyState } from '@/components/empty-state';
+import { StatusBadge } from '@/components/status-badge';
 import { TablePagination } from '@/components/table-pagination';
 import { usePagination } from '@/hooks/use-pagination';
-import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/formatters';
 
 import { useReturnsQuery } from '../hooks/use-returns';
@@ -123,9 +122,7 @@ export function ReturnsDashboard() {
                       {ret.processedAt ? (
                         <span suppressHydrationWarning>{formatDateTime(ret.processedAt)}</span>
                       ) : (
-                        <Badge variant="outline" className={cn('border-amber-500 text-amber-600')}>
-                          menunggu
-                        </Badge>
+                        <StatusBadge tone="warn">menunggu</StatusBadge>
                       )}
                     </TableCell>
                   </TableRow>

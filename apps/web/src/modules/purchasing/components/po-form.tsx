@@ -55,9 +55,9 @@ const SCAN_STATUS_META: Record<PoScannerStatus, { dot: string; cta: string; hint
   {
     off: { dot: '', cta: '', hint: null },
     idle: { dot: 'bg-muted-foreground/40', cta: 'Scan menggunakan ponsel', hint: null },
-    waiting: { dot: 'bg-amber-500', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
+    waiting: { dot: 'bg-highlight', cta: 'Tampilkan QR', hint: 'Menunggu ponsel kamu terhubung…' },
     connected: {
-      dot: 'bg-emerald-500',
+      dot: 'bg-status-ok',
       cta: 'ponsel terhubung',
       hint: 'ponsel terhubung — scan label produk untuk menambahkannya ke pembelian.',
     },

@@ -38,7 +38,7 @@ export function getStorageQuotaBarClassName(level: StorageQuotaLevel): string {
     case 'critical':
       return 'bg-destructive';
     case 'warning':
-      return 'bg-amber-500';
+      return 'bg-highlight';
     default:
       return 'bg-primary';
   }
@@ -50,7 +50,7 @@ export function getStorageQuotaContainerClassName(level: StorageQuotaLevel): str
     case 'critical':
       return 'border-destructive/40 bg-destructive/10';
     case 'warning':
-      return 'border-amber-500/40 bg-amber-500/10';
+      return 'border-highlight/40 bg-highlight/15';
     default:
       return 'border-border bg-muted/30';
   }

@@ -63,7 +63,7 @@ export function WebcamPreview({
         </div>
       ) : null}
       {isRecording ? (
-        <div className="absolute top-3 left-3 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
+        <div className="bg-destructive text-destructive-foreground absolute top-3 left-3 rounded-full px-3 py-1 text-xs font-semibold">
           REC
         </div>
       ) : null}

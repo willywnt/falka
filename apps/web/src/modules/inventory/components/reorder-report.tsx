@@ -80,7 +80,7 @@ export function ReorderReport() {
             value={data.summary.reorderCount}
             icon={ShoppingCart}
             tone="amber"
-            accentClassName={data.summary.reorderCount > 0 ? 'text-amber-600' : undefined}
+            accentClassName={data.summary.reorderCount > 0 ? 'text-status-warn' : undefined}
             hint={`${data.summary.urgentCount} mendesak`}
           />
           <StatCard

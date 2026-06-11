@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Check, Copy, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,8 +13,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import type { StatusTone } from '@/components/status-badge';
+import { StatusBadge } from '@/components/status-badge';
 import { formatDateTime } from '@/lib/formatters';
-import { cn } from '@/lib/utils';
 
 import {
   useCreateShareLinkMutation,
@@ -27,13 +27,10 @@ import { SHARE_LINK_TTL_OPTIONS } from '../validators/share-link';
 
 const DEFAULT_TTL_HOURS = 168;
 
-const STATUS_BADGE: Record<ShareLinkItem['status'], { label: string; className: string }> = {
-  active: {
-    label: 'Aktif',
-    className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  },
-  expired: { label: 'Kedaluwarsa', className: 'bg-muted text-muted-foreground' },
-  revoked: { label: 'Dicabut', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+const STATUS_BADGE: Record<ShareLinkItem['status'], { label: string; tone: StatusTone }> = {
+  active: { label: 'Aktif', tone: 'ok' },
+  expired: { label: 'Kedaluwarsa', tone: 'neutral' },
+  revoked: { label: 'Dicabut', tone: 'danger' },
 };
 
 function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi: string }) {
@@ -148,9 +145,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
                 <li key={link.id} className="flex items-center justify-between gap-3 p-3 text-sm">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge className={cn('border-transparent', badge.className)}>
-                        {badge.label}
-                      </Badge>
+                      <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
                       <span className="text-muted-foreground text-xs">
                         {link.viewCount} tampilan
                       </span>

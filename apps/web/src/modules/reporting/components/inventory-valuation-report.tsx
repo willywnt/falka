@@ -5,7 +5,7 @@ import { Boxes, Coins, Download, Info, PackageSearch, Warehouse } from 'lucide-r
 
 import { EmptyState } from '@/components/empty-state';
 import { StatCard } from '@/components/stat-card';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,7 +83,7 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
           value={summary.costUnknownVariants.toLocaleString()}
           icon={PackageSearch}
           tone="amber"
-          accentClassName={summary.costUnknownVariants > 0 ? 'text-amber-600' : undefined}
+          accentClassName={summary.costUnknownVariants > 0 ? 'text-status-warn' : undefined}
           hint={
             <span className="inline-flex items-center gap-1">
               <Info className="size-3" />
@@ -151,9 +151,9 @@ function ValuationContent({ data }: { data: InventoryValuationData }) {
                         {row.productName}
                       </Link>
                       {row.costUnknownVariants > 0 ? (
-                        <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
+                        <StatusBadge tone="warn" className="ml-2">
                           {row.costUnknownVariants} tanpa modal
-                        </Badge>
+                        </StatusBadge>
                       ) : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">

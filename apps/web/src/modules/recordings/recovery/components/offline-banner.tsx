@@ -15,7 +15,7 @@ export function OfflineBanner() {
   return (
     <div
       role="alert"
-      className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+      className="border-highlight/40 bg-highlight/15 text-status-warn flex items-start gap-3 rounded-lg border px-4 py-3 text-sm"
     >
       <WifiOff className="mt-0.5 size-4 shrink-0" />
       <div>

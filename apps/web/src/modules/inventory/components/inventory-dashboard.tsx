@@ -84,7 +84,7 @@ export function InventoryDashboard() {
       value: String(summary.lowStockCount),
       icon: AlertTriangle,
       tone: 'amber',
-      accentClassName: summary.lowStockCount > 0 ? 'text-amber-600' : undefined,
+      accentClassName: summary.lowStockCount > 0 ? 'text-status-warn' : undefined,
     },
     {
       label: 'Stok habis',
@@ -244,7 +244,7 @@ export function InventoryDashboard() {
                       <span
                         className={cn(
                           'num font-medium',
-                          item.availableStock <= 0 ? 'text-destructive' : 'text-amber-600',
+                          item.availableStock <= 0 ? 'text-destructive' : 'text-status-warn',
                         )}
                       >
                         {item.availableStock}
