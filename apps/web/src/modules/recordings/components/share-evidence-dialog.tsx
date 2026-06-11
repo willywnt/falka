@@ -130,9 +130,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
       </div>
 
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Link untuk resi {noResi}
-        </p>
+        <p className="text-muted-foreground eyebrow">Link untuk resi {noResi}</p>
         {linksQuery.isLoading ? (
           <p className="text-muted-foreground text-sm">Memuat…</p>
         ) : links.length === 0 ? (
@@ -147,7 +145,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
                     <div className="flex items-center gap-2">
                       <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
                       <span className="text-muted-foreground text-xs">
-                        {link.viewCount} tampilan
+                        <span className="num">{link.viewCount}</span> tampilan
                       </span>
                     </div>
                     <div className="text-muted-foreground mt-1 text-xs">

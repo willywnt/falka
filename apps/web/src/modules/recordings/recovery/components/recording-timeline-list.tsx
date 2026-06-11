@@ -45,7 +45,7 @@ export function RecordingTimelineList({ events }: { events: RecordingTimelineEve
                 {TIMELINE_EVENT_LABELS[event.type]}
               </p>
               <p className="text-muted-foreground mt-1 text-sm leading-snug">{event.message}</p>
-              <time className="text-muted-foreground mt-1.5 block text-xs tabular-nums">
+              <time className="text-muted-foreground num mt-1.5 block text-xs">
                 {formatRecoveryTimelineDate(event.at)}
               </time>
             </div>

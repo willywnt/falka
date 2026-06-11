@@ -79,10 +79,10 @@ export function RecoveryModal() {
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Pending uploads need attention</DialogTitle>
+            <DialogTitle>Ada upload tertunda yang perlu dicek</DialogTitle>
             <DialogDescription>
-              Unfinished recordings were saved on this device. Upload or discard them — uploads
-              never start automatically.
+              Videomu aman tersimpan di perangkat ini, tapi belum masuk penyimpanan cloud. Upload
+              atau buang — upload nggak pernah jalan otomatis.
             </DialogDescription>
           </DialogHeader>
 
@@ -101,8 +101,8 @@ export function RecoveryModal() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium">{recording.noResi}</p>
-                      <p className="text-muted-foreground mt-1">
+                      <p className="num font-medium">{recording.noResi}</p>
+                      <p className="text-muted-foreground num mt-1">
                         {formatRecoveryDate(recording.createdAt)} ·{' '}
                         {formatRecoveryDuration(recording.durationSeconds)} ·{' '}
                         {formatRecoveryFileSize(recording.estimatedSizeBytes)}
@@ -123,7 +123,7 @@ export function RecoveryModal() {
           </div>
 
           {isRetryingUpload ? (
-            <UploadProgressBar progress={retryUploadProgress} label="Uploading" />
+            <UploadProgressBar progress={retryUploadProgress} label="Mengupload" />
           ) : null}
 
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
@@ -135,10 +135,10 @@ export function RecoveryModal() {
                 setUploadCenterOpen(true);
               }}
             >
-              Open upload center
+              Buka pusat upload
             </Button>
             <div className="flex gap-2">
-              <ActionTooltip label="Discard the selected recording">
+              <ActionTooltip label="Buang rekaman yang dipilih">
                 <Button
                   variant="ghost"
                   className="text-destructive hover:text-destructive"
@@ -147,10 +147,10 @@ export function RecoveryModal() {
                     if (selectedRecording) setDiscardTarget(selectedRecording);
                   }}
                 >
-                  Discard
+                  Buang
                 </Button>
               </ActionTooltip>
-              <ActionTooltip label="Upload the selected recording to cloud storage">
+              <ActionTooltip label="Upload rekaman yang dipilih ke penyimpanan cloud">
                 <Button
                   variant="default"
                   disabled={isRetryingUpload || !selectedRecording || !isOnline}

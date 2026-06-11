@@ -28,15 +28,20 @@ export function PendingDiscardDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Discard local recording?</AlertDialogTitle>
+          <AlertDialogTitle>Buang rekaman dari perangkat ini?</AlertDialogTitle>
           <AlertDialogDescription>
-            {noResi
-              ? `Tracking number ${noResi} will be removed from this device. This cannot be undone.`
-              : 'This local recording will be removed from this device. This cannot be undone.'}
+            {noResi ? (
+              <>
+                Rekaman untuk no. resi <span className="num font-medium">{noResi}</span> bakal
+                dihapus dari perangkat ini. Nggak bisa dibalikin lagi.
+              </>
+            ) : (
+              'Rekaman lokal ini bakal dihapus dari perangkat ini. Nggak bisa dibalikin lagi.'
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDiscarding}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDiscarding}>Batal</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             disabled={isDiscarding}
@@ -45,7 +50,7 @@ export function PendingDiscardDialog({
               onConfirm();
             }}
           >
-            {isDiscarding ? 'Discarding…' : 'Discard'}
+            {isDiscarding ? 'Membuang…' : 'Buang'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

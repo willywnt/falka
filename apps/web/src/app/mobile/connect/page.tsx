@@ -85,9 +85,9 @@ export default function MobileConnectPage() {
   if (!isMobileScannerEnabled()) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 text-center">
-        <h1 className="text-lg font-medium">Mobile scanner unavailable</h1>
+        <h1 className="text-lg font-medium">Scanner HP belum tersedia</h1>
         <p className="text-muted-foreground text-sm">
-          This feature isn’t available yet. Please check back later.
+          Fitur ini belum aktif di server ini. Coba lagi nanti, ya.
         </p>
       </main>
     );

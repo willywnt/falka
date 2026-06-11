@@ -280,17 +280,20 @@ export function RecordingPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>No. resi duplikat</AlertDialogTitle>
+            <AlertDialogTitle>Resi ini baru saja direkam</AlertDialogTitle>
             <AlertDialogDescription>
-              {scannerDuplicateWarning
-                ? `${scannerDuplicateWarning.noResi} sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?`
-                : null}
+              {scannerDuplicateWarning ? (
+                <>
+                  No. resi <span className="num font-medium">{scannerDuplicateWarning.noResi}</span>{' '}
+                  dari hasil scan sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?
+                </>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={clearScannerDuplicateWarning}>Batal</AlertDialogCancel>
             <AlertDialogAction onClick={confirmScannerDuplicateAndCountdown}>
-              Lanjutkan
+              Tetap rekam
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -302,11 +305,14 @@ export function RecordingPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>No. resi baru saja direkam</AlertDialogTitle>
+            <AlertDialogTitle>Resi ini baru saja direkam</AlertDialogTitle>
             <AlertDialogDescription>
-              {duplicateWarning
-                ? `No. resi ${duplicateWarning.noResi} baru saja direkam. Tetap lanjutkan?`
-                : null}
+              {duplicateWarning ? (
+                <>
+                  No. resi <span className="num font-medium">{duplicateWarning.noResi}</span> yang
+                  kamu masukkan sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?
+                </>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -320,7 +326,7 @@ export function RecordingPanel() {
                 }
               }}
             >
-              Tetap lanjutkan
+              Tetap rekam
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

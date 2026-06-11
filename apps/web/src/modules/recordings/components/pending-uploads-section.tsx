@@ -51,6 +51,78 @@ type PendingUploadsSectionProps = {
   onDiscard: (recording: TemporaryRecording) => void;
 };
 
+/** Upload-in-progress indicator OR the `⋯` menu — shared by table rows and mobile cards. */
+function PendingRowControls({
+  recording,
+  isUploadingThis,
+  uploadProgress,
+  isOnline,
+  isRetryingUpload,
+  onUpload,
+  onPreview,
+  onViewTimeline,
+  onDiscard,
+}: {
+  recording: TemporaryRecording;
+  isUploadingThis: boolean;
+  uploadProgress: number;
+  isOnline: boolean;
+  isRetryingUpload: boolean;
+  onUpload: (recording: TemporaryRecording) => void;
+  onPreview: (recording: TemporaryRecording) => void;
+  onViewTimeline: (recording: TemporaryRecording) => void;
+  onDiscard: (recording: TemporaryRecording) => void;
+}) {
+  if (isUploadingThis) {
+    return (
+      <div
+        className="inline-flex items-center gap-2"
+        role="status"
+        aria-label={`Mengupload ${uploadProgress}%`}
+      >
+        <Loader2 className="text-primary size-4 animate-spin" />
+        <span className="text-muted-foreground num text-xs">{uploadProgress}%</span>
+      </div>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="size-4" />
+          <span className="sr-only">Buka aksi</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onPreview(recording)}>
+          <Play className="size-4" />
+          Pratinjau
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!isOnline || isRetryingUpload}
+          onClick={() => onUpload(recording)}
+        >
+          <UploadCloud className="size-4" />
+          Upload
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onViewTimeline(recording)}>
+          <Eye className="size-4" />
+          Lihat riwayat
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          disabled={isRetryingUpload}
+          onClick={() => onDiscard(recording)}
+        >
+          <Trash2 className="size-4" />
+          Buang
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /**
  * Collapsible table of recordings saved locally on this device that have not yet
  * reached cloud storage (upload recovery). Owns its expand/collapse + retry state;
@@ -74,6 +146,11 @@ export function PendingUploadsSection({
 
   if (recordings.length === 0) return null;
 
+  function handleUpload(recording: TemporaryRecording) {
+    setSelectedRecoveryId(recording.id);
+    void retryUpload(recording.id);
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border">
       <button
@@ -88,25 +165,17 @@ export function PendingUploadsSection({
           </p>
         </div>
         <div className="text-muted-foreground flex items-center gap-2">
-          <Badge variant="secondary">{recordings.length}</Badge>
+          <Badge variant="secondary" className="num">
+            {recordings.length}
+          </Badge>
           {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
         </div>
       </button>
 
       {expanded ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>No. resi</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Penyebab gagal</TableHead>
-              <TableHead>Durasi</TableHead>
-              <TableHead>Ukuran file</TableHead>
-              <TableHead>Direkam</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobile: stacked cards — same data + actions as the table. */}
+          <div className="space-y-3 border-t p-3 sm:hidden">
             {recordings.map((recording) => {
               const failureMessage = resolvePendingRecordingFailureMessage(recording);
               const isUploadingThis = isRetryingUpload && selectedRecoveryId === recording.id;
@@ -115,81 +184,122 @@ export function PendingUploadsSection({
                 : mapRecoveryUploadToOperational(recording.uploadStatus);
 
               return (
-                <TableRow key={recording.id} className="bg-muted/20">
-                  <TableCell className="font-medium">{recording.noResi}</TableCell>
-                  <TableCell>
-                    <OperationalStatusBadge status={status} />
-                  </TableCell>
-                  <TableCell className="max-w-[220px]">
-                    {failureMessage ? (
-                      <EllipsisTooltip
-                        text={failureMessage}
-                        className="text-destructive text-sm leading-snug"
-                        contentClassName="max-w-sm"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground text-sm">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{formatRecoveryDuration(recording.durationSeconds)}</TableCell>
-                  <TableCell>{formatRecoveryFileSize(recording.estimatedSizeBytes)}</TableCell>
-                  <TableCell>{formatRecoveryDate(recording.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                    {isUploadingThis ? (
-                      <div
-                        className="inline-flex items-center gap-2"
-                        role="status"
-                        aria-label={`Mengupload ${retryUploadProgress}%`}
-                      >
-                        <Loader2 className="text-primary size-4 animate-spin" />
-                        <span className="text-muted-foreground num text-xs">
-                          {retryUploadProgress}%
-                        </span>
-                      </div>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Buka aksi</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onPreview(recording)}>
-                            <Play className="size-4" />
-                            Pratinjau
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={!isOnline || isRetryingUpload}
-                            onClick={() => {
-                              setSelectedRecoveryId(recording.id);
-                              void retryUpload(recording.id);
-                            }}
-                          >
-                            <UploadCloud className="size-4" />
-                            Upload
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onViewTimeline(recording)}>
-                            <Eye className="size-4" />
-                            Lihat riwayat
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            disabled={isRetryingUpload}
-                            onClick={() => onDiscard(recording)}
-                          >
-                            <Trash2 className="size-4" />
-                            Buang
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
+                <article key={recording.id} className="bg-muted/20 space-y-3 rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p className="num truncate font-medium">{recording.noResi}</p>
+                      <OperationalStatusBadge status={status} />
+                    </div>
+                    <PendingRowControls
+                      recording={recording}
+                      isUploadingThis={isUploadingThis}
+                      uploadProgress={retryUploadProgress}
+                      isOnline={isOnline}
+                      isRetryingUpload={isRetryingUpload}
+                      onUpload={handleUpload}
+                      onPreview={onPreview}
+                      onViewTimeline={onViewTimeline}
+                      onDiscard={onDiscard}
+                    />
+                  </div>
+                  {failureMessage ? (
+                    <EllipsisTooltip
+                      text={failureMessage}
+                      className="text-destructive text-xs leading-snug"
+                      contentClassName="max-w-sm"
+                    />
+                  ) : null}
+                  <dl className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground">Durasi</dt>
+                      <dd className="num mt-0.5 font-medium">
+                        {formatRecoveryDuration(recording.durationSeconds)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Ukuran file</dt>
+                      <dd className="num mt-0.5 font-medium">
+                        {formatRecoveryFileSize(recording.estimatedSizeBytes)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Direkam</dt>
+                      <dd className="mt-0.5 font-medium">
+                        {formatRecoveryDate(recording.createdAt)}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
               );
             })}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Desktop table — the Table primitive scrolls itself. */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>No. resi</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Penyebab gagal</TableHead>
+                  <TableHead>Durasi</TableHead>
+                  <TableHead>Ukuran file</TableHead>
+                  <TableHead>Direkam</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recordings.map((recording) => {
+                  const failureMessage = resolvePendingRecordingFailureMessage(recording);
+                  const isUploadingThis = isRetryingUpload && selectedRecoveryId === recording.id;
+                  const status = isUploadingThis
+                    ? 'UPLOADING'
+                    : mapRecoveryUploadToOperational(recording.uploadStatus);
+
+                  return (
+                    <TableRow key={recording.id} className="bg-muted/20">
+                      <TableCell className="num font-medium">{recording.noResi}</TableCell>
+                      <TableCell>
+                        <OperationalStatusBadge status={status} />
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        {failureMessage ? (
+                          <EllipsisTooltip
+                            text={failureMessage}
+                            className="text-destructive text-sm leading-snug"
+                            contentClassName="max-w-sm"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="num">
+                        {formatRecoveryDuration(recording.durationSeconds)}
+                      </TableCell>
+                      <TableCell className="num">
+                        {formatRecoveryFileSize(recording.estimatedSizeBytes)}
+                      </TableCell>
+                      <TableCell>{formatRecoveryDate(recording.createdAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <PendingRowControls
+                          recording={recording}
+                          isUploadingThis={isUploadingThis}
+                          uploadProgress={retryUploadProgress}
+                          isOnline={isOnline}
+                          isRetryingUpload={isRetryingUpload}
+                          onUpload={handleUpload}
+                          onPreview={onPreview}
+                          onViewTimeline={onViewTimeline}
+                          onDiscard={onDiscard}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       ) : null}
     </div>
   );

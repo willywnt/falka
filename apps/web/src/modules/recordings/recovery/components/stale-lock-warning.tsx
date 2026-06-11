@@ -16,9 +16,9 @@ export function StaleLockWarning() {
     >
       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
       <div>
-        <p className="font-medium">Stale recording lock cleared</p>
+        <p className="font-medium">Kunci rekaman lama sudah dibersihkan</p>
         <p className="mt-1 opacity-90">
-          A previous recording session was interrupted. You can start a new recording safely.
+          Sesi rekaman sebelumnya sempat terputus. Kamu bisa mulai rekaman baru dengan aman.
         </p>
       </div>
     </div>

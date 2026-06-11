@@ -18,7 +18,7 @@ export function PendingRecordingDetailPanel({ recording }: PendingRecordingDetai
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-xl font-semibold tracking-tight">{recording.noResi}</h3>
+          <h3 className="num text-xl font-semibold tracking-tight">{recording.noResi}</h3>
           <OperationalStatusBadge status={status} />
         </div>
         {failureMessage ? (
@@ -27,7 +27,7 @@ export function PendingRecordingDetailPanel({ recording }: PendingRecordingDetai
       </div>
 
       <div>
-        <p className="mb-4 text-sm font-medium">Timeline</p>
+        <p className="mb-4 text-sm font-medium">Riwayat</p>
         <RecordingTimelineList events={recording.timeline} />
       </div>
     </div>

@@ -24,7 +24,14 @@ export function UploadProgressBar({
         <span className="text-muted-foreground">{label}</span>
         <span className="num font-medium">{safeProgress}%</span>
       </div>
-      <div className="bg-muted h-2 overflow-hidden rounded-full">
+      <div
+        className="bg-muted h-2 overflow-hidden rounded-full"
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={safeProgress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
           className="bg-primary h-full transition-all duration-200"
           style={{ width: `${safeProgress}%` }}

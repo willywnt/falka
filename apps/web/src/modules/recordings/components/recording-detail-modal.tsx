@@ -22,12 +22,21 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  numeric = false,
+}: {
+  label: string;
+  value: string;
+  numeric?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="max-w-[60%] text-right font-medium">{value}</span>
+      <span className={cn('max-w-[60%] text-right font-medium', numeric && 'num')}>{value}</span>
     </div>
   );
 }
@@ -75,7 +84,7 @@ export function RecordingDetailModal({
             <Separator />
 
             <div className="space-y-3">
-              <DetailRow label="No. resi" value={recording.noResi} />
+              <DetailRow label="No. resi" value={recording.noResi} numeric />
               {linkedOrder ? (
                 <div className="flex items-start justify-between gap-4 text-sm">
                   <span className="text-muted-foreground">Pesanan terkait</span>
@@ -91,10 +100,12 @@ export function RecordingDetailModal({
               <DetailRow
                 label="Durasi"
                 value={formatRecordingDuration(recording.durationSeconds)}
+                numeric
               />
               <DetailRow
                 label="Ukuran file"
                 value={formatRecordingFileSize(recording.fileSizeBytes)}
+                numeric
               />
               <DetailRow label="Dibuat" value={formatRecordingDate(recording.createdAt)} />
               <DetailRow

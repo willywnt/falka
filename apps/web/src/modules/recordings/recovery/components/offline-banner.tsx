@@ -19,11 +19,11 @@ export function OfflineBanner() {
     >
       <WifiOff className="mt-0.5 size-4 shrink-0" />
       <div>
-        <p className="font-medium">Internet disconnected.</p>
+        <p className="font-medium">Internet terputus.</p>
         <p className="mt-1 opacity-90">
           {hasTemporaryRecordings
-            ? 'Your recording is safely stored locally. You can upload it again after reconnecting.'
-            : 'Uploads will fail until your connection is restored. Active recordings are stored locally when possible.'}
+            ? 'Videomu aman tersimpan di perangkat ini. Kamu bisa upload lagi setelah koneksi balik.'
+            : 'Upload bakal gagal sampai koneksi balik. Rekaman yang lagi jalan tetap disimpan di perangkat ini kalau memungkinkan.'}
         </p>
       </div>
     </div>

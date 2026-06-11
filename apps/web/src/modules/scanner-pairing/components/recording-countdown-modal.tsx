@@ -40,7 +40,7 @@ export function RecordingCountdownModal({ onCancel, onStartNow }: RecordingCount
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-5 text-center">
+        <div className="px-6 py-5 text-center" role="status" aria-live="polite">
           <p className="font-mono text-sm font-semibold tracking-wide">{barcode}</p>
 
           {blockReason ? (

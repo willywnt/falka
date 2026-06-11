@@ -30,13 +30,13 @@ export function ReconnectBanner() {
       <div className="flex items-start gap-3">
         <Wifi className="text-primary mt-0.5 size-4 shrink-0" />
         <div>
-          <p className="font-medium">Connection restored.</p>
-          <p className="text-muted-foreground mt-1">Upload pending recording?</p>
+          <p className="font-medium">Koneksi balik lagi.</p>
+          <p className="text-muted-foreground mt-1">Upload rekaman yang tertunda?</p>
         </div>
       </div>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={() => resetReconnectPrompt()}>
-          Dismiss
+          Nanti aja
         </Button>
         {firstPending ? (
           <Button
@@ -48,7 +48,7 @@ export function ReconnectBanner() {
           </Button>
         ) : (
           <Button size="sm" variant="secondary" onClick={() => openRecoveryModal()}>
-            View recordings
+            Lihat rekaman
           </Button>
         )}
       </div>

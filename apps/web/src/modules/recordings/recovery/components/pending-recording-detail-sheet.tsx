@@ -32,12 +32,12 @@ export function PendingRecordingDetailSheet({
           <div className="border-b px-4 py-3">
             <Button variant="ghost" size="sm" className="-ml-2 gap-1" onClick={onBack}>
               <ArrowLeft className="size-4" />
-              Back
+              Kembali
             </Button>
           </div>
         ) : null}
         <SheetHeader className="space-y-1 border-b px-6 py-5 text-left">
-          <SheetTitle className="text-lg">Upload timeline</SheetTitle>
+          <SheetTitle className="text-lg">Riwayat upload</SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <PendingRecordingDetailPanel recording={recording} />

@@ -19,10 +19,10 @@ export function WebcamDisconnectWarning() {
     >
       <VideoOff className="mt-0.5 size-4 shrink-0" />
       <div className="flex-1 space-y-2">
-        <p className="font-medium">Camera disconnected</p>
+        <p className="font-medium">Kamera terputus</p>
         <p className="opacity-90">
-          Your recording was safely preserved locally. Open the pending upload center to retry or
-          discard it.
+          Videomu aman tersimpan di perangkat ini. Buka pusat upload buat upload ulang atau buang
+          rekamannya.
         </p>
         {showCameraPicker && devices.length > 1 ? (
           <div className="flex flex-wrap gap-2 pt-1">
@@ -34,7 +34,7 @@ export function WebcamDisconnectWarning() {
                 disabled={isSwitching}
                 onClick={() => void switchCamera(device.deviceId)}
               >
-                Switch to {device.label}
+                Ganti ke {device.label}
               </Button>
             ))}
           </div>

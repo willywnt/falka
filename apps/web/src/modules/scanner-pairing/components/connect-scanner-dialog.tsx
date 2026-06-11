@@ -88,7 +88,7 @@ export function ConnectScannerDialog({
         createStartedRef.current = false;
         const message =
           error.code === 'UNAUTHORIZED'
-            ? 'Kamu belum masuk. Login di https://localhost:3000 (akun yang sama), lalu coba lagi.'
+            ? 'Kamu belum masuk. Login dulu di browser ini dengan akun yang sama, lalu coba lagi.'
             : error.message;
         setCreateError(message);
         toast.error('Gagal membuat sesi pairing', { description: message });

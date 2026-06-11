@@ -52,14 +52,14 @@ function PendingRecordingRow({
   const failureMessage = resolvePendingRecordingFailureMessage(recording);
 
   return (
-    <div className="bg-card rounded-lg border p-4 shadow-sm">
+    <div className="bg-card rounded-lg border p-4">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold tracking-tight">{recording.noResi}</p>
+            <p className="num font-semibold tracking-tight">{recording.noResi}</p>
             <OperationalStatusBadge status={status} />
           </div>
-          <p className="text-muted-foreground text-xs tabular-nums">
+          <p className="text-muted-foreground num text-xs">
             {formatRecoveryDate(recording.createdAt)} ·{' '}
             {formatRecoveryDuration(recording.durationSeconds)} ·{' '}
             {formatRecoveryFileSize(recording.estimatedSizeBytes)}
@@ -72,34 +72,34 @@ function PendingRecordingRow({
             />
           ) : null}
         </div>
-        <ActionTooltip label="View upload activity timeline">
+        <ActionTooltip label="Lihat riwayat upload">
           <Button variant="ghost" size="icon" className="shrink-0" onClick={onDetails}>
             <ChevronRight className="size-4" />
-            <span className="sr-only">View timeline</span>
+            <span className="sr-only">Lihat riwayat upload</span>
           </Button>
         </ActionTooltip>
       </div>
 
       {isRetrying ? (
         <div className="mt-3">
-          <UploadProgressBar progress={retryProgress} label="Uploading" />
+          <UploadProgressBar progress={retryProgress} label="Mengupload" />
         </div>
       ) : null}
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <ActionTooltip label="Playback the recording">
+        <ActionTooltip label="Putar rekaman ini">
           <Button size="sm" variant="outline" onClick={onPreview}>
             <Play className="size-3.5" />
-            Preview
+            Pratinjau
           </Button>
         </ActionTooltip>
-        <ActionTooltip label="Upload this recording to cloud storage">
+        <ActionTooltip label="Upload rekaman ini ke penyimpanan cloud">
           <Button size="sm" variant="default" disabled={!isOnline || isRetrying} onClick={onRetry}>
             <UploadCloud className="size-3.5" />
             Upload
           </Button>
         </ActionTooltip>
-        <ActionTooltip label="Discard this recording">
+        <ActionTooltip label="Buang rekaman ini dari perangkat">
           <Button
             size="sm"
             variant="ghost"
@@ -108,7 +108,7 @@ function PendingRecordingRow({
             onClick={onDiscard}
           >
             <Trash2 className="size-3.5" />
-            Discard
+            Buang
           </Button>
         </ActionTooltip>
       </div>
@@ -139,18 +139,20 @@ export function PendingUploadTrigger({
       onClick={() => setUploadCenterOpen(true)}
     >
       <UploadCloud className="size-4" />
-      {showLabel && !iconOnly ? 'Pending uploads' : null}
+      {showLabel && !iconOnly ? 'Upload tertunda' : null}
       {pendingCount > 0 ? (
         <Badge
           variant={iconOnly ? 'destructive' : 'secondary'}
           className={
-            iconOnly ? 'absolute -top-1 -right-1 size-5 justify-center px-0 text-[10px]' : 'ml-2'
+            iconOnly
+              ? 'num absolute -top-1 -right-1 size-5 justify-center px-0 text-[10px]'
+              : 'num ml-2'
           }
         >
           {pendingCount}
         </Badge>
       ) : null}
-      {iconOnly ? <span className="sr-only">Pending uploads ({pendingCount})</span> : null}
+      {iconOnly ? <span className="sr-only">Upload tertunda ({pendingCount})</span> : null}
     </Button>
   );
 }
@@ -215,18 +217,18 @@ export function PendingUploadProvider() {
           {sheetView === 'list' ? (
             <>
               <SheetHeader className="space-y-1 border-b px-6 py-5 text-left">
-                <SheetTitle className="text-lg">Pending uploads</SheetTitle>
+                <SheetTitle className="text-lg">Upload tertunda</SheetTitle>
                 <SheetDescription>
                   {pendingCount > 0
-                    ? `${pendingCount} recording(s) saved on this device waiting to upload.`
-                    : 'No pending uploads on this device.'}
+                    ? `${pendingCount} rekaman tersimpan di perangkat ini, menunggu diupload.`
+                    : 'Tidak ada upload tertunda di perangkat ini.'}
                 </SheetDescription>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-3">
                   {temporaryRecordings.length === 0 ? (
                     <p className="text-muted-foreground py-8 text-center text-sm">
-                      Recordings that fail to upload are saved here for upload.
+                      Rekaman yang gagal diupload tersimpan aman di sini buat diupload lagi.
                     </p>
                   ) : (
                     temporaryRecordings.map((recording) => (
@@ -262,11 +264,11 @@ export function PendingUploadProvider() {
                   }}
                 >
                   <ArrowLeft className="size-4" />
-                  Back to list
+                  Kembali ke daftar
                 </Button>
               </div>
               <div className="border-b px-6 py-4">
-                <h2 className="text-lg font-semibold">Upload timeline</h2>
+                <h2 className="text-lg font-semibold">Riwayat upload</h2>
               </div>
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <PendingRecordingDetailPanel recording={detailRecording} />

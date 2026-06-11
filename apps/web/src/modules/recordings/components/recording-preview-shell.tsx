@@ -352,9 +352,7 @@ export function RecordingPreviewShell({
               <>
                 <Separator className="col-span-full" />
                 <div className="col-span-full space-y-1 sm:space-y-2">
-                  <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                    Progres
-                  </p>
+                  <p className="text-muted-foreground eyebrow">Progres</p>
                   <p className="num text-xl font-semibold tracking-tight sm:text-2xl">
                     {formatPlaybackTime(currentTime)}
                     <span className="text-muted-foreground text-sm font-normal sm:text-base">
@@ -369,9 +367,7 @@ export function RecordingPreviewShell({
             <Separator className="col-span-full" />
 
             <div className="col-span-full space-y-2 sm:space-y-3">
-              <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                Kecepatan putar
-              </p>
+              <p className="text-muted-foreground eyebrow">Kecepatan putar</p>
               <div className="flex flex-wrap gap-1.5 sm:grid sm:grid-cols-5 sm:gap-1.5">
                 {PLAYBACK_SPEEDS.map((speed) => (
                   <Button
@@ -389,9 +385,7 @@ export function RecordingPreviewShell({
             </div>
 
             <div className="col-span-full space-y-2">
-              <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">
-                Aksi
-              </p>
+              <p className="text-muted-foreground eyebrow">Aksi</p>
               <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
                 <Button
                   variant="outline"

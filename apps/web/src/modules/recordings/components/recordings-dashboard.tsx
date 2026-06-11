@@ -39,6 +39,7 @@ import { RecordingPlayerModal } from './recording-player-modal';
 import { ShareEvidenceDialog } from './share-evidence-dialog';
 import { OperationalStatusBadge } from './operational-status-badge';
 import { EmptyState } from '@/components/empty-state';
+import { ErrorState } from '@/components/error-state';
 import { TablePagination } from '@/components/table-pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -90,6 +91,66 @@ function SortButton({
   );
 }
 
+/** Per-recording `⋯` menu — shared by the desktop table rows and the mobile cards. */
+function RecordingRowActions({
+  recording,
+  canPlay,
+  isDownloadPending,
+  onPlay,
+  onDetail,
+  onDownload,
+  onShare,
+  onDelete,
+}: {
+  recording: RecordingListItem;
+  canPlay: boolean;
+  isDownloadPending: boolean;
+  onPlay: (recording: RecordingListItem) => void;
+  onDetail: (recording: RecordingListItem) => void;
+  onDownload: (recording: RecordingListItem) => void;
+  onShare: (recording: RecordingListItem) => void;
+  onDelete: (recording: RecordingListItem) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="size-4" />
+          <span className="sr-only">Buka aksi</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem disabled={!canPlay} onClick={() => onPlay(recording)}>
+          <Play className="size-4" />
+          Pratinjau
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDetail(recording)}>
+          <Eye className="size-4" />
+          Lihat detail
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!canPlay || isDownloadPending}
+          onClick={() => onDownload(recording)}
+        >
+          <Download className="size-4" />
+          Unduh
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!canPlay} onClick={() => onShare(recording)}>
+          <Link2 className="size-4" />
+          Bagikan bukti
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => onDelete(recording)}
+        >
+          <Trash2 className="size-4" />
+          Hapus
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function RecordingsDashboard() {
   const { query, setQuery, searchInput, setSearchInput, listQuery } = useRecordingLibraryFilters();
   const [selectedRecording, setSelectedRecording] = useState<RecordingListItem | null>(null);
@@ -108,7 +169,7 @@ export function RecordingsDashboard() {
   const setUploadCenterOpen = useRecordingReliabilityStore((state) => state.setUploadCenterOpen);
   const { discardRecording } = useUploadRetry();
 
-  const { data, isLoading, error } = useRecordingsListQuery(listQuery);
+  const { data, isLoading, error, refetch } = useRecordingsListQuery(listQuery);
   const detailQuery = useRecordingDetailQuery(detailId, detailOpen);
   const deleteMutation = useDeleteRecordingMutation();
   const downloadMutation = useDownloadRecordingMutation();
@@ -120,6 +181,11 @@ export function RecordingsDashboard() {
       sortBy: field,
       sortOrder: current.sortBy === field && current.sortOrder === 'desc' ? 'asc' : 'desc',
     }));
+  }
+
+  function ariaSortFor(field: RecordingSortField): 'ascending' | 'descending' | 'none' {
+    if (query.sortBy !== field) return 'none';
+    return query.sortOrder === 'asc' ? 'ascending' : 'descending';
   }
 
   function openPlayer(recording: RecordingListItem) {
@@ -233,11 +299,7 @@ export function RecordingsDashboard() {
         </Button>
       </div>
 
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
-          Gagal memuat rekaman. {error instanceof Error ? error.message : 'Coba lagi.'}
-        </div>
-      ) : null}
+      {error ? <ErrorState title="Gagal memuat rekaman" onRetry={() => void refetch()} /> : null}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -265,118 +327,146 @@ export function RecordingsDashboard() {
           />
 
           {visibleServerRecordings.length > 0 ? (
-            <div className="rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <SortButton
-                        label="No. resi"
-                        field="noResi"
-                        sortBy={query.sortBy}
-                        sortOrder={query.sortOrder}
-                        onSort={handleSort}
-                      />
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>
-                      <SortButton
-                        label="Durasi"
-                        field="durationSeconds"
-                        sortBy={query.sortBy}
-                        sortOrder={query.sortOrder}
-                        onSort={handleSort}
-                      />
-                    </TableHead>
-                    <TableHead>
-                      <SortButton
-                        label="Ukuran file"
-                        field="fileSizeBytes"
-                        sortBy={query.sortBy}
-                        sortOrder={query.sortOrder}
-                        onSort={handleSort}
-                      />
-                    </TableHead>
-                    <TableHead>
-                      <SortButton
-                        label="Dibuat"
-                        field="createdAt"
-                        sortBy={query.sortBy}
-                        sortOrder={query.sortOrder}
-                        onSort={handleSort}
-                      />
-                    </TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleServerRecordings.map((recording) => {
-                    const canPlay = isPlayableRecording(recording.status, recording.publicUrl);
+            <>
+              {/* Mobile: stacked cards — same data + actions as the table. */}
+              <div className="space-y-3 sm:hidden">
+                {visibleServerRecordings.map((recording) => {
+                  const canPlay = isPlayableRecording(recording.status, recording.publicUrl);
 
-                    return (
-                      <TableRow key={recording.id}>
-                        <TableCell className="font-medium">{recording.noResi}</TableCell>
-                        <TableCell>
+                  return (
+                    <article key={recording.id} className="space-y-3 rounded-xl border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="num truncate font-medium">{recording.noResi}</p>
                           <OperationalStatusBadge
                             status={mapServerStatusToOperational(recording.status)}
                           />
-                        </TableCell>
-                        <TableCell>{formatRecordingDuration(recording.durationSeconds)}</TableCell>
-                        <TableCell>{formatRecordingFileSize(recording.fileSizeBytes)}</TableCell>
-                        <TableCell>{formatRecordingDate(recording.createdAt)}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="size-4" />
-                                <span className="sr-only">Buka aksi</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                disabled={!canPlay}
-                                onClick={() => openPlayer(recording)}
-                              >
-                                <Play className="size-4" />
-                                Pratinjau
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openDetail(recording)}>
-                                <Eye className="size-4" />
-                                Lihat detail
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={!canPlay || downloadMutation.isPending}
-                                onClick={() => void handleDownload(recording)}
-                              >
-                                <Download className="size-4" />
-                                Unduh
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={!canPlay}
-                                onClick={() => {
-                                  setShareTarget(recording);
-                                  setShareOpen(true);
-                                }}
-                              >
-                                <Link2 className="size-4" />
-                                Bagikan bukti
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleteTarget(recording)}
-                              >
-                                <Trash2 className="size-4" />
-                                Hapus
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                        </div>
+                        <RecordingRowActions
+                          recording={recording}
+                          canPlay={canPlay}
+                          isDownloadPending={downloadMutation.isPending}
+                          onPlay={openPlayer}
+                          onDetail={openDetail}
+                          onDownload={(target) => void handleDownload(target)}
+                          onShare={(target) => {
+                            setShareTarget(target);
+                            setShareOpen(true);
+                          }}
+                          onDelete={setDeleteTarget}
+                        />
+                      </div>
+                      <dl className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <dt className="text-muted-foreground">Durasi</dt>
+                          <dd className="num mt-0.5 font-medium">
+                            {formatRecordingDuration(recording.durationSeconds)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Ukuran file</dt>
+                          <dd className="num mt-0.5 font-medium">
+                            {formatRecordingFileSize(recording.fileSizeBytes)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Dibuat</dt>
+                          <dd className="mt-0.5 font-medium">
+                            {formatRecordingDate(recording.createdAt)}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table — the Table primitive scrolls itself. */}
+              <div className="hidden rounded-xl border sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead aria-sort={ariaSortFor('noResi')}>
+                        <SortButton
+                          label="No. resi"
+                          field="noResi"
+                          sortBy={query.sortBy}
+                          sortOrder={query.sortOrder}
+                          onSort={handleSort}
+                        />
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead aria-sort={ariaSortFor('durationSeconds')}>
+                        <SortButton
+                          label="Durasi"
+                          field="durationSeconds"
+                          sortBy={query.sortBy}
+                          sortOrder={query.sortOrder}
+                          onSort={handleSort}
+                        />
+                      </TableHead>
+                      <TableHead aria-sort={ariaSortFor('fileSizeBytes')}>
+                        <SortButton
+                          label="Ukuran file"
+                          field="fileSizeBytes"
+                          sortBy={query.sortBy}
+                          sortOrder={query.sortOrder}
+                          onSort={handleSort}
+                        />
+                      </TableHead>
+                      <TableHead aria-sort={ariaSortFor('createdAt')}>
+                        <SortButton
+                          label="Dibuat"
+                          field="createdAt"
+                          sortBy={query.sortBy}
+                          sortOrder={query.sortOrder}
+                          onSort={handleSort}
+                        />
+                      </TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleServerRecordings.map((recording) => {
+                      const canPlay = isPlayableRecording(recording.status, recording.publicUrl);
+
+                      return (
+                        <TableRow key={recording.id}>
+                          <TableCell className="num font-medium">{recording.noResi}</TableCell>
+                          <TableCell>
+                            <OperationalStatusBadge
+                              status={mapServerStatusToOperational(recording.status)}
+                            />
+                          </TableCell>
+                          <TableCell className="num">
+                            {formatRecordingDuration(recording.durationSeconds)}
+                          </TableCell>
+                          <TableCell className="num">
+                            {formatRecordingFileSize(recording.fileSizeBytes)}
+                          </TableCell>
+                          <TableCell>{formatRecordingDate(recording.createdAt)}</TableCell>
+                          <TableCell className="text-right">
+                            <RecordingRowActions
+                              recording={recording}
+                              canPlay={canPlay}
+                              isDownloadPending={downloadMutation.isPending}
+                              onPlay={openPlayer}
+                              onDetail={openDetail}
+                              onDownload={(target) => void handleDownload(target)}
+                              onShare={(target) => {
+                                setShareTarget(target);
+                                setShareOpen(true);
+                              }}
+                              onDelete={setDeleteTarget}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : null}
 
           {visibleServerRecordings.length > 0 ? (
