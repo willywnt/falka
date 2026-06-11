@@ -8,7 +8,9 @@ import { apiRoutes } from '@/lib/api/routes';
 
 import { reportingKeys } from './reporting-keys';
 import type {
+  AbcReport,
   ChannelPerformanceReport,
+  DeadStockReport,
   InventoryValuationReport,
   ProfitPeriodGranularity,
   ProfitReport,
@@ -100,4 +102,56 @@ export function useInventoryValuationQuery() {
 /** URL for the per-product valuation CSV export, for a plain download link. */
 export function inventoryValuationExportUrl(): string {
   return `${apiRoutes.reports}/inventory-value/export`;
+}
+
+/** Dead/slow stock holding capital — variants idle past `staleDays` days. */
+export function useDeadStockQuery(staleDays: number) {
+  const queryParams = { staleDays: String(staleDays) };
+
+  return useQuery({
+    queryKey: reportingKeys.deadStock(queryParams),
+    queryFn: async () => {
+      const result = await apiFetch<DeadStockReport>(`${apiRoutes.reports}/dead-stock`, {
+        params: queryParams,
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+/** URL for the dead-stock CSV export, for a plain download link. */
+export function deadStockExportUrl(staleDays: number): string {
+  const search = new URLSearchParams({ staleDays: String(staleDays) });
+  return `${apiRoutes.reports}/dead-stock/export?${search.toString()}`;
+}
+
+/** ABC (Pareto) ranking of SKUs by net revenue over a date range. */
+export function useAbcAnalysisQuery(params: ProfitReportParams) {
+  const queryParams = toQueryParams(params);
+
+  return useQuery({
+    queryKey: reportingKeys.abc(queryParams),
+    queryFn: async () => {
+      const result = await apiFetch<AbcReport>(`${apiRoutes.reports}/abc`, {
+        params: queryParams,
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+/** URL for the ABC CSV export, for a plain download link. */
+export function abcExportUrl(params: ProfitReportParams): string {
+  const search = new URLSearchParams(toQueryParams(params));
+  return `${apiRoutes.reports}/abc/export?${search.toString()}`;
 }

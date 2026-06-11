@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Store,
+  TrendingDown,
   Truck,
   Undo2,
   Video,
@@ -74,6 +75,7 @@ export const sidebarNavSections: readonly SidebarNavSection[] = [
     items: [
       { title: 'Laba & channel', href: '/dashboard/reports/profit', icon: LineChart },
       { title: 'Nilai stok', href: '/dashboard/reports/inventory-value', icon: Coins },
+      { title: 'Stok mati & ABC', href: '/dashboard/reports/dead-stock', icon: TrendingDown },
     ],
   },
   {

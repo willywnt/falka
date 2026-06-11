@@ -1,0 +1,25 @@
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
+
+import { PageHeader } from '@/components/page-header';
+import { StockHealthInsights } from '@/modules/reporting/components/stock-health-insights';
+
+export const metadata: Metadata = {
+  title: 'Stok mati & ABC',
+};
+
+export default function StockHealthPage() {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Insight"
+        title="Stok mati & ABC"
+        description="Lihat modal yang nyangkut di stok yang nggak laku, dan SKU mana yang benar-benar menyumbang omzet (Pareto A/B/C)."
+      />
+      {/* useSearchParams (the ?tab sync) needs a Suspense boundary. */}
+      <Suspense fallback={null}>
+        <StockHealthInsights />
+      </Suspense>
+    </div>
+  );
+}
