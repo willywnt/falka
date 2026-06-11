@@ -59,10 +59,11 @@ export class ReportingServerService {
           quantity: true,
           unitPrice: true,
           unitCost: true,
+          discountAmount: true,
           sku: true,
           name: true,
           productVariantId: true,
-          sale: { select: { createdAt: true } },
+          sale: { select: { createdAt: true, taxRate: true, taxInclusive: true } },
         },
       }),
       prisma.orderItem.findMany({
@@ -119,16 +120,31 @@ export class ReportingServerService {
     ]);
 
     const lines: SoldLine[] = [
-      ...saleItems.map((item) => ({
-        date: item.sale.createdAt,
-        channel: 'POS' as ProfitChannel,
-        variantId: item.productVariantId,
-        sku: item.sku,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: Number(item.unitPrice),
-        unitCost: item.unitCost == null ? null : Number(item.unitCost),
-      })),
+      // POS revenue is NET: line gross minus its allocated cart discount, and
+      // with the contained PPN carved out when the sale was tax-inclusive
+      // (exclusive PPN never sat in unitPrice, so no scaling there). The
+      // effective unit price keeps every downstream aggregate (omzet, margin,
+      // rankings, below-cost) on net numbers without touching their math.
+      ...saleItems.map((item) => {
+        const gross = Number(item.unitPrice) * item.quantity;
+        const afterDiscount = Math.max(0, gross - Number(item.discountAmount));
+        const taxRate = Number(item.sale.taxRate);
+        const net =
+          item.sale.taxInclusive && taxRate > 0
+            ? afterDiscount * (100 / (100 + taxRate))
+            : afterDiscount;
+
+        return {
+          date: item.sale.createdAt,
+          channel: 'POS' as ProfitChannel,
+          variantId: item.productVariantId,
+          sku: item.sku,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.quantity > 0 ? net / item.quantity : 0,
+          unitCost: item.unitCost == null ? null : Number(item.unitCost),
+        };
+      }),
       ...orderItems.map((item) => ({
         date: item.order.placedAt,
         channel: item.order.provider as ProfitChannel,
