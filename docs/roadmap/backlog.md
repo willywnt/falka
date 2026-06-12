@@ -72,12 +72,17 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 
 ## ⚡ Quick wins (sub-hour)
 
-- Archived-variant view + restore on product detail 🟢 (needs a new unarchive service+route — SKU
-  un-mangle + collision check; not a true sub-hour, scope before picking up).
+- _(No open quick wins — all of the below shipped to `main`.)_
 - _(shipped 2026-06-11: marketplace sync-health badge · below-cost alert at sale-create ·
   `grup · subvarian` picker label.)_
 - _(shipped 2026-06-12: `@@index([userId, createdAt])` on `StockLedger` — serves the userId-scoped
   newest-first activity-log scans the reason-prefixed index can't order.)_
+- _(shipped 2026-06-12: archived-variant view + restore on product detail — a collapsible
+  "Varian terarsip" section lists soft-deleted variants; restore un-mangles the original SKU and
+  is refused when a live variant/bundle now owns it.)_
+- _(shipped 2026-06-12: bundle archive — `Bundle.deletedAt` soft-delete (manual delete now archives,
+  restorable); deleting a variant warns if it's a bundle component, then on confirm drops it from
+  every live bundle and auto-archives any bundle left empty; "Bundel terarsip" view + restore.)_
 
 ## Locked decisions (don't relitigate without a reason)
 

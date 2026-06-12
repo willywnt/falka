@@ -51,6 +51,7 @@ import {
   type BundleStatusFilter,
 } from '../hooks/use-bundles';
 import type { BundleListItem } from '../types';
+import { ArchivedBundles } from './archived-bundles';
 import { BundleImage } from './bundle-image';
 
 /** Lightweight stand-in matching the page rhythm while the URL-synced filters hydrate. */
@@ -118,9 +119,11 @@ function BundlesDashboardContent() {
   async function handleDelete(bundle: BundleListItem) {
     try {
       await deleteBundle.mutateAsync(bundle.id);
-      toast.success('Bundel dihapus');
+      toast.success('Bundel diarsipkan', {
+        description: 'Bisa dipulihkan dari "Bundel terarsip".',
+      });
     } catch (deleteError) {
-      toast.error('Gagal menghapus bundel', {
+      toast.error('Gagal mengarsipkan bundel', {
         description: deleteError instanceof Error ? deleteError.message : 'Coba lagi.',
       });
     } finally {
@@ -292,7 +295,7 @@ function BundlesDashboardContent() {
                             onClick={() => setDeleteTarget(bundle)}
                           >
                             <Trash2 className="size-4" />
-                            Hapus bundel
+                            Arsipkan bundel
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -318,6 +321,8 @@ function BundlesDashboardContent() {
         </>
       )}
 
+      <ArchivedBundles />
+
       {qrTarget ? (
         <QrCodeDialog
           open={Boolean(qrTarget)}
@@ -340,10 +345,11 @@ function BundlesDashboardContent() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hapus “{deleteTarget?.name}”?</AlertDialogTitle>
+            <AlertDialogTitle>Arsipkan “{deleteTarget?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              Ini menghapus bundel. Varian komponen dan stoknya tidak terpengaruh. Tindakan ini
-              tidak bisa dibatalkan.
+              Bundel diarsipkan dan disembunyikan dari daftar, POS, dan scan. Varian komponen serta
+              stoknya tidak terpengaruh, SKU-nya dibebaskan, dan bundel bisa dipulihkan kapan saja
+              dari “Bundel terarsip”.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -353,7 +359,7 @@ function BundlesDashboardContent() {
               disabled={deleteBundle.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Hapus
+              Arsipkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

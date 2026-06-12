@@ -179,9 +179,14 @@ Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-m
   **standalone SKU** or a **named group of subvariant SKUs** (siblings share one `variantGroup`). A product
   may have **0..N** variants (create-without-variant, add later from detail). Grouping is **display-only** —
   inventory/ledger/orders/sales/PO/marketplace stay at the leaf, **no deeper stock level**. Shared builder
-  `variant-blocks-field.tsx`; SKU auto-gen; **soft-delete frees the SKU** (`archivedSku`) and is gated by a
-  cross-module **delete preflight** `getDeletionBlockers` (marketplace-mapped / reserved / incoming /
-  open-PENDING-return = **block**; on-hand + damaged = **warn**). **Per-variant photo**
+  `variant-blocks-field.tsx`; SKU auto-gen; **soft-delete frees the SKU** (`archivedSku` mangles
+  `<sku>::deleted::<id>`; `unarchiveSku` reverses it) and is gated by a cross-module **delete preflight**
+  `getDeletionBlockers` (marketplace-mapped / reserved / incoming / open-PENDING-return = **block**;
+  on-hand + damaged + **bundle membership** = **warn**). **Archived variants are restorable**: product
+  detail has a collapsible **"Varian terarsip"** section (`listArchivedVariants`/`restoreVariant`,
+  `GET …/variants/archived` + `POST …/variants/:id/restore`) — restore reinstates the original SKU and is
+  **refused (block, not auto-suffix)** when a live variant/bundle now owns it (`takenSkus` checks both;
+  unique index is the final race guard). **Per-variant photo**
   (`imageKey`/`imageUrl`) lives in a **separate PUBLIC R2 bucket** (recordings bucket stays private),
   client-compressed to WebP, shown in a `VariantImage` popover by the name. R2 uses **per-bucket public
   URLs** (`<base>/<key>`, NO bucket in the path): `R2_RECORDINGS_BUCKET_NAME`+`R2_PUBLIC_URL`,
@@ -237,7 +242,15 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   oversell warnings **accumulate per variant**; scan resolves variant-OR-bundle (`resolveBundleByCode`); SKU is
   unique across bundles **and** variants; **inactive** bundles are hidden from POS/PO/scan. Bundle QR labels =
   labels-studio "Bundles" tab. Catalog owns it (`resolveBundles`/CRUD/image/labels); sales/purchasing call its
-  service, never the tables. Marketplace orders NOT bundle-aware (deferred). Detail: `…/40-inventory-marketplace.mdc`.
+  service, never the tables. Marketplace orders NOT bundle-aware (deferred). **Bundles soft-delete**
+  (`Bundle.deletedAt`): manual delete **archives** (frees the SKU like a variant, keeps composition+image,
+  restorable) and every bundle read filters `deletedAt: null`; a **"Bundel terarsip"** view on the bundles
+  dashboard restores (`listArchivedBundles`/`restoreBundle`, same SKU-reclaim + block-on-clash rule as
+  variants). **Deleting a variant cascades into bundles**: the delete preflight warns which bundles list it,
+  then `cascadeBundleComponentRemoval` (inside the deleteVariants + deleteProduct tx) drops its `BundleItem`
+  from every LIVE bundle and **auto-archives any bundle left with 0 components** (archived bundles keep their
+  items so a restore stays intact; a 0-component restored bundle is re-filled on the edit screen).
+  Detail: `…/40-inventory-marketplace.mdc`.
 - **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty, honours per-variant
   `leadTimeDays`/`minOrderQty`); stock activity log (filter + paginate + CSV); variant editing. Demand
   velocity sums `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN` (net), excludes the delta-0 `ORDER_SHIP`.

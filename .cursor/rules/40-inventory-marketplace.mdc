@@ -31,9 +31,18 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   **Delete** (soft, `deletedAt`) of a product / variant / whole group is **guarded by a cross-module
   preflight** `getDeletionBlockers` (`GET /products/:id/deletion-blockers?variantIds=`): **BLOCKED** when
   any active variant is marketplace-mapped, has `reserved>0` or `incoming>0`, or has an open (PENDING)
-  return; **WARNS** (still allowed) on available on-hand + damaged stock; pending unpaid orders ignored.
-  Soft-delete mangles the SKU (`archivedSku` → `<sku>::deleted::<id>`) so it **frees for reuse** (the
-  unique index spans archived rows; safe — Sale/Order items snapshot sku). No restore UI yet.
+  return; **WARNS** (still allowed) on available on-hand + damaged stock + **bundle membership** (names the
+  bundles it's a component of + how many would empty); pending unpaid orders ignored.
+  Soft-delete mangles the SKU (`archivedSku` → `<sku>::deleted::<id>`; `unarchiveSku` reverses it) so it
+  **frees for reuse** (the unique index spans archived rows; safe — Sale/Order items snapshot sku).
+  **Restore IS supported**: product detail has a collapsible **"Varian terarsip"** section
+  (`listArchivedVariants` / `restoreVariant`, `GET …/variants/archived` + `POST …/variants/:id/restore`);
+  restore reinstates the original SKU and is **refused (block, not auto-suffix)** when a live variant/bundle
+  now owns it (`takenSkus` checks variants+bundles; the unique index is the final race guard).
+  **Deleting a variant cascades into bundles** (`cascadeBundleComponentRemoval`, inside the deleteVariants +
+  deleteProduct tx): its `BundleItem` is dropped from every LIVE bundle, and any bundle left with **0
+  components is auto-archived** (it can't be built/sold); already-archived bundles keep their items so a
+  restore stays intact. See the Bundles section.
   **QR labels**: `/dashboard/labels` label studio — `listLabelVariants` (paginated; already-printed
   sort last via `labelPrintedAt nulls-first`), prints an A4 grid encoding `barcode ?? sku`.
   `ProductVariant.labelPrintedAt` + `markLabelsPrinted` (`POST /products/variants/printed`) stamp the
@@ -217,6 +226,20 @@ Bundles have their own QR labels (labels studio "Bundles" tab; ⋯ "Show QR code
 `labelPrintedAt`). Marketplace orders are NOT bundle-aware (deferred). UI: `/dashboard/bundles` pages +
 `BundleComponentsField` + `BundleImage`. Sale + PO detail GROUP a bundle's exploded lines under a
 "Bundle · {name}" header.
+
+**Bundle archive (soft-delete, `Bundle.deletedAt`).** Distinct from `isActive`: `deletedAt` is the archive
+flag, `isActive` is the separate visibility toggle. Manual delete now **archives** (`deleteBundle`) — it
+frees the SKU (`archivedSku`, same mangle as variants), keeps the composition + image, and is **restorable**;
+hard-delete is gone. **Every bundle read filters `deletedAt: null`** (list, labels, `resolveBundles`,
+`resolveBundleByCode`, `buildBundleDetail`, `assertBundleOwned`, `assertBundleSkuAvailable`,
+`markBundleLabelsPrinted`, and the `takenSkus` clash check). A **"Bundel terarsip"** collapsible on the
+bundles dashboard restores via `listArchivedBundles` / `restoreBundle` (`GET …/bundles/archived` +
+`POST …/bundles/:id/restore`); restore un-mangles the SKU and is **refused** when a live variant/bundle now
+owns it (same block-not-suffix rule as variants). **Auto-archive on variant delete**: when a component
+variant is soft-deleted, `cascadeBundleComponentRemoval` removes its `BundleItem` from every live bundle and
+archives any bundle left with **0 components** (it can no longer be built/sold). A 0-component bundle that is
+later restored comes back empty and is re-filled on the edit screen (the update validator requires ≥1
+component). Delete copy across the dashboard + bundle detail says "arsipkan", not "hapus".
 
 ## Deferred (raise as separate suggestions)
 ProviderHealth + reconciliation/drift; marketplace-order bundle decrement; multi-warehouse; per-order re-pull (pull is
