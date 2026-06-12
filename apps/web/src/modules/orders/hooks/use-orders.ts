@@ -51,6 +51,31 @@ export function useOrdersQuery(page: number, pageSize: number, filters: OrdersLi
   });
 }
 
+/**
+ * The departure-board view: first page of one status, auto-refreshing every
+ * 20s so a wall screen stays current. Shares `orderKeys.list` with the main
+ * list so both caches stay coherent.
+ */
+export function useOrdersBoardQuery(status: 'PAID' | 'SHIPPED') {
+  return useQuery({
+    queryKey: orderKeys.list(1, 50, '', status),
+    queryFn: async () => {
+      const result = await apiFetch<OrdersPage>(apiRoutes.orders, {
+        params: { page: 1, pageSize: 50, status },
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    placeholderData: keepPreviousData,
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
 export function useOrderQuery(id: string | null, enabled = true) {
   return useQuery({
     queryKey: orderKeys.detail(id ?? 'unknown'),

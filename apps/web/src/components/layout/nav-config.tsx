@@ -252,6 +252,7 @@ export const SHELL_SUPPRESSED_ROUTES: readonly string[] = [
   '/recordings',
   '/dashboard/sales/new',
   '/dashboard/purchasing/new',
+  '/dashboard/orders/board',
 ];
 
 export function isShellSuppressedRoute(pathname: string): boolean {
