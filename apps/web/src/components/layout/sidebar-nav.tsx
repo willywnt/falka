@@ -1,121 +1,37 @@
 'use client';
 
-import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Boxes,
-  ChevronRight,
-  ClipboardCheck,
-  Coins,
-  Layers,
-  LayoutDashboard,
-  Library,
-  LineChart,
-  QrCode,
-  Settings,
-  ShoppingBag,
-  ShoppingCart,
-  Store,
-  TrendingDown,
-  Truck,
-  Undo2,
-  Video,
-  Warehouse,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
+import {
+  allNavItems,
+  resolveActiveHref,
+  sidebarNavSections,
+  type NavItem,
+} from '@/components/layout/nav-config';
+import { useOpsPulse } from '@/components/layout/use-ops-pulse';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-type SidebarNavItem = {
-  title: string;
-  href: Route;
-  icon: LucideIcon;
-};
+/** Live count chip on a nav row — restock urgency lights the suar amber. */
+function NavPulseBadge({ item, count }: { item: NavItem; count: number | undefined }) {
+  if (!count) return null;
 
-type SidebarNavSection = {
-  label?: string;
-  items: readonly SidebarNavItem[];
-};
-
-export const sidebarNavSections: readonly SidebarNavSection[] = [
-  {
-    items: [{ title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
-  },
-  {
-    label: 'Katalog',
-    items: [
-      { title: 'Produk', href: '/dashboard/products', icon: Boxes },
-      { title: 'Bundel', href: '/dashboard/bundles', icon: Layers },
-      { title: 'Inventaris', href: '/dashboard/inventory', icon: Warehouse },
-      { title: 'Opname stok', href: '/dashboard/inventory/opname', icon: ClipboardCheck },
-      { title: 'Pembelian', href: '/dashboard/purchasing', icon: Truck },
-      { title: 'Label', href: '/dashboard/labels', icon: QrCode },
-    ],
-  },
-  {
-    label: 'Channel penjualan',
-    items: [
-      { title: 'Marketplace', href: '/dashboard/marketplace', icon: ShoppingBag },
-      { title: 'Pesanan (online)', href: '/dashboard/orders', icon: ShoppingCart },
-      { title: 'Penjualan (Kasir)', href: '/dashboard/sales', icon: Store },
-    ],
-  },
-  {
-    label: 'Fulfillment',
-    items: [
-      // "Rekam packing" vs "Rekaman": one letter apart was an easy mis-tap.
-      { title: 'Rekam packing', href: '/recordings', icon: Video },
-      { title: 'Rekaman', href: '/dashboard/recordings', icon: Library },
-      { title: 'Retur', href: '/dashboard/returns', icon: Undo2 },
-    ],
-  },
-  {
-    label: 'Laporan',
-    items: [
-      { title: 'Laba & channel', href: '/dashboard/reports/profit', icon: LineChart },
-      { title: 'Nilai stok', href: '/dashboard/reports/inventory-value', icon: Coins },
-      { title: 'Stok mati & ABC', href: '/dashboard/reports/dead-stock', icon: TrendingDown },
-    ],
-  },
-  {
-    label: 'Sistem',
-    items: [{ title: 'Pengaturan', href: '/settings', icon: Settings }],
-  },
-];
-
-/** The active nav item's title for the given path — used by the mobile navbar chrome. */
-export function resolveNavTitle(pathname: string): string | undefined {
-  const activeHref = resolveActiveHref(pathname);
-  if (!activeHref) return undefined;
-
-  for (const section of sidebarNavSections) {
-    for (const item of section.items) {
-      if (item.href === activeHref) return item.title;
-    }
-  }
-
-  return undefined;
-}
-
-/** Highlight the most specific matching item so a parent route never lights up a child's row. */
-function resolveActiveHref(pathname: string): string | undefined {
-  let best: string | undefined;
-
-  for (const section of sidebarNavSections) {
-    for (const item of section.items) {
-      const href: string = item.href;
-      const matches = pathname === href || pathname.startsWith(`${href}/`);
-
-      if (matches && (best === undefined || href.length > best.length)) {
-        best = href;
-      }
-    }
-  }
-
-  return best;
+  return (
+    <span
+      aria-label={`${count} perlu tindakan`}
+      className={cn(
+        'num ml-auto rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
+        item.pulse === 'restockUrgent'
+          ? 'bg-highlight text-highlight-foreground'
+          : 'bg-sidebar-accent text-sidebar-foreground/90',
+      )}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
 }
 
 export function SidebarNav({
@@ -126,8 +42,9 @@ export function SidebarNav({
   collapsed?: boolean;
 }) {
   const pathname = usePathname();
-  const activeHref = resolveActiveHref(pathname);
+  const activeHref = resolveActiveHref(pathname, allNavItems());
   const { collapsedSections, toggleSection } = useSidebar();
+  const pulse = useOpsPulse();
 
   return (
     <nav
@@ -162,6 +79,7 @@ export function SidebarNav({
               ? section.items.map((item) => {
                   const isActive = item.href === activeHref;
                   const Icon = item.icon;
+                  const count = item.pulse ? pulse[item.pulse] : undefined;
 
                   const link = (
                     <Link
@@ -183,9 +101,23 @@ export function SidebarNav({
                           className="bg-primary absolute inset-y-2 left-0 w-0.5 rounded-full"
                         />
                       ) : null}
-                      <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
+                      <span className="relative flex shrink-0">
+                        <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
+                        {collapsed && count ? (
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'absolute -top-1 -right-1 size-2 rounded-full',
+                              item.pulse === 'restockUrgent'
+                                ? 'bg-highlight'
+                                : 'bg-sidebar-foreground/60',
+                            )}
+                          />
+                        ) : null}
+                      </span>
                       {collapsed ? null : item.title}
                       {collapsed ? <span className="sr-only">{item.title}</span> : null}
+                      {!collapsed ? <NavPulseBadge item={item} count={count} /> : null}
                     </Link>
                   );
 
@@ -194,7 +126,10 @@ export function SidebarNav({
                   return (
                     <Tooltip key={item.href}>
                       <TooltipTrigger asChild>{link}</TooltipTrigger>
-                      <TooltipContent side="right">{item.title}</TooltipContent>
+                      <TooltipContent side="right">
+                        {item.title}
+                        {count ? ` · ${count}` : ''}
+                      </TooltipContent>
                     </Tooltip>
                   );
                 })

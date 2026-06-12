@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ArrowRight, Info, TriangleAlert, X } from 'lucide-react';
 
 import { BrandMark } from '@/components/brand-mark';
+import { isShellSuppressedRoute } from '@/components/layout/nav-config';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +15,6 @@ import { cn } from '@/lib/utils';
 
 import { usePanduNudges, type PanduNudge } from './pandu-nudges';
 import { PANDU_SUGGESTIONS, routePanduQuery } from './pandu-router';
-
-/*
- * Routes that own the thumb zone / full attention — the dock stays out of the
- * way there (POS checkout, new-PO scanning, the recording station).
- */
-const SUPPRESSED_ROUTES = ['/recordings', '/dashboard/sales/new', '/dashboard/purchasing/new'];
 
 function NudgeRow({ nudge, onDismiss }: { nudge: PanduNudge; onDismiss: (id: string) => void }) {
   const Icon = nudge.tone === 'urgent' ? TriangleAlert : Info;
@@ -82,7 +77,7 @@ export function PanduDock() {
     setNoMatch(false);
   }, [pathname]);
 
-  if (SUPPRESSED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+  if (isShellSuppressedRoute(pathname)) {
     return null;
   }
 

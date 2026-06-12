@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
-import { ChevronDown, LogOut, Menu, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  Search,
+  Settings as SettingsIcon,
+  Sun,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { usePathname } from 'next/navigation';
@@ -11,7 +19,9 @@ import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { BrandBadge } from '@/components/brand-mark';
-import { SidebarNav, resolveNavTitle } from '@/components/layout/sidebar-nav';
+import { CommandPaletteTrigger, useCommandPalette } from '@/components/command-palette';
+import { resolveNavTitle } from '@/components/layout/nav-config';
+import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -36,6 +46,7 @@ export function DashboardNavbar() {
   const { toggle } = useSidebar();
   const { setTheme, resolvedTheme } = useTheme();
   const { user } = useCurrentUser();
+  const { open: openPalette } = useCommandPalette();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
   const mobileTitle = resolveNavTitle(pathname) ?? APP_NAME;
@@ -82,8 +93,17 @@ export function DashboardNavbar() {
         {mobileTitle}
       </p>
 
+      {/* One search box for everything: menu, create actions, Pandu (Ctrl+K). */}
+      <div className="hidden min-w-0 flex-1 justify-center md:flex">
+        <CommandPaletteTrigger className="w-full max-w-sm" />
+      </div>
+
       <div className="ml-auto flex items-center gap-1.5">
         {/* Reserved slot: <NotificationBell/> (count badge → tray) — backlog item A. */}
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette}>
+          <Search className="size-4" />
+          <span className="sr-only">Cari atau tanya Pandu</span>
+        </Button>
         <Button
           variant="ghost"
           size="icon"

@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
-import { Boxes, Plus, Store, Truck, Video } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { BrandBadge } from '@/components/brand-mark';
+import { CREATE_ACTIONS } from '@/components/layout/nav-config';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-/* Ordered by real creation frequency: counter sale, restock PO, product, packing video. */
+/* The create menu reads CREATE_ACTIONS (nav-config) — same list as the palette. */
 function SidebarCreate({ collapsed }: { collapsed: boolean }) {
   return (
     <DropdownMenu>
@@ -38,30 +39,17 @@ function SidebarCreate({ collapsed }: { collapsed: boolean }) {
       <DropdownMenuContent align="start" className="w-52">
         <DropdownMenuLabel>Buat</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/sales/new">
-            <Store className="size-4" />
-            Penjualan kasir
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/purchasing/new">
-            <Truck className="size-4" />
-            Pembelian (PO)
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/products">
-            <Boxes className="size-4" />
-            Produk baru
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/recordings">
-            <Video className="size-4" />
-            Rekam packing
-          </Link>
-        </DropdownMenuItem>
+        {CREATE_ACTIONS.map((action) => {
+          const Icon = action.icon;
+          return (
+            <DropdownMenuItem key={action.title} asChild>
+              <Link href={action.href}>
+                <Icon className="size-4" />
+                {action.title}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );

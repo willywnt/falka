@@ -1,65 +1,36 @@
 'use client';
 
-import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import {
-  LayoutDashboard,
-  Library,
-  ShoppingCart,
-  Store,
-  Warehouse,
-  type LucideIcon,
-} from 'lucide-react';
-
+  isShellSuppressedRoute,
+  MOBILE_TABS,
+  resolveActiveHref,
+} from '@/components/layout/nav-config';
+import { useOpsPulse } from '@/components/layout/use-ops-pulse';
 import { cn } from '@/lib/utils';
-
-type TabItem = { title: string; href: Route; icon: LucideIcon };
-
-/* The five flows a seller actually runs from a phone. */
-const TABS: readonly TabItem[] = [
-  { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Pesanan', href: '/dashboard/orders', icon: ShoppingCart },
-  { title: 'Kasir', href: '/dashboard/sales', icon: Store },
-  { title: 'Stok', href: '/dashboard/inventory', icon: Warehouse },
-  { title: 'Rekaman', href: '/dashboard/recordings', icon: Library },
-];
-
-/*
- * Routes that own the bottom of the screen (sticky Bayar bar, scan flows) —
- * the tab bar steps aside there, matching the Pandu dock's suppression list.
- */
-const SUPPRESSED_ROUTES = ['/recordings', '/dashboard/sales/new', '/dashboard/purchasing/new'];
-
-function resolveActiveTab(pathname: string): string | undefined {
-  let best: string | undefined;
-  for (const tab of TABS) {
-    const href: string = tab.href;
-    if (pathname === href || pathname.startsWith(`${href}/`)) {
-      if (best === undefined || href.length > best.length) best = href;
-    }
-  }
-  return best;
-}
 
 /** Bottom navigation for phones — in normal flow (no overlap hacks), hidden md+. */
 export function MobileTabBar() {
   const pathname = usePathname();
+  const pulse = useOpsPulse();
 
-  if (SUPPRESSED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+  if (isShellSuppressedRoute(pathname)) {
     return null;
   }
 
-  const activeHref = resolveActiveTab(pathname);
+  const activeHref = resolveActiveHref(pathname, MOBILE_TABS);
 
   return (
     <nav
       aria-label="Navigasi bawah"
       className="bg-card/95 supports-[backdrop-filter]:bg-card/80 grid shrink-0 grid-cols-5 border-t backdrop-blur md:hidden"
     >
-      {TABS.map((tab) => {
+      {MOBILE_TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = tab.href === activeHref;
+        const count = tab.pulse ? pulse[tab.pulse] : undefined;
 
         return (
           <Link
@@ -71,7 +42,17 @@ export function MobileTabBar() {
               isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <Icon className="size-5" aria-hidden />
+            <span className="relative flex">
+              <Icon className="size-5" aria-hidden />
+              {count ? (
+                <span
+                  aria-label={`${count} perlu tindakan`}
+                  className="num bg-highlight text-highlight-foreground absolute -top-1.5 -right-2.5 rounded-full px-1 py-px text-[9px] leading-none font-semibold"
+                >
+                  {count > 99 ? '99+' : count}
+                </span>
+              ) : null}
+            </span>
             {tab.title}
           </Link>
         );
