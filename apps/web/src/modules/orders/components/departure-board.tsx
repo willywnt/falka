@@ -18,8 +18,8 @@ import { useOrdersBoardQuery } from '../hooks/use-orders';
 import type { OrderListItem } from '../types';
 
 /*
- * Solari-board packing station: today's parcels at a glance, readable from
- * across the room. No sockets, no flip animation — the 20s query poll in
+ * Packing-station board: today's parcels at a glance, in the app's standard
+ * table dress. No sockets, no flip animation — the 20s query poll in
  * useOrdersBoardQuery is the only "mechanism", so reduced-motion stays happy.
  */
 
@@ -33,9 +33,6 @@ const timeFormat = new Intl.DateTimeFormat('id-ID', {
 
 const SHIPPED_ROW_LIMIT = 10;
 
-/** Big mono cells — the board is meant to be read from a few meters away. */
-const CELL = 'num py-4 text-base md:py-5 md:text-lg';
-
 function BoardClock() {
   const [now, setNow] = useState(() => new Date());
 
@@ -45,10 +42,7 @@ function BoardClock() {
   }, []);
 
   return (
-    <span
-      className="num text-3xl font-semibold tracking-tight md:text-4xl"
-      suppressHydrationWarning
-    >
+    <span className="num text-2xl font-semibold tracking-tight" suppressHydrationWarning>
       {timeFormat.format(now)}
     </span>
   );
@@ -57,25 +51,19 @@ function BoardClock() {
 function BoardRow({ order, departed = false }: { order: OrderListItem; departed?: boolean }) {
   return (
     <TableRow>
-      <TableCell className={`${CELL} font-medium`}>
+      <TableCell className="num font-medium">
         {order.noResi ?? <span className="text-muted-foreground">— belum ada resi</span>}
       </TableCell>
-      <TableCell className={CELL}>{order.shopName}</TableCell>
-      <TableCell className={CELL}>{order.buyerName ?? '—'}</TableCell>
-      <TableCell className={`${CELL} text-right`}>{order.itemCount}</TableCell>
-      <TableCell className="py-4 md:py-5">
+      <TableCell>{order.shopName}</TableCell>
+      <TableCell>{order.buyerName ?? '—'}</TableCell>
+      <TableCell className="num text-right">{order.itemCount}</TableCell>
+      <TableCell>
         {departed ? (
-          <StatusBadge tone="info" className="text-sm">
-            DIKIRIM
-          </StatusBadge>
+          <StatusBadge tone="info">Dikirim</StatusBadge>
         ) : order.fulfilledAt ? (
-          <StatusBadge tone="ok" className="text-sm">
-            TEREKAM — siap kirim
-          </StatusBadge>
+          <StatusBadge tone="ok">Terekam — siap kirim</StatusBadge>
         ) : (
-          <StatusBadge tone="warn" className="text-sm">
-            MENUNGGU DIKEMAS
-          </StatusBadge>
+          <StatusBadge tone="warn">Menunggu dikemas</StatusBadge>
         )}
       </TableCell>
     </TableRow>
@@ -85,14 +73,14 @@ function BoardRow({ order, departed = false }: { order: OrderListItem; departed?
 function BoardSkeleton() {
   return (
     <div className="overflow-hidden rounded-xl border">
-      <Skeleton className="h-12 w-full rounded-none" />
+      <Skeleton className="h-10 w-full rounded-none" />
       <div className="divide-y">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="flex items-center gap-6 px-4 py-5">
-            <Skeleton className="h-5 w-1/4" />
-            <Skeleton className="h-5 w-1/6" />
-            <Skeleton className="h-5 w-1/5" />
-            <Skeleton className="ml-auto h-6 w-44" />
+          <div key={index} className="flex items-center gap-6 px-4 py-3">
+            <Skeleton className="h-4 w-1/4" />
+            <Skeleton className="h-4 w-1/6" />
+            <Skeleton className="h-4 w-1/5" />
+            <Skeleton className="ml-auto h-5 w-40" />
           </div>
         ))}
       </div>
@@ -154,11 +142,11 @@ export function DepartureBoard() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="eyebrow text-muted-foreground">Resi</TableHead>
-                <TableHead className="eyebrow text-muted-foreground">Toko</TableHead>
-                <TableHead className="eyebrow text-muted-foreground">Pembeli</TableHead>
-                <TableHead className="eyebrow text-muted-foreground text-right">Item</TableHead>
-                <TableHead className="eyebrow text-muted-foreground">Status</TableHead>
+                <TableHead>Resi</TableHead>
+                <TableHead>Toko</TableHead>
+                <TableHead>Pembeli</TableHead>
+                <TableHead className="text-right">Item</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
