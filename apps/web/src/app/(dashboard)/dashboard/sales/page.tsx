@@ -11,7 +11,7 @@ export default function SalesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Channel penjualan"
+        eyebrow="Jualan"
         title="Penjualan (Kasir)"
         description="Jualan langsung di toko, pakai stok yang sama dengan marketplace kamu — jadi nggak bakal kejual dobel."
       />

@@ -14,7 +14,7 @@ export default function DashboardRecordingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Fulfillment"
+        eyebrow="Kirim & retur"
         title="Rekaman"
         description="Cari, putar, dan download video packing kamu."
       >

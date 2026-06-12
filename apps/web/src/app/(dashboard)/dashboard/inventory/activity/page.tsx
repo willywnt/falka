@@ -22,7 +22,7 @@ export default function StockActivityPage() {
         </Link>
       </Button>
       <PageHeader
-        eyebrow="Inventaris"
+        eyebrow="Stok"
         title="Aktivitas stok"
         description="Semua perubahan stok, terbaru di atas — cari dan export seluruh riwayatnya."
       />

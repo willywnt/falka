@@ -20,7 +20,7 @@ export default function ReorderPage() {
         </Link>
       </Button>
       <PageHeader
-        eyebrow="Inventaris"
+        eyebrow="Stok"
         title="Saran restok"
         description="Seberapa cepat item terjual, berapa lama stok kamu bertahan, dan berapa yang perlu dibeli lagi."
       />

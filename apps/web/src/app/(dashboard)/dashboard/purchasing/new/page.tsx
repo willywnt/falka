@@ -21,7 +21,7 @@ export default function NewPurchaseOrderPage() {
       </Button>
 
       <PageHeader
-        eyebrow="Katalog"
+        eyebrow="Stok"
         title="Pembelian baru"
         description="Cari produk atau muat saran restok, atur jumlah + modal, lalu buat pesanan."
       />

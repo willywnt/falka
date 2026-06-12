@@ -11,7 +11,7 @@ export default function PurchasingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Katalog"
+        eyebrow="Stok"
         title="Pembelian"
         description="Restok dari supplier. Barang yang dipesan masuk hitungan stok akan datang, lalu jadi tersedia begitu kamu terima."
       />

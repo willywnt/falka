@@ -11,7 +11,7 @@ export default function DashboardMarketplacePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Channel penjualan"
+        eyebrow="Jualan"
         title="Koneksi marketplace"
         description="Hubungkan toko Shopee dan Tokopedia kamu. Data login disimpan terenkripsi."
       />

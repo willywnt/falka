@@ -133,7 +133,7 @@ function OpnameTable({ items }: { items: StockOpnameListItem[] }) {
             {items.map((item) => {
               const meta = OPNAME_STATUS_META[item.status];
               return (
-                <TableRow key={item.id} className="cursor-pointer">
+                <TableRow key={item.id}>
                   <TableCell>
                     <Link
                       href={`/dashboard/inventory/opname/${item.id}`}

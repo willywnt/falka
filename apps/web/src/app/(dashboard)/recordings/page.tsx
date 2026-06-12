@@ -15,7 +15,7 @@ export default function RecordingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Fulfillment"
+        eyebrow="Kirim & retur"
         title="Rekam baru"
         description="Rekam proses packing dari webcam kamu, langsung terupload ke penyimpanan."
       >

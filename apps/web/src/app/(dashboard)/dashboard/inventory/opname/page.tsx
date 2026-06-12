@@ -11,7 +11,7 @@ export default function OpnamePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Katalog"
+        eyebrow="Stok"
         title="Opname stok"
         description="Hitung stok fisik dan samakan dengan sistem. Selisihnya diposting sebagai penyesuaian (RECONCILE) di kartu stok."
       />

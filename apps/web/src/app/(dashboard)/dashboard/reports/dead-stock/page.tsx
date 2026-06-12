@@ -12,7 +12,7 @@ export default function StockHealthPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Insight"
+        eyebrow="Laporan"
         title="Stok mati & ABC"
         description="Lihat modal yang nyangkut di stok yang nggak laku, dan SKU mana yang benar-benar menyumbang omzet (Pareto A/B/C)."
       />

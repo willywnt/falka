@@ -11,7 +11,7 @@ export default function InventoryValuationPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Insight"
+        eyebrow="Laporan"
         title="Nilai stok"
         description="Nilai stok yang ada sekarang, dihitung dari modal — lihat di mana modal kamu tertahan."
       />

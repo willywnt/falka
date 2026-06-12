@@ -16,7 +16,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Katalog"
+        eyebrow="Stok"
         title="Inventaris"
         description="Sisa stok tiap item kamu, selalu sinkronisasi di semua channel penjualan."
       >

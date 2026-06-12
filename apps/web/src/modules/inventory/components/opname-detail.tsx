@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { NumberDelta } from '@/components/number-delta';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -45,7 +46,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
-import { cn } from '@/lib/utils';
 import { formatProductVariantLabel } from '@/lib/variant-label';
 
 import { OpnameAddItem } from './opname-add-item';
@@ -58,16 +58,6 @@ import {
 } from '../hooks/use-stock-opname';
 import { OPNAME_STATUS_META } from '../utils/opname-display';
 import type { StockOpnameDetail as StockOpnameData, StockOpnameItemDetail } from '../types';
-
-function formatVariance(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
-}
-
-function varianceClass(value: number): string {
-  if (value < 0) return 'text-signed-down';
-  if (value > 0) return 'text-status-ok';
-  return 'text-muted-foreground';
-}
 
 export function OpnameDetail({ opnameId }: { opnameId: string }) {
   const { data, isLoading, error, refetch } = useStockOpnameQuery(opnameId);
@@ -128,17 +118,19 @@ function OpnameContent({ data }: { data: StockOpnameData }) {
 
   return (
     <div className="space-y-6">
+      {/* Header follows the shared detail-page rhythm (see purchase-order-detail). */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Link href="/dashboard/inventory/opname">
+          <ArrowLeft className="size-4" />
+          Kembali ke opname
+        </Link>
+      </Button>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <Link
-            href="/dashboard/inventory/opname"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
-          >
-            <ArrowLeft className="size-4" />
-            Semua opname
-          </Link>
-          <div className="flex items-center gap-2">
-            <h1 className="num text-2xl font-semibold">{data.code}</h1>
+          <p className="eyebrow text-primary">Opname stok</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="num text-2xl font-semibold tracking-tight">{data.code}</h1>
             <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
           </div>
           <p className="text-muted-foreground text-sm">
@@ -389,20 +381,22 @@ function OpnameItemRow({
           <span className="num">{item.countedQuantity}</span>
         )}
       </TableCell>
-      <TableCell className={cn('num text-right font-medium', varianceClass(variance))}>
-        {formatVariance(variance)}
+      <TableCell className="text-right">
+        <NumberDelta value={variance} showZero className="font-medium" />
       </TableCell>
       {editable ? (
         <TableCell className="text-right">
-          <Button
-            size="icon"
-            variant="ghost"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate(item.id)}
-            aria-label={`Hapus ${item.sku}`}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <ActionTooltip label="Hapus dari hitungan">
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate(item.id)}
+              aria-label={`Hapus ${item.sku}`}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </ActionTooltip>
         </TableCell>
       ) : null}
     </TableRow>
@@ -430,16 +424,18 @@ function OpnameItemCard({
           <div className="text-muted-foreground text-xs">{item.sku}</div>
         </div>
         {editable ? (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="-mt-1 -mr-1"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate(item.id)}
-            aria-label={`Hapus ${item.sku}`}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+          <ActionTooltip label="Hapus dari hitungan">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="-mt-1 -mr-1"
+              disabled={remove.isPending}
+              onClick={() => remove.mutate(item.id)}
+              aria-label={`Hapus ${item.sku}`}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </ActionTooltip>
         ) : null}
       </div>
       <div className="mt-2 flex items-end justify-between gap-3">
@@ -482,9 +478,7 @@ function OpnameItemCard({
         </div>
         <div className="text-right">
           <div className="text-muted-foreground text-xs">Selisih</div>
-          <div className={cn('num font-medium', varianceClass(variance))}>
-            {formatVariance(variance)}
-          </div>
+          <NumberDelta value={variance} showZero className="font-medium" />
         </div>
       </div>
     </li>

@@ -11,7 +11,7 @@ export default function ReturnsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Fulfillment"
+        eyebrow="Kirim & retur"
         title="Retur"
         description="Barang yang dikembalikan pembeli. Proses returnya buat restok unit yang masih layak jual, atau hapus stok yang rusak."
       />

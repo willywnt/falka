@@ -13,7 +13,7 @@ export default function ProfitReportPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Insight"
+        eyebrow="Laporan"
         title="Laba & channel"
         description="Omzet, HPP, margin, dan perbandingan tiap channel — lihat dari mana untung kamu datang."
       />

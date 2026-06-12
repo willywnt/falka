@@ -21,7 +21,7 @@ export default function NewSalePage() {
       </Button>
 
       <PageHeader
-        eyebrow="Channel penjualan"
+        eyebrow="Jualan"
         title="Penjualan baru"
         description="Cari produk, susun keranjang, lalu bayar — stok langsung diperbarui di semua channel."
       />

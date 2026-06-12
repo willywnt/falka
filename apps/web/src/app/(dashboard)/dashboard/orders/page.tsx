@@ -11,7 +11,7 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Channel penjualan"
+        eyebrow="Jualan"
         title="Pesanan"
         description="Pesanan dari toko online. Begitu dibayar, stok otomatis tersinkronisasi."
       />
