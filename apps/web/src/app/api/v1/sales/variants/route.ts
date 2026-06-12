@@ -6,7 +6,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const url = new URL(request.url);
     const parsed = searchVariantsQuerySchema.safeParse({
       q: url.searchParams.get('q') ?? '',
@@ -15,7 +15,7 @@ export const GET = withApiRoute(
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await salesServerService.searchSellableVariants(user.id, parsed.data);
+    const result = await salesServerService.searchSellableVariants(org.id, parsed.data);
     return apiSuccess(result);
   },
   { requireAuth: true },

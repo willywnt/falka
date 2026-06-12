@@ -8,11 +8,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = marketplaceConnectionIdSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Marketplace connection not found');
 
-    const result = await marketplaceImportService.rerunAutoMap(user.id, parsed.data.id);
+    const result = await marketplaceImportService.rerunAutoMap(org.id, user.id, parsed.data.id);
     return apiSuccess(result);
   },
   { requireAuth: true },

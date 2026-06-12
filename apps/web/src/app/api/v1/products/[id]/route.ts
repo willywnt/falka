@@ -8,18 +8,18 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = productIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Product not found');
 
-    const product = await catalogServerService.getProductById(user.id, parsed.data.id);
+    const product = await catalogServerService.getProductById(org.id, parsed.data.id);
     return apiSuccess(product);
   },
   { requireAuth: true },
 );
 
 export const PATCH = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
@@ -28,7 +28,7 @@ export const PATCH = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const product = await catalogServerService.updateProduct(
-      user.id,
+      org.id,
       parsedParams.data.id,
       parsed.data,
     );
@@ -38,11 +38,11 @@ export const PATCH = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = productIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Product not found');
 
-    await catalogServerService.deleteProduct(user.id, parsed.data.id);
+    await catalogServerService.deleteProduct(org.id, parsed.data.id);
     return apiSuccess({ id: parsed.data.id });
   },
   { requireAuth: true },

@@ -6,12 +6,13 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = pullOrdersBodySchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const result = await ordersServerService.pullFromConnections(
+      org.id,
       user.id,
       parsed.data.connectionIds,
     );

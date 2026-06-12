@@ -23,7 +23,7 @@ import {
   generateProductImageKey,
   generateRecordingFilename,
   generateStorageKey,
-  isUserStorageKey,
+  isOrgStorageKey,
 } from '../utils/storage-key';
 import { getR2ProductImageProvider, getR2StorageProvider } from './r2.client';
 
@@ -34,7 +34,7 @@ export class StorageService {
     this.validateUploadRequest(input);
 
     const generatedFilename = generateRecordingFilename();
-    const storageKey = generateStorageKey(input.userId, generatedFilename);
+    const storageKey = generateStorageKey(input.organizationId, generatedFilename);
     const publicUrl = this.getPublicUrl(storageKey);
 
     const presigned = await this.provider.generateUploadUrl({
@@ -44,7 +44,7 @@ export class StorageService {
     });
 
     appLogger.info('storage.upload.presign.created', {
-      userId: input.userId,
+      organizationId: input.organizationId,
       storageKey,
       fileSizeBytes: input.fileSizeBytes,
       mimeType: input.mimeType,
@@ -61,7 +61,7 @@ export class StorageService {
 
   /** Presign a product-image upload (image MIME + small cap; its own key/filename). */
   async generateImageUploadUrl(input: {
-    userId: string;
+    organizationId: string;
     mimeType: string;
     fileSizeBytes: number;
   }): Promise<GenerateUploadUrlResult> {
@@ -74,7 +74,7 @@ export class StorageService {
 
     const provider = getR2ProductImageProvider();
     const filename = generateImageFilename(imageExtensionForMime(input.mimeType));
-    const storageKey = generateProductImageKey(input.userId, filename);
+    const storageKey = generateProductImageKey(input.organizationId, filename);
     const publicUrl = provider.getPublicUrl(storageKey);
 
     const presigned = await provider.generateUploadUrl({
@@ -98,9 +98,9 @@ export class StorageService {
     appLogger.info('storage.image.delete.completed', { storageKey });
   }
 
-  /** Whether a storage key is a final object owned by the given user. */
-  ownsKey(storageKey: string, userId: string): boolean {
-    return isUserStorageKey(storageKey, userId);
+  /** Whether a storage key is a final object owned by the given organization. */
+  ownsKey(storageKey: string, organizationId: string): boolean {
+    return isOrgStorageKey(storageKey, organizationId);
   }
 
   getPublicUrl(storageKey: string): string {

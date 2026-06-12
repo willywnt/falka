@@ -65,7 +65,7 @@ function endOfDay(date: Date): Date {
  */
 export class ReportingServerService {
   private async loadSoldLines(
-    userId: string,
+    organizationId: string,
     query: ProfitReportQuery,
   ): Promise<{ lines: SoldLine[]; from: Date; to: Date }> {
     const to = endOfDay(query.to ?? new Date());
@@ -75,7 +75,7 @@ export class ReportingServerService {
       prisma.saleItem.findMany({
         where: {
           sale: {
-            userId,
+            organizationId,
             status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] },
             createdAt: { gte: from, lte: to },
           },
@@ -96,7 +96,7 @@ export class ReportingServerService {
       prisma.saleRefundItem.findMany({
         where: {
           refund: {
-            userId,
+            organizationId,
             createdAt: { gte: from, lte: to },
             sale: { status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] } },
           },
@@ -126,7 +126,7 @@ export class ReportingServerService {
         where: {
           productVariantId: { not: null },
           order: {
-            userId,
+            organizationId,
             status: { in: ['SHIPPED', 'COMPLETED'] },
             placedAt: { gte: from, lte: to },
           },
@@ -148,7 +148,7 @@ export class ReportingServerService {
       // by processedAt (when the goods actually came back).
       prisma.return.findMany({
         where: {
-          userId,
+          organizationId,
           status: 'RECEIVED',
           processedAt: { gte: from, lte: to },
           order: { status: { in: ['SHIPPED', 'COMPLETED'] } },
@@ -261,14 +261,14 @@ export class ReportingServerService {
     return { lines, from, to };
   }
 
-  async getProfitReport(userId: string, query: ProfitReportQuery): Promise<ProfitReport> {
-    const { lines, from, to } = await this.loadSoldLines(userId, query);
+  async getProfitReport(organizationId: string, query: ProfitReportQuery): Promise<ProfitReport> {
+    const { lines, from, to } = await this.loadSoldLines(organizationId, query);
     return aggregateProfit(lines, { from, to, groupBy: query.groupBy });
   }
 
   /** Full per-SKU profit rows for the CSV export (no top/bottom slicing). */
-  async getProfitSkuRows(userId: string, query: ProfitReportQuery): Promise<ProfitBySku[]> {
-    const { lines } = await this.loadSoldLines(userId, query);
+  async getProfitSkuRows(organizationId: string, query: ProfitReportQuery): Promise<ProfitBySku[]> {
+    const { lines } = await this.loadSoldLines(organizationId, query);
     return aggregateProfitBySku(lines);
   }
 
@@ -278,18 +278,18 @@ export class ReportingServerService {
    * (grouped by provider). Drives average-order-value (a SoldLine is per-item).
    */
   private async loadTransactionCounts(
-    userId: string,
+    organizationId: string,
     from: Date,
     to: Date,
   ): Promise<TransactionsByChannel> {
     const [posCount, ordersByProvider] = await Promise.all([
       prisma.sale.count({
-        where: { userId, status: 'COMPLETED', createdAt: { gte: from, lte: to } },
+        where: { organizationId, status: 'COMPLETED', createdAt: { gte: from, lte: to } },
       }),
       prisma.order.groupBy({
         by: ['provider'],
         where: {
-          userId,
+          organizationId,
           status: { in: ['SHIPPED', 'COMPLETED'] },
           placedAt: { gte: from, lte: to },
         },
@@ -311,11 +311,11 @@ export class ReportingServerService {
    * period revenue trend. Same realized-sales basis as the profit report.
    */
   async getChannelPerformance(
-    userId: string,
+    organizationId: string,
     query: ProfitReportQuery,
   ): Promise<ChannelPerformanceReport> {
-    const { lines, from, to } = await this.loadSoldLines(userId, query);
-    const transactions = await this.loadTransactionCounts(userId, from, to);
+    const { lines, from, to } = await this.loadSoldLines(organizationId, query);
+    const transactions = await this.loadTransactionCounts(organizationId, from, to);
     return aggregateChannelPerformance(lines, transactions, { from, to, groupBy: query.groupBy });
   }
 
@@ -324,9 +324,9 @@ export class ReportingServerService {
    * moving-average cost (same formula as the dashboard's totalStockValue), rolled
    * up per product. A snapshot — no date range.
    */
-  async getInventoryValuation(userId: string): Promise<InventoryValuationReport> {
+  async getInventoryValuation(organizationId: string): Promise<InventoryValuationReport> {
     const variants = await prisma.productVariant.findMany({
-      where: { userId, deletedAt: null },
+      where: { organizationId, deletedAt: null },
       select: {
         productId: true,
         cost: true,
@@ -352,12 +352,12 @@ export class ReportingServerService {
    * keeps only those idle past `staleDays` and values the stuck capital at the
    * moving-average cost. A snapshot — no date range.
    */
-  async getDeadStock(userId: string, query: DeadStockQuery): Promise<DeadStockReport> {
+  async getDeadStock(organizationId: string, query: DeadStockQuery): Promise<DeadStockReport> {
     const now = new Date();
 
     const [variants, lastSoldRows] = await Promise.all([
       prisma.productVariant.findMany({
-        where: { userId, deletedAt: null },
+        where: { organizationId, deletedAt: null },
         select: {
           id: true,
           productId: true,
@@ -370,11 +370,11 @@ export class ReportingServerService {
           inventory: { select: { availableStock: true } },
         },
       }),
-      // Last genuine outbound sale per variant, served by the (userId, reason,
-      // createdAt) ledger index.
+      // Last genuine outbound sale per variant (most recent SALE/ORDER_RESERVE
+      // ledger row), scoped to the org.
       prisma.stockLedger.groupBy({
         by: ['variantId'],
-        where: { userId, reason: { in: [...SOLD_LEDGER_REASONS] } },
+        where: { organizationId, reason: { in: [...SOLD_LEDGER_REASONS] } },
         _max: { createdAt: true },
       }),
     ]);
@@ -407,8 +407,8 @@ export class ReportingServerService {
    * bucket them A/B/C (Pareto). Reuses the profit report's realized-sale lines,
    * so processed returns net each SKU down — same recognition + range handling.
    */
-  async getAbcAnalysis(userId: string, query: ProfitReportQuery): Promise<AbcReport> {
-    const { lines, from, to } = await this.loadSoldLines(userId, query);
+  async getAbcAnalysis(organizationId: string, query: ProfitReportQuery): Promise<AbcReport> {
+    const { lines, from, to } = await this.loadSoldLines(organizationId, query);
     return aggregateAbc(lines, { from, to });
   }
 }

@@ -8,11 +8,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { variantId: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = variantIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Product variant not found');
 
-    const view = await inventoryServerService.getView(user.id, parsed.data.variantId);
+    const view = await inventoryServerService.getView(org.id, parsed.data.variantId);
     return apiSuccess(view);
   },
   { requireAuth: true },

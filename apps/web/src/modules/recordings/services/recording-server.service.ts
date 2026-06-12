@@ -12,7 +12,7 @@ import type { PaginatedRecordingsResponse, RecordingDetail, RecordingListItem } 
 import type { ListRecordingsQuery } from '../validators/list-recordings';
 import type { SaveRecordingMetadataInput } from '../validators/create-recording';
 import { extractGeneratedFilename } from '../utils/media-recorder';
-import { isPendingStorageKey, isUserStorageKey } from '@/modules/storage/utils/storage-key';
+import { isOrgStorageKey, isPendingStorageKey } from '@/modules/storage/utils/storage-key';
 import { quotaService } from '@/modules/storage/services/quota.service';
 import { storageService } from '@/modules/storage/services/storage.service';
 import { appLogger } from '@/lib/logger';
@@ -111,10 +111,10 @@ function mapDetail(recording: {
 }
 
 export class RecordingServerService {
-  async findActiveRecording(userId: string) {
+  async findActiveRecording(organizationId: string) {
     return prisma.recording.findFirst({
       where: {
-        userId,
+        organizationId,
         deletedAt: null,
         status: { in: ACTIVE_STATUSES },
       },
@@ -122,28 +122,29 @@ export class RecordingServerService {
     });
   }
 
-  async assertNoActiveRecording(userId: string): Promise<void> {
-    const active = await this.findActiveRecording(userId);
+  async assertNoActiveRecording(organizationId: string): Promise<void> {
+    const active = await this.findActiveRecording(organizationId);
 
     if (active) {
       throw RecordingError.activeRecordingExists();
     }
   }
 
-  async startRecording(userId: string, noResi: string) {
-    await this.assertNoActiveRecording(userId);
+  async startRecording(organizationId: string, actorUserId: string, noResi: string) {
+    await this.assertNoActiveRecording(organizationId);
 
-    const snapshot = await quotaService.getQuotaSnapshot(userId);
+    const snapshot = await quotaService.getQuotaSnapshot(organizationId);
     if (Number(snapshot.remainingBytes) <= 0) {
       throw RecordingError.quotaExceeded();
     }
 
     const env = getServerEnv();
-    const pendingKey = `pending/${userId}/${generateId(12)}`;
+    const pendingKey = `pending/${organizationId}/${generateId(12)}`;
 
     const recording = await prisma.recording.create({
       data: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         noResi,
         generatedFilename: 'pending.webm',
         storageProvider: 'cloudflare-r2',
@@ -165,8 +166,8 @@ export class RecordingServerService {
     };
   }
 
-  async markUploading(recordingId: string, userId: string): Promise<void> {
-    const recording = await this.getOwnedRecording(recordingId, userId);
+  async markUploading(recordingId: string, organizationId: string): Promise<void> {
+    const recording = await this.getOwnedRecording(recordingId, organizationId);
 
     if (recording.status === RecordingStatus.UPLOADING) {
       return;
@@ -186,9 +187,13 @@ export class RecordingServerService {
     });
   }
 
-  async completeRecording(userId: string, input: SaveRecordingMetadataInput) {
-    if (!isUserStorageKey(input.storageKey, userId)) {
-      throw RecordingError.validation('Invalid storage key for this user.');
+  async completeRecording(
+    organizationId: string,
+    actorUserId: string,
+    input: SaveRecordingMetadataInput,
+  ) {
+    if (!isOrgStorageKey(input.storageKey, organizationId)) {
+      throw RecordingError.validation('Invalid storage key for this organization.');
     }
 
     if (!(ALLOWED_UPLOAD_MIME_TYPES as readonly string[]).includes(input.mimeType)) {
@@ -199,9 +204,9 @@ export class RecordingServerService {
       throw RecordingError.validation('Invalid file size.');
     }
 
-    await quotaService.assertQuotaAvailable(userId, input.fileSizeBytes);
+    await quotaService.assertQuotaAvailable(organizationId, input.fileSizeBytes);
 
-    const recording = await this.getOwnedRecording(input.recordingId, userId);
+    const recording = await this.getOwnedRecording(input.recordingId, organizationId);
 
     if (!UPLOAD_RESUMABLE_STATUSES.includes(recording.status)) {
       throw RecordingError.validation('Recording is not in a valid state.');
@@ -242,8 +247,8 @@ export class RecordingServerService {
         } as Prisma.RecordingUpdateInput,
       });
 
-      await tx.user.update({
-        where: { id: userId },
+      await tx.organization.update({
+        where: { id: organizationId },
         data: {
           storageUsedBytes: {
             increment: BigInt(input.fileSizeBytes),
@@ -267,10 +272,10 @@ export class RecordingServerService {
 
   async markFailed(
     recordingId: string,
-    userId: string,
+    organizationId: string,
     options?: { failureCode?: string; failureReason?: string },
   ): Promise<void> {
-    const recording = await this.getOwnedRecording(recordingId, userId);
+    const recording = await this.getOwnedRecording(recordingId, organizationId);
 
     if (!CANCELLABLE_STATUSES.includes(recording.status)) {
       return;
@@ -288,11 +293,11 @@ export class RecordingServerService {
   }
 
   async listRecordings(
-    userId: string,
+    organizationId: string,
     query: ListRecordingsQuery,
   ): Promise<PaginatedRecordingsResponse> {
     const where: Prisma.RecordingWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
     };
 
@@ -348,12 +353,15 @@ export class RecordingServerService {
    * lookback window — including in-progress (RECORDING/UPLOADING) sessions, so a
    * resi being recorded right now is still flagged as a duplicate.
    */
-  async findRecentDuplicateResi(userId: string, noResi: string): Promise<RecordingListItem | null> {
+  async findRecentDuplicateResi(
+    organizationId: string,
+    noResi: string,
+  ): Promise<RecordingListItem | null> {
     const since = new Date(Date.now() - DUPLICATE_RESI_LOOKBACK_MS);
 
     const recording = await prisma.recording.findFirst({
       where: {
-        userId,
+        organizationId,
         deletedAt: null,
         status: { notIn: [RecordingStatus.PENDING_DELETE] },
         noResi: { equals: noResi, mode: 'insensitive' },
@@ -370,10 +378,10 @@ export class RecordingServerService {
    * Completed packing videos for an EXACT tracking number — the order/return
    * dispute evidence. Newest first; excludes soft-deleted.
    */
-  async findByResi(userId: string, noResi: string): Promise<RecordingListItem[]> {
+  async findByResi(organizationId: string, noResi: string): Promise<RecordingListItem[]> {
     const recordings = await prisma.recording.findMany({
       where: {
-        userId,
+        organizationId,
         deletedAt: null,
         status: RecordingStatus.COMPLETED,
         noResi: { equals: noResi, mode: 'insensitive' },
@@ -385,11 +393,15 @@ export class RecordingServerService {
     return recordings.map(mapListItem);
   }
 
-  async getRecordingById(userId: string, recordingId: string): Promise<RecordingDetail> {
+  async getRecordingById(
+    organizationId: string,
+    actorUserId: string,
+    recordingId: string,
+  ): Promise<RecordingDetail> {
     const recording = await prisma.recording.findFirst({
       where: {
         id: recordingId,
-        userId,
+        organizationId,
         deletedAt: null,
       },
     });
@@ -398,13 +410,13 @@ export class RecordingServerService {
       throw RecordingError.validation('Recording not found.');
     }
 
-    await this.logRecordingAccess(userId, recordingId, 'recording.viewed');
+    await this.logRecordingAccess(organizationId, actorUserId, recordingId, 'recording.viewed');
 
     return mapDetail(recording);
   }
 
-  async getPlaybackInfo(userId: string, recordingId: string) {
-    const recording = await this.getOwnedRecording(recordingId, userId);
+  async getPlaybackInfo(organizationId: string, actorUserId: string, recordingId: string) {
+    const recording = await this.getOwnedRecording(recordingId, organizationId);
 
     if (recording.status !== RecordingStatus.COMPLETED) {
       throw RecordingError.validation('Recording is not available for playback.');
@@ -420,7 +432,7 @@ export class RecordingServerService {
       disposition: 'inline',
     });
 
-    await this.logRecordingAccess(userId, recordingId, 'recording.playback');
+    await this.logRecordingAccess(organizationId, actorUserId, recordingId, 'recording.playback');
 
     return {
       playbackUrl: access.url,
@@ -429,8 +441,8 @@ export class RecordingServerService {
     };
   }
 
-  async getDownloadInfo(userId: string, recordingId: string) {
-    const recording = await this.getOwnedRecording(recordingId, userId);
+  async getDownloadInfo(organizationId: string, actorUserId: string, recordingId: string) {
+    const recording = await this.getOwnedRecording(recordingId, organizationId);
 
     if (recording.status !== RecordingStatus.COMPLETED) {
       throw RecordingError.validation('Recording is not available for download.');
@@ -447,7 +459,7 @@ export class RecordingServerService {
       filename: recording.generatedFilename,
     });
 
-    await this.logRecordingAccess(userId, recordingId, 'recording.downloaded');
+    await this.logRecordingAccess(organizationId, actorUserId, recordingId, 'recording.downloaded');
 
     return {
       downloadUrl: access.url,
@@ -457,8 +469,12 @@ export class RecordingServerService {
     };
   }
 
-  async softDeleteRecording(userId: string, recordingId: string): Promise<void> {
-    const recording = await this.getOwnedRecording(recordingId, userId);
+  async softDeleteRecording(
+    organizationId: string,
+    actorUserId: string,
+    recordingId: string,
+  ): Promise<void> {
+    const recording = await this.getOwnedRecording(recordingId, organizationId);
 
     if (recording.status === RecordingStatus.DELETED) {
       return;
@@ -468,14 +484,14 @@ export class RecordingServerService {
     const shouldDecrementQuota =
       recording.status === RecordingStatus.COMPLETED &&
       recording.fileSizeBytes > 0n &&
-      isUserStorageKey(recording.storageKey, userId);
+      isOrgStorageKey(recording.storageKey, organizationId);
 
     if (shouldDeleteObject) {
       try {
         await storageService.deleteObject(recording.storageKey);
       } catch (error) {
         appLogger.warn('recording.delete.storage_object_failed', {
-          userId,
+          organizationId,
           recordingId,
           storageKey: recording.storageKey,
           error: error instanceof Error ? error.message : String(error),
@@ -493,8 +509,8 @@ export class RecordingServerService {
       });
 
       if (shouldDecrementQuota) {
-        await tx.user.update({
-          where: { id: userId },
+        await tx.organization.update({
+          where: { id: organizationId },
           data: {
             storageUsedBytes: {
               decrement: recording.fileSizeBytes,
@@ -505,7 +521,8 @@ export class RecordingServerService {
 
       await tx.auditLog.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           action: 'recording.deleted',
           resource: 'recording',
           metadata: {
@@ -521,7 +538,7 @@ export class RecordingServerService {
     });
 
     appLogger.info('recording.deleted', {
-      userId,
+      organizationId,
       recordingId,
       storageKey: recording.storageKey,
       storageObjectDeleted: shouldDeleteObject,
@@ -529,10 +546,16 @@ export class RecordingServerService {
     });
   }
 
-  private async logRecordingAccess(userId: string, recordingId: string, action: string) {
+  private async logRecordingAccess(
+    organizationId: string,
+    actorUserId: string,
+    recordingId: string,
+    action: string,
+  ) {
     await prisma.auditLog.create({
       data: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         action,
         resource: 'recording',
         metadata: { recordingId },
@@ -540,11 +563,11 @@ export class RecordingServerService {
     });
   }
 
-  private async getOwnedRecording(recordingId: string, userId: string) {
+  private async getOwnedRecording(recordingId: string, organizationId: string) {
     const recording = await prisma.recording.findFirst({
       where: {
         id: recordingId,
-        userId,
+        organizationId,
         deletedAt: null,
       },
     });

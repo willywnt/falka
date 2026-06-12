@@ -9,12 +9,12 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string; shareLinkId: string };
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = shareLinkParamsSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Share link not found');
 
     try {
-      const link = await recordingShareService.revokeShareLink(user.id, parsed.data.shareLinkId);
+      const link = await recordingShareService.revokeShareLink(org.id, parsed.data.shareLinkId);
       return apiSuccess(link);
     } catch (error) {
       if (error instanceof RecordingError) return apiNotFound(error.message);

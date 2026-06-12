@@ -38,7 +38,10 @@ const STATUS_RANK: Record<ReorderStatus, number> = {
  * Read-only; no writes.
  */
 export class InventoryReorderService {
-  async getReorderReport(userId: string, query: ReorderReportQuery): Promise<ReorderReport> {
+  async getReorderReport(
+    organizationId: string,
+    query: ReorderReportQuery,
+  ): Promise<ReorderReport> {
     const { windowDays, leadTimeDays, targetCoverDays } = query;
     const now = new Date();
     const bucketMs = (windowDays * MS_PER_DAY) / VELOCITY.buckets;
@@ -46,7 +49,7 @@ export class InventoryReorderService {
 
     const [variants, bucketGroups] = await Promise.all([
       prisma.productVariant.findMany({
-        where: { userId, deletedAt: null },
+        where: { organizationId, deletedAt: null },
         select: {
           id: true,
           productId: true,
@@ -69,7 +72,7 @@ export class InventoryReorderService {
           prisma.stockLedger.groupBy({
             by: ['variantId'],
             where: {
-              userId,
+              organizationId,
               reason: { in: [...SALES_LEDGER_REASONS] },
               createdAt: {
                 gte: new Date(now.getTime() - (bucket + 1) * bucketMs),
@@ -83,7 +86,7 @@ export class InventoryReorderService {
     ]);
 
     if (variants.length > REORDER_CAP) {
-      appLogger.warn('inventory.reorder.truncated', { userId, cap: REORDER_CAP });
+      appLogger.warn('inventory.reorder.truncated', { organizationId, cap: REORDER_CAP });
       variants.length = REORDER_CAP;
     }
 

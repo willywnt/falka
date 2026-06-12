@@ -8,22 +8,26 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = marketplaceConnectionIdSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Marketplace connection not found');
 
-    const connection = await marketplaceServerService.getConnectionById(user.id, parsed.data.id);
+    const connection = await marketplaceServerService.getConnectionById(org.id, parsed.data.id);
     return apiSuccess(connection);
   },
   { requireAuth: true },
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = marketplaceConnectionIdSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Marketplace connection not found');
 
-    const connection = await marketplaceServerService.disconnectConnection(user.id, parsed.data.id);
+    const connection = await marketplaceServerService.disconnectConnection(
+      org.id,
+      user.id,
+      parsed.data.id,
+    );
     return apiSuccess(connection);
   },
   { requireAuth: true },

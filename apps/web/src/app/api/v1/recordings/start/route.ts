@@ -7,16 +7,21 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 import { appLogger } from '@/lib/logger';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json();
     const parsed = startRecordingSchema.safeParse(body);
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const started = await recordingServerService.startRecording(user.id, parsed.data.noResi);
+    const started = await recordingServerService.startRecording(
+      org.id,
+      user.id,
+      parsed.data.noResi,
+    );
 
     appLogger.info('recording.started', {
       userId: user.id,
+      organizationId: org.id,
       recordingId: started.recordingId,
       noResi: started.noResi,
     });

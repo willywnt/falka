@@ -63,7 +63,8 @@ vi.mock('@/modules/catalog/services/catalog-server.service', () => ({
 const { SalesServerService } = await import('@/modules/sales/services/sales-server.service');
 
 const service = new SalesServerService();
-const USER = 'user-1';
+const ORG = 'org-1';
+const ACTOR = 'user-1';
 const getSaleSpy = vi
   .spyOn(service, 'getSale')
   .mockResolvedValue({ id: 's1' } as Awaited<ReturnType<typeof service.getSale>>);
@@ -88,29 +89,48 @@ describe('createSale', () => {
       { id: 'v1', sku: 'BLACK-S', name: 'Black / S' },
     ]);
 
-    await service.createSale(USER, input);
+    await service.createSale(ORG, ACTOR, input);
 
     const createArgs = txMock.sale.create.mock.calls[0]?.[0] as {
-      data: { code: string; totalAmount: number; items: { create: Array<{ sku: string }> } };
+      data: {
+        code: string;
+        totalAmount: number;
+        userId: string;
+        organizationId: string;
+        items: { create: Array<{ sku: string }> };
+      };
     };
     expect(createArgs.data.code).toBe('S00001');
     expect(createArgs.data.totalAmount).toBe(200_000);
+    // The row is scoped to the organization; userId records the kasir (actor).
+    expect(createArgs.data.userId).toBe(ACTOR);
+    expect(createArgs.data.organizationId).toBe(ORG);
     expect(createArgs.data.items.create[0]?.sku).toBe('BLACK-S');
 
     expect(inventoryMock.applyOfflineSaleTx).toHaveBeenCalledWith(
       txMock,
-      expect.objectContaining({ variantId: 'v1', quantity: 2, saleId: 's1' }),
+      expect.objectContaining({
+        organizationId: ORG,
+        actorUserId: ACTOR,
+        variantId: 'v1',
+        quantity: 2,
+        saleId: 's1',
+      }),
     );
     // available went negative — still completes; propagation fires for the variant.
     expect(enqueueMock).toHaveBeenCalledTimes(1);
-    expect(enqueueMock.mock.calls[0]?.[0]).toMatchObject({ variantId: 'v1' });
-    expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+    expect(enqueueMock.mock.calls[0]?.[0]).toMatchObject({
+      organizationId: ORG,
+      actorUserId: ACTOR,
+      variantId: 'v1',
+    });
+    expect(getSaleSpy).toHaveBeenCalledWith(ORG, 's1');
   });
 
-  it('rejects a sale referencing a variant the user does not own', async () => {
+  it('rejects a sale referencing a variant the organization does not own', async () => {
     prismaMock.productVariant.findMany.mockResolvedValue([]); // none found
 
-    await expect(service.createSale(USER, input)).rejects.toMatchObject({
+    await expect(service.createSale(ORG, ACTOR, input)).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     });
     expect(inventoryMock.applyOfflineSaleTx).not.toHaveBeenCalled();
@@ -143,7 +163,7 @@ describe('createSale', () => {
       ]),
     );
 
-    await service.createSale(USER, {
+    await service.createSale(ORG, ACTOR, {
       items: [{ kind: 'bundle' as const, bundleId: 'b1', quantity: 2, unitPrice: 150_000 }],
       paymentMethod: 'CASH' as const,
     });
@@ -174,17 +194,23 @@ describe('voidSale', () => {
       refunds: [],
     });
 
-    await service.voidSale(USER, 's1');
+    await service.voidSale(ORG, ACTOR, 's1');
 
     expect(inventoryMock.applyOfflineSaleReversalTx).toHaveBeenCalledWith(
       txMock,
-      expect.objectContaining({ variantId: 'v1', quantity: 2, saleId: 's1' }),
+      expect.objectContaining({
+        organizationId: ORG,
+        actorUserId: ACTOR,
+        variantId: 'v1',
+        quantity: 2,
+        saleId: 's1',
+      }),
     );
     expect(txMock.sale.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 's1' }, data: { status: 'VOID' } }),
     );
     expect(enqueueMock).toHaveBeenCalledTimes(1);
-    expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+    expect(getSaleSpy).toHaveBeenCalledWith(ORG, 's1');
   });
 
   it('refuses to void a sale that already has refunds (would double-restock)', async () => {
@@ -196,7 +222,7 @@ describe('voidSale', () => {
       refunds: [{ id: 'rf1' }],
     });
 
-    await expect(service.voidSale(USER, 's1')).rejects.toMatchObject({
+    await expect(service.voidSale(ORG, ACTOR, 's1')).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     });
     expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
@@ -211,17 +237,19 @@ describe('voidSale', () => {
       items: [{ productVariantId: 'v1', quantity: 2 }],
     });
 
-    await service.voidSale(USER, 's1');
+    await service.voidSale(ORG, ACTOR, 's1');
 
     expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
     expect(txMock.sale.update).not.toHaveBeenCalled();
-    expect(getSaleSpy).toHaveBeenCalledWith(USER, 's1');
+    expect(getSaleSpy).toHaveBeenCalledWith(ORG, 's1');
   });
 
   it('throws NOT_FOUND for an unknown sale', async () => {
     prismaMock.sale.findFirst.mockResolvedValue(null);
 
-    await expect(service.voidSale(USER, 'missing')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(service.voidSale(ORG, ACTOR, 'missing')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
     expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
   });
 });
@@ -240,7 +268,7 @@ describe('searchSellableVariants', () => {
     ]);
     prismaMock.productVariant.count.mockResolvedValue(1);
 
-    const result = await service.searchSellableVariants(USER, {
+    const result = await service.searchSellableVariants(ORG, {
       q: 'black',
       page: 1,
       pageSize: 10,

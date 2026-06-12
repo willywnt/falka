@@ -11,7 +11,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string; productId: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = marketplaceListingParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Listing not found');
 
@@ -20,6 +20,7 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const listing = await marketplaceMappingService.mapListing(
+      org.id,
       user.id,
       parsedParams.data.id,
       parsedParams.data.productId,
@@ -31,12 +32,12 @@ export const POST = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = marketplaceListingParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Listing not found');
 
     const listing = await marketplaceMappingService.unmapListing(
-      user.id,
+      org.id,
       parsed.data.id,
       parsed.data.productId,
     );

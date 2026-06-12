@@ -6,13 +6,13 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = resolveVariantQuerySchema.safeParse({
       code: new URL(request.url).searchParams.get('code') ?? '',
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await salesServerService.resolveScannedItem(user.id, parsed.data.code);
+    const result = await salesServerService.resolveScannedItem(org.id, parsed.data.code);
     return apiSuccess(result);
   },
   { requireAuth: true },

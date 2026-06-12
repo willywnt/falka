@@ -42,25 +42,25 @@ function mapConnection(connection: MarketplaceConnection): MarketplaceConnection
 }
 
 export class MarketplaceServerService {
-  async listConnections(userId: string): Promise<MarketplaceConnectionListItem[]> {
+  async listConnections(organizationId: string): Promise<MarketplaceConnectionListItem[]> {
     // Sync-health rollup per store: listings awaiting review + failed pushes,
     // so the connections list can flag trouble without opening each detail.
     const [connections, reviewCounts, failedCounts] = await Promise.all([
       prisma.marketplaceConnection.findMany({
         where: {
-          userId,
+          organizationId,
           deletedAt: null,
         },
         orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
       }),
       prisma.marketplaceProductMapping.groupBy({
         by: ['marketplaceConnectionId'],
-        where: { userId, mappingStatus: 'NEEDS_REVIEW' },
+        where: { organizationId, mappingStatus: 'NEEDS_REVIEW' },
         _count: { _all: true },
       }),
       prisma.marketplaceProductMapping.groupBy({
         by: ['marketplaceConnectionId'],
-        where: { userId, lastSyncStatus: 'FAILED' },
+        where: { organizationId, lastSyncStatus: 'FAILED' },
         _count: { _all: true },
       }),
     ]);
@@ -80,15 +80,16 @@ export class MarketplaceServerService {
   }
 
   async getConnectionById(
-    userId: string,
+    organizationId: string,
     connectionId: string,
   ): Promise<MarketplaceConnectionDetail> {
-    const connection = await this.getOwnedConnection(connectionId, userId);
+    const connection = await this.getOwnedConnection(connectionId, organizationId);
     return mapConnection(connection);
   }
 
   async createConnection(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     input: CreateMarketplaceConnectionInput,
   ): Promise<MarketplaceConnectionDetail> {
     if (!isSupportedMarketplaceProvider(input.provider)) {
@@ -102,7 +103,7 @@ export class MarketplaceServerService {
 
     const existing = await prisma.marketplaceConnection.findFirst({
       where: {
-        userId,
+        organizationId,
         provider: input.provider,
         shopId: input.shopId,
         deletedAt: null,
@@ -130,7 +131,8 @@ export class MarketplaceServerService {
       } else {
         saved = await tx.marketplaceConnection.create({
           data: {
-            userId,
+            userId: actorUserId,
+            organizationId,
             provider: input.provider as MarketplaceProvider,
             shopId: input.shopId,
             shopName: input.shopName,
@@ -144,7 +146,8 @@ export class MarketplaceServerService {
 
       await tx.auditLog.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           action: 'marketplace.connected',
           resource: 'marketplace_connection',
           metadata: {
@@ -160,7 +163,7 @@ export class MarketplaceServerService {
     });
 
     appLogger.info('marketplace.connected', {
-      userId,
+      organizationId,
       connectionId: connection.id,
       provider: connection.provider,
       shopId: connection.shopId,
@@ -170,10 +173,11 @@ export class MarketplaceServerService {
   }
 
   async disconnectConnection(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionId: string,
   ): Promise<MarketplaceConnectionDetail> {
-    const connection = await this.getOwnedConnection(connectionId, userId);
+    const connection = await this.getOwnedConnection(connectionId, organizationId);
 
     if (!connection.isActive) {
       return mapConnection(connection);
@@ -187,7 +191,8 @@ export class MarketplaceServerService {
 
       await tx.auditLog.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           action: 'marketplace.disconnected',
           resource: 'marketplace_connection',
           metadata: {
@@ -203,7 +208,7 @@ export class MarketplaceServerService {
     });
 
     appLogger.info('marketplace.disconnected', {
-      userId,
+      organizationId,
       connectionId,
       provider: updated.provider,
       shopId: updated.shopId,
@@ -216,8 +221,8 @@ export class MarketplaceServerService {
    * Server-only accessor for future sync jobs and token refresh workers.
    * Never expose decrypted tokens through API responses.
    */
-  async getDecryptedTokens(userId: string, connectionId: string) {
-    const connection = await this.getOwnedConnection(connectionId, userId);
+  async getDecryptedTokens(organizationId: string, connectionId: string) {
+    const connection = await this.getOwnedConnection(connectionId, organizationId);
 
     if (!connection.isActive) {
       throw MarketplaceError.validation('Marketplace connection is not active.');
@@ -232,11 +237,11 @@ export class MarketplaceServerService {
     };
   }
 
-  private async getOwnedConnection(connectionId: string, userId: string) {
+  private async getOwnedConnection(connectionId: string, organizationId: string) {
     const connection = await prisma.marketplaceConnection.findFirst({
       where: {
         id: connectionId,
-        userId,
+        organizationId,
         deletedAt: null,
       },
     });

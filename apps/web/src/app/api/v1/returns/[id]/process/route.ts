@@ -9,7 +9,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = returnIdSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Return not found');
 
@@ -18,6 +18,7 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const data = await returnsServerService.processReturn(
+      org.id,
       user.id,
       parsedParams.data.id,
       parsed.data,

@@ -10,14 +10,14 @@ const byResiQuerySchema = z.object({
 });
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = byResiQuerySchema.safeParse({
       noResi: new URL(request.url).searchParams.get('noResi') ?? '',
     });
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const recordings = await recordingServerService.findByResi(user.id, parsed.data.noResi);
+    const recordings = await recordingServerService.findByResi(org.id, parsed.data.noResi);
     return apiSuccess(recordings);
   },
   { requireAuth: true },

@@ -70,6 +70,7 @@ const { PurchasingServerService } =
   await import('@/modules/purchasing/services/purchasing-server.service');
 
 const service = new PurchasingServerService();
+const ORG = 'org-1';
 const USER = 'user-1';
 const getSpy = vi
   .spyOn(service, 'getPurchaseOrder')
@@ -91,7 +92,7 @@ describe('createPurchaseOrder', () => {
       { id: 'v1', sku: 'BLACK-S', name: 'Black / S' },
     ]);
 
-    await service.createPurchaseOrder(USER, {
+    await service.createPurchaseOrder(ORG, USER, {
       items: [{ kind: 'variant', variantId: 'v1', quantity: 20, unitCost: 50_000 }],
     });
 
@@ -105,7 +106,7 @@ describe('createPurchaseOrder', () => {
       txMock,
       expect.objectContaining({ variantId: 'v1', delta: 20 }),
     );
-    expect(getSpy).toHaveBeenCalledWith(USER, 'po1');
+    expect(getSpy).toHaveBeenCalledWith(ORG, 'po1');
   });
 
   it('explodes a bundle line into per-component rows (qty × component qty, bundle-tagged)', async () => {
@@ -136,7 +137,7 @@ describe('createPurchaseOrder', () => {
       ]),
     );
 
-    await service.createPurchaseOrder(USER, {
+    await service.createPurchaseOrder(ORG, USER, {
       items: [{ kind: 'bundle', bundleId: 'b1', quantity: 3, unitCost: 30_000 }],
     });
 
@@ -168,7 +169,7 @@ describe('receivePurchaseOrder', () => {
   it('receives partially → PARTIALLY_RECEIVED, moves incoming→available, propagates', async () => {
     prismaMock.purchaseOrder.findFirst.mockResolvedValue(orderedPo);
 
-    await service.receivePurchaseOrder(USER, 'po1', {
+    await service.receivePurchaseOrder(ORG, USER, 'po1', {
       lines: [{ purchaseOrderItemId: 'poi1', quantity: 5 }],
     });
 
@@ -186,7 +187,7 @@ describe('receivePurchaseOrder', () => {
   it('receives the remainder → RECEIVED + receivedAt', async () => {
     prismaMock.purchaseOrder.findFirst.mockResolvedValue(orderedPo);
 
-    await service.receivePurchaseOrder(USER, 'po1', {
+    await service.receivePurchaseOrder(ORG, USER, 'po1', {
       lines: [{ purchaseOrderItemId: 'poi1', quantity: 20 }],
     });
 
@@ -204,7 +205,7 @@ describe('receivePurchaseOrder', () => {
     });
 
     await expect(
-      service.receivePurchaseOrder(USER, 'po1', {
+      service.receivePurchaseOrder(ORG, USER, 'po1', {
         lines: [{ purchaseOrderItemId: 'poi1', quantity: 5 }],
       }),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
@@ -220,7 +221,7 @@ describe('cancelPurchaseOrder', () => {
       items: [{ id: 'poi1', productVariantId: 'v1', quantity: 20, receivedQuantity: 5 }],
     });
 
-    await service.cancelPurchaseOrder(USER, 'po1');
+    await service.cancelPurchaseOrder(ORG, USER, 'po1');
 
     expect(inventoryMock.adjustIncomingTx).toHaveBeenCalledWith(
       txMock,
@@ -247,7 +248,7 @@ describe('searchVariants', () => {
     ]);
     prismaMock.productVariant.count.mockResolvedValue(1);
 
-    const result = await service.searchVariants(USER, { q: 'black', page: 1, pageSize: 10 });
+    const result = await service.searchVariants(ORG, { q: 'black', page: 1, pageSize: 10 });
 
     expect(result.items).toEqual([
       {

@@ -5,8 +5,8 @@ import { apiSuccess } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const dashboard = await inventoryDashboardService.getDashboard(user.id);
+  async (_request, { org }) => {
+    const dashboard = await inventoryDashboardService.getDashboard(org.id);
     return apiSuccess(dashboard);
   },
   { requireAuth: true },

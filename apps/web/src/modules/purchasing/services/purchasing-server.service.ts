@@ -66,12 +66,12 @@ function mapDetail(row: PurchaseOrderRow): PurchaseOrderDetail {
 export class PurchasingServerService {
   /** Variants for the PO picker — matched by SKU/name, with cost + available/incoming, paginated. */
   async searchVariants(
-    userId: string,
+    organizationId: string,
     query: SearchVariantsQuery,
   ): Promise<PaginatedResult<PurchasableVariant>> {
     const term = query.q.trim();
     const where: Prisma.ProductVariantWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       isActive: true,
       ...(term
@@ -119,13 +119,13 @@ export class PurchasingServerService {
    * Returns null when nothing matches.
    */
   async resolvePurchasableVariant(
-    userId: string,
+    organizationId: string,
     code: string,
   ): Promise<PurchasableVariant | null> {
     const term = code.trim();
     if (!term) return null;
 
-    const base = { userId, deletedAt: null, isActive: true } as const;
+    const base = { organizationId, deletedAt: null, isActive: true } as const;
     const include = {
       inventory: { select: { availableStock: true, incomingStock: true } },
       product: { select: { name: true } },
@@ -156,9 +156,9 @@ export class PurchasingServerService {
     };
   }
 
-  async listPurchaseOrders(userId: string): Promise<PurchaseOrderListItem[]> {
+  async listPurchaseOrders(organizationId: string): Promise<PurchaseOrderListItem[]> {
     const rows = await prisma.purchaseOrder.findMany({
-      where: { userId },
+      where: { organizationId },
       include: { _count: { select: { items: true } } },
       orderBy: { createdAt: 'desc' },
       take: LIST_LIMIT,
@@ -175,9 +175,9 @@ export class PurchasingServerService {
     }));
   }
 
-  async getPurchaseOrder(userId: string, id: string): Promise<PurchaseOrderDetail> {
+  async getPurchaseOrder(organizationId: string, id: string): Promise<PurchaseOrderDetail> {
     const row = await prisma.purchaseOrder.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       include: DETAIL_INCLUDE,
     });
     if (!row) throw PurchaseOrderError.notFound();
@@ -189,16 +189,20 @@ export class PurchasingServerService {
    * lines, and bump each variant's incoming stock — all in one transaction.
    */
   /** Resolve a scanned code to a purchasable variant OR a whole bundle (variant takes priority). */
-  async resolveScannedItem(userId: string, code: string): Promise<ScannedPurchaseItem | null> {
-    const variant = await this.resolvePurchasableVariant(userId, code);
+  async resolveScannedItem(
+    organizationId: string,
+    code: string,
+  ): Promise<ScannedPurchaseItem | null> {
+    const variant = await this.resolvePurchasableVariant(organizationId, code);
     if (variant) return { kind: 'variant', variant };
-    const bundle = await catalogServerService.resolveBundleByCode(userId, code);
+    const bundle = await catalogServerService.resolveBundleByCode(organizationId, code);
     if (bundle) return { kind: 'bundle', bundle };
     return null;
   }
 
   async createPurchaseOrder(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<PurchaseOrderDetail> {
     const variantItems = input.items.filter((item) => item.kind === 'variant');
@@ -207,13 +211,13 @@ export class PurchasingServerService {
     const variantIds = [...new Set(variantItems.map((item) => item.variantId))];
     const variants = variantIds.length
       ? await prisma.productVariant.findMany({
-          where: { id: { in: variantIds }, userId, deletedAt: null },
+          where: { id: { in: variantIds }, organizationId, deletedAt: null },
           select: { id: true, sku: true, name: true },
         })
       : [];
     const variantById = new Map(variants.map((variant) => [variant.id, variant]));
     const bundles = await catalogServerService.resolveBundles(
-      userId,
+      organizationId,
       bundleItems.map((item) => item.bundleId),
     );
 
@@ -234,12 +238,13 @@ export class PurchasingServerService {
     const totalCost = lines.reduce((sum, line) => sum + Number(line.unitCost) * line.quantity, 0);
 
     const created = await prisma.$transaction(async (tx) => {
-      const count = await tx.purchaseOrder.count({ where: { userId } });
+      const count = await tx.purchaseOrder.count({ where: { organizationId } });
       const code = `PO${(count + 1).toString().padStart(5, '0')}`;
 
       const order = await tx.purchaseOrder.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           code,
           supplierName: input.supplierName ?? null,
           note: input.note ?? null,
@@ -250,6 +255,8 @@ export class PurchasingServerService {
 
       for (const line of lines) {
         await inventoryServerService.adjustIncomingTx(tx, {
+          organizationId,
+          actorUserId,
           variantId: line.productVariantId,
           delta: line.quantity,
         });
@@ -259,11 +266,12 @@ export class PurchasingServerService {
     });
 
     appLogger.info('purchasing.created', {
-      userId,
+      organizationId,
+      actorUserId,
       purchaseOrderId: created.id,
       code: created.code,
     });
-    return this.getPurchaseOrder(userId, created.id);
+    return this.getPurchaseOrder(organizationId, created.id);
   }
 
   /** Flatten variant + bundle cart items into per-variant PO rows (bundle cost allocated). */
@@ -317,12 +325,13 @@ export class PurchasingServerService {
    * propagate to the channels afterwards.
    */
   async receivePurchaseOrder(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     id: string,
     input: ReceivePurchaseOrderInput,
   ): Promise<PurchaseOrderDetail> {
     const order = await prisma.purchaseOrder.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       include: { items: true },
     });
     if (!order) throw PurchaseOrderError.notFound();
@@ -354,7 +363,8 @@ export class PurchasingServerService {
           data: { receivedQuantity: { increment: qty } },
         });
         await inventoryServerService.applyPurchaseReceiveTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: item.productVariantId,
           quantity: qty,
           purchaseOrderId: id,
@@ -377,15 +387,24 @@ export class PurchasingServerService {
       });
     });
 
-    appLogger.info('purchasing.received', { userId, purchaseOrderId: id, lines: receipts.size });
-    await this.propagateAffected(userId, [...affected]);
-    return this.getPurchaseOrder(userId, id);
+    appLogger.info('purchasing.received', {
+      organizationId,
+      actorUserId,
+      purchaseOrderId: id,
+      lines: receipts.size,
+    });
+    await this.propagateAffected(organizationId, actorUserId, [...affected]);
+    return this.getPurchaseOrder(organizationId, id);
   }
 
   /** Cancel a not-yet-received PO: remove the outstanding incoming stock. */
-  async cancelPurchaseOrder(userId: string, id: string): Promise<PurchaseOrderDetail> {
+  async cancelPurchaseOrder(
+    organizationId: string,
+    actorUserId: string,
+    id: string,
+  ): Promise<PurchaseOrderDetail> {
     const order = await prisma.purchaseOrder.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       include: { items: true },
     });
     if (!order) throw PurchaseOrderError.notFound();
@@ -398,6 +417,8 @@ export class PurchasingServerService {
         const outstanding = Math.max(0, item.quantity - item.receivedQuantity);
         if (outstanding > 0) {
           await inventoryServerService.adjustIncomingTx(tx, {
+            organizationId,
+            actorUserId,
             variantId: item.productVariantId,
             delta: -outstanding,
           });
@@ -406,16 +427,20 @@ export class PurchasingServerService {
       await tx.purchaseOrder.update({ where: { id }, data: { status: 'CANCELLED' } });
     });
 
-    appLogger.info('purchasing.cancelled', { userId, purchaseOrderId: id });
-    return this.getPurchaseOrder(userId, id);
+    appLogger.info('purchasing.cancelled', { organizationId, actorUserId, purchaseOrderId: id });
+    return this.getPurchaseOrder(organizationId, id);
   }
 
   /** Best-effort: push each received variant's new available stock to all channels. */
-  private async propagateAffected(userId: string, variantIds: string[]): Promise<void> {
+  private async propagateAffected(
+    organizationId: string,
+    actorUserId: string,
+    variantIds: string[],
+  ): Promise<void> {
     for (const variantId of variantIds) {
       try {
         const syncEnabledCount = await prisma.marketplaceProductMapping.count({
-          where: { productVariantId: variantId, userId, syncEnabled: true },
+          where: { productVariantId: variantId, organizationId, syncEnabled: true },
         });
         if (syncEnabledCount === 0) continue;
 
@@ -424,14 +449,15 @@ export class PurchasingServerService {
           select: { availableStock: true },
         });
         await enqueuePropagateInventoryStock({
-          userId,
+          organizationId,
+          actorUserId,
           variantId,
           availableStock: inventory?.availableStock ?? 0,
           eventId: `purchase-${variantId}-${Date.now()}`,
         });
       } catch (error) {
         appLogger.warn('purchasing.propagate.enqueue_failed', {
-          userId,
+          organizationId,
           variantId,
           error: error instanceof Error ? error.message : String(error),
         });

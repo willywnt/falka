@@ -6,7 +6,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const url = new URL(request.url);
     const parsed = listProductsQuerySchema.safeParse({
       page: url.searchParams.get('page') ?? undefined,
@@ -16,20 +16,20 @@ export const GET = withApiRoute(
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await catalogServerService.listProducts(user.id, parsed.data);
+    const result = await catalogServerService.listProducts(org.id, parsed.data);
     return apiSuccess(result.items, 200, { ...result.meta });
   },
   { requireAuth: true },
 );
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json();
     const parsed = createProductSchema.safeParse(body);
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const product = await catalogServerService.createProduct(user.id, parsed.data);
+    const product = await catalogServerService.createProduct(org.id, user.id, parsed.data);
     return apiSuccess(product, 201);
   },
   { requireAuth: true },

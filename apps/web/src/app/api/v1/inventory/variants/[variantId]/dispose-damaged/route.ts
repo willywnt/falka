@@ -8,7 +8,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { variantId: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = variantIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product variant not found');
 
@@ -17,6 +17,7 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const result = await inventoryServerService.disposeDamaged(
+      org.id,
       user.id,
       parsedParams.data.variantId,
       parsed.data.quantity,

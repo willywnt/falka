@@ -11,7 +11,7 @@ import { getRequestIp } from '@/lib/api/request-context';
 import { appLogger } from '@/lib/logger';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     // Rate limiting stays inside the handler so a throttled request is still
     // counted in UPLOADS_FAILED, matching the previous behavior.
     const rateLimitResult = await enforceRateLimit('upload', {
@@ -33,7 +33,7 @@ export const POST = withApiRoute(
         return apiValidationError(parsed.error);
       }
 
-      const result = await uploadService.createPresignedUpload(user.id, parsed.data);
+      const result = await uploadService.createPresignedUpload(org.id, parsed.data);
       await incrementMetric(METRIC_KEYS.UPLOADS_TOTAL, 1);
       appLogger.info('storage.upload.presign.created', {
         userId: user.id,

@@ -47,6 +47,7 @@ vi.mock('@/modules/inventory/services/inventory-server.service', () => ({
 const { ReturnsServerService } = await import('@/modules/returns/services/returns-server.service');
 
 const service = new ReturnsServerService();
+const ORG = 'org-1';
 const USER = 'user-1';
 // getReturn re-fetches for the response shape; stub it so tests assert behavior, not mapping.
 const getReturnSpy = vi
@@ -73,7 +74,7 @@ describe('createReturn', () => {
   it('rejects opening a return before the order has shipped', async () => {
     prismaMock.order.findFirst.mockResolvedValue({ ...shippedOrder, inventoryShippedAt: null });
 
-    await expect(service.createReturn(USER, 'o1')).rejects.toMatchObject({
+    await expect(service.createReturn(ORG, USER, 'o1')).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
     });
     expect(prismaMock.return.create).not.toHaveBeenCalled();
@@ -83,7 +84,7 @@ describe('createReturn', () => {
     prismaMock.order.findFirst.mockResolvedValue(shippedOrder);
     prismaMock.return.findFirst.mockResolvedValue(null); // no existing return
 
-    await service.createReturn(USER, 'o1', { autoDetected: true });
+    await service.createReturn(ORG, USER, 'o1', { autoDetected: true });
 
     const createArgs = prismaMock.return.create.mock.calls[0]?.[0] as {
       data: { autoDetected: boolean; noResi: string; items: { create: unknown[] } };
@@ -98,10 +99,10 @@ describe('createReturn', () => {
     prismaMock.order.findFirst.mockResolvedValue(shippedOrder);
     prismaMock.return.findFirst.mockResolvedValue({ id: 'existing' });
 
-    await service.createReturn(USER, 'o1', { autoDetected: true });
+    await service.createReturn(ORG, USER, 'o1', { autoDetected: true });
 
     expect(prismaMock.return.create).not.toHaveBeenCalled();
-    expect(getReturnSpy).toHaveBeenCalledWith(USER, 'existing');
+    expect(getReturnSpy).toHaveBeenCalledWith(ORG, 'existing');
   });
 });
 
@@ -119,7 +120,7 @@ describe('processReturn', () => {
   it('restocks and damages per line, marks RECEIVED, and propagates only the restock', async () => {
     prismaMock.return.findFirst.mockResolvedValue(pendingReturn);
 
-    await service.processReturn(USER, 'r1', {
+    await service.processReturn(ORG, USER, 'r1', {
       lines: [
         { returnItemId: 'ri1', disposition: 'RESTOCK' },
         { returnItemId: 'ri2', disposition: 'DAMAGED' },
@@ -143,7 +144,7 @@ describe('processReturn', () => {
     prismaMock.return.findFirst.mockResolvedValue(pendingReturn);
 
     await expect(
-      service.processReturn(USER, 'r1', {
+      service.processReturn(ORG, USER, 'r1', {
         lines: [{ returnItemId: 'ri1', disposition: 'RESTOCK' }],
       }),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
@@ -154,7 +155,7 @@ describe('processReturn', () => {
     prismaMock.return.findFirst.mockResolvedValue({ ...pendingReturn, status: 'RECEIVED' });
 
     await expect(
-      service.processReturn(USER, 'r1', {
+      service.processReturn(ORG, USER, 'r1', {
         lines: [{ returnItemId: 'ri1', disposition: 'RESTOCK' }],
       }),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });

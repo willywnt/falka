@@ -6,7 +6,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const url = new URL(request.url);
     const parsed = listStockOverviewQuerySchema.safeParse({
       search: url.searchParams.get('search') ?? undefined,
@@ -15,7 +15,7 @@ export const GET = withApiRoute(
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const items = await inventoryServerService.listStockOverview(user.id, parsed.data);
+    const items = await inventoryServerService.listStockOverview(org.id, parsed.data);
     return apiSuccess(items);
   },
   { requireAuth: true },

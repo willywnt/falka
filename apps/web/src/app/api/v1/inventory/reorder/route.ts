@@ -6,7 +6,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const url = new URL(request.url);
     const parsed = reorderReportQuerySchema.safeParse({
       windowDays: url.searchParams.get('windowDays') ?? undefined,
@@ -16,7 +16,7 @@ export const GET = withApiRoute(
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const report = await inventoryReorderService.getReorderReport(user.id, parsed.data);
+    const report = await inventoryReorderService.getReorderReport(org.id, parsed.data);
     return apiSuccess(report);
   },
   { requireAuth: true },

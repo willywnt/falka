@@ -7,7 +7,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const searchParams = new URL(request.url).searchParams;
     const parsed = listReturnsQuerySchema.safeParse({
       status: searchParams.get('status') ?? undefined,
@@ -16,19 +16,19 @@ export const GET = withApiRoute(
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const data = await returnsServerService.listReturns(user.id, parsed.data);
+    const data = await returnsServerService.listReturns(org.id, parsed.data);
     return apiSuccess(data);
   },
   { requireAuth: true },
 );
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = createReturnSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const data = await returnsServerService.createReturn(user.id, parsed.data.orderId, {
+    const data = await returnsServerService.createReturn(org.id, user.id, parsed.data.orderId, {
       reason: parsed.data.reason,
     });
     return apiSuccess(data);

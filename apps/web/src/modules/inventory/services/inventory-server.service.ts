@@ -67,7 +67,8 @@ function mapLedgerEntry(entry: StockLedger): StockLedgerEntryItem {
  * Owns the `Inventory` (fast-read cache) and append-only `StockLedger` (source of
  * truth) tables. Every stock mutation writes a ledger row and updates the cached
  * snapshot inside a single transaction. Other modules touch stock ONLY through
- * this service.
+ * this service. Queries are scoped by `organizationId`; ledger rows keep `userId`
+ * as the ACTOR who triggered the movement.
  */
 export class InventoryServerService {
   /** Idempotently create the 1:1 inventory row for a newly created variant. */
@@ -81,20 +82,20 @@ export class InventoryServerService {
     return mapInventory(inventory);
   }
 
-  async getSnapshot(userId: string, variantId: string): Promise<InventorySnapshot> {
-    await this.assertVariantOwned(userId, variantId);
+  async getSnapshot(organizationId: string, variantId: string): Promise<InventorySnapshot> {
+    await this.assertVariantOwned(organizationId, variantId);
 
     const inventory = await prisma.inventory.findUnique({ where: { variantId } });
     return inventory ? mapInventory(inventory) : emptySnapshot(variantId);
   }
 
-  async getView(userId: string, variantId: string): Promise<InventoryView> {
-    await this.assertVariantOwned(userId, variantId);
+  async getView(organizationId: string, variantId: string): Promise<InventoryView> {
+    await this.assertVariantOwned(organizationId, variantId);
 
     const [inventory, entries] = await Promise.all([
       prisma.inventory.findUnique({ where: { variantId } }),
       prisma.stockLedger.findMany({
-        where: { variantId, userId },
+        where: { variantId, organizationId },
         orderBy: { createdAt: 'desc' },
         take: LEDGER_PAGE_SIZE,
       }),
@@ -107,16 +108,16 @@ export class InventoryServerService {
   }
 
   /**
-   * Flat stock view across all of a user's variants (low-stock first). Bounded
-   * by OVERVIEW_CAP; truncation is logged rather than silently dropping rows.
+   * Flat stock view across all of an organization's variants (low-stock first).
+   * Bounded by OVERVIEW_CAP; truncation is logged rather than silently dropping rows.
    */
   async listStockOverview(
-    userId: string,
+    organizationId: string,
     query: ListStockOverviewQuery,
   ): Promise<StockOverviewItem[]> {
     const variants = await prisma.productVariant.findMany({
       where: {
-        userId,
+        organizationId,
         deletedAt: null,
         ...(query.search
           ? {
@@ -144,7 +145,7 @@ export class InventoryServerService {
     });
 
     if (variants.length > OVERVIEW_CAP) {
-      appLogger.warn('inventory.overview.truncated', { userId, cap: OVERVIEW_CAP });
+      appLogger.warn('inventory.overview.truncated', { organizationId, cap: OVERVIEW_CAP });
       variants.length = OVERVIEW_CAP;
     }
 
@@ -177,13 +178,14 @@ export class InventoryServerService {
   }
 
   async adjustStock(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantId: string,
     input: AdjustStockInput,
   ): Promise<AdjustStockResult> {
     const outcome = await prisma.$transaction(async (tx) => {
       const variant = await tx.productVariant.findFirst({
-        where: { id: variantId, userId, deletedAt: null },
+        where: { id: variantId, organizationId, deletedAt: null },
         select: { id: true },
       });
       if (!variant) throw InventoryError.variantNotFound();
@@ -220,7 +222,8 @@ export class InventoryServerService {
 
       const entry = await tx.stockLedger.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           variantId,
           delta: input.delta,
           balanceAfter: balance.balanceAfter,
@@ -234,7 +237,8 @@ export class InventoryServerService {
     });
 
     appLogger.info('inventory.adjusted', {
-      userId,
+      organizationId,
+      actorUserId,
       variantId,
       delta: input.delta,
       reason: input.reason,
@@ -242,7 +246,8 @@ export class InventoryServerService {
     });
 
     await this.propagateToMarketplaces(
-      userId,
+      organizationId,
+      actorUserId,
       variantId,
       outcome.inventory.availableStock,
       outcome.entry.id,
@@ -259,14 +264,15 @@ export class InventoryServerService {
    * and the disposed count in the note for the audit trail.
    */
   async disposeDamaged(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantId: string,
     quantity: number,
     note?: string,
   ): Promise<AdjustStockResult> {
     const outcome = await prisma.$transaction(async (tx) => {
       const variant = await tx.productVariant.findFirst({
-        where: { id: variantId, userId, deletedAt: null },
+        where: { id: variantId, organizationId, deletedAt: null },
         select: { id: true },
       });
       if (!variant) throw InventoryError.variantNotFound();
@@ -286,7 +292,8 @@ export class InventoryServerService {
 
       const entry = await tx.stockLedger.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           variantId,
           delta: 0,
           balanceAfter: available,
@@ -299,7 +306,7 @@ export class InventoryServerService {
       return { inventory: mapInventory(inventory), entry: mapLedgerEntry(entry) };
     });
 
-    appLogger.info('inventory.damage_written_off', { userId, variantId });
+    appLogger.info('inventory.damage_written_off', { organizationId, actorUserId, variantId });
     return outcome;
   }
 
@@ -309,21 +316,28 @@ export class InventoryServerService {
    * (Redis) is unavailable or there is nothing to sync.
    */
   private async propagateToMarketplaces(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantId: string,
     availableStock: number,
     eventId: string,
   ): Promise<void> {
     try {
       const syncEnabledCount = await prisma.marketplaceProductMapping.count({
-        where: { productVariantId: variantId, userId, syncEnabled: true },
+        where: { productVariantId: variantId, organizationId, syncEnabled: true },
       });
       if (syncEnabledCount === 0) return;
 
-      await enqueuePropagateInventoryStock({ userId, variantId, availableStock, eventId });
+      await enqueuePropagateInventoryStock({
+        organizationId,
+        actorUserId,
+        variantId,
+        availableStock,
+        eventId,
+      });
     } catch (error) {
       appLogger.warn('inventory.propagate.enqueue_failed', {
-        userId,
+        organizationId,
         variantId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -333,14 +347,20 @@ export class InventoryServerService {
   /**
    * Apply a stock-opname / reconcile correction WITHIN the caller's transaction:
    * shift available by `delta` (counted − system) and record a RECONCILE ledger
-   * row (source MANUAL) carrying the variance. Available may move to whatever the
-   * physical count implies. Returns the new balance + the ledger entry id; does NOT
-   * enqueue propagation (the caller does that after commit). The caller skips a zero
-   * delta — a no-variance line writes nothing.
+   * row (source MANUAL, actor = `actorUserId`) carrying the variance. Available may
+   * move to whatever the physical count implies. Returns the new balance + the ledger
+   * entry id; does NOT enqueue propagation (the caller does that after commit). The
+   * caller skips a zero delta — a no-variance line writes nothing.
    */
   async applyReconcileTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; delta: number; note?: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      delta: number;
+      note?: string;
+    },
   ): Promise<{ availableStock: number; ledgerId: string }> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) + params.delta;
@@ -354,7 +374,8 @@ export class InventoryServerService {
 
     const entry = await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: params.delta,
         balanceAfter,
@@ -378,7 +399,13 @@ export class InventoryServerService {
    */
   async applyOrderReserveTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; orderId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      orderId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) - params.quantity;
@@ -401,7 +428,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: -params.quantity,
         balanceAfter,
@@ -425,7 +453,13 @@ export class InventoryServerService {
    */
   async applyOrderShipTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; orderId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      orderId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const available = existing?.availableStock ?? 0;
@@ -440,7 +474,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: 0,
         balanceAfter: available,
@@ -464,7 +499,13 @@ export class InventoryServerService {
    */
   async applyOrderReleaseTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; orderId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      orderId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
@@ -479,7 +520,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: params.quantity,
         balanceAfter,
@@ -502,7 +544,13 @@ export class InventoryServerService {
    */
   async applyReturnRestockTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; returnId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      returnId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
@@ -516,7 +564,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: params.quantity,
         balanceAfter,
@@ -539,7 +588,13 @@ export class InventoryServerService {
    */
   async applyReturnDamagedTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; returnId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      returnId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const available = existing?.availableStock ?? 0;
@@ -558,7 +613,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: 0,
         balanceAfter: available,
@@ -581,7 +637,13 @@ export class InventoryServerService {
    */
   async applyOfflineSaleTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; saleId: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      saleId: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) - params.quantity;
@@ -595,7 +657,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: -params.quantity,
         balanceAfter,
@@ -618,7 +681,14 @@ export class InventoryServerService {
    */
   async applyOfflineSaleReversalTx(
     tx: TransactionClient,
-    params: { userId: string; variantId: string; quantity: number; saleId: string; note?: string },
+    params: {
+      organizationId: string;
+      actorUserId: string;
+      variantId: string;
+      quantity: number;
+      saleId: string;
+      note?: string;
+    },
   ): Promise<number> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
@@ -632,7 +702,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: params.quantity,
         balanceAfter,
@@ -650,15 +721,19 @@ export class InventoryServerService {
    * Adjusts the incoming (on-order) bucket WITHIN the caller's transaction — used
    * when a purchase order is placed (positive delta) or cancelled (negative). No
    * ledger row: incoming is a forecast bucket and available is unchanged. Clamped at 0.
+   * `organizationId`/`actorUserId` are carried for log context only — `Inventory`
+   * has no scope/actor columns and no ledger row is written.
    */
   async adjustIncomingTx(
     tx: TransactionClient,
-    params: { variantId: string; delta: number },
+    params: { organizationId: string; actorUserId: string; variantId: string; delta: number },
   ): Promise<void> {
     const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
     const current = existing?.incomingStock ?? 0;
     if (current + params.delta < 0) {
       appLogger.warn('inventory.incoming.underflow_clamped', {
+        organizationId: params.organizationId,
+        actorUserId: params.actorUserId,
         variantId: params.variantId,
         current,
         delta: params.delta,
@@ -686,7 +761,8 @@ export class InventoryServerService {
   async applyPurchaseReceiveTx(
     tx: TransactionClient,
     params: {
-      userId: string;
+      organizationId: string;
+      actorUserId: string;
       variantId: string;
       quantity: number;
       purchaseOrderId: string;
@@ -728,7 +804,8 @@ export class InventoryServerService {
 
     await tx.stockLedger.create({
       data: {
-        userId: params.userId,
+        userId: params.actorUserId,
+        organizationId: params.organizationId,
         variantId: params.variantId,
         delta: params.quantity,
         balanceAfter,
@@ -763,9 +840,9 @@ export class InventoryServerService {
     return current - params.quantity;
   }
 
-  private async assertVariantOwned(userId: string, variantId: string): Promise<void> {
+  private async assertVariantOwned(organizationId: string, variantId: string): Promise<void> {
     const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, userId, deletedAt: null },
+      where: { id: variantId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!variant) throw InventoryError.variantNotFound();

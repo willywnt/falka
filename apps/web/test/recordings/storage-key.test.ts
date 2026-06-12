@@ -4,45 +4,45 @@ import {
   generateProductImageKey,
   generateRecordingFilename,
   generateStorageKey,
+  isOrgStorageKey,
   isPendingStorageKey,
-  isUserStorageKey,
 } from '@/modules/storage/utils/storage-key';
 import { extractGeneratedFilename } from '@/modules/recordings/utils/media-recorder';
 
 /**
  * Happy Flow #1 — upload ownership gate.
  * `completeRecording` rejects any storage key that is not a final object under
- * the caller's own `{userId}/` prefix, so this helper is a security boundary.
+ * the caller's own `{organizationId}/` prefix, so this helper is a security boundary.
  */
-describe('isUserStorageKey', () => {
-  it('accepts a key under the user prefix', () => {
-    expect(isUserStorageKey('user-1/2026/06/rec_20260602_abcd1234.webm', 'user-1')).toBe(true);
-    expect(isUserStorageKey('user-1/img_20260606_abcd1234.webp', 'user-1')).toBe(true);
+describe('isOrgStorageKey', () => {
+  it('accepts a key under the organization prefix', () => {
+    expect(isOrgStorageKey('org-1/2026/06/rec_20260602_abcd1234.webm', 'org-1')).toBe(true);
+    expect(isOrgStorageKey('org-1/img_20260606_abcd1234.webp', 'org-1')).toBe(true);
   });
 
-  it('rejects a key belonging to another user', () => {
-    expect(isUserStorageKey('user-2/2026/06/rec.webm', 'user-1')).toBe(false);
+  it('rejects a key belonging to another organization', () => {
+    expect(isOrgStorageKey('org-2/2026/06/rec.webm', 'org-1')).toBe(false);
   });
 
-  it('rejects a pending key (not yet a final user key)', () => {
-    expect(isUserStorageKey('pending/user-1/abcd1234', 'user-1')).toBe(false);
+  it('rejects a pending key (not yet a final org key)', () => {
+    expect(isOrgStorageKey('pending/org-1/abcd1234', 'org-1')).toBe(false);
   });
 
   it('rejects a prefix-injection attempt', () => {
-    expect(isUserStorageKey('user-12/rec.webm', 'user-1')).toBe(false);
+    expect(isOrgStorageKey('org-12/rec.webm', 'org-1')).toBe(false);
   });
 });
 
 describe('isPendingStorageKey', () => {
   it('detects pending keys', () => {
-    expect(isPendingStorageKey('pending/user-1/abcd')).toBe(true);
-    expect(isPendingStorageKey('user-1/2026/06/rec.webm')).toBe(false);
+    expect(isPendingStorageKey('pending/org-1/abcd')).toBe(true);
+    expect(isPendingStorageKey('org-1/2026/06/rec.webm')).toBe(false);
   });
 });
 
 describe('extractGeneratedFilename', () => {
   it('returns the last path segment', () => {
-    expect(extractGeneratedFilename('user-1/2026/06/rec_x.webm')).toBe('rec_x.webm');
+    expect(extractGeneratedFilename('org-1/2026/06/rec_x.webm')).toBe('rec_x.webm');
   });
 
   it('returns the input when there is no slash', () => {
@@ -51,15 +51,15 @@ describe('extractGeneratedFilename', () => {
 });
 
 describe('generateStorageKey', () => {
-  it('builds {userId}/{year}/{month}/{filename} with zero-padded month', () => {
+  it('builds {organizationId}/{year}/{month}/{filename} with zero-padded month', () => {
     const date = new Date(Date.UTC(2026, 0, 9)); // January 2026
-    expect(generateStorageKey('user-1', 'rec_x.webm', date)).toBe('user-1/2026/01/rec_x.webm');
+    expect(generateStorageKey('org-1', 'rec_x.webm', date)).toBe('org-1/2026/01/rec_x.webm');
   });
 });
 
 describe('generateProductImageKey', () => {
-  it('builds a flat {userId}/{filename} key', () => {
-    expect(generateProductImageKey('user-1', 'img_x.webp')).toBe('user-1/img_x.webp');
+  it('builds a flat {organizationId}/{filename} key', () => {
+    expect(generateProductImageKey('org-1', 'img_x.webp')).toBe('org-1/img_x.webp');
   });
 });
 

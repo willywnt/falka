@@ -34,7 +34,7 @@ export async function processPropagateInventoryStockJob(
   };
 
   const mappings = await findSyncReadyMappingsByVariant(
-    payload.userId,
+    payload.organizationId,
     payload.variantId,
     payload.excludeConnectionId,
   );
@@ -51,7 +51,8 @@ export async function processPropagateInventoryStockJob(
     }
 
     const job = await createSyncJob({
-      userId: payload.userId,
+      organizationId: payload.organizationId,
+      actorUserId: payload.actorUserId,
       marketplaceConnectionId: mapping.marketplaceConnectionId,
       marketplaceProductMappingId: mapping.mappingId,
       provider: mapping.provider,

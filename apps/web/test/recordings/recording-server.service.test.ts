@@ -11,13 +11,13 @@ import { RECORDING_ERROR_CODES } from '@/modules/recordings/errors/recording-err
 
 type TxClient = {
   recording: { update: ReturnType<typeof vi.fn> };
-  user: { update: ReturnType<typeof vi.fn> };
+  organization: { update: ReturnType<typeof vi.fn> };
 };
 
 const { prismaMock, txMock, quotaMock } = vi.hoisted(() => {
   const txMock: TxClient = {
     recording: { update: vi.fn() },
-    user: { update: vi.fn() },
+    organization: { update: vi.fn() },
   };
   return {
     txMock,
@@ -28,7 +28,7 @@ const { prismaMock, txMock, quotaMock } = vi.hoisted(() => {
         update: vi.fn(),
         findUnique: vi.fn(),
       },
-      user: { update: vi.fn() },
+      organization: { update: vi.fn() },
       $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
     },
     quotaMock: {
@@ -55,6 +55,7 @@ const { RecordingServerService } =
   await import('@/modules/recordings/services/recording-server.service');
 
 const service = new RecordingServerService();
+const ORG = 'org-1';
 const USER = 'user-1';
 
 beforeEach(() => {
@@ -66,7 +67,7 @@ describe('startRecording', () => {
   it('rejects when an active recording already exists', async () => {
     prismaMock.recording.findFirst.mockResolvedValue({ id: 'active-1' });
 
-    await expect(service.startRecording(USER, 'RESI123')).rejects.toMatchObject({
+    await expect(service.startRecording(ORG, USER, 'RESI123')).rejects.toMatchObject({
       code: RECORDING_ERROR_CODES.ACTIVE_RECORDING_EXISTS,
     });
     expect(prismaMock.recording.create).not.toHaveBeenCalled();
@@ -76,13 +77,13 @@ describe('startRecording', () => {
     prismaMock.recording.findFirst.mockResolvedValue(null);
     quotaMock.getQuotaSnapshot.mockResolvedValue({ remainingBytes: BigInt(0) });
 
-    await expect(service.startRecording(USER, 'RESI123')).rejects.toMatchObject({
+    await expect(service.startRecording(ORG, USER, 'RESI123')).rejects.toMatchObject({
       code: RECORDING_ERROR_CODES.QUOTA_EXCEEDED,
     });
     expect(prismaMock.recording.create).not.toHaveBeenCalled();
   });
 
-  it('creates a RECORDING row with a user-scoped pending key and returns its id', async () => {
+  it('creates a RECORDING row with an org-scoped pending key and returns its id', async () => {
     prismaMock.recording.findFirst.mockResolvedValue(null);
     prismaMock.recording.create.mockResolvedValue({
       id: 'rec-1',
@@ -90,7 +91,7 @@ describe('startRecording', () => {
       startedAt: new Date('2026-06-02T08:00:00.000Z'),
     });
 
-    const result = await service.startRecording(USER, 'RESI123');
+    const result = await service.startRecording(ORG, USER, 'RESI123');
 
     expect(result).toEqual({
       recordingId: 'rec-1',
@@ -99,11 +100,12 @@ describe('startRecording', () => {
     });
 
     const createArgs = prismaMock.recording.create.mock.calls[0]?.[0] as {
-      data: { status: string; storageKey: string; userId: string };
+      data: { status: string; storageKey: string; userId: string; organizationId: string };
     };
     expect(createArgs.data.status).toBe('RECORDING');
     expect(createArgs.data.userId).toBe(USER);
-    expect(createArgs.data.storageKey.startsWith(`pending/${USER}/`)).toBe(true);
+    expect(createArgs.data.organizationId).toBe(ORG);
+    expect(createArgs.data.storageKey.startsWith(`pending/${ORG}/`)).toBe(true);
   });
 });
 
@@ -111,7 +113,7 @@ describe('completeRecording', () => {
   const baseInput = {
     recordingId: 'rec-1',
     noResi: 'RESI123',
-    storageKey: `${USER}/2026/06/rec_x.webm`,
+    storageKey: `${ORG}/2026/06/rec_x.webm`,
     publicUrl: 'https://cdn.example/rec_x.webm',
     mimeType: 'video/webm',
     fileSizeBytes: 1_000,
@@ -120,23 +122,23 @@ describe('completeRecording', () => {
 
   it('rejects a storage key that does not belong to the caller', async () => {
     await expect(
-      service.completeRecording(USER, { ...baseInput, storageKey: 'other-user/rec.webm' }),
+      service.completeRecording(ORG, USER, { ...baseInput, storageKey: 'other-org/rec.webm' }),
     ).rejects.toMatchObject({ code: RECORDING_ERROR_CODES.VALIDATION_ERROR });
   });
 
   it('rejects an unsupported MIME type', async () => {
     await expect(
-      service.completeRecording(USER, { ...baseInput, mimeType: 'video/mp4' }),
+      service.completeRecording(ORG, USER, { ...baseInput, mimeType: 'video/mp4' }),
     ).rejects.toMatchObject({ code: RECORDING_ERROR_CODES.VALIDATION_ERROR });
   });
 
   it('rejects a non-positive file size', async () => {
     await expect(
-      service.completeRecording(USER, { ...baseInput, fileSizeBytes: 0 }),
+      service.completeRecording(ORG, USER, { ...baseInput, fileSizeBytes: 0 }),
     ).rejects.toMatchObject({ code: RECORDING_ERROR_CODES.VALIDATION_ERROR });
   });
 
-  it('marks the recording COMPLETED and increments user storage in one transaction', async () => {
+  it('marks the recording COMPLETED and increments org storage in one transaction', async () => {
     prismaMock.recording.findFirst.mockResolvedValue({
       id: 'rec-1',
       noResi: 'RESI123',
@@ -152,27 +154,27 @@ describe('completeRecording', () => {
       fileSizeBytes: BigInt(1_000),
       durationSeconds: 5,
     });
-    txMock.user.update.mockResolvedValue({ id: USER });
+    txMock.organization.update.mockResolvedValue({ id: ORG });
 
-    const result = await service.completeRecording(USER, baseInput);
+    const result = await service.completeRecording(ORG, USER, baseInput);
 
     expect(result.status).toBe('COMPLETED');
     expect(result.fileSizeBytes).toBe(1_000);
-    expect(quotaMock.assertQuotaAvailable).toHaveBeenCalledWith(USER, 1_000);
+    expect(quotaMock.assertQuotaAvailable).toHaveBeenCalledWith(ORG, 1_000);
 
-    const userUpdateArgs = txMock.user.update.mock.calls[0]?.[0] as {
+    const orgUpdateArgs = txMock.organization.update.mock.calls[0]?.[0] as {
       where: { id: string };
       data: { storageUsedBytes: { increment: bigint } };
     };
-    expect(userUpdateArgs.where.id).toBe(USER);
-    expect(userUpdateArgs.data.storageUsedBytes.increment).toBe(BigInt(1_000));
+    expect(orgUpdateArgs.where.id).toBe(ORG);
+    expect(orgUpdateArgs.data.storageUsedBytes.increment).toBe(BigInt(1_000));
   });
 });
 
 describe('findRecentDuplicateResi', () => {
   it('returns null when no recent same-resi recording exists', async () => {
     prismaMock.recording.findFirst.mockResolvedValue(null);
-    expect(await service.findRecentDuplicateResi(USER, 'RESI123')).toBeNull();
+    expect(await service.findRecentDuplicateResi(ORG, 'RESI123')).toBeNull();
   });
 
   it('matches the exact resi, includes in-progress, and excludes deleted/PENDING_DELETE', async () => {
@@ -188,21 +190,21 @@ describe('findRecentDuplicateResi', () => {
       uploadedAt: null,
     });
 
-    const result = await service.findRecentDuplicateResi(USER, 'resi123');
+    const result = await service.findRecentDuplicateResi(ORG, 'resi123');
 
     expect(result?.id).toBe('rec-1');
     expect(result?.status).toBe('RECORDING'); // an in-progress recording still counts
 
     const where = prismaMock.recording.findFirst.mock.calls[0]?.[0] as {
       where: {
-        userId: string;
+        organizationId: string;
         deletedAt: null;
         noResi: { equals: string; mode: string };
         status: { notIn: string[] };
         createdAt: { gte: Date };
       };
     };
-    expect(where.where.userId).toBe(USER);
+    expect(where.where.organizationId).toBe(ORG);
     expect(where.where.deletedAt).toBeNull();
     expect(where.where.noResi).toEqual({ equals: 'resi123', mode: 'insensitive' });
     expect(where.where.status).toEqual({ notIn: ['PENDING_DELETE'] });

@@ -12,7 +12,7 @@ export interface PresignUploadResponse {
 }
 
 export interface GenerateUploadUrlInput {
-  userId: string;
+  organizationId: string;
   filename: string;
   mimeType: string;
   fileSizeBytes: number;

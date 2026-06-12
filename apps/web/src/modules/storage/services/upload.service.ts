@@ -4,13 +4,13 @@ import { storageService } from './storage.service';
 
 export class UploadService {
   async createPresignedUpload(
-    userId: string,
+    organizationId: string,
     request: PresignUploadRequest,
   ): Promise<PresignUploadResponse> {
-    await quotaService.assertQuotaAvailable(userId, request.fileSizeBytes);
+    await quotaService.assertQuotaAvailable(organizationId, request.fileSizeBytes);
 
     const result = await storageService.generateUploadUrl({
-      userId,
+      organizationId,
       filename: request.filename,
       mimeType: request.mimeType,
       fileSizeBytes: request.fileSizeBytes,
@@ -24,15 +24,15 @@ export class UploadService {
     };
   }
 
-  /** Presign a product-image upload (counts toward the user's storage quota). */
+  /** Presign a product-image upload (counts toward the organization's storage quota). */
   async createPresignedImageUpload(
-    userId: string,
+    organizationId: string,
     request: { mimeType: string; fileSizeBytes: number },
   ): Promise<PresignUploadResponse> {
-    await quotaService.assertQuotaAvailable(userId, request.fileSizeBytes);
+    await quotaService.assertQuotaAvailable(organizationId, request.fileSizeBytes);
 
     const result = await storageService.generateImageUploadUrl({
-      userId,
+      organizationId,
       mimeType: request.mimeType,
       fileSizeBytes: request.fileSizeBytes,
     });

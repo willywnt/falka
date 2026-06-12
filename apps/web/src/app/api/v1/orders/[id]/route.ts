@@ -8,11 +8,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = orderIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Order not found');
 
-    const order = await ordersServerService.getOrder(user.id, parsed.data.id);
+    const order = await ordersServerService.getOrder(org.id, parsed.data.id);
     return apiSuccess(order);
   },
   { requireAuth: true },

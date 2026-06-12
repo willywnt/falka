@@ -6,11 +6,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
-    const variants = await catalogServerService.listArchivedVariants(user.id, parsedParams.data.id);
+    const variants = await catalogServerService.listArchivedVariants(org.id, parsedParams.data.id);
     return apiSuccess(variants);
   },
   { requireAuth: true },

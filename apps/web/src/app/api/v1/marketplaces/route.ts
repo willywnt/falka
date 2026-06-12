@@ -6,21 +6,25 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const connections = await marketplaceServerService.listConnections(user.id);
+  async (_request, { org }) => {
+    const connections = await marketplaceServerService.listConnections(org.id);
     return apiSuccess(connections);
   },
   { requireAuth: true },
 );
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json();
     const parsed = createMarketplaceConnectionSchema.safeParse(body);
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const connection = await marketplaceServerService.createConnection(user.id, parsed.data);
+    const connection = await marketplaceServerService.createConnection(
+      org.id,
+      user.id,
+      parsed.data,
+    );
     return apiSuccess(connection, 201);
   },
   { requireAuth: true },

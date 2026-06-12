@@ -8,12 +8,12 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string; itemId: string };
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsedParams = stockOpnameItemParamsSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Stock opname item not found');
 
     const opname = await stockOpnameService.removeItem(
-      user.id,
+      org.id,
       parsedParams.data.id,
       parsedParams.data.itemId,
     );

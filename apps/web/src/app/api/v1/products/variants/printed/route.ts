@@ -6,12 +6,12 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const body: unknown = await request.json().catch(() => null);
     const parsed = markLabelsPrintedSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    await catalogServerService.markLabelsPrinted(user.id, parsed.data.variantIds);
+    await catalogServerService.markLabelsPrinted(org.id, parsed.data.variantIds);
     return apiSuccess({ ok: true });
   },
   { requireAuth: true },

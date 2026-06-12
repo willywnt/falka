@@ -6,13 +6,13 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const body: unknown = await request.json();
     const parsed = cancelRecordingSchema.safeParse(body);
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    await recordingServerService.markFailed(parsed.data.recordingId, user.id, {
+    await recordingServerService.markFailed(parsed.data.recordingId, org.id, {
       failureCode: parsed.data.failureCode,
       failureReason: parsed.data.failureReason,
     });

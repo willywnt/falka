@@ -61,32 +61,36 @@ function toListingItem(
 
 /** Manages the link between imported listings and internal variants. */
 export class MarketplaceMappingService {
-  async listListings(userId: string, connectionId: string): Promise<MarketplaceListingItem[]> {
-    await this.assertConnectionOwned(userId, connectionId);
+  async listListings(
+    organizationId: string,
+    connectionId: string,
+  ): Promise<MarketplaceListingItem[]> {
+    await this.assertConnectionOwned(organizationId, connectionId);
 
     const rows = await prisma.marketplaceProduct.findMany({
-      where: { marketplaceConnectionId: connectionId, userId, deletedAt: null },
+      where: { marketplaceConnectionId: connectionId, organizationId, deletedAt: null },
       include: LISTING_INCLUDE,
       orderBy: [{ externalProductName: 'asc' }, { externalVariantName: 'asc' }],
     });
 
-    const context = await this.buildSuggestionContext(userId, rows);
+    const context = await this.buildSuggestionContext(organizationId, rows);
     return rows.map((row) => toListingItem(row, this.suggestionFor(row, context)));
   }
 
   async mapListing(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionId: string,
     marketplaceProductId: string,
     variantId: string,
   ): Promise<MarketplaceListingItem> {
-    await this.assertConnectionOwned(userId, connectionId);
+    await this.assertConnectionOwned(organizationId, connectionId);
 
     const product = await prisma.marketplaceProduct.findFirst({
       where: {
         id: marketplaceProductId,
         marketplaceConnectionId: connectionId,
-        userId,
+        organizationId,
         deletedAt: null,
       },
       select: { id: true, provider: true },
@@ -94,7 +98,7 @@ export class MarketplaceMappingService {
     if (!product) throw MarketplaceError.notFound('Listing not found.');
 
     const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, userId, deletedAt: null },
+      where: { id: variantId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!variant) throw MarketplaceError.validation('Product variant not found.');
@@ -102,7 +106,8 @@ export class MarketplaceMappingService {
     await prisma.marketplaceProductMapping.upsert({
       where: { marketplaceProductId },
       create: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         marketplaceConnectionId: connectionId,
         marketplaceProductId,
         productVariantId: variantId,
@@ -114,13 +119,13 @@ export class MarketplaceMappingService {
     });
 
     appLogger.info('marketplace.listing.mapped', {
-      userId,
+      organizationId,
       connectionId,
       marketplaceProductId,
       variantId,
     });
 
-    return this.getListing(userId, connectionId, marketplaceProductId);
+    return this.getListing(organizationId, connectionId, marketplaceProductId);
   }
 
   /**
@@ -129,7 +134,8 @@ export class MarketplaceMappingService {
    * resolving an unmapped order item so the mapping persists for future pulls.
    */
   async mapByExternalRef(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionId: string,
     ref: {
       externalProductId: string;
@@ -140,10 +146,10 @@ export class MarketplaceMappingService {
     },
     variantId: string,
   ): Promise<void> {
-    await this.assertConnectionOwned(userId, connectionId);
+    await this.assertConnectionOwned(organizationId, connectionId);
 
     const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, userId, deletedAt: null },
+      where: { id: variantId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!variant) throw MarketplaceError.validation('Product variant not found.');
@@ -157,7 +163,8 @@ export class MarketplaceMappingService {
         },
       },
       create: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         marketplaceConnectionId: connectionId,
         provider: ref.provider,
         externalProductId: ref.externalProductId,
@@ -176,7 +183,8 @@ export class MarketplaceMappingService {
     await prisma.marketplaceProductMapping.upsert({
       where: { marketplaceProductId: listing.id },
       create: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         marketplaceConnectionId: connectionId,
         marketplaceProductId: listing.id,
         productVariantId: variantId,
@@ -187,52 +195,62 @@ export class MarketplaceMappingService {
       update: { productVariantId: variantId, mappingStatus: 'MAPPED', autoMapped: false },
     });
 
-    appLogger.info('marketplace.listing.mapped_by_ref', { userId, connectionId, variantId });
+    appLogger.info('marketplace.listing.mapped_by_ref', {
+      organizationId,
+      connectionId,
+      variantId,
+    });
   }
 
   async unmapListing(
-    userId: string,
+    organizationId: string,
     connectionId: string,
     marketplaceProductId: string,
   ): Promise<MarketplaceListingItem> {
-    await this.assertConnectionOwned(userId, connectionId);
+    await this.assertConnectionOwned(organizationId, connectionId);
 
-    await prisma.marketplaceProductMapping.deleteMany({ where: { marketplaceProductId, userId } });
+    await prisma.marketplaceProductMapping.deleteMany({
+      where: { marketplaceProductId, organizationId },
+    });
 
-    appLogger.info('marketplace.listing.unmapped', { userId, connectionId, marketplaceProductId });
+    appLogger.info('marketplace.listing.unmapped', {
+      organizationId,
+      connectionId,
+      marketplaceProductId,
+    });
 
-    return this.getListing(userId, connectionId, marketplaceProductId);
+    return this.getListing(organizationId, connectionId, marketplaceProductId);
   }
 
   async setSyncEnabled(
-    userId: string,
+    organizationId: string,
     connectionId: string,
     marketplaceProductId: string,
     enabled: boolean,
   ): Promise<MarketplaceListingItem> {
-    await this.assertConnectionOwned(userId, connectionId);
+    await this.assertConnectionOwned(organizationId, connectionId);
 
     const updated = await prisma.marketplaceProductMapping.updateMany({
-      where: { marketplaceProductId, userId },
+      where: { marketplaceProductId, organizationId },
       data: { syncEnabled: enabled },
     });
     if (updated.count === 0) throw MarketplaceError.notFound('Listing is not mapped.');
 
     appLogger.info('marketplace.listing.sync_toggled', {
-      userId,
+      organizationId,
       connectionId,
       marketplaceProductId,
       enabled,
     });
 
-    return this.getListing(userId, connectionId, marketplaceProductId);
+    return this.getListing(organizationId, connectionId, marketplaceProductId);
   }
 
   /** Variant ids (from the given set) that have at least one marketplace mapping. */
-  async getMappedVariantIds(userId: string, variantIds: string[]): Promise<Set<string>> {
+  async getMappedVariantIds(organizationId: string, variantIds: string[]): Promise<Set<string>> {
     if (variantIds.length === 0) return new Set();
     const rows = await prisma.marketplaceProductMapping.findMany({
-      where: { userId, productVariantId: { in: variantIds } },
+      where: { organizationId, productVariantId: { in: variantIds } },
       select: { productVariantId: true },
     });
     return new Set(rows.map((row) => row.productVariantId));
@@ -243,7 +261,7 @@ export class MarketplaceMappingService {
    * Keyed by variant id; each entry links back to its connection for unmapping.
    */
   async getVariantMappings(
-    userId: string,
+    organizationId: string,
     variantIds: string[],
   ): Promise<Map<string, { connectionId: string; provider: string; shopName: string }[]>> {
     const byVariant = new Map<
@@ -253,7 +271,7 @@ export class MarketplaceMappingService {
     if (variantIds.length === 0) return byVariant;
 
     const rows = await prisma.marketplaceProductMapping.findMany({
-      where: { userId, productVariantId: { in: variantIds } },
+      where: { organizationId, productVariantId: { in: variantIds } },
       select: {
         productVariantId: true,
         connection: { select: { id: true, provider: true, shopName: true } },
@@ -273,14 +291,15 @@ export class MarketplaceMappingService {
   }
 
   async syncNow(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionId: string,
     marketplaceProductId: string,
   ): Promise<MarketplaceListingItem> {
-    await this.assertConnectionOwned(userId, connectionId);
+    await this.assertConnectionOwned(organizationId, connectionId);
 
     const mapping = await prisma.marketplaceProductMapping.findFirst({
-      where: { marketplaceProductId, userId },
+      where: { marketplaceProductId, organizationId },
       select: {
         id: true,
         syncEnabled: true,
@@ -298,7 +317,8 @@ export class MarketplaceMappingService {
 
     try {
       await enqueuePropagateInventoryStock({
-        userId,
+        organizationId,
+        actorUserId,
         variantId: mapping.productVariantId,
         availableStock,
         eventId,
@@ -309,13 +329,17 @@ export class MarketplaceMappingService {
       );
     }
 
-    appLogger.info('marketplace.listing.sync_now', { userId, connectionId, marketplaceProductId });
+    appLogger.info('marketplace.listing.sync_now', {
+      organizationId,
+      connectionId,
+      marketplaceProductId,
+    });
 
-    return this.getListing(userId, connectionId, marketplaceProductId);
+    return this.getListing(organizationId, connectionId, marketplaceProductId);
   }
 
   private async getListing(
-    userId: string,
+    organizationId: string,
     connectionId: string,
     marketplaceProductId: string,
   ): Promise<MarketplaceListingItem> {
@@ -323,26 +347,26 @@ export class MarketplaceMappingService {
       where: {
         id: marketplaceProductId,
         marketplaceConnectionId: connectionId,
-        userId,
+        organizationId,
         deletedAt: null,
       },
       include: LISTING_INCLUDE,
     });
     if (!row) throw MarketplaceError.notFound('Listing not found.');
 
-    const context = await this.buildSuggestionContext(userId, [row]);
+    const context = await this.buildSuggestionContext(organizationId, [row]);
     return toListingItem(row, this.suggestionFor(row, context));
   }
 
   private async buildSuggestionContext(
-    userId: string,
+    organizationId: string,
     rows: ListingRow[],
   ): Promise<SuggestionContext | null> {
     const hasUnmapped = rows.some((row) => !row.mapping && row.externalSku);
     if (!hasUnmapped) return null;
 
     const variants = await prisma.productVariant.findMany({
-      where: { userId, deletedAt: null },
+      where: { organizationId, deletedAt: null },
       select: { id: true, sku: true, name: true, product: { select: { name: true } } },
     });
 
@@ -375,9 +399,9 @@ export class MarketplaceMappingService {
     return details ? { ...details, quality: match.quality } : null;
   }
 
-  private async assertConnectionOwned(userId: string, connectionId: string): Promise<void> {
+  private async assertConnectionOwned(organizationId: string, connectionId: string): Promise<void> {
     const connection = await prisma.marketplaceConnection.findFirst({
-      where: { id: connectionId, userId, deletedAt: null },
+      where: { id: connectionId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!connection) throw MarketplaceError.notFound();

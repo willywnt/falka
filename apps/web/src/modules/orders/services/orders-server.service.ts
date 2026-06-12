@@ -28,11 +28,11 @@ function isCoolingDown(lastPulledAt: Date | null): boolean {
 
 export class OrdersServerService {
   async listOrders(
-    userId: string,
+    organizationId: string,
     query: ListOrdersQuery,
   ): Promise<PaginatedResult<OrderListItem>> {
     const where: Prisma.OrderWhereInput = {
-      userId,
+      organizationId,
       ...(query.status ? { status: query.status } : {}),
       ...(query.search
         ? {
@@ -80,9 +80,9 @@ export class OrdersServerService {
     return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
-  async getOrder(userId: string, orderId: string): Promise<OrderDetail> {
+  async getOrder(organizationId: string, orderId: string): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       include: {
         connection: { select: { shopName: true, lastOrdersPulledAt: true } },
         items: {
@@ -147,14 +147,14 @@ export class OrdersServerService {
    * view. Matched case-insensitively (resi/tracking numbers are case-insensitive;
    * the scanner uppercases while marketplaces may not).
    */
-  async findByResi(userId: string, noResi: string): Promise<OrderDetail | null> {
+  async findByResi(organizationId: string, noResi: string): Promise<OrderDetail | null> {
     const order = await prisma.order.findFirst({
-      where: { userId, noResi: { equals: noResi, mode: 'insensitive' } },
+      where: { organizationId, noResi: { equals: noResi, mode: 'insensitive' } },
       orderBy: { placedAt: 'desc' },
       select: { id: true },
     });
     if (!order) return null;
-    return this.getOrder(userId, order.id);
+    return this.getOrder(organizationId, order.id);
   }
 
   /**
@@ -163,13 +163,13 @@ export class OrdersServerService {
    * (see findByResi). Returns how many were stamped. Called best-effort after a
    * packing video completes.
    */
-  async markFulfilledByResi(userId: string, noResi: string): Promise<number> {
+  async markFulfilledByResi(organizationId: string, noResi: string): Promise<number> {
     const result = await prisma.order.updateMany({
-      where: { userId, noResi: { equals: noResi, mode: 'insensitive' }, fulfilledAt: null },
+      where: { organizationId, noResi: { equals: noResi, mode: 'insensitive' }, fulfilledAt: null },
       data: { fulfilledAt: new Date() },
     });
     if (result.count > 0) {
-      appLogger.info('orders.fulfilled', { userId, noResi, count: result.count });
+      appLogger.info('orders.fulfilled', { organizationId, noResi, count: result.count });
     }
     return result.count;
   }
@@ -180,13 +180,14 @@ export class OrdersServerService {
    * and — for a PAID order — reserve stock for the items just resolved.
    */
   async resolveOrderItem(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     orderId: string,
     orderItemId: string,
     variantId: string,
   ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       include: { items: true },
     });
     if (!order) throw OrderError.notFound();
@@ -195,7 +196,8 @@ export class OrdersServerService {
     if (!item) throw OrderError.notFound('Order item not found.');
 
     await marketplaceMappingService.mapByExternalRef(
-      userId,
+      organizationId,
+      actorUserId,
       order.marketplaceConnectionId,
       {
         externalProductId: item.externalProductId,
@@ -226,7 +228,8 @@ export class OrdersServerService {
       await prisma.$transaction(async (tx) => {
         for (const entry of newlyResolved) {
           await inventoryServerService.applyOrderReserveTx(tx, {
-            userId,
+            organizationId,
+            actorUserId,
             variantId,
             quantity: entry.quantity,
             orderId: order.id,
@@ -240,11 +243,22 @@ export class OrdersServerService {
           });
         }
       });
-      await this.propagateAffected(userId, new Set([variantId]), order.marketplaceConnectionId);
+      await this.propagateAffected(
+        organizationId,
+        actorUserId,
+        new Set([variantId]),
+        order.marketplaceConnectionId,
+      );
     }
 
-    appLogger.info('orders.item.resolved', { userId, orderId, orderItemId, variantId });
-    return this.getOrder(userId, orderId);
+    appLogger.info('orders.item.resolved', {
+      organizationId,
+      actorUserId,
+      orderId,
+      orderItemId,
+      variantId,
+    });
+    return this.getOrder(organizationId, orderId);
   }
 
   /**
@@ -254,12 +268,13 @@ export class OrdersServerService {
    * Best-effort re-runs the noResi → packing-video fulfillment match afterwards.
    */
   async markOrderShipped(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     orderId: string,
     input: { noResi?: string } = {},
   ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       include: { items: true },
     });
     if (!order) throw OrderError.notFound();
@@ -281,7 +296,8 @@ export class OrdersServerService {
       for (const item of order.items) {
         if (!item.productVariantId) continue;
         await inventoryServerService.applyOrderShipTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: item.productVariantId,
           quantity: item.quantity,
           orderId: order.id,
@@ -294,9 +310,14 @@ export class OrdersServerService {
     });
 
     // The order is packed-and-shipped now; stamp fulfillment if a video already exists.
-    if (noResi) await this.markFulfilledByResi(userId, noResi);
-    appLogger.info('orders.marked_shipped', { userId, orderId, hasResi: Boolean(noResi) });
-    return this.getOrder(userId, orderId);
+    if (noResi) await this.markFulfilledByResi(organizationId, noResi);
+    appLogger.info('orders.marked_shipped', {
+      organizationId,
+      actorUserId,
+      orderId,
+      hasResi: Boolean(noResi),
+    });
+    return this.getOrder(organizationId, orderId);
   }
 
   /**
@@ -304,17 +325,21 @@ export class OrdersServerService {
    * then re-run the noResi → packing-video fulfillment match. NOTE: a later marketplace
    * re-pull may overwrite this for a marketplace-sourced order.
    */
-  async setOrderResi(userId: string, orderId: string, noResi: string): Promise<OrderDetail> {
+  async setOrderResi(
+    organizationId: string,
+    orderId: string,
+    noResi: string,
+  ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       select: { id: true },
     });
     if (!order) throw OrderError.notFound();
 
     await prisma.order.update({ where: { id: orderId }, data: { noResi } });
-    await this.markFulfilledByResi(userId, noResi);
-    appLogger.info('orders.resi_updated', { userId, orderId });
-    return this.getOrder(userId, orderId);
+    await this.markFulfilledByResi(organizationId, noResi);
+    appLogger.info('orders.resi_updated', { organizationId, orderId });
+    return this.getOrder(organizationId, orderId);
   }
 
   /**
@@ -325,12 +350,13 @@ export class OrdersServerService {
    * propagate to the other channels.
    */
   async cancelOrder(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     orderId: string,
     input: { reason?: string } = {},
   ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       include: { items: true },
     });
     if (!order) throw OrderError.notFound();
@@ -355,7 +381,8 @@ export class OrdersServerService {
         for (const item of order.items) {
           if (!item.productVariantId) continue;
           await inventoryServerService.applyOrderReleaseTx(tx, {
-            userId,
+            organizationId,
+            actorUserId,
             variantId: item.productVariantId,
             quantity: item.quantity,
             orderId: order.id,
@@ -374,10 +401,20 @@ export class OrdersServerService {
     });
 
     if (released.size > 0) {
-      await this.propagateAffected(userId, released, order.marketplaceConnectionId);
+      await this.propagateAffected(
+        organizationId,
+        actorUserId,
+        released,
+        order.marketplaceConnectionId,
+      );
     }
-    appLogger.info('orders.cancelled', { userId, orderId, released: released.size });
-    return this.getOrder(userId, orderId);
+    appLogger.info('orders.cancelled', {
+      organizationId,
+      actorUserId,
+      orderId,
+      released: released.size,
+    });
+    return this.getOrder(organizationId, orderId);
   }
 
   /**
@@ -385,12 +422,13 @@ export class OrdersServerService {
    * within the cooldown window are skipped (anti-abuse) rather than re-fetched.
    */
   async pullFromConnections(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionIds?: string[],
   ): Promise<MultiPullOrdersResult> {
     const connections = await prisma.marketplaceConnection.findMany({
       where: {
-        userId,
+        organizationId,
         deletedAt: null,
         isActive: true,
         ...(connectionIds && connectionIds.length > 0 ? { id: { in: connectionIds } } : {}),
@@ -410,12 +448,12 @@ export class OrdersServerService {
         continue;
       }
 
-      const result = await this.pullOneConnection(userId, connection);
+      const result = await this.pullOneConnection(organizationId, actorUserId, connection);
       await prisma.marketplaceConnection.update({
         where: { id: connection.id },
         data: { lastOrdersPulledAt: new Date() },
       });
-      await this.propagateAffected(userId, result.affected, connection.id);
+      await this.propagateAffected(organizationId, actorUserId, result.affected, connection.id);
 
       pulled += result.pulled;
       applied += result.applied;
@@ -425,7 +463,8 @@ export class OrdersServerService {
     }
 
     appLogger.info('orders.pulled.multi', {
-      userId,
+      organizationId,
+      actorUserId,
       storesPulled,
       pulled,
       applied,
@@ -436,7 +475,8 @@ export class OrdersServerService {
   }
 
   private async pullOneConnection(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connection: MarketplaceConnection,
   ): Promise<{
     pulled: number;
@@ -480,7 +520,8 @@ export class OrdersServerService {
             },
           },
           create: {
-            userId,
+            userId: actorUserId,
+            organizationId,
             marketplaceConnectionId: connection.id,
             provider: connection.provider,
             externalOrderId: order.externalOrderId,
@@ -542,7 +583,8 @@ export class OrdersServerService {
           for (const item of resolvedItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderReserveTx(tx, {
-              userId,
+              organizationId,
+              actorUserId,
               variantId: item.productVariantId,
               quantity: item.quantity,
               orderId: saved.id,
@@ -567,7 +609,8 @@ export class OrdersServerService {
           for (const item of resolvedItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderShipTx(tx, {
-              userId,
+              organizationId,
+              actorUserId,
               variantId: item.productVariantId,
               quantity: item.quantity,
               orderId: saved.id,
@@ -585,7 +628,8 @@ export class OrdersServerService {
           for (const item of resolvedItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderReleaseTx(tx, {
-              userId,
+              organizationId,
+              actorUserId,
               variantId: item.productVariantId,
               quantity: item.quantity,
               orderId: saved.id,
@@ -604,10 +648,12 @@ export class OrdersServerService {
         // Open a return (idempotent) to track the goods coming back; stock only
         // moves once the return is processed. Best-effort — never fail the pull.
         try {
-          await returnsServerService.createReturn(userId, saved.id, { autoDetected: true });
+          await returnsServerService.createReturn(organizationId, actorUserId, saved.id, {
+            autoDetected: true,
+          });
         } catch (error) {
           appLogger.warn('orders.return.autocreate_failed', {
-            userId,
+            organizationId,
             orderId: saved.id,
             error: error instanceof Error ? error.message : String(error),
           });
@@ -646,7 +692,8 @@ export class OrdersServerService {
   }
 
   private async propagateAffected(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantIds: Set<string>,
     connectionId: string,
   ): Promise<void> {
@@ -657,7 +704,8 @@ export class OrdersServerService {
           select: { availableStock: true },
         });
         await enqueuePropagateInventoryStock({
-          userId,
+          organizationId,
+          actorUserId,
           variantId,
           availableStock: inventory?.availableStock ?? 0,
           eventId: `order-${connectionId}-${variantId}-${Date.now()}`,
@@ -666,7 +714,7 @@ export class OrdersServerService {
         });
       } catch (error) {
         appLogger.warn('orders.propagate.enqueue_failed', {
-          userId,
+          organizationId,
           variantId,
           error: error instanceof Error ? error.message : String(error),
         });

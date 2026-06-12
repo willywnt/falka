@@ -6,7 +6,7 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const searchParams = new URL(request.url).searchParams;
     const parsed = listOrdersQuerySchema.safeParse({
       page: searchParams.get('page') ?? undefined,
@@ -16,7 +16,7 @@ export const GET = withApiRoute(
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const orders = await ordersServerService.listOrders(user.id, parsed.data);
+    const orders = await ordersServerService.listOrders(org.id, parsed.data);
     return apiSuccess(orders);
   },
   { requireAuth: true },

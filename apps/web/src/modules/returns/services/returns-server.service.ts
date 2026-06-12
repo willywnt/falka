@@ -83,11 +83,11 @@ function mapDetail(row: ReturnRow): ReturnDetail {
  */
 export class ReturnsServerService {
   async listReturns(
-    userId: string,
+    organizationId: string,
     query: ListReturnsQuery,
   ): Promise<PaginatedResult<ReturnListItem>> {
     const where: Prisma.ReturnWhereInput = {
-      userId,
+      organizationId,
       ...(query.status ? { status: query.status } : {}),
     };
 
@@ -129,9 +129,9 @@ export class ReturnsServerService {
     return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
-  async getReturn(userId: string, returnId: string): Promise<ReturnDetail> {
+  async getReturn(organizationId: string, returnId: string): Promise<ReturnDetail> {
     const row = await prisma.return.findFirst({
-      where: { id: returnId, userId },
+      where: { id: returnId, organizationId },
       include: DETAIL_INCLUDE,
     });
     if (!row) throw ReturnError.notFound();
@@ -144,12 +144,13 @@ export class ReturnsServerService {
    * re-pull never duplicates). Seeds one PENDING line per resolved order item.
    */
   async createReturn(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     orderId: string,
     opts: { reason?: string; autoDetected?: boolean } = {},
   ): Promise<ReturnDetail> {
     const order = await prisma.order.findFirst({
-      where: { id: orderId, userId },
+      where: { id: orderId, organizationId },
       include: { items: true },
     });
     if (!order) throw ReturnError.notFound('Order not found.');
@@ -157,8 +158,8 @@ export class ReturnsServerService {
       throw ReturnError.validation('A return can only be opened after the order has shipped.');
     }
 
-    const existing = await prisma.return.findFirst({ where: { orderId, userId } });
-    if (existing) return this.getReturn(userId, existing.id);
+    const existing = await prisma.return.findFirst({ where: { orderId, organizationId } });
+    if (existing) return this.getReturn(organizationId, existing.id);
 
     const resolvedItems = order.items.filter((item) => item.productVariantId !== null);
     if (resolvedItems.length === 0) {
@@ -167,7 +168,8 @@ export class ReturnsServerService {
 
     const created = await prisma.return.create({
       data: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         orderId,
         reason: opts.reason ?? null,
         autoDetected: opts.autoDetected ?? false,
@@ -183,12 +185,13 @@ export class ReturnsServerService {
     });
 
     appLogger.info('returns.created', {
-      userId,
+      organizationId,
+      actorUserId,
       returnId: created.id,
       orderId,
       autoDetected: opts.autoDetected ?? false,
     });
-    return this.getReturn(userId, created.id);
+    return this.getReturn(organizationId, created.id);
   }
 
   /**
@@ -197,12 +200,13 @@ export class ReturnsServerService {
    * propagated to marketplaces afterwards (best-effort).
    */
   async processReturn(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     returnId: string,
     input: ProcessReturnInput,
   ): Promise<ReturnDetail> {
     const ret = await prisma.return.findFirst({
-      where: { id: returnId, userId },
+      where: { id: returnId, organizationId },
       include: { items: true },
     });
     if (!ret) throw ReturnError.notFound();
@@ -232,7 +236,8 @@ export class ReturnsServerService {
         if (item.productVariantId) {
           if (disposition === 'RESTOCK') {
             await inventoryServerService.applyReturnRestockTx(tx, {
-              userId,
+              organizationId,
+              actorUserId,
               variantId: item.productVariantId,
               quantity: item.quantity,
               returnId,
@@ -240,7 +245,8 @@ export class ReturnsServerService {
             restocked.add(item.productVariantId);
           } else {
             await inventoryServerService.applyReturnDamagedTx(tx, {
-              userId,
+              organizationId,
+              actorUserId,
               variantId: item.productVariantId,
               quantity: item.quantity,
               returnId,
@@ -255,14 +261,19 @@ export class ReturnsServerService {
       });
     });
 
-    appLogger.info('returns.processed', { userId, returnId, restockedVariants: restocked.size });
-    await this.propagateRestocked(userId, restocked);
-    return this.getReturn(userId, returnId);
+    appLogger.info('returns.processed', {
+      organizationId,
+      actorUserId,
+      returnId,
+      restockedVariants: restocked.size,
+    });
+    await this.propagateRestocked(organizationId, actorUserId, restocked);
+    return this.getReturn(organizationId, returnId);
   }
 
   /** Close a return without restocking (goods not returned / dispute lost). */
-  async rejectReturn(userId: string, returnId: string): Promise<ReturnDetail> {
-    const ret = await prisma.return.findFirst({ where: { id: returnId, userId } });
+  async rejectReturn(organizationId: string, returnId: string): Promise<ReturnDetail> {
+    const ret = await prisma.return.findFirst({ where: { id: returnId, organizationId } });
     if (!ret) throw ReturnError.notFound();
     if (ret.status !== 'PENDING')
       throw ReturnError.validation('This return has already been processed.');
@@ -271,17 +282,20 @@ export class ReturnsServerService {
       where: { id: returnId },
       data: { status: 'REJECTED', processedAt: new Date() },
     });
-    appLogger.info('returns.rejected', { userId, returnId });
-    return this.getReturn(userId, returnId);
+    appLogger.info('returns.rejected', { organizationId, returnId });
+    return this.getReturn(organizationId, returnId);
   }
 
   /** Variant ids (from the given set) referenced by a still-open (PENDING) return. */
-  async getVariantIdsWithOpenReturns(userId: string, variantIds: string[]): Promise<Set<string>> {
+  async getVariantIdsWithOpenReturns(
+    organizationId: string,
+    variantIds: string[],
+  ): Promise<Set<string>> {
     if (variantIds.length === 0) return new Set();
     const rows = await prisma.returnItem.findMany({
       where: {
         productVariantId: { in: variantIds },
-        return: { userId, status: 'PENDING' },
+        return: { organizationId, status: 'PENDING' },
       },
       select: { productVariantId: true },
     });
@@ -291,11 +305,15 @@ export class ReturnsServerService {
   }
 
   /** Best-effort: push each restocked variant's new available stock to all channels. */
-  private async propagateRestocked(userId: string, variantIds: Set<string>): Promise<void> {
+  private async propagateRestocked(
+    organizationId: string,
+    actorUserId: string,
+    variantIds: Set<string>,
+  ): Promise<void> {
     for (const variantId of variantIds) {
       try {
         const syncEnabledCount = await prisma.marketplaceProductMapping.count({
-          where: { productVariantId: variantId, userId, syncEnabled: true },
+          where: { productVariantId: variantId, organizationId, syncEnabled: true },
         });
         if (syncEnabledCount === 0) continue;
 
@@ -304,14 +322,15 @@ export class ReturnsServerService {
           select: { availableStock: true },
         });
         await enqueuePropagateInventoryStock({
-          userId,
+          organizationId,
+          actorUserId,
           variantId,
           availableStock: inventory?.availableStock ?? 0,
           eventId: `return-${variantId}-${Date.now()}`,
         });
       } catch (error) {
         appLogger.warn('returns.propagate.enqueue_failed', {
-          userId,
+          organizationId,
           variantId,
           error: error instanceof Error ? error.message : String(error),
         });

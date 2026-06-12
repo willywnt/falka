@@ -10,7 +10,7 @@ const duplicateQuerySchema = z.object({
 });
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = duplicateQuerySchema.safeParse({
       noResi: new URL(request.url).searchParams.get('noResi') ?? '',
     });
@@ -18,7 +18,7 @@ export const GET = withApiRoute(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const duplicate = await recordingServerService.findRecentDuplicateResi(
-      user.id,
+      org.id,
       parsed.data.noResi,
     );
 

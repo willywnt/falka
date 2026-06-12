@@ -6,11 +6,11 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = parseProfitReportQuery(new URL(request.url).searchParams);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const report = await reportingServerService.getAbcAnalysis(user.id, parsed.data);
+    const report = await reportingServerService.getAbcAnalysis(org.id, parsed.data);
     return apiSuccess(report);
   },
   { requireAuth: true },

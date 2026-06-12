@@ -111,17 +111,19 @@ const COUNTABLE_SELECT = {
  * counted quantity per variant against the system's number. Posting (COMPLETED)
  * writes each line's variance to the append-only ledger as a RECONCILE row and
  * corrects the Inventory cache — all stock writes go through the inventory service.
- * Read of catalog variants is read-only.
+ * Read of catalog variants is read-only. Queries are scoped by `organizationId`;
+ * `StockOpname.userId` records the creating ACTOR and the RECONCILE ledger rows
+ * record the posting ACTOR.
  */
 export class StockOpnameService {
   /** Variants to add to a count — matched by SKU/name, with the current system qty. Paginated. */
   async searchCountableVariants(
-    userId: string,
+    organizationId: string,
     query: SearchCountableVariantsQuery,
   ): Promise<PaginatedResult<CountableVariant>> {
     const term = query.q.trim();
     const where: Prisma.ProductVariantWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       ...(term
         ? {
@@ -148,11 +150,14 @@ export class StockOpnameService {
   }
 
   /** Resolve a scanned/typed code to one variant to count (barcode then SKU, case-insensitive). */
-  async resolveCountableVariant(userId: string, code: string): Promise<CountableVariant | null> {
+  async resolveCountableVariant(
+    organizationId: string,
+    code: string,
+  ): Promise<CountableVariant | null> {
     const term = code.trim();
     if (!term) return null;
 
-    const base = { userId, deletedAt: null } as const;
+    const base = { organizationId, deletedAt: null } as const;
     const variant =
       (await prisma.productVariant.findFirst({
         where: { ...base, barcode: { equals: term, mode: 'insensitive' } },
@@ -167,11 +172,11 @@ export class StockOpnameService {
   }
 
   async listOpnames(
-    userId: string,
+    organizationId: string,
     query: ListStockOpnameQuery,
   ): Promise<PaginatedResult<StockOpnameListItem>> {
     const where: Prisma.StockOpnameWhereInput = {
-      userId,
+      organizationId,
       ...(query.search
         ? {
             OR: [
@@ -205,29 +210,36 @@ export class StockOpnameService {
     return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
-  async getOpname(userId: string, id: string): Promise<StockOpnameDetail> {
+  async getOpname(organizationId: string, id: string): Promise<StockOpnameDetail> {
     const row = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       include: DETAIL_INCLUDE,
     });
     if (!row) throw StockOpnameError.notFound();
     return mapDetail(row);
   }
 
-  /** Start a new (empty) DRAFT session with a per-user code (OP00001). */
-  async createOpname(userId: string, input: CreateStockOpnameInput): Promise<StockOpnameDetail> {
+  /** Start a new (empty) DRAFT session with a per-organization code (OP00001). */
+  async createOpname(
+    organizationId: string,
+    actorUserId: string,
+    input: CreateStockOpnameInput,
+  ): Promise<StockOpnameDetail> {
     const created = await prisma.$transaction(async (tx) => {
-      const count = await tx.stockOpname.count({ where: { userId } });
+      const count = await tx.stockOpname.count({ where: { organizationId } });
       const code = `OP${(count + 1).toString().padStart(5, '0')}`;
-      return tx.stockOpname.create({ data: { userId, code, note: input.note ?? null } });
+      return tx.stockOpname.create({
+        data: { userId: actorUserId, organizationId, code, note: input.note ?? null },
+      });
     });
 
     appLogger.info('inventory.opname.created', {
-      userId,
+      organizationId,
+      actorUserId,
       opnameId: created.id,
       code: created.code,
     });
-    return this.getOpname(userId, created.id);
+    return this.getOpname(organizationId, created.id);
   }
 
   /**
@@ -236,19 +248,19 @@ export class StockOpnameService {
    * variance you saw while counting is the one that gets posted. DRAFT only.
    */
   async upsertItem(
-    userId: string,
+    organizationId: string,
     id: string,
     input: UpsertOpnameItemInput,
   ): Promise<StockOpnameDetail> {
     const opname = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       select: { id: true, status: true },
     });
     if (!opname) throw StockOpnameError.notFound();
     if (opname.status !== 'DRAFT') throw StockOpnameError.validation('Opname ini sudah ditutup.');
 
     const variant = await prisma.productVariant.findFirst({
-      where: { id: input.variantId, userId, deletedAt: null },
+      where: { id: input.variantId, organizationId, deletedAt: null },
       select: { id: true, sku: true, name: true, inventory: { select: { availableStock: true } } },
     });
     if (!variant) throw StockOpnameError.validation('Varian tidak ditemukan.');
@@ -282,7 +294,7 @@ export class StockOpnameService {
       });
     }
 
-    return this.getOpname(userId, id);
+    return this.getOpname(organizationId, id);
   }
 
   /**
@@ -291,15 +303,15 @@ export class StockOpnameService {
    * each physical unit. DRAFT only; returns `matched: null` when nothing resolves so
    * the caller can buzz an error.
    */
-  async scanCountItem(userId: string, id: string, code: string): Promise<OpnameScanResult> {
+  async scanCountItem(organizationId: string, id: string, code: string): Promise<OpnameScanResult> {
     const opname = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       select: { id: true, status: true },
     });
     if (!opname) throw StockOpnameError.notFound();
     if (opname.status !== 'DRAFT') throw StockOpnameError.validation('Opname ini sudah ditutup.');
 
-    const variant = await this.resolveCountableVariant(userId, code);
+    const variant = await this.resolveCountableVariant(organizationId, code);
     if (!variant) return { matched: null, detail: null };
 
     const counted = await prisma.$transaction(async (tx) => {
@@ -336,7 +348,7 @@ export class StockOpnameService {
       return 1;
     });
 
-    const detail = await this.getOpname(userId, id);
+    const detail = await this.getOpname(organizationId, id);
     return {
       matched: {
         sku: variant.sku,
@@ -350,26 +362,31 @@ export class StockOpnameService {
   }
 
   /** Remove a counted line (DRAFT only). A wrong/stale itemId is a no-op. */
-  async removeItem(userId: string, id: string, itemId: string): Promise<StockOpnameDetail> {
+  async removeItem(organizationId: string, id: string, itemId: string): Promise<StockOpnameDetail> {
     const opname = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       select: { id: true, status: true },
     });
     if (!opname) throw StockOpnameError.notFound();
     if (opname.status !== 'DRAFT') throw StockOpnameError.validation('Opname ini sudah ditutup.');
 
     await prisma.stockOpnameItem.deleteMany({ where: { id: itemId, stockOpnameId: id } });
-    return this.getOpname(userId, id);
+    return this.getOpname(organizationId, id);
   }
 
   /**
    * Post the count (DRAFT → COMPLETED): for every line with a variance, shift
-   * available by that variance and write a RECONCILE ledger row, in one tx. Then
-   * propagate the corrected stock to the channels. No-variance lines write nothing.
+   * available by that variance and write a RECONCILE ledger row (actor = the
+   * posting user), in one tx. Then propagate the corrected stock to the channels.
+   * No-variance lines write nothing.
    */
-  async completeOpname(userId: string, id: string): Promise<StockOpnameDetail> {
+  async completeOpname(
+    organizationId: string,
+    actorUserId: string,
+    id: string,
+  ): Promise<StockOpnameDetail> {
     const opname = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       include: { items: true },
     });
     if (!opname) throw StockOpnameError.notFound();
@@ -386,7 +403,8 @@ export class StockOpnameService {
       for (const item of opname.items) {
         if (item.variance === 0) continue;
         const result = await inventoryServerService.applyReconcileTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: item.productVariantId,
           delta: item.variance,
           note: `Opname ${opname.code}`,
@@ -404,15 +422,20 @@ export class StockOpnameService {
       });
     });
 
-    appLogger.info('inventory.opname.completed', { userId, opnameId: id, posted: affected.length });
-    await this.propagateAffected(userId, affected);
-    return this.getOpname(userId, id);
+    appLogger.info('inventory.opname.completed', {
+      organizationId,
+      actorUserId,
+      opnameId: id,
+      posted: affected.length,
+    });
+    await this.propagateAffected(organizationId, actorUserId, affected);
+    return this.getOpname(organizationId, id);
   }
 
   /** Cancel a not-yet-posted count (DRAFT → CANCELLED). Nothing is written to stock. */
-  async cancelOpname(userId: string, id: string): Promise<StockOpnameDetail> {
+  async cancelOpname(organizationId: string, id: string): Promise<StockOpnameDetail> {
     const opname = await prisma.stockOpname.findFirst({
-      where: { id, userId },
+      where: { id, organizationId },
       select: { id: true, status: true },
     });
     if (!opname) throw StockOpnameError.notFound();
@@ -421,31 +444,33 @@ export class StockOpnameService {
     }
 
     await prisma.stockOpname.update({ where: { id }, data: { status: 'CANCELLED' } });
-    appLogger.info('inventory.opname.cancelled', { userId, opnameId: id });
-    return this.getOpname(userId, id);
+    appLogger.info('inventory.opname.cancelled', { organizationId, opnameId: id });
+    return this.getOpname(organizationId, id);
   }
 
   /** Best-effort: push each corrected variant's new available stock to all channels. */
   private async propagateAffected(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     entries: { variantId: string; availableStock: number; eventId: string }[],
   ): Promise<void> {
     for (const entry of entries) {
       try {
         const syncEnabledCount = await prisma.marketplaceProductMapping.count({
-          where: { productVariantId: entry.variantId, userId, syncEnabled: true },
+          where: { productVariantId: entry.variantId, organizationId, syncEnabled: true },
         });
         if (syncEnabledCount === 0) continue;
 
         await enqueuePropagateInventoryStock({
-          userId,
+          organizationId,
+          actorUserId,
           variantId: entry.variantId,
           availableStock: entry.availableStock,
           eventId: entry.eventId,
         });
       } catch (error) {
         appLogger.warn('inventory.opname.propagate.enqueue_failed', {
-          userId,
+          organizationId,
           variantId: entry.variantId,
           error: error instanceof Error ? error.message : String(error),
         });

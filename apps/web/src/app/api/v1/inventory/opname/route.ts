@@ -6,23 +6,23 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = parseListStockOpnameQuery(new URL(request.url).searchParams);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await stockOpnameService.listOpnames(user.id, parsed.data);
+    const result = await stockOpnameService.listOpnames(org.id, parsed.data);
     return apiSuccess(result);
   },
   { requireAuth: true },
 );
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { user, org }) => {
     const body: unknown = await request.json().catch(() => ({}));
     const parsed = createStockOpnameSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const opname = await stockOpnameService.createOpname(user.id, parsed.data);
+    const opname = await stockOpnameService.createOpname(org.id, user.id, parsed.data);
     return apiSuccess(opname, 201);
   },
   { requireAuth: true },

@@ -8,7 +8,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
@@ -16,7 +16,7 @@ export const GET = withApiRoute<RouteParams>(
     const variantIds = raw ? raw.split(',').filter(Boolean) : undefined;
 
     const blockers = await catalogServerService.getDeletionBlockers(
-      user.id,
+      org.id,
       parsedParams.data.id,
       variantIds,
     );

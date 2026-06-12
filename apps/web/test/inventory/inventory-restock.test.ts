@@ -31,7 +31,13 @@ const { InventoryServerService } =
   await import('@/modules/inventory/services/inventory-server.service');
 
 const service = new InventoryServerService();
-const PARAMS = { userId: 'user-1', variantId: 'v1', quantity: 3, orderId: 'order-1' };
+const PARAMS = {
+  organizationId: 'org-1',
+  actorUserId: 'user-1',
+  variantId: 'v1',
+  quantity: 3,
+  orderId: 'order-1',
+};
 
 function upsertUpdateArg() {
   return txMock.inventory.upsert.mock.calls[0]?.[0] as {

@@ -80,6 +80,7 @@ vi.mock('@/modules/orders/adapters/order-adapter', () => ({
 const { OrdersServerService } = await import('@/modules/orders/services/orders-server.service');
 
 const service = new OrdersServerService();
+const ORG = 'org-1';
 const USER = 'user-1';
 const CONN_ID = 'conn-A';
 const APPLIED_AT = new Date('2026-01-11T00:00:00.000Z');
@@ -151,7 +152,7 @@ describe('pullFromConnections — reserve (PAID)', () => {
     state.orders = [orderFromAdapter('PAID')];
     state.saved = savedOrder({ status: 'PAID' });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReserveTx).toHaveBeenCalledTimes(1);
     expect(inventoryMock.applyOrderReserveTx).toHaveBeenCalledWith(
@@ -173,7 +174,7 @@ describe('pullFromConnections — ship (SHIPPED/COMPLETED)', () => {
     state.orders = [orderFromAdapter('SHIPPED')];
     state.saved = savedOrder({ status: 'SHIPPED' });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReserveTx).toHaveBeenCalledTimes(1);
     expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledTimes(1);
@@ -187,7 +188,7 @@ describe('pullFromConnections — ship (SHIPPED/COMPLETED)', () => {
     state.orders = [orderFromAdapter('COMPLETED')];
     state.saved = savedOrder({ status: 'COMPLETED', inventoryAppliedAt: APPLIED_AT });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReserveTx).not.toHaveBeenCalled();
     expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledTimes(1);
@@ -204,7 +205,7 @@ describe('pullFromConnections — ship (SHIPPED/COMPLETED)', () => {
       inventoryShippedAt: SHIPPED_AT,
     });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalled();
     expect(result.shipped).toBe(0);
@@ -216,7 +217,7 @@ describe('pullFromConnections — release (CANCELLED)', () => {
     state.orders = [orderFromAdapter('CANCELLED')];
     state.saved = savedOrder({ status: 'CANCELLED', inventoryAppliedAt: APPLIED_AT });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReleaseTx).toHaveBeenCalledTimes(1);
     expect(result.reverted).toBe(1);
@@ -231,19 +232,19 @@ describe('pullFromConnections — release (CANCELLED)', () => {
       inventoryShippedAt: SHIPPED_AT,
     });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
     expect(result.reverted).toBe(0);
     expect(enqueueMock).not.toHaveBeenCalled();
-    expect(returnsMock.createReturn).toHaveBeenCalledWith(USER, 'o1', { autoDetected: true });
+    expect(returnsMock.createReturn).toHaveBeenCalledWith(ORG, USER, 'o1', { autoDetected: true });
   });
 
   it('does not release a cancelled order that was never reserved', async () => {
     state.orders = [orderFromAdapter('CANCELLED')];
     state.saved = savedOrder({ status: 'CANCELLED' });
 
-    const result = await service.pullFromConnections(USER);
+    const result = await service.pullFromConnections(ORG, USER);
 
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
     expect(result.reverted).toBe(0);
@@ -257,30 +258,34 @@ describe('findByResi / markFulfilledByResi (fulfillment)', () => {
       .spyOn(service, 'getOrder')
       .mockResolvedValue({ id: 'o9' } as Awaited<ReturnType<typeof service.getOrder>>);
 
-    const result = await service.findByResi(USER, 'RESI-1');
+    const result = await service.findByResi(ORG, 'RESI-1');
 
-    expect(getOrderSpy).toHaveBeenCalledWith(USER, 'o9');
+    expect(getOrderSpy).toHaveBeenCalledWith(ORG, 'o9');
     expect(result).toMatchObject({ id: 'o9' });
     getOrderSpy.mockRestore();
   });
 
   it('returns null when no order matches the resi', async () => {
     prismaMock.order.findFirst.mockResolvedValue(null);
-    expect(await service.findByResi(USER, 'RESI-NONE')).toBeNull();
+    expect(await service.findByResi(ORG, 'RESI-NONE')).toBeNull();
   });
 
   it('stamps fulfilledAt only on not-yet-fulfilled matching orders', async () => {
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
-    const count = await service.markFulfilledByResi(USER, 'RESI-1');
+    const count = await service.markFulfilledByResi(ORG, 'RESI-1');
 
     expect(count).toBe(1);
     const args = prismaMock.order.updateMany.mock.calls[0]?.[0] as {
-      where: { userId: string; noResi: { equals: string; mode: string }; fulfilledAt: null };
+      where: {
+        organizationId: string;
+        noResi: { equals: string; mode: string };
+        fulfilledAt: null;
+      };
       data: { fulfilledAt: Date };
     };
     expect(args.where).toMatchObject({
-      userId: USER,
+      organizationId: ORG,
       noResi: { equals: 'RESI-1', mode: 'insensitive' },
       fulfilledAt: null,
     });
@@ -312,7 +317,7 @@ describe('markOrderShipped (manual)', () => {
       .spyOn(service, 'getOrder')
       .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
 
-    await service.markOrderShipped(USER, 'o1', { noResi: 'NEW-RESI' });
+    await service.markOrderShipped(ORG, USER, 'o1', { noResi: 'NEW-RESI' });
 
     expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledWith(
       txMock,
@@ -327,13 +332,13 @@ describe('markOrderShipped (manual)', () => {
 
   it('refuses to ship an order that is not PAID', async () => {
     prismaMock.order.findFirst.mockResolvedValue(persistedOrder({ status: 'PENDING' }));
-    await expect(service.markOrderShipped(USER, 'o1')).rejects.toThrow(/paid/i);
+    await expect(service.markOrderShipped(ORG, USER, 'o1')).rejects.toThrow(/paid/i);
     expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalled();
   });
 
   it('refuses to ship a PAID order whose stock was never reserved', async () => {
     prismaMock.order.findFirst.mockResolvedValue(persistedOrder({ inventoryAppliedAt: null }));
-    await expect(service.markOrderShipped(USER, 'o1')).rejects.toThrow(/not reserved/i);
+    await expect(service.markOrderShipped(ORG, USER, 'o1')).rejects.toThrow(/not reserved/i);
     expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalled();
   });
 });
@@ -345,7 +350,7 @@ describe('cancelOrder (manual)', () => {
       .spyOn(service, 'getOrder')
       .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
 
-    await service.cancelOrder(USER, 'o1', { reason: 'Buyer changed mind' });
+    await service.cancelOrder(ORG, USER, 'o1', { reason: 'Buyer changed mind' });
 
     expect(inventoryMock.applyOrderReleaseTx).toHaveBeenCalledWith(
       txMock,
@@ -363,7 +368,7 @@ describe('cancelOrder (manual)', () => {
     prismaMock.order.findFirst.mockResolvedValue(
       persistedOrder({ status: 'SHIPPED', inventoryShippedAt: SHIPPED_AT }),
     );
-    await expect(service.cancelOrder(USER, 'o1', {})).rejects.toThrow(/return/i);
+    await expect(service.cancelOrder(ORG, USER, 'o1', {})).rejects.toThrow(/return/i);
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
   });
 
@@ -375,7 +380,7 @@ describe('cancelOrder (manual)', () => {
       .spyOn(service, 'getOrder')
       .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
 
-    await service.cancelOrder(USER, 'o1', {});
+    await service.cancelOrder(ORG, USER, 'o1', {});
 
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
     expect(txMock.order.update.mock.calls[0]?.[0]).toMatchObject({

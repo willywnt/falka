@@ -5,8 +5,8 @@ import { apiSuccess } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const active = await recordingServerService.findActiveRecording(user.id);
+  async (_request, { org }) => {
+    const active = await recordingServerService.findActiveRecording(org.id);
 
     if (!active) {
       return apiSuccess(null);

@@ -10,13 +10,13 @@ const uploadingSchema = z.object({
 });
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const body: unknown = await request.json();
     const parsed = uploadingSchema.safeParse(body);
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    await recordingServerService.markUploading(parsed.data.recordingId, user.id);
+    await recordingServerService.markUploading(parsed.data.recordingId, org.id);
 
     return apiSuccess({ success: true });
   },

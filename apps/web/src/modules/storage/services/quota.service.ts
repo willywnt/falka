@@ -7,11 +7,11 @@ import { StorageError } from '../errors/storage-errors';
 import type { StorageQuotaSnapshot } from '../types';
 
 export class QuotaService {
-  async getQuotaSnapshot(userId: string): Promise<StorageQuotaSnapshot> {
-    const user = await this.getActiveUserQuota(userId);
+  async getQuotaSnapshot(organizationId: string): Promise<StorageQuotaSnapshot> {
+    const organization = await this.getActiveOrgQuota(organizationId);
 
-    const usedBytes = user.storageUsedBytes;
-    const quotaBytes = user.storageQuotaBytes;
+    const usedBytes = organization.storageUsedBytes;
+    const quotaBytes = organization.storageQuotaBytes;
 
     return {
       usedBytes,
@@ -21,12 +21,12 @@ export class QuotaService {
     };
   }
 
-  async assertQuotaAvailable(userId: string, incomingFileSizeBytes: number): Promise<void> {
-    const user = await this.getActiveUserQuota(userId);
+  async assertQuotaAvailable(organizationId: string, incomingFileSizeBytes: number): Promise<void> {
+    const organization = await this.getActiveOrgQuota(organizationId);
 
     const hasQuota = isWithinQuota(
-      Number(user.storageUsedBytes),
-      Number(user.storageQuotaBytes),
+      Number(organization.storageUsedBytes),
+      Number(organization.storageQuotaBytes),
       incomingFileSizeBytes,
     );
 
@@ -35,9 +35,9 @@ export class QuotaService {
     }
   }
 
-  private async getActiveUserQuota(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+  private async getActiveOrgQuota(organizationId: string) {
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
       select: {
         storageUsedBytes: true,
         storageQuotaBytes: true,
@@ -45,11 +45,11 @@ export class QuotaService {
       },
     });
 
-    if (!user || user.deletedAt) {
+    if (!organization || organization.deletedAt) {
       throw StorageError.unauthorized();
     }
 
-    return user;
+    return organization;
   }
 }
 

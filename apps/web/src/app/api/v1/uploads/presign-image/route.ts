@@ -6,12 +6,12 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const POST = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const body: unknown = await request.json();
     const parsed = imagePresignSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await uploadService.createPresignedImageUpload(user.id, parsed.data);
+    const result = await uploadService.createPresignedImageUpload(org.id, parsed.data);
     return apiSuccess(result);
   },
   { requireAuth: true },

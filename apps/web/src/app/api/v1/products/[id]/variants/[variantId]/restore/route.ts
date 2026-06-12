@@ -8,12 +8,12 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string; variantId: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsedParams = variantRouteParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Variant not found');
 
     const variant = await catalogServerService.restoreVariant(
-      user.id,
+      org.id,
       parsedParams.data.id,
       parsedParams.data.variantId,
     );

@@ -8,25 +8,25 @@ import {
   type CleanupRecordingsJobPayload,
   type JobResultMetadata,
 } from '../types/index.js';
-import { isPendingStorageKey, isUserRecordingStorageKey } from '../utils/index.js';
+import { isOrgRecordingStorageKey, isPendingStorageKey } from '../utils/index.js';
 
 type CleanupStats = JobResultMetadata;
 
 async function finalizeRecordingDeletion(params: {
   recordingId: string;
-  userId: string;
+  organizationId: string | null;
   storageKey: string;
   fileSizeBytes: bigint;
   dryRun: boolean;
 }): Promise<'deleted' | 'skipped'> {
   // fileSizeBytes is part of the caller contract but re-read authoritatively from the
   // DB below, so it is intentionally not destructured here.
-  const { recordingId, userId, storageKey, dryRun } = params;
+  const { recordingId, organizationId, storageKey, dryRun } = params;
   const storage = getObjectStorageProvider();
 
   const recording = await prisma.recording.findUnique({
     where: { id: recordingId },
-    select: { id: true, status: true, storageKey: true, fileSizeBytes: true, userId: true },
+    select: { id: true, status: true, storageKey: true, fileSizeBytes: true, organizationId: true },
   });
 
   if (!recording) return 'skipped';
@@ -60,8 +60,12 @@ async function finalizeRecordingDeletion(params: {
       return;
     }
 
-    const shouldDecrement =
-      current.fileSizeBytes > 0n && isUserRecordingStorageKey(storageKey, userId);
+    const decrementOrgId =
+      current.fileSizeBytes > 0n &&
+      organizationId !== null &&
+      isOrgRecordingStorageKey(storageKey, organizationId)
+        ? organizationId
+        : null;
 
     await tx.recording.update({
       where: { id: recordingId },
@@ -71,9 +75,9 @@ async function finalizeRecordingDeletion(params: {
       },
     });
 
-    if (shouldDecrement) {
-      await tx.user.update({
-        where: { id: userId },
+    if (decrementOrgId) {
+      await tx.organization.update({
+        where: { id: decrementOrgId },
         data: {
           storageUsedBytes: {
             decrement: current.fileSizeBytes,
@@ -113,7 +117,7 @@ export async function processCleanupRecordingsJob(
     },
     select: {
       id: true,
-      userId: true,
+      organizationId: true,
       storageKey: true,
       fileSizeBytes: true,
     },
@@ -149,7 +153,7 @@ export async function processCleanupRecordingsJob(
     try {
       const result = await finalizeRecordingDeletion({
         recordingId: recording.id,
-        userId: recording.userId,
+        organizationId: recording.organizationId,
         storageKey: recording.storageKey,
         fileSizeBytes: recording.fileSizeBytes,
         dryRun: false,
@@ -172,7 +176,7 @@ export async function processCleanupRecordingsJob(
     },
     select: {
       id: true,
-      userId: true,
+      organizationId: true,
       storageKey: true,
       fileSizeBytes: true,
     },
@@ -185,7 +189,7 @@ export async function processCleanupRecordingsJob(
     try {
       const result = await finalizeRecordingDeletion({
         recordingId: recording.id,
-        userId: recording.userId,
+        organizationId: recording.organizationId,
         storageKey: recording.storageKey,
         fileSizeBytes: recording.fileSizeBytes,
         dryRun: payload.dryRun,
@@ -212,7 +216,6 @@ export async function processCleanupRecordingsJob(
     },
     select: {
       id: true,
-      userId: true,
       storageKey: true,
       fileSizeBytes: true,
     },

@@ -32,7 +32,7 @@ export const cleanupRecordingsJobSchema = z.object({
 export type CleanupRecordingsJobPayload = z.infer<typeof cleanupRecordingsJobSchema>;
 
 export const recalculateStorageJobSchema = z.object({
-  userId: z.string().cuid().optional(),
+  organizationId: z.string().cuid().optional(),
   batchSize: z.number().int().positive().max(500).default(50),
   dryRun: z.boolean().default(false),
 });
@@ -65,7 +65,9 @@ export const verifyStorageConsistencyJobSchema = z.object({
 export type VerifyStorageConsistencyJobPayload = z.infer<typeof verifyStorageConsistencyJobSchema>;
 
 export const propagateInventoryStockJobSchema = z.object({
-  userId: z.string().cuid(),
+  organizationId: z.string().cuid(),
+  /** The user whose action triggered the stock change — recorded on sync-job rows. */
+  actorUserId: z.string().cuid(),
   variantId: z.string().cuid(),
   availableStock: z.number().int(),
   /** The stock-ledger entry id that triggered this propagation (idempotency key). */

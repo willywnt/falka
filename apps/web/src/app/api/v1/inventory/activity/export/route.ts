@@ -7,11 +7,11 @@ import { apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = parseStockActivityQuery(new URL(request.url).searchParams);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const items = await inventoryActivityService.listForExport(user.id, parsed.data);
+    const items = await inventoryActivityService.listForExport(org.id, parsed.data);
     const csv = stockActivityToCsv(items);
 
     return new NextResponse(csv, {

@@ -11,18 +11,18 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = recordingIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Recording not found');
 
-    const links = await recordingShareService.listShareLinks(user.id, parsed.data.id);
+    const links = await recordingShareService.listShareLinks(org.id, parsed.data.id);
     return apiSuccess(links);
   },
   { requireAuth: true },
 );
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = recordingIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Recording not found');
 
@@ -32,6 +32,7 @@ export const POST = withApiRoute<RouteParams>(
 
     try {
       const { token, link } = await recordingShareService.createShareLink(
+        org.id,
         user.id,
         parsedParams.data.id,
         parsedBody.data.expiresInHours,

@@ -9,12 +9,16 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = recordingIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Recording not found');
 
     try {
-      const playback = await recordingServerService.getPlaybackInfo(user.id, parsed.data.id);
+      const playback = await recordingServerService.getPlaybackInfo(
+        org.id,
+        user.id,
+        parsed.data.id,
+      );
       return apiSuccess(playback);
     } catch (error) {
       if (error instanceof RecordingError) return apiNotFound(error.message);

@@ -11,9 +11,9 @@ const DAILY_WINDOW_DAYS = 14;
 const DAILY_MOVEMENT_CAP = 4000;
 
 export class InventoryDashboardService {
-  async getDashboard(userId: string): Promise<InventoryDashboard> {
+  async getDashboard(organizationId: string): Promise<InventoryDashboard> {
     const variants = await prisma.productVariant.findMany({
-      where: { userId, deletedAt: null },
+      where: { organizationId, deletedAt: null },
       select: {
         id: true,
         sku: true,
@@ -66,7 +66,7 @@ export class InventoryDashboardService {
     needsAttention.sort((a, b) => a.availableStock - b.availableStock);
 
     const movements = await prisma.stockLedger.findMany({
-      where: { userId },
+      where: { organizationId },
       orderBy: { createdAt: 'desc' },
       take: RECENT_MOVEMENTS_SIZE,
       select: {
@@ -85,7 +85,7 @@ export class InventoryDashboardService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (DAILY_WINDOW_DAYS - 1)),
     );
     const flowRows = await prisma.stockLedger.findMany({
-      where: { userId, createdAt: { gte: windowStart } },
+      where: { organizationId, createdAt: { gte: windowStart } },
       orderBy: { createdAt: 'desc' },
       take: DAILY_MOVEMENT_CAP,
       select: { createdAt: true, delta: true },

@@ -14,13 +14,13 @@ export type SyncReadyMapping = {
  * inbound orders so the source channel isn't re-synced against its own change.
  */
 export async function findSyncReadyMappingsByVariant(
-  userId: string,
+  organizationId: string,
   variantId: string,
   excludeConnectionId?: string,
 ): Promise<SyncReadyMapping[]> {
   const mappings = await prisma.marketplaceProductMapping.findMany({
     where: {
-      userId,
+      organizationId,
       productVariantId: variantId,
       syncEnabled: true,
       connection: { isActive: true, deletedAt: null },
@@ -53,7 +53,8 @@ export async function findSyncJobByIdempotencyKey(
 }
 
 export async function createSyncJob(data: {
-  userId: string;
+  organizationId: string;
+  actorUserId: string;
   marketplaceConnectionId: string;
   marketplaceProductMappingId: string;
   provider: MarketplaceProvider;
@@ -62,7 +63,8 @@ export async function createSyncJob(data: {
 }): Promise<{ id: string }> {
   return prisma.marketplaceSyncJob.create({
     data: {
-      userId: data.userId,
+      userId: data.actorUserId,
+      organizationId: data.organizationId,
       marketplaceConnectionId: data.marketplaceConnectionId,
       marketplaceProductMappingId: data.marketplaceProductMappingId,
       provider: data.provider,

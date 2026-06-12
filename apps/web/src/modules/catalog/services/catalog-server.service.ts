@@ -118,12 +118,14 @@ function mapProductDetail(
 }
 
 function buildVariantData(
-  userId: string,
+  organizationId: string,
+  actorUserId: string,
   productId: string,
   input: CreateVariantInput,
 ): Prisma.ProductVariantUncheckedCreateInput {
   return {
-    userId,
+    userId: actorUserId,
+    organizationId,
     productId,
     sku: input.sku,
     name: input.name,
@@ -189,12 +191,12 @@ export class CatalogServerService {
    * next not-yet-printed ones surface first.
    */
   async listLabelVariants(
-    userId: string,
+    organizationId: string,
     query: LabelVariantsQuery,
   ): Promise<PaginatedResult<LabelVariant>> {
     const term = query.q.trim();
     const where: Prisma.ProductVariantWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       isActive: true,
       ...(term
@@ -241,28 +243,28 @@ export class CatalogServerService {
   }
 
   /** Stamp the label-printed time for the given variants (re-printing is allowed). */
-  async markLabelsPrinted(userId: string, variantIds: string[]): Promise<void> {
+  async markLabelsPrinted(organizationId: string, variantIds: string[]): Promise<void> {
     const ids = [...new Set(variantIds)];
     if (ids.length === 0) return;
 
     const result = await prisma.productVariant.updateMany({
-      where: { id: { in: ids }, userId, deletedAt: null },
+      where: { id: { in: ids }, organizationId, deletedAt: null },
       data: { labelPrintedAt: new Date() },
     });
 
     appLogger.info('catalog.labels.printed', {
-      userId,
+      organizationId,
       requested: ids.length,
       updated: result.count,
     });
   }
 
   async listProducts(
-    userId: string,
+    organizationId: string,
     query: ListProductsQuery,
   ): Promise<PaginatedResult<ProductListItem>> {
     const where: Prisma.ProductWhereInput = {
-      userId,
+      organizationId,
       ...notDeleted,
       ...(query.search ? { name: { contains: query.search, mode: 'insensitive' } } : {}),
     };
@@ -300,9 +302,9 @@ export class CatalogServerService {
     return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
-  async getProductById(userId: string, productId: string): Promise<ProductDetail> {
+  async getProductById(organizationId: string, productId: string): Promise<ProductDetail> {
     const product = await prisma.product.findFirst({
-      where: { id: productId, userId, ...notDeleted },
+      where: { id: productId, organizationId, ...notDeleted },
       include: {
         variants: {
           where: notDeleted,
@@ -315,16 +317,20 @@ export class CatalogServerService {
     if (!product) throw CatalogError.notFound();
 
     const mappingsByVariant = await marketplaceMappingService.getVariantMappings(
-      userId,
+      organizationId,
       product.variants.map((variant) => variant.id),
     );
 
     return mapProductDetail(product, mappingsByVariant);
   }
 
-  async createProduct(userId: string, input: CreateProductInput): Promise<ProductDetail> {
+  async createProduct(
+    organizationId: string,
+    actorUserId: string,
+    input: CreateProductInput,
+  ): Promise<ProductDetail> {
     await this.assertSkusAvailable(
-      userId,
+      organizationId,
       input.variants.map((variant) => variant.sku),
     );
 
@@ -334,13 +340,20 @@ export class CatalogServerService {
       const created = await prisma.$transaction(async (tx) => {
         const product = await tx.product.create({
           data: {
-            userId,
+            userId: actorUserId,
+            organizationId,
             name: input.name,
             description: input.description ?? null,
             category: input.category ?? null,
           },
         });
-        const ids = await this.createVariantLeaves(tx, userId, product.id, input.variants);
+        const ids = await this.createVariantLeaves(
+          tx,
+          organizationId,
+          actorUserId,
+          product.id,
+          input.variants,
+        );
         return { productId: product.id, variantIds: ids };
       });
       productId = created.productId;
@@ -351,11 +364,16 @@ export class CatalogServerService {
       throw error;
     }
 
-    await this.initVariantStocks(userId, variantIds, input.variants);
+    await this.initVariantStocks(organizationId, actorUserId, variantIds, input.variants);
 
-    appLogger.info('catalog.product.created', { userId, productId, variants: variantIds.length });
+    appLogger.info('catalog.product.created', {
+      organizationId,
+      actorUserId,
+      productId,
+      variants: variantIds.length,
+    });
 
-    return this.getProductById(userId, productId);
+    return this.getProductById(organizationId, productId);
   }
 
   /**
@@ -365,29 +383,35 @@ export class CatalogServerService {
    * per leaf. SKUs must be unique within the batch and across the account.
    */
   async addVariants(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     productId: string,
     inputs: CreateVariantInput[],
   ): Promise<ProductVariantItem[]> {
-    await this.assertProductOwned(userId, productId);
+    await this.assertProductOwned(organizationId, productId);
     await this.assertSkusAvailable(
-      userId,
+      organizationId,
       inputs.map((input) => input.sku),
     );
 
     let variantIds: string[];
     try {
       variantIds = await prisma.$transaction((tx) =>
-        this.createVariantLeaves(tx, userId, productId, inputs),
+        this.createVariantLeaves(tx, organizationId, actorUserId, productId, inputs),
       );
     } catch (error) {
       if (isUniqueConstraintError(error)) throw CatalogError.duplicateSku(inputs[0]?.sku ?? '');
       throw error;
     }
 
-    await this.initVariantStocks(userId, variantIds, inputs);
+    await this.initVariantStocks(organizationId, actorUserId, variantIds, inputs);
 
-    appLogger.info('catalog.variants.created', { userId, productId, count: variantIds.length });
+    appLogger.info('catalog.variants.created', {
+      organizationId,
+      actorUserId,
+      productId,
+      count: variantIds.length,
+    });
 
     const created = await prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
@@ -406,15 +430,15 @@ export class CatalogServerService {
    * reorder lead time / MOQ). Lead time and MOQ use 0 to mean "unset" → null.
    */
   async updateVariant(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantId: string,
     input: UpdateVariantInput,
   ): Promise<ProductVariantItem> {
-    await this.assertProductOwned(userId, productId);
+    await this.assertProductOwned(organizationId, productId);
 
     const owned = await prisma.productVariant.findFirst({
-      where: { id: variantId, productId, userId, deletedAt: null },
+      where: { id: variantId, productId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!owned) throw CatalogError.notFound('Variant not found.');
@@ -435,7 +459,7 @@ export class CatalogServerService {
       },
     });
 
-    appLogger.info('catalog.variant.updated', { userId, productId, variantId });
+    appLogger.info('catalog.variant.updated', { organizationId, productId, variantId });
 
     const updated = await prisma.productVariant.findUniqueOrThrow({
       where: { id: variantId },
@@ -446,11 +470,11 @@ export class CatalogServerService {
   }
 
   async updateProduct(
-    userId: string,
+    organizationId: string,
     productId: string,
     input: UpdateProductInput,
   ): Promise<ProductDetail> {
-    await this.assertProductOwned(userId, productId);
+    await this.assertProductOwned(organizationId, productId);
 
     await prisma.product.update({
       where: { id: productId },
@@ -462,24 +486,24 @@ export class CatalogServerService {
       },
     });
 
-    appLogger.info('catalog.product.updated', { userId, productId });
+    appLogger.info('catalog.product.updated', { organizationId, productId });
 
-    return this.getProductById(userId, productId);
+    return this.getProductById(organizationId, productId);
   }
 
   /** Set/replace a variant's photo from a just-uploaded R2 object; drops the old one. */
   async setVariantImage(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantId: string,
     input: SetVariantImageInput,
   ): Promise<ProductDetail> {
     const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, productId, userId, deletedAt: null },
+      where: { id: variantId, productId, organizationId, deletedAt: null },
       select: { id: true, imageKey: true },
     });
     if (!variant) throw CatalogError.notFound('Variant not found.');
-    if (!storageService.ownsKey(input.imageKey, userId)) {
+    if (!storageService.ownsKey(input.imageKey, organizationId)) {
       throw CatalogError.validation('Invalid image reference.');
     }
 
@@ -492,18 +516,18 @@ export class CatalogServerService {
       await this.deleteStorageObject(variant.imageKey);
     }
 
-    appLogger.info('catalog.variant.image.set', { userId, productId, variantId });
-    return this.getProductById(userId, productId);
+    appLogger.info('catalog.variant.image.set', { organizationId, productId, variantId });
+    return this.getProductById(organizationId, productId);
   }
 
   /** Remove a variant's photo (clears the fields + deletes the R2 object). */
   async removeVariantImage(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantId: string,
   ): Promise<ProductDetail> {
     const variant = await prisma.productVariant.findFirst({
-      where: { id: variantId, productId, userId, deletedAt: null },
+      where: { id: variantId, productId, organizationId, deletedAt: null },
       select: { id: true, imageKey: true },
     });
     if (!variant) throw CatalogError.notFound('Variant not found.');
@@ -515,8 +539,8 @@ export class CatalogServerService {
 
     if (variant.imageKey) await this.deleteStorageObject(variant.imageKey);
 
-    appLogger.info('catalog.variant.image.removed', { userId, productId, variantId });
-    return this.getProductById(userId, productId);
+    appLogger.info('catalog.variant.image.removed', { organizationId, productId, variantId });
+    return this.getProductById(organizationId, productId);
   }
 
   /**
@@ -525,12 +549,12 @@ export class CatalogServerService {
    * are few, so the summary + status filter are computed in memory across the search set.
    */
   async listBundles(
-    userId: string,
+    organizationId: string,
     query: ListBundlesQuery,
   ): Promise<PaginatedResult<BundleListItem> & { summary: BundleListSummary }> {
     const term = query.q.trim();
     const where: Prisma.BundleWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       ...(term
         ? {
@@ -599,18 +623,18 @@ export class CatalogServerService {
   }
 
   /** A bundle's full composition for the edit screen. */
-  async getBundle(userId: string, bundleId: string): Promise<BundleDetail> {
-    return this.buildBundleDetail(userId, bundleId);
+  async getBundle(organizationId: string, bundleId: string): Promise<BundleDetail> {
+    return this.buildBundleDetail(organizationId, bundleId);
   }
 
   /** Bundles for the label studio — printable, paginated, not-yet-printed first. */
   async listBundleLabels(
-    userId: string,
+    organizationId: string,
     query: LabelVariantsQuery,
   ): Promise<PaginatedResult<BundleLabel>> {
     const term = query.q.trim();
     const where: Prisma.BundleWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       ...(term
         ? {
@@ -647,24 +671,29 @@ export class CatalogServerService {
   }
 
   /** Stamp the label-printed time for the given bundles (re-printing is allowed). */
-  async markBundleLabelsPrinted(userId: string, bundleIds: string[]): Promise<void> {
+  async markBundleLabelsPrinted(organizationId: string, bundleIds: string[]): Promise<void> {
     const ids = [...new Set(bundleIds)];
     if (ids.length === 0) return;
     await prisma.bundle.updateMany({
-      where: { id: { in: ids }, userId, deletedAt: null },
+      where: { id: { in: ids }, organizationId, deletedAt: null },
       data: { labelPrintedAt: new Date() },
     });
-    appLogger.info('catalog.bundle.labels.printed', { userId, count: ids.length });
+    appLogger.info('catalog.bundle.labels.printed', { organizationId, count: ids.length });
   }
 
   /** Create a bundle: validate the SKU is free (across bundles + variants) and the components. */
-  async createBundle(userId: string, input: CreateBundleInput): Promise<{ id: string }> {
-    await this.assertBundleSkuAvailable(userId, input.sku);
-    await this.assertBundleItemsValid(userId, input.items);
+  async createBundle(
+    organizationId: string,
+    actorUserId: string,
+    input: CreateBundleInput,
+  ): Promise<{ id: string }> {
+    await this.assertBundleSkuAvailable(organizationId, input.sku);
+    await this.assertBundleItemsValid(organizationId, input.items);
 
     const bundle = await prisma.bundle.create({
       data: {
-        userId,
+        userId: actorUserId,
+        organizationId,
         name: input.name,
         sku: input.sku,
         barcode: input.barcode ?? null,
@@ -680,7 +709,8 @@ export class CatalogServerService {
     });
 
     appLogger.info('catalog.bundle.created', {
-      userId,
+      organizationId,
+      actorUserId,
       bundleId: bundle.id,
       items: input.items.length,
     });
@@ -689,13 +719,13 @@ export class CatalogServerService {
 
   /** Update a bundle's identity + replace its component set in one transaction. */
   async updateBundle(
-    userId: string,
+    organizationId: string,
     bundleId: string,
     input: UpdateBundleInput,
   ): Promise<BundleDetail> {
-    await this.assertBundleOwned(userId, bundleId);
-    await this.assertBundleSkuAvailable(userId, input.sku, bundleId);
-    await this.assertBundleItemsValid(userId, input.items);
+    await this.assertBundleOwned(organizationId, bundleId);
+    await this.assertBundleSkuAvailable(organizationId, input.sku, bundleId);
+    await this.assertBundleItemsValid(organizationId, input.items);
 
     await prisma.$transaction(async (tx) => {
       await tx.bundle.update({
@@ -718,8 +748,12 @@ export class CatalogServerService {
       });
     });
 
-    appLogger.info('catalog.bundle.updated', { userId, bundleId, items: input.items.length });
-    return this.buildBundleDetail(userId, bundleId);
+    appLogger.info('catalog.bundle.updated', {
+      organizationId,
+      bundleId,
+      items: input.items.length,
+    });
+    return this.buildBundleDetail(organizationId, bundleId);
   }
 
   /**
@@ -727,8 +761,8 @@ export class CatalogServerService {
    * every list/scan, keeping its composition + image so it can be restored. Past
    * sale/PO lines kept their own name snapshots regardless.
    */
-  async deleteBundle(userId: string, bundleId: string): Promise<void> {
-    await this.assertBundleOwned(userId, bundleId);
+  async deleteBundle(organizationId: string, bundleId: string): Promise<void> {
+    await this.assertBundleOwned(organizationId, bundleId);
     const bundle = await prisma.bundle.findUnique({
       where: { id: bundleId },
       select: { sku: true },
@@ -739,7 +773,7 @@ export class CatalogServerService {
       where: { id: bundleId },
       data: { deletedAt: new Date(), sku: archivedSku(bundle.sku, bundleId) },
     });
-    appLogger.info('catalog.bundle.archived', { userId, bundleId });
+    appLogger.info('catalog.bundle.archived', { organizationId, bundleId });
   }
 
   /**
@@ -748,9 +782,9 @@ export class CatalogServerService {
    * variants/bundles. A 0-component bundle was auto-archived when its last component
    * variant was deleted.
    */
-  async listArchivedBundles(userId: string): Promise<ArchivedBundleItem[]> {
+  async listArchivedBundles(organizationId: string): Promise<ArchivedBundleItem[]> {
     const rows = await prisma.bundle.findMany({
-      where: { userId, deletedAt: { not: null } },
+      where: { organizationId, deletedAt: { not: null } },
       orderBy: { deletedAt: 'desc' },
       select: {
         id: true,
@@ -763,7 +797,7 @@ export class CatalogServerService {
     });
 
     const taken = await this.takenSkus(
-      userId,
+      organizationId,
       rows.map((row) => unarchiveSku(row.sku, row.id)),
     );
 
@@ -792,15 +826,16 @@ export class CatalogServerService {
    * must stay unique); the unique index is the final guard against a race. A restored
    * bundle may have 0 components (auto-archived) — the edit screen lets the user re-add.
    */
-  async restoreBundle(userId: string, bundleId: string): Promise<{ id: string }> {
+  async restoreBundle(organizationId: string, bundleId: string): Promise<{ id: string }> {
     const archived = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId, deletedAt: { not: null } },
+      where: { id: bundleId, organizationId, deletedAt: { not: null } },
       select: { id: true, sku: true },
     });
     if (!archived) throw CatalogError.notFound('Archived bundle not found.');
 
     const sku = unarchiveSku(archived.sku, archived.id);
-    if ((await this.takenSkus(userId, [sku])).has(sku)) throw CatalogError.duplicateSku(sku);
+    if ((await this.takenSkus(organizationId, [sku])).has(sku))
+      throw CatalogError.duplicateSku(sku);
 
     try {
       await prisma.bundle.update({
@@ -812,22 +847,22 @@ export class CatalogServerService {
       throw error;
     }
 
-    appLogger.info('catalog.bundle.restored', { userId, bundleId });
+    appLogger.info('catalog.bundle.restored', { organizationId, bundleId });
     return { id: bundleId };
   }
 
   /** Set/replace a bundle's image from a just-uploaded R2 object; drops the old one. */
   async setBundleImage(
-    userId: string,
+    organizationId: string,
     bundleId: string,
     input: SetVariantImageInput,
   ): Promise<BundleDetail> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId },
+      where: { id: bundleId, organizationId },
       select: { id: true, imageKey: true },
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
-    if (!storageService.ownsKey(input.imageKey, userId)) {
+    if (!storageService.ownsKey(input.imageKey, organizationId)) {
       throw CatalogError.validation('Invalid image reference.');
     }
 
@@ -839,14 +874,14 @@ export class CatalogServerService {
       await this.deleteStorageObject(bundle.imageKey);
     }
 
-    appLogger.info('catalog.bundle.image.set', { userId, bundleId });
-    return this.buildBundleDetail(userId, bundleId);
+    appLogger.info('catalog.bundle.image.set', { organizationId, bundleId });
+    return this.buildBundleDetail(organizationId, bundleId);
   }
 
   /** Remove a bundle's image (clears the fields + deletes the R2 object). */
-  async removeBundleImage(userId: string, bundleId: string): Promise<BundleDetail> {
+  async removeBundleImage(organizationId: string, bundleId: string): Promise<BundleDetail> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId },
+      where: { id: bundleId, organizationId },
       select: { id: true, imageKey: true },
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
@@ -857,20 +892,20 @@ export class CatalogServerService {
     });
     if (bundle.imageKey) await this.deleteStorageObject(bundle.imageKey);
 
-    appLogger.info('catalog.bundle.image.removed', { userId, bundleId });
-    return this.buildBundleDetail(userId, bundleId);
+    appLogger.info('catalog.bundle.image.removed', { organizationId, bundleId });
+    return this.buildBundleDetail(organizationId, bundleId);
   }
 
   /** Resolve bundles by id for stock/price math (sale/PO explosion). Unknown ids are absent. */
   async resolveBundles(
-    userId: string,
+    organizationId: string,
     bundleIds: string[],
   ): Promise<Map<string, BundleResolution>> {
     const resolved = new Map<string, BundleResolution>();
     if (bundleIds.length === 0) return resolved;
 
     const bundles = await prisma.bundle.findMany({
-      where: { id: { in: bundleIds }, userId, deletedAt: null },
+      where: { id: { in: bundleIds }, organizationId, deletedAt: null },
       include: bundleDetailInclude,
     });
     for (const bundle of bundles) {
@@ -893,14 +928,17 @@ export class CatalogServerService {
   }
 
   /** Resolve a scanned code (barcode then SKU, case-insensitive) to a bundle. */
-  async resolveBundleByCode(userId: string, code: string): Promise<BundleResolution | null> {
+  async resolveBundleByCode(
+    organizationId: string,
+    code: string,
+  ): Promise<BundleResolution | null> {
     const term = code.trim();
     if (!term) return null;
 
     const bundle =
       (await prisma.bundle.findFirst({
         where: {
-          userId,
+          organizationId,
           isActive: true,
           deletedAt: null,
           barcode: { equals: term, mode: 'insensitive' },
@@ -909,7 +947,7 @@ export class CatalogServerService {
       })) ??
       (await prisma.bundle.findFirst({
         where: {
-          userId,
+          organizationId,
           isActive: true,
           deletedAt: null,
           sku: { equals: term, mode: 'insensitive' },
@@ -918,12 +956,12 @@ export class CatalogServerService {
       }));
     if (!bundle) return null;
 
-    return (await this.resolveBundles(userId, [bundle.id])).get(bundle.id) ?? null;
+    return (await this.resolveBundles(organizationId, [bundle.id])).get(bundle.id) ?? null;
   }
 
-  private async buildBundleDetail(userId: string, bundleId: string): Promise<BundleDetail> {
+  private async buildBundleDetail(organizationId: string, bundleId: string): Promise<BundleDetail> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId, deletedAt: null },
+      where: { id: bundleId, organizationId, deletedAt: null },
       include: bundleDetailInclude,
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
@@ -948,27 +986,27 @@ export class CatalogServerService {
     };
   }
 
-  private async assertBundleOwned(userId: string, bundleId: string): Promise<void> {
+  private async assertBundleOwned(organizationId: string, bundleId: string): Promise<void> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId, deletedAt: null },
+      where: { id: bundleId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
   }
 
   /**
-   * A bundle SKU must be unique among the user's bundles AND not collide with a variant
+   * A bundle SKU must be unique among the org's bundles AND not collide with a variant
    * SKU — both are scannable, so they share one code namespace.
    */
   private async assertBundleSkuAvailable(
-    userId: string,
+    organizationId: string,
     sku: string,
     excludeBundleId?: string,
   ): Promise<void> {
     const [bundleClash, variantClash] = await Promise.all([
       prisma.bundle.findFirst({
         where: {
-          userId,
+          organizationId,
           sku,
           deletedAt: null,
           ...(excludeBundleId ? { id: { not: excludeBundleId } } : {}),
@@ -976,7 +1014,7 @@ export class CatalogServerService {
         select: { id: true },
       }),
       prisma.productVariant.findFirst({
-        where: { userId, sku, deletedAt: null },
+        where: { organizationId, sku, deletedAt: null },
         select: { id: true },
       }),
     ]);
@@ -985,7 +1023,7 @@ export class CatalogServerService {
 
   /** Components must be distinct + owned + active (not soft-deleted). */
   private async assertBundleItemsValid(
-    userId: string,
+    organizationId: string,
     items: { productVariantId: string; quantity: number }[],
   ): Promise<void> {
     const ids = items.map((item) => item.productVariantId);
@@ -993,7 +1031,7 @@ export class CatalogServerService {
       throw CatalogError.validation('A component is listed more than once.');
     }
     const owned = await prisma.productVariant.findMany({
-      where: { id: { in: ids }, userId, deletedAt: null },
+      where: { id: { in: ids }, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (owned.length !== ids.length) {
@@ -1010,10 +1048,10 @@ export class CatalogServerService {
     }
   }
 
-  async deleteProduct(userId: string, productId: string): Promise<void> {
-    await this.assertProductOwned(userId, productId);
+  async deleteProduct(organizationId: string, productId: string): Promise<void> {
+    await this.assertProductOwned(organizationId, productId);
 
-    const { blockers, variants } = await this.computeDeletionBlockers(userId, productId);
+    const { blockers, variants } = await this.computeDeletionBlockers(organizationId, productId);
     if (blockers.blocked) {
       throw CatalogError.validation(`Cannot delete. ${blockers.reasons.join(' ')}`);
     }
@@ -1029,7 +1067,11 @@ export class CatalogServerService {
       await tx.product.update({ where: { id: productId }, data: { deletedAt: now } });
     });
 
-    appLogger.info('catalog.product.deleted', { userId, productId, variants: variants.length });
+    appLogger.info('catalog.product.deleted', {
+      organizationId,
+      productId,
+      variants: variants.length,
+    });
   }
 
   /**
@@ -1037,11 +1079,15 @@ export class CatalogServerService {
    * mapped to a marketplace, has reserved/incoming stock, or has an open return.
    * Stock history is kept; each freed SKU becomes reusable.
    */
-  async deleteVariants(userId: string, productId: string, variantIds: string[]): Promise<void> {
-    await this.assertProductOwned(userId, productId);
+  async deleteVariants(
+    organizationId: string,
+    productId: string,
+    variantIds: string[],
+  ): Promise<void> {
+    await this.assertProductOwned(organizationId, productId);
 
     const { blockers, variants } = await this.computeDeletionBlockers(
-      userId,
+      organizationId,
       productId,
       variantIds,
     );
@@ -1060,24 +1106,31 @@ export class CatalogServerService {
       );
     });
 
-    appLogger.info('catalog.variants.deleted', { userId, productId, count: variants.length });
+    appLogger.info('catalog.variants.deleted', {
+      organizationId,
+      productId,
+      count: variants.length,
+    });
   }
 
   /**
    * The soft-deleted variants of a product, newest-archived first, each with the
    * original SKU restore would reinstate and whether that SKU is still free.
    */
-  async listArchivedVariants(userId: string, productId: string): Promise<ArchivedVariantItem[]> {
-    await this.assertProductOwned(userId, productId);
+  async listArchivedVariants(
+    organizationId: string,
+    productId: string,
+  ): Promise<ArchivedVariantItem[]> {
+    await this.assertProductOwned(organizationId, productId);
 
     const rows = await prisma.productVariant.findMany({
-      where: { productId, userId, deletedAt: { not: null } },
+      where: { productId, organizationId, deletedAt: { not: null } },
       orderBy: { deletedAt: 'desc' },
       select: { id: true, sku: true, name: true, variantGroup: true, deletedAt: true },
     });
 
     const taken = await this.takenSkus(
-      userId,
+      organizationId,
       rows.map((row) => unarchiveSku(row.sku, row.id)),
     );
 
@@ -1106,20 +1159,21 @@ export class CatalogServerService {
    * guard against a race. The variant's Inventory row survived the soft-delete.
    */
   async restoreVariant(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantId: string,
   ): Promise<ProductVariantItem> {
-    await this.assertProductOwned(userId, productId);
+    await this.assertProductOwned(organizationId, productId);
 
     const archived = await prisma.productVariant.findFirst({
-      where: { id: variantId, productId, userId, deletedAt: { not: null } },
+      where: { id: variantId, productId, organizationId, deletedAt: { not: null } },
       select: { id: true, sku: true },
     });
     if (!archived) throw CatalogError.notFound('Archived variant not found.');
 
     const sku = unarchiveSku(archived.sku, archived.id);
-    if ((await this.takenSkus(userId, [sku])).has(sku)) throw CatalogError.duplicateSku(sku);
+    if ((await this.takenSkus(organizationId, [sku])).has(sku))
+      throw CatalogError.duplicateSku(sku);
 
     let restored: VariantWithInventory;
     try {
@@ -1133,21 +1187,21 @@ export class CatalogServerService {
       throw error;
     }
 
-    appLogger.info('catalog.variant.restored', { userId, productId, variantId });
+    appLogger.info('catalog.variant.restored', { organizationId, productId, variantId });
 
     return mapVariant(restored);
   }
 
   /** The subset of `skus` currently owned by a live variant or a bundle (shared scan namespace). */
-  private async takenSkus(userId: string, skus: string[]): Promise<Set<string>> {
+  private async takenSkus(organizationId: string, skus: string[]): Promise<Set<string>> {
     if (skus.length === 0) return new Set();
     const [variants, bundles] = await Promise.all([
       prisma.productVariant.findMany({
-        where: { userId, sku: { in: skus }, deletedAt: null },
+        where: { organizationId, sku: { in: skus }, deletedAt: null },
         select: { sku: true },
       }),
       prisma.bundle.findMany({
-        where: { userId, sku: { in: skus }, deletedAt: null },
+        where: { organizationId, sku: { in: skus }, deletedAt: null },
         select: { sku: true },
       }),
     ]);
@@ -1160,23 +1214,23 @@ export class CatalogServerService {
    * incoming stock, an open (PENDING) return. Soft warnings: on-hand + damaged stock.
    */
   async getDeletionBlockers(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantIds?: string[],
   ): Promise<DeletionBlockers> {
-    await this.assertProductOwned(userId, productId);
-    return (await this.computeDeletionBlockers(userId, productId, variantIds)).blockers;
+    await this.assertProductOwned(organizationId, productId);
+    return (await this.computeDeletionBlockers(organizationId, productId, variantIds)).blockers;
   }
 
   private async computeDeletionBlockers(
-    userId: string,
+    organizationId: string,
     productId: string,
     variantIds?: string[],
   ): Promise<{ blockers: DeletionBlockers; variants: { id: string; sku: string }[] }> {
     const variants = await prisma.productVariant.findMany({
       where: {
         productId,
-        userId,
+        organizationId,
         deletedAt: null,
         ...(variantIds ? { id: { in: variantIds } } : {}),
       },
@@ -1197,8 +1251,8 @@ export class CatalogServerService {
 
     const ids = variants.map((variant) => variant.id);
     const [mapped, openReturns] = await Promise.all([
-      marketplaceMappingService.getMappedVariantIds(userId, ids),
-      returnsServerService.getVariantIdsWithOpenReturns(userId, ids),
+      marketplaceMappingService.getMappedVariantIds(organizationId, ids),
+      returnsServerService.getVariantIdsWithOpenReturns(organizationId, ids),
     ]);
 
     const reasons: string[] = [];
@@ -1321,14 +1375,15 @@ export class CatalogServerService {
   }
 
   private async initializeVariantStock(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantId: string,
     initialStock: number,
   ): Promise<void> {
     await inventoryServerService.ensureInventory(variantId);
 
     if (initialStock > 0) {
-      await inventoryServerService.adjustStock(userId, variantId, {
+      await inventoryServerService.adjustStock(organizationId, actorUserId, variantId, {
         delta: initialStock,
         reason: 'RESTOCK',
         note: 'Initial stock',
@@ -1336,40 +1391,41 @@ export class CatalogServerService {
     }
   }
 
-  private async assertProductOwned(userId: string, productId: string): Promise<void> {
+  private async assertProductOwned(organizationId: string, productId: string): Promise<void> {
     const product = await prisma.product.findFirst({
-      where: { id: productId, userId, deletedAt: null },
+      where: { id: productId, organizationId, deletedAt: null },
       select: { id: true },
     });
     if (!product) throw CatalogError.notFound();
   }
 
-  private async assertSkuAvailable(userId: string, sku: string): Promise<void> {
+  private async assertSkuAvailable(organizationId: string, sku: string): Promise<void> {
     const existing = await prisma.productVariant.findFirst({
-      where: { userId, sku, deletedAt: null },
+      where: { organizationId, sku, deletedAt: null },
       select: { id: true },
     });
     if (existing) throw CatalogError.duplicateSku(sku);
   }
 
-  /** Reject duplicate SKUs within the batch, then any already used by the account. */
-  private async assertSkusAvailable(userId: string, skus: string[]): Promise<void> {
+  /** Reject duplicate SKUs within the batch, then any already used by the organization. */
+  private async assertSkusAvailable(organizationId: string, skus: string[]): Promise<void> {
     const duplicate = skus.find((sku, index) => skus.indexOf(sku) !== index);
     if (duplicate) throw CatalogError.validation(`Duplicate SKU "${duplicate}".`);
-    for (const sku of skus) await this.assertSkuAvailable(userId, sku);
+    for (const sku of skus) await this.assertSkuAvailable(organizationId, sku);
   }
 
   /** Create the given leaf variants inside a transaction, returning their ids in order. */
   private async createVariantLeaves(
     tx: Prisma.TransactionClient,
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     productId: string,
     inputs: CreateVariantInput[],
   ): Promise<string[]> {
     const ids: string[] = [];
     for (const input of inputs) {
       const variant = await tx.productVariant.create({
-        data: buildVariantData(userId, productId, input),
+        data: buildVariantData(organizationId, actorUserId, productId, input),
         select: { id: true },
       });
       ids.push(variant.id);
@@ -1379,7 +1435,8 @@ export class CatalogServerService {
 
   /** Ensure inventory + apply the initial stock for each freshly created leaf. */
   private async initVariantStocks(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     variantIds: string[],
     inputs: CreateVariantInput[],
   ): Promise<void> {
@@ -1387,7 +1444,12 @@ export class CatalogServerService {
       const variantId = variantIds[index];
       const input = inputs[index];
       if (variantId && input)
-        await this.initializeVariantStock(userId, variantId, input.initialStock);
+        await this.initializeVariantStock(
+          organizationId,
+          actorUserId,
+          variantId,
+          input.initialStock,
+        );
     }
   }
 }

@@ -12,7 +12,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
@@ -21,6 +21,7 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const variants = await catalogServerService.addVariants(
+      org.id,
       user.id,
       parsedParams.data.id,
       parsed.data.variants,
@@ -31,7 +32,7 @@ export const POST = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
@@ -39,11 +40,7 @@ export const DELETE = withApiRoute<RouteParams>(
     const parsed = deleteVariantsSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    await catalogServerService.deleteVariants(
-      user.id,
-      parsedParams.data.id,
-      parsed.data.variantIds,
-    );
+    await catalogServerService.deleteVariants(org.id, parsedParams.data.id, parsed.data.variantIds);
     return apiSuccess({ ok: true });
   },
   { requireAuth: true },

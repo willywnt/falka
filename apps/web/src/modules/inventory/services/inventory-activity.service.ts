@@ -54,8 +54,11 @@ function mapActivity(row: ActivityRow): StockActivityItem {
   };
 }
 
-function buildWhere(userId: string, query: StockActivityQuery): Prisma.StockLedgerWhereInput {
-  const where: Prisma.StockLedgerWhereInput = { userId };
+function buildWhere(
+  organizationId: string,
+  query: StockActivityQuery,
+): Prisma.StockLedgerWhereInput {
+  const where: Prisma.StockLedgerWhereInput = { organizationId };
 
   if (query.reason) where.reason = query.reason;
   if (query.source) where.source = query.source;
@@ -83,14 +86,14 @@ function buildWhere(userId: string, query: StockActivityQuery): Prisma.StockLedg
 
 /**
  * Read-only, filterable, paginated view over the append-only `StockLedger` — the
- * stock activity log. Tenant-scoped by `userId`; newest first.
+ * stock activity log. Tenant-scoped by `organizationId`; newest first.
  */
 export class InventoryActivityService {
   async listStockActivity(
-    userId: string,
+    organizationId: string,
     query: StockActivityQuery,
   ): Promise<PaginatedResult<StockActivityItem>> {
-    const where = buildWhere(userId, query);
+    const where = buildWhere(organizationId, query);
 
     const [rows, total] = await Promise.all([
       prisma.stockLedger.findMany({
@@ -107,8 +110,11 @@ export class InventoryActivityService {
   }
 
   /** All matching rows (ignores paging) for a CSV export, capped at EXPORT_CAP. */
-  async listForExport(userId: string, query: StockActivityQuery): Promise<StockActivityItem[]> {
-    const where = buildWhere(userId, query);
+  async listForExport(
+    organizationId: string,
+    query: StockActivityQuery,
+  ): Promise<StockActivityItem[]> {
+    const where = buildWhere(organizationId, query);
 
     const rows = await prisma.stockLedger.findMany({
       where,
@@ -118,7 +124,7 @@ export class InventoryActivityService {
     });
 
     if (rows.length > EXPORT_CAP) {
-      appLogger.warn('inventory.activity.export.truncated', { userId, cap: EXPORT_CAP });
+      appLogger.warn('inventory.activity.export.truncated', { organizationId, cap: EXPORT_CAP });
       rows.length = EXPORT_CAP;
     }
 

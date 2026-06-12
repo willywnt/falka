@@ -104,12 +104,12 @@ function mapDetail(row: SaleRow): SaleDetail {
 export class SalesServerService {
   /** Active variants for the POS picker — matched by SKU/name, with price + stock, paginated. */
   async searchSellableVariants(
-    userId: string,
+    organizationId: string,
     query: SearchVariantsQuery,
   ): Promise<PaginatedResult<SellableVariant>> {
     const term = query.q.trim();
     const where: Prisma.ProductVariantWhereInput = {
-      userId,
+      organizationId,
       deletedAt: null,
       isActive: true,
       ...(term
@@ -158,11 +158,14 @@ export class SalesServerService {
    * already normalized (uppercased, spaces stripped) — so match case-insensitively
    * and prefer a barcode hit over a SKU hit. Returns null when nothing matches.
    */
-  async resolveSellableVariant(userId: string, code: string): Promise<SellableVariant | null> {
+  async resolveSellableVariant(
+    organizationId: string,
+    code: string,
+  ): Promise<SellableVariant | null> {
     const term = code.trim();
     if (!term) return null;
 
-    const base = { userId, deletedAt: null, isActive: true } as const;
+    const base = { organizationId, deletedAt: null, isActive: true } as const;
     const include = {
       inventory: { select: { availableStock: true, incomingStock: true } },
       product: { select: { name: true } },
@@ -195,17 +198,17 @@ export class SalesServerService {
   }
 
   /** Resolve a scanned code to a sellable variant OR a whole bundle (variant takes priority). */
-  async resolveScannedItem(userId: string, code: string): Promise<ScannedSaleItem | null> {
-    const variant = await this.resolveSellableVariant(userId, code);
+  async resolveScannedItem(organizationId: string, code: string): Promise<ScannedSaleItem | null> {
+    const variant = await this.resolveSellableVariant(organizationId, code);
     if (variant) return { kind: 'variant', variant };
-    const bundle = await catalogServerService.resolveBundleByCode(userId, code);
+    const bundle = await catalogServerService.resolveBundleByCode(organizationId, code);
     if (bundle) return { kind: 'bundle', bundle };
     return null;
   }
 
-  async listSales(userId: string): Promise<SaleListItem[]> {
+  async listSales(organizationId: string): Promise<SaleListItem[]> {
     const rows = await prisma.sale.findMany({
-      where: { userId },
+      where: { organizationId },
       include: { _count: { select: { items: true } } },
       orderBy: { createdAt: 'desc' },
       take: LIST_LIMIT,
@@ -223,9 +226,9 @@ export class SalesServerService {
     }));
   }
 
-  async getSale(userId: string, saleId: string): Promise<SaleDetail> {
+  async getSale(organizationId: string, saleId: string): Promise<SaleDetail> {
     const row = await prisma.sale.findFirst({
-      where: { id: saleId, userId },
+      where: { id: saleId, organizationId },
       include: DETAIL_INCLUDE,
     });
     if (!row) throw SaleError.notFound();
@@ -238,16 +241,16 @@ export class SalesServerService {
    * is returned unchanged. Voided sales drop out of the profit report (which counts
    * only COMPLETED sales).
    */
-  async voidSale(userId: string, saleId: string): Promise<SaleDetail> {
+  async voidSale(organizationId: string, actorUserId: string, saleId: string): Promise<SaleDetail> {
     const sale = await prisma.sale.findFirst({
-      where: { id: saleId, userId },
+      where: { id: saleId, organizationId },
       include: {
         items: { select: { productVariantId: true, quantity: true } },
         refunds: { select: { id: true } },
       },
     });
     if (!sale) throw SaleError.notFound();
-    if (sale.status === 'VOID') return this.getSale(userId, saleId);
+    if (sale.status === 'VOID') return this.getSale(organizationId, saleId);
     // A void restocks EVERY line — combined with a refund's restock that would
     // double-credit stock. Once a refund exists, only further refunds are allowed.
     if (sale.refunds.length > 0) {
@@ -259,7 +262,8 @@ export class SalesServerService {
     await prisma.$transaction(async (tx) => {
       for (const item of sale.items) {
         await inventoryServerService.applyOfflineSaleReversalTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: item.productVariantId,
           quantity: item.quantity,
           saleId: sale.id,
@@ -268,12 +272,17 @@ export class SalesServerService {
       await tx.sale.update({ where: { id: sale.id }, data: { status: 'VOID' } });
     });
 
-    appLogger.info('sales.voided', { userId, saleId: sale.id, code: sale.code });
+    appLogger.info('sales.voided', {
+      organizationId,
+      actorUserId,
+      saleId: sale.id,
+      code: sale.code,
+    });
 
-    await this.propagateAffected(userId, [
+    await this.propagateAffected(organizationId, actorUserId, [
       ...new Set(sale.items.map((item) => item.productVariantId)),
     ]);
-    return this.getSale(userId, saleId);
+    return this.getSale(organizationId, saleId);
   }
 
   /**
@@ -283,12 +292,13 @@ export class SalesServerService {
    * The sale itself stands — status moves to PARTIALLY_REFUNDED.
    */
   async createSaleRefund(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     saleId: string,
     input: RefundSaleInput,
   ): Promise<SaleDetail> {
     const sale = await prisma.sale.findFirst({
-      where: { id: saleId, userId },
+      where: { id: saleId, organizationId },
       include: {
         items: true,
         refunds: { include: { items: { select: { saleItemId: true, quantity: true } } } },
@@ -343,12 +353,13 @@ export class SalesServerService {
     const totalAmount = Math.round(lines.reduce((sum, line) => sum + line.amount, 0) * 100) / 100;
 
     const created = await prisma.$transaction(async (tx) => {
-      const count = await tx.saleRefund.count({ where: { userId } });
+      const count = await tx.saleRefund.count({ where: { organizationId } });
       const code = `RF${(count + 1).toString().padStart(5, '0')}`;
 
       const refund = await tx.saleRefund.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           saleId: sale.id,
           code,
           totalAmount,
@@ -368,7 +379,8 @@ export class SalesServerService {
 
       for (const line of lines) {
         await inventoryServerService.applyOfflineSaleReversalTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: line.item.productVariantId,
           quantity: line.quantity,
           saleId: sale.id,
@@ -381,7 +393,8 @@ export class SalesServerService {
     });
 
     appLogger.info('sales.refunded', {
-      userId,
+      organizationId,
+      actorUserId,
       saleId: sale.id,
       refundId: created.id,
       code: created.code,
@@ -389,10 +402,10 @@ export class SalesServerService {
       totalAmount,
     });
 
-    await this.propagateAffected(userId, [
+    await this.propagateAffected(organizationId, actorUserId, [
       ...new Set(lines.map((line) => line.item.productVariantId)),
     ]);
-    return this.getSale(userId, saleId);
+    return this.getSale(organizationId, saleId);
   }
 
   /**
@@ -400,20 +413,24 @@ export class SalesServerService {
    * decrement each variant's available stock in ONE transaction (oversell allowed —
    * the goods are in hand). Propagates the new available to marketplaces afterwards.
    */
-  async createSale(userId: string, input: CreateSaleInput): Promise<SaleDetail> {
+  async createSale(
+    organizationId: string,
+    actorUserId: string,
+    input: CreateSaleInput,
+  ): Promise<SaleDetail> {
     const variantItems = input.items.filter((item) => item.kind === 'variant');
     const bundleItems = input.items.filter((item) => item.kind === 'bundle');
 
     const variantIds = [...new Set(variantItems.map((item) => item.variantId))];
     const variants = variantIds.length
       ? await prisma.productVariant.findMany({
-          where: { id: { in: variantIds }, userId, deletedAt: null },
+          where: { id: { in: variantIds }, organizationId, deletedAt: null },
           select: { id: true, sku: true, name: true, cost: true },
         })
       : [];
     const variantById = new Map(variants.map((variant) => [variant.id, variant]));
     const bundles = await catalogServerService.resolveBundles(
-      userId,
+      organizationId,
       bundleItems.map((item) => item.bundleId),
     );
 
@@ -451,12 +468,13 @@ export class SalesServerService {
     });
 
     const created = await prisma.$transaction(async (tx) => {
-      const count = await tx.sale.count({ where: { userId } });
+      const count = await tx.sale.count({ where: { organizationId } });
       const code = `S${(count + 1).toString().padStart(5, '0')}`;
 
       const sale = await tx.sale.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           code,
           customerName: input.customerName ?? null,
           paymentMethod: input.paymentMethod,
@@ -473,7 +491,8 @@ export class SalesServerService {
 
       for (const line of lines) {
         await inventoryServerService.applyOfflineSaleTx(tx, {
-          userId,
+          organizationId,
+          actorUserId,
           variantId: line.productVariantId,
           quantity: line.quantity,
           saleId: sale.id,
@@ -484,7 +503,8 @@ export class SalesServerService {
     });
 
     appLogger.info('sales.created', {
-      userId,
+      organizationId,
+      actorUserId,
       saleId: created.id,
       code: created.code,
       items: lines.length,
@@ -497,7 +517,8 @@ export class SalesServerService {
     );
     if (belowCostLines.length > 0) {
       appLogger.warn('sales.below_cost', {
-        userId,
+        organizationId,
+        actorUserId,
         saleId: created.id,
         code: created.code,
         lines: belowCostLines.map((line) => ({
@@ -509,8 +530,10 @@ export class SalesServerService {
       });
     }
 
-    await this.propagateAffected(userId, [...new Set(lines.map((line) => line.productVariantId))]);
-    return this.getSale(userId, created.id);
+    await this.propagateAffected(organizationId, actorUserId, [
+      ...new Set(lines.map((line) => line.productVariantId)),
+    ]);
+    return this.getSale(organizationId, created.id);
   }
 
   /** Flatten variant + bundle cart items into per-variant SaleItem rows (bundle price allocated). */
@@ -564,11 +587,15 @@ export class SalesServerService {
   }
 
   /** Best-effort: push each sold variant's new available stock to all sync-ready channels. */
-  private async propagateAffected(userId: string, variantIds: string[]): Promise<void> {
+  private async propagateAffected(
+    organizationId: string,
+    actorUserId: string,
+    variantIds: string[],
+  ): Promise<void> {
     for (const variantId of variantIds) {
       try {
         const syncEnabledCount = await prisma.marketplaceProductMapping.count({
-          where: { productVariantId: variantId, userId, syncEnabled: true },
+          where: { productVariantId: variantId, organizationId, syncEnabled: true },
         });
         if (syncEnabledCount === 0) continue;
 
@@ -577,14 +604,15 @@ export class SalesServerService {
           select: { availableStock: true },
         });
         await enqueuePropagateInventoryStock({
-          userId,
+          organizationId,
+          actorUserId,
           variantId,
           availableStock: inventory?.availableStock ?? 0,
           eventId: `sale-${variantId}-${Date.now()}`,
         });
       } catch (error) {
         appLogger.warn('sales.propagate.enqueue_failed', {
-          userId,
+          organizationId,
           variantId,
           error: error instanceof Error ? error.message : String(error),
         });

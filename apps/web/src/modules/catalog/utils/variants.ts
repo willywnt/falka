@@ -68,7 +68,7 @@ export function suggestVariantSku(...parts: string[]): string {
 const ARCHIVED_SKU_MARKER = '::deleted::';
 
 /**
- * The SKU to store on a soft-deleted variant. The `@@unique([userId, sku])` index
+ * The SKU to store on a soft-deleted variant. The `@@unique([organizationId, sku])` index
  * spans archived rows too, so we mangle the SKU on delete to free the original for
  * reuse. The variant id keeps it unique; archived rows are never shown live.
  */

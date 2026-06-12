@@ -8,13 +8,13 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 const querySchema = z.object({ noResi: z.string().trim().min(1).max(64) });
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = querySchema.safeParse({
       noResi: new URL(request.url).searchParams.get('noResi') ?? '',
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const data = await ordersServerService.findByResi(user.id, parsed.data.noResi);
+    const data = await ordersServerService.findByResi(org.id, parsed.data.noResi);
     return apiSuccess(data);
   },
   { requireAuth: true },

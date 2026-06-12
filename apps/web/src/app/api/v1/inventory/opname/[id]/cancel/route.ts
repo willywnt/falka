@@ -8,11 +8,11 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsedParams = stockOpnameIdSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Stock opname not found');
 
-    const opname = await stockOpnameService.cancelOpname(user.id, parsedParams.data.id);
+    const opname = await stockOpnameService.cancelOpname(org.id, parsedParams.data.id);
     return apiSuccess(opname);
   },
   { requireAuth: true },

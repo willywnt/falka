@@ -35,12 +35,13 @@ function mapShareLink(link: RecordingShareLink): ShareLinkItem {
  */
 export class RecordingShareService {
   async createShareLink(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     recordingId: string,
     expiresInHours: number,
   ): Promise<{ token: string; link: ShareLinkItem }> {
     const recording = await prisma.recording.findFirst({
-      where: { id: recordingId, userId, deletedAt: null },
+      where: { id: recordingId, organizationId, deletedAt: null },
       select: { id: true, status: true },
     });
     if (!recording) throw RecordingError.validation('Recording not found.');
@@ -53,11 +54,11 @@ export class RecordingShareService {
     const expiresAt = new Date(Date.now() + expiresInHours * HOUR_MS);
 
     const created = await prisma.recordingShareLink.create({
-      data: { userId, recordingId, tokenHash, expiresAt },
+      data: { userId: actorUserId, organizationId, recordingId, tokenHash, expiresAt },
     });
 
     appLogger.info('recording.share.created', {
-      userId,
+      organizationId,
       recordingId,
       shareLinkId: created.id,
       expiresAt: expiresAt.toISOString(),
@@ -66,18 +67,18 @@ export class RecordingShareService {
     return { token, link: mapShareLink(created) };
   }
 
-  async listShareLinks(userId: string, recordingId: string): Promise<ShareLinkItem[]> {
+  async listShareLinks(organizationId: string, recordingId: string): Promise<ShareLinkItem[]> {
     const links = await prisma.recordingShareLink.findMany({
-      where: { userId, recordingId },
+      where: { organizationId, recordingId },
       orderBy: { createdAt: 'desc' },
     });
 
     return links.map(mapShareLink);
   }
 
-  async revokeShareLink(userId: string, shareLinkId: string): Promise<ShareLinkItem> {
+  async revokeShareLink(organizationId: string, shareLinkId: string): Promise<ShareLinkItem> {
     const link = await prisma.recordingShareLink.findFirst({
-      where: { id: shareLinkId, userId },
+      where: { id: shareLinkId, organizationId },
     });
     if (!link) throw RecordingError.validation('Share link not found.');
     if (link.revokedAt) return mapShareLink(link);
@@ -87,7 +88,7 @@ export class RecordingShareService {
       data: { revokedAt: new Date() },
     });
 
-    appLogger.info('recording.share.revoked', { userId, shareLinkId });
+    appLogger.info('recording.share.revoked', { organizationId, shareLinkId });
 
     return mapShareLink(updated);
   }

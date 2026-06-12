@@ -7,11 +7,11 @@ import { apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (request, { user }) => {
+  async (request, { org }) => {
     const parsed = parseProfitReportQuery(new URL(request.url).searchParams);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const rows = await reportingServerService.getProfitSkuRows(user.id, parsed.data);
+    const rows = await reportingServerService.getProfitSkuRows(org.id, parsed.data);
     const csv = profitBySkuToCsv(rows);
 
     return new NextResponse(csv, {

@@ -5,8 +5,8 @@ import { apiSuccess } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const report = await reportingServerService.getInventoryValuation(user.id);
+  async (_request, { org }) => {
+    const report = await reportingServerService.getInventoryValuation(org.id);
     return apiSuccess(report);
   },
   { requireAuth: true },

@@ -9,14 +9,18 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string };
 
 export const GET = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = recordingIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Recording not found');
 
     // A missing recording surfaces as RecordingError -> 404 here, not the
     // central 400 mapping; preserve that route-specific semantic.
     try {
-      const recording = await recordingServerService.getRecordingById(user.id, parsed.data.id);
+      const recording = await recordingServerService.getRecordingById(
+        org.id,
+        user.id,
+        parsed.data.id,
+      );
       return apiSuccess(recording);
     } catch (error) {
       if (error instanceof RecordingError) return apiNotFound(error.message);
@@ -27,12 +31,12 @@ export const GET = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = recordingIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Recording not found');
 
     try {
-      await recordingServerService.softDeleteRecording(user.id, parsed.data.id);
+      await recordingServerService.softDeleteRecording(org.id, user.id, parsed.data.id);
       return apiSuccess({ success: true });
     } catch (error) {
       if (error instanceof RecordingError) return apiNotFound(error.message);

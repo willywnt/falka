@@ -5,8 +5,8 @@ import { apiSuccess } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const snapshot = await quotaService.getQuotaSnapshot(user.id);
+  async (_request, { org }) => {
+    const snapshot = await quotaService.getQuotaSnapshot(org.id);
 
     return apiSuccess({
       usedBytes: Number(snapshot.usedBytes),

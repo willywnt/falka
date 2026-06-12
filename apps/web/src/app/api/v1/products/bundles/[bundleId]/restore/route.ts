@@ -10,11 +10,11 @@ const paramsSchema = z.object({ bundleId: z.string().min(1) });
 type RouteParams = { bundleId: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Bundle not found');
 
-    const restored = await catalogServerService.restoreBundle(user.id, parsed.data.bundleId);
+    const restored = await catalogServerService.restoreBundle(org.id, parsed.data.bundleId);
     return apiSuccess(restored);
   },
   { requireAuth: true },

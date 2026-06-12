@@ -17,9 +17,13 @@ import { buildVariantSkuIndex, matchSku } from '../utils/sku-match';
  * exactly matches an internal variant. Read-only: never writes to the marketplace.
  */
 export class MarketplaceImportService {
-  async importListings(userId: string, connectionId: string): Promise<ImportListingsResult> {
+  async importListings(
+    organizationId: string,
+    actorUserId: string,
+    connectionId: string,
+  ): Promise<ImportListingsResult> {
     const connection = await prisma.marketplaceConnection.findFirst({
-      where: { id: connectionId, userId, deletedAt: null },
+      where: { id: connectionId, organizationId, deletedAt: null },
     });
 
     if (!connection) throw MarketplaceError.notFound();
@@ -50,7 +54,8 @@ export class MarketplaceImportService {
           },
         },
         create: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           marketplaceConnectionId: connection.id,
           provider: connection.provider,
           externalProductId: listing.externalProductId,
@@ -76,7 +81,12 @@ export class MarketplaceImportService {
       });
     }
 
-    const autoMapped = await this.autoMapBySku(userId, connection.id, connection.provider);
+    const autoMapped = await this.autoMapBySku(
+      organizationId,
+      actorUserId,
+      connection.id,
+      connection.provider,
+    );
 
     await prisma.marketplaceConnection.update({
       where: { id: connection.id },
@@ -84,7 +94,7 @@ export class MarketplaceImportService {
     });
 
     appLogger.info('marketplace.listings.imported', {
-      userId,
+      organizationId,
       connectionId: connection.id,
       imported: listings.length,
       autoMapped,
@@ -94,15 +104,24 @@ export class MarketplaceImportService {
   }
 
   /** Re-runs SKU auto-map over already-imported, still-unmapped listings (no provider fetch). */
-  async rerunAutoMap(userId: string, connectionId: string): Promise<{ autoMapped: number }> {
+  async rerunAutoMap(
+    organizationId: string,
+    actorUserId: string,
+    connectionId: string,
+  ): Promise<{ autoMapped: number }> {
     const connection = await prisma.marketplaceConnection.findFirst({
-      where: { id: connectionId, userId, deletedAt: null },
+      where: { id: connectionId, organizationId, deletedAt: null },
       select: { id: true, provider: true },
     });
     if (!connection) throw MarketplaceError.notFound();
 
-    const autoMapped = await this.autoMapBySku(userId, connection.id, connection.provider);
-    appLogger.info('marketplace.automap.rerun', { userId, connectionId, autoMapped });
+    const autoMapped = await this.autoMapBySku(
+      organizationId,
+      actorUserId,
+      connection.id,
+      connection.provider,
+    );
+    appLogger.info('marketplace.automap.rerun', { organizationId, connectionId, autoMapped });
     return { autoMapped };
   }
 
@@ -112,14 +131,15 @@ export class MarketplaceImportService {
    * NEEDS_REVIEW (confidence 0.9) and stays sync-disabled until confirmed.
    */
   private async autoMapBySku(
-    userId: string,
+    organizationId: string,
+    actorUserId: string,
     connectionId: string,
     provider: MarketplaceProvider,
   ): Promise<number> {
     const unmapped = await prisma.marketplaceProduct.findMany({
       where: {
         marketplaceConnectionId: connectionId,
-        userId,
+        organizationId,
         deletedAt: null,
         mapping: { is: null },
         externalSku: { not: null },
@@ -130,7 +150,7 @@ export class MarketplaceImportService {
     if (unmapped.length === 0) return 0;
 
     const variants = await prisma.productVariant.findMany({
-      where: { userId, deletedAt: null },
+      where: { organizationId, deletedAt: null },
       select: { id: true, sku: true },
     });
     const index = buildVariantSkuIndex(variants);
@@ -144,7 +164,8 @@ export class MarketplaceImportService {
       const exact = match.quality === 'EXACT';
       await prisma.marketplaceProductMapping.create({
         data: {
-          userId,
+          userId: actorUserId,
+          organizationId,
           marketplaceConnectionId: connectionId,
           marketplaceProductId: product.id,
           productVariantId: match.variantId,

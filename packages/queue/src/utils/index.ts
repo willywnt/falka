@@ -24,6 +24,11 @@ export function isPendingStorageKey(storageKey: string): boolean {
   return storageKey.startsWith('pending/');
 }
 
-export function isUserRecordingStorageKey(storageKey: string, userId: string): boolean {
-  return storageKey.startsWith(`recordings/${userId}/`);
+/**
+ * Recording storage keys are prefixed by the owning organization id. (Accounts
+ * that predate organizations kept their old `recordings/<userId>/` keys — the
+ * backfill set org.id := that userId, so the prefix stays valid verbatim.)
+ */
+export function isOrgRecordingStorageKey(storageKey: string, organizationId: string): boolean {
+  return storageKey.startsWith(`recordings/${organizationId}/`);
 }

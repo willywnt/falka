@@ -5,8 +5,8 @@ import { inventoryValuationToCsv } from '@/modules/reporting/utils/inventory-val
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 export const GET = withApiRoute(
-  async (_request, { user }) => {
-    const report = await reportingServerService.getInventoryValuation(user.id);
+  async (_request, { org }) => {
+    const report = await reportingServerService.getInventoryValuation(org.id);
     const csv = inventoryValuationToCsv(report.byProduct);
 
     return new NextResponse(csv, {

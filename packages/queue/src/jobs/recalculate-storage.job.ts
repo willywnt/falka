@@ -22,15 +22,15 @@ export async function processRecalculateStorageJob(
     skipped: 0,
     durationMs: 0,
     details: {
-      repairedUsers: 0,
-      unchangedUsers: 0,
+      repairedOrganizations: 0,
+      unchangedOrganizations: 0,
     },
   };
 
-  const users = await prisma.user.findMany({
+  const organizations = await prisma.organization.findMany({
     where: {
       deletedAt: null,
-      ...(payload.userId ? { id: payload.userId } : {}),
+      ...(payload.organizationId ? { id: payload.organizationId } : {}),
     },
     select: {
       id: true,
@@ -40,12 +40,12 @@ export async function processRecalculateStorageJob(
     orderBy: { updatedAt: 'asc' },
   });
 
-  for (const user of users) {
+  for (const organization of organizations) {
     stats.processed += 1;
 
     const aggregate = await prisma.recording.aggregate({
       where: {
-        userId: user.id,
+        organizationId: organization.id,
         status: RecordingStatus.COMPLETED,
         deletedAt: null,
       },
@@ -55,30 +55,30 @@ export async function processRecalculateStorageJob(
     });
 
     const calculatedUsed = aggregate._sum.fileSizeBytes ?? 0n;
-    const currentUsed = user.storageUsedBytes;
+    const currentUsed = organization.storageUsedBytes;
 
     if (calculatedUsed === currentUsed) {
       stats.skipped += 1;
-      stats.details!.unchangedUsers = Number(stats.details!.unchangedUsers) + 1;
+      stats.details!.unchangedOrganizations = Number(stats.details!.unchangedOrganizations) + 1;
       continue;
     }
 
     if (payload.dryRun) {
       stats.succeeded += 1;
-      stats.details!.repairedUsers = Number(stats.details!.repairedUsers) + 1;
+      stats.details!.repairedOrganizations = Number(stats.details!.repairedOrganizations) + 1;
       continue;
     }
 
     try {
-      await prisma.user.update({
-        where: { id: user.id },
+      await prisma.organization.update({
+        where: { id: organization.id },
         data: {
           storageUsedBytes: calculatedUsed,
         },
       });
 
       stats.succeeded += 1;
-      stats.details!.repairedUsers = Number(stats.details!.repairedUsers) + 1;
+      stats.details!.repairedOrganizations = Number(stats.details!.repairedOrganizations) + 1;
     } catch {
       stats.failed += 1;
     }

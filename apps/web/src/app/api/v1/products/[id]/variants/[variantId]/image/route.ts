@@ -8,7 +8,7 @@ import { withApiRoute } from '@/lib/api/with-api-route';
 type RouteParams = { id: string; variantId: string };
 
 export const PATCH = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { org, params }) => {
     const parsedParams = variantRouteParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Variant not found');
 
@@ -17,7 +17,7 @@ export const PATCH = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const product = await catalogServerService.setVariantImage(
-      user.id,
+      org.id,
       parsedParams.data.id,
       parsedParams.data.variantId,
       parsed.data,
@@ -28,12 +28,12 @@ export const PATCH = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { user, params }) => {
+  async (_request, { org, params }) => {
     const parsedParams = variantRouteParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Variant not found');
 
     const product = await catalogServerService.removeVariantImage(
-      user.id,
+      org.id,
       parsedParams.data.id,
       parsedParams.data.variantId,
     );

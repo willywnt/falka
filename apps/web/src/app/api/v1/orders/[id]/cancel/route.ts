@@ -11,7 +11,7 @@ const orderIdParamSchema = z.object({ id: z.string().cuid() });
 type RouteParams = { id: string };
 
 export const POST = withApiRoute<RouteParams>(
-  async (request, { user, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = orderIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Order not found');
 
@@ -20,6 +20,7 @@ export const POST = withApiRoute<RouteParams>(
     if (!parsed.success) return apiValidationError(parsed.error);
 
     const result = await ordersServerService.cancelOrder(
+      org.id,
       user.id,
       parsedParams.data.id,
       parsed.data,
