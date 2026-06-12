@@ -1,26 +1,14 @@
 import Link from 'next/link';
 import { APP_NAME } from '@falka/config/constants';
-import { Boxes, PackageCheck, RefreshCw } from 'lucide-react';
 
 import { BrandBadge } from '@/components/brand-mark';
 import { WaveHairline } from '@/components/maritime-art';
 
-const HIGHLIGHTS = [
-  {
-    icon: Boxes,
-    title: 'Stok selalu akurat',
-    text: 'Satu angka stok yang bisa kamu percaya, di semua toko.',
-  },
-  {
-    icon: RefreshCw,
-    title: 'Sinkron antar toko',
-    text: 'Stok ikut update otomatis biar kamu nggak oversell.',
-  },
-  {
-    icon: PackageCheck,
-    title: 'Bukti video packing',
-    text: 'Setiap pesanan terekam — siap jadi bukti kalau ada komplain.',
-  },
+/** A believable Monday-morning queue — product proof, not feature copy. */
+const QUEUE_ROWS = [
+  { label: 'Pesanan siap dikirim', count: 7 },
+  { label: 'Varian perlu restok', count: 2 },
+  { label: 'Retur menunggu', count: 1 },
 ];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -47,24 +35,34 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Pesanan dari semua toko masuk, stok tetap sinkron, dan setiap paket punya video
               packing.
             </p>
+            <p className="text-primary-foreground/60 max-w-sm text-sm text-pretty">
+              Begini pagi kamu nanti — antrian kerja yang sudah dihitung.
+            </p>
           </div>
 
-          <ul className="space-y-4">
-            {HIGHLIGHTS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.title} className="flex items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
-                    <Icon className="size-4" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <p className="text-primary-foreground/60 text-sm">{item.text}</p>
-                  </div>
+          <p className="sr-only">
+            Contoh antrian kerja Senin pagi: 7 pesanan siap dikirim, 2 varian perlu restok, 1 retur
+            menunggu, dan omzet kemarin naik.
+          </p>
+          <div aria-hidden className="max-w-sm rounded-xl border border-white/15 bg-white/10 p-4">
+            <p className="eyebrow text-primary-foreground/60">Antrian kerja · Senin pagi</p>
+            <ul className="mt-2 divide-y divide-white/10">
+              {QUEUE_ROWS.map((row) => (
+                <li key={row.label} className="flex items-center justify-between gap-4 py-2.5">
+                  <span className="text-primary-foreground/80 text-sm">{row.label}</span>
+                  <span className="num text-sm font-medium">{row.count}</span>
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+            <p className="mt-1 flex items-center justify-between gap-4 border-t border-white/15 pt-3 text-xs">
+              <span className="text-primary-foreground/60">Omzet kemarin</span>
+              {/* Hand-rolled +/− pair: NumberDelta's signed colors are tuned for paper surfaces. */}
+              <span className="num">
+                <span className="text-primary-foreground">+Rp1,84 jt</span>{' '}
+                <span className="text-primary-foreground/50">−2 retur</span>
+              </span>
+            </p>
+          </div>
         </div>
 
         <p className="text-primary-foreground/50 relative text-xs">
