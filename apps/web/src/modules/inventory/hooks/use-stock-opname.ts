@@ -22,11 +22,14 @@ const opnameBase = `${apiRoutes.inventory}/opname`;
 export type StockOpnamesPage = { items: StockOpnameListItem[]; meta: PageMeta };
 export type CountableVariantsPage = { items: CountableVariant[]; meta: PageMeta };
 
-export function useStockOpnamesQuery(page: number, pageSize: number) {
+export function useStockOpnamesQuery(page: number, pageSize: number, search?: string) {
+  const trimmed = search?.trim() ?? '';
   return useQuery({
-    queryKey: stockOpnameKeys.list({ page, pageSize }),
+    queryKey: stockOpnameKeys.list({ page, pageSize, search: trimmed }),
     queryFn: async () => {
-      const result = await apiFetch<StockOpnamesPage>(opnameBase, { params: { page, pageSize } });
+      const result = await apiFetch<StockOpnamesPage>(opnameBase, {
+        params: { page, pageSize, ...(trimmed ? { search: trimmed } : {}) },
+      });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },

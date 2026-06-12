@@ -20,10 +20,11 @@ export const stockOpnameItemParamsSchema = z.object({
   itemId: z.string().cuid(),
 });
 
-/** Paginated opname-session list. */
+/** Paginated opname-session list, optionally filtered by code/note. */
 export const listStockOpnameQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+  search: z.string().trim().min(1).max(64).optional(),
 });
 export type ListStockOpnameQuery = z.infer<typeof listStockOpnameQuerySchema>;
 
@@ -31,6 +32,7 @@ export function parseListStockOpnameQuery(searchParams: URLSearchParams) {
   return listStockOpnameQuerySchema.safeParse({
     page: searchParams.get('page') ?? undefined,
     pageSize: searchParams.get('pageSize') ?? undefined,
+    search: searchParams.get('search') ?? undefined,
   });
 }
 

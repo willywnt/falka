@@ -170,7 +170,17 @@ export class StockOpnameService {
     userId: string,
     query: ListStockOpnameQuery,
   ): Promise<PaginatedResult<StockOpnameListItem>> {
-    const where: Prisma.StockOpnameWhereInput = { userId };
+    const where: Prisma.StockOpnameWhereInput = {
+      userId,
+      ...(query.search
+        ? {
+            OR: [
+              { code: { contains: query.search, mode: 'insensitive' } },
+              { note: { contains: query.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
     const [rows, total] = await Promise.all([
       prisma.stockOpname.findMany({
         where,
