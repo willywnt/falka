@@ -115,17 +115,64 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
 
 ## Shell & auth
 
-- `components/layout/`: AppSidebar (icon rail w/ Tooltips, Create menu ordered by real frequency,
+- **`components/layout/nav-config.tsx` is the SINGLE source for shell navigation**: job-based
+  sidebar groups (Jualan / Stok / Katalog / Kirim & retur / Laporan / Sistem — verbs over entity
+  nouns; "Saran restok" + "Aktivitas stok" are first-class items, never nav-orphans again),
+  `CREATE_ACTIONS` (the "Buat" menu AND the palette read it), `MOBILE_TABS`,
+  `SHELL_SUPPRESSED_ROUTES`/`isShellSuppressedRoute` (tab bar + Pandu dock share it — never
+  duplicate the list), `resolveActiveHref`/`resolveNavTitle`, and per-item `keywords` for the
+  palette. Add a route → edit nav-config, everything else follows.
+- **Ops-pulse badges**: `use-ops-pulse.ts` = live "needs my attention" counts composed from
+  EXISTING module queries (PAID orders / PENDING returns via `meta.total` at pageSize 1; reorder
+  `urgentCount` on the exact key Pandu warms). Nav rows render the count chip (suar amber ONLY
+  for restock-urgent; neutral otherwise); the collapsed rail shows a dot + count in the Tooltip.
+  Never invent a new endpoint for a badge.
+- `components/layout/`: AppSidebar (icon rail w/ Tooltips, Create menu from CREATE_ACTIONS,
   brand tagline footer), DashboardNavbar (controlled mobile Sheet: scrolls + closes on navigate;
-  theme toggle reads `resolvedTheme`; mobile center shows the page title via `resolveNavTitle`),
+  theme toggle reads `resolvedTheme`; mobile center shows the page title via `resolveNavTitle`;
+  **CommandPaletteTrigger** centered on md+, Search icon button on phones),
   SidebarNav (focus-visible rings, teal active edge-marker, "Rekam packing" ≠ "Rekaman"),
-  **MobileTabBar** (5-slot bottom nav on phones, in normal flow, safe-area padding; SAME
-  suppression list as the Pandu dock — POS/new-PO/station own the bottom; the dock pill sits
-  `bottom-20 md:bottom-4` so they never overlap), dashboard shell (`h-dvh`, skip-link "Langsung
-  ke konten", `horizon-wash` main, `PanduDock` mounted), `(dashboard)/template.tsx` = per-page
-  ease-tide entrance (remounts on navigation; reduced-motion guard freezes it).
+  **MobileTabBar** (5-slot bottom nav on phones, in normal flow, safe-area padding; Pesanan tab
+  carries the ordersToShip pulse badge; the dock pill sits `bottom-20 md:bottom-4`), dashboard
+  shell (`h-dvh`, skip-link "Langsung ke konten", `horizon-wash` main, `PanduDock` +
+  `CommandPaletteProvider` mounted), `(dashboard)/template.tsx` = per-page ease-tide entrance
+  (remounts on navigation; reduced-motion guard freezes it).
 - **Auth enforced already** — don't touch config/middleware/cookies (HARD CONSTRAINT #2). The
-  whole funnel (pages, panel, validators, AUTH_ERROR_MESSAGES, lockout) speaks ID.
+  whole funnel (pages, panel, validators, AUTH_ERROR_MESSAGES, lockout) speaks ID. The auth
+  brand panel shows a product vignette (mock queue on `bg-white/10`), not repeated feature copy.
+
+## Command palette (Ctrl+K) — deterministic, honest
+
+- **`components/command-palette.tsx`**: `CommandPaletteProvider` (global Ctrl/⌘+K, mounted once
+  in DashboardShell) + `useCommandPalette()` + `CommandPaletteTrigger` (the navbar "search box"
+  — sellers know search boxes; the kbd hint teaches the shortcut). Built on the ui/Dialog
+  primitive, zero new deps.
+- Results = nav-config items + CREATE_ACTIONS filtered by token match over title/keywords; free
+  text falls through **`routePanduQuery`** (same honest keyword router as the dock) labeled
+  "Pandu · Pratinjau"; no match → `PANDU_SUGGESTIONS` chips. Every result is a REAL route —
+  never a generated answer. Footer carries the kbd hints + the honesty line.
+- The dashboard-home hero NL bar was retired in favor of this (the dock keeps its own input);
+  don't reintroduce per-page ask-bars.
+
+## Dashboard home = briefing, not a stat wall
+
+- Order on home: greeting → **`Briefing`** ("Antrian kerja · otomatis", app-layer composition in
+  `app/(dashboard)/dashboard/briefing.tsx`) → "Pintasan" quick actions → WaveHairline →
+  InventoryDashboard. The briefing's queue rows (oversold → restock-urgent → PAID-unshipped →
+  PENDING returns) deep-link to pre-filtered lists (`?status=PAID`, `?status=PENDING`) and exist
+  ONLY when count > 0; all-clear renders the calm "Laut tenang" row. Branch order is loading →
+  all-failed ErrorState → all-clear → rows; a partially-failed source shows the muted "Sebagian
+  antrian gagal dimuat — Coba lagi" line, NEVER a silent zero.
+
+## Landing & marketing surfaces
+
+- **Show the product, not stock art**: landing/auth visuals are composed from the REAL
+  design-system primitives (`components/marketing/product-mocks.tsx` — AnjunganMock, ledger
+  trail, dispute-evidence, POS total, profit rows). Mocks are `aria-hidden` and ALWAYS paired
+  with an sr-only Indonesian summary. Plausible generic demo data only.
+- **Honesty is the marketing**: no invented testimonials, user counts, pricing, or logos; the
+  proof sections are the append-only ledger trail + the packing-video dispute story ("Bukti,
+  bukan klaim"). Pandu stays an honest "Segera hadir" teaser — zero fake interactivity.
 
 ## Gotchas
 
