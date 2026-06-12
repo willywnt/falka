@@ -237,7 +237,8 @@ function PaletteDialog({
       <DialogContent className="top-20 max-h-[min(560px,calc(100dvh-6rem))] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogTitle className="sr-only">Cari &amp; perintah</DialogTitle>
         <DialogDescription className="sr-only">
-          Cari menu, buat sesuatu, atau tanya Pandu — pilih dengan panah, buka dengan Enter.
+          Cari menu, buat sesuatu, atau tempel kode penjualan, PO, opname, nomor resi, dan SKU —
+          pilih dengan panah, buka dengan Enter.
         </DialogDescription>
 
         <div className="flex items-center gap-2.5 border-b py-2 pr-12 pl-4">
@@ -247,7 +248,7 @@ function PaletteDialog({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Cari menu, buat sesuatu, atau tanya Pandu…"
+            placeholder="Cari menu, kode (S…/PO…), resi, atau SKU…"
             aria-label="Cari menu atau perintah"
             role="combobox"
             aria-expanded
@@ -441,7 +442,7 @@ export function CommandPaletteTrigger({ className }: { className?: string }) {
       )}
     >
       <Search aria-hidden className="size-4 shrink-0" />
-      <span className="min-w-0 flex-1 truncate text-left">Cari atau tanya Pandu…</span>
+      <span className="min-w-0 flex-1 truncate text-left">Cari menu, resi, SKU…</span>
       <kbd className="bg-muted text-muted-foreground hidden rounded px-1.5 py-0.5 font-sans text-[10px] md:inline-block">
         Ctrl K
       </kbd>

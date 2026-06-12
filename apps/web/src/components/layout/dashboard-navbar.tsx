@@ -102,7 +102,7 @@ export function DashboardNavbar() {
         {/* Reserved slot: <NotificationBell/> (count badge → tray) — backlog item A. */}
         <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette}>
           <Search className="size-4" />
-          <span className="sr-only">Cari atau tanya Pandu</span>
+          <span className="sr-only">Cari menu, kode, resi, atau SKU</span>
         </Button>
         <Button
           variant="ghost"
