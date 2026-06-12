@@ -9,7 +9,13 @@ import type { PageMeta } from '@/hooks/use-pagination';
 
 import { compressImage } from '../utils/compress-image';
 import { catalogKeys } from './catalog-keys';
-import type { BundleDetail, BundleLabel, BundleListItem, BundleListSummary } from '../types';
+import type {
+  ArchivedBundleItem,
+  BundleDetail,
+  BundleLabel,
+  BundleListItem,
+  BundleListSummary,
+} from '../types';
 import type { CreateBundleInput, UpdateBundleInput } from '../validators/bundle';
 
 export type BundleStatusFilter = 'all' | 'available' | 'unavailable';
@@ -98,6 +104,37 @@ export function useDeleteBundleMutation() {
     mutationFn: async (bundleId: string) => {
       const result = await apiFetch<{ id: string }>(`${apiRoutes.bundles}/${bundleId}`, {
         method: 'DELETE',
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['catalog', 'bundles'] });
+    },
+  });
+}
+
+/** The user's archived bundles (with the original SKU + whether it's free to restore). */
+export function useArchivedBundlesQuery(enabled = true) {
+  return useQuery({
+    queryKey: catalogKeys.archivedBundles,
+    queryFn: async () => {
+      const result = await apiFetch<ArchivedBundleItem[]>(`${apiRoutes.bundles}/archived`);
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    enabled,
+  });
+}
+
+/** Restore an archived bundle (reinstates its original SKU) and refresh the bundle lists. */
+export function useRestoreBundleMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bundleId: string) => {
+      const result = await apiFetch<{ id: string }>(`${apiRoutes.bundles}/${bundleId}/restore`, {
+        method: 'POST',
       });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;

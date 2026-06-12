@@ -96,10 +96,12 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
   async function handleDelete() {
     try {
       await deleteBundle.mutateAsync(bundleId);
-      toast.success('Bundel dihapus');
+      toast.success('Bundel diarsipkan', {
+        description: 'Bisa dipulihkan dari "Bundel terarsip".',
+      });
       router.push('/dashboard/bundles');
     } catch (deleteError) {
-      toast.error('Gagal menghapus bundel', {
+      toast.error('Gagal mengarsipkan bundel', {
         description: deleteError instanceof Error ? deleteError.message : 'Coba lagi.',
       });
     }
@@ -254,11 +256,12 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Hapus bundel</CardTitle>
+              <CardTitle className="text-base">Arsipkan bundel</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground text-sm">
-                Menghapus bundel. Varian komponen dan stoknya tidak terpengaruh.
+                Menyembunyikan bundel dari daftar, POS, dan scan. Varian komponen dan stoknya tidak
+                terpengaruh, dan bundel bisa dipulihkan lagi.
               </p>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -268,15 +271,16 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                     disabled={deleteBundle.isPending}
                   >
                     <Trash2 className="size-4" />
-                    Hapus bundel
+                    Arsipkan bundel
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus “{data.name}”?</AlertDialogTitle>
+                    <AlertDialogTitle>Arsipkan “{data.name}”?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Ini menghapus bundel. Varian komponen dan stoknya tidak terpengaruh. Tindakan
-                      ini tidak bisa dibatalkan.
+                      Bundel disembunyikan dari daftar, POS, dan scan. Varian komponen serta stoknya
+                      tidak terpengaruh, SKU-nya dibebaskan, dan bundel bisa dipulihkan kapan saja
+                      dari “Bundel terarsip”.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -285,7 +289,7 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
                       onClick={() => void handleDelete()}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      Hapus
+                      Arsipkan
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

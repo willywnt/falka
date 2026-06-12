@@ -105,6 +105,22 @@ export type ArchivedVariantItem = {
   deletedAt: string;
 };
 
+/** A soft-deleted (archived) bundle, with its restorable original SKU and component count. */
+export type ArchivedBundleItem = {
+  id: string;
+  /** The original SKU (un-mangled), i.e. the one restore would reinstate. */
+  sku: string;
+  name: string;
+  imageUrl: string | null;
+  /** Remaining components — 0 when the bundle was auto-archived after its last one was deleted. */
+  componentCount: number;
+  /** Whether restoring is possible — false when another live variant/bundle now uses `sku`. */
+  restorable: boolean;
+  /** When restore is blocked, why (so the UI can explain it); null otherwise. */
+  blockReason: string | null;
+  deletedAt: string;
+};
+
 /** A component line of a bundle: a variant + how many go into one bundle, with live stock. */
 export type BundleComponentLine = {
   productVariantId: string;

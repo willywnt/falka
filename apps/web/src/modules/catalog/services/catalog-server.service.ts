@@ -11,6 +11,7 @@ import { storageService } from '@/modules/storage/services/storage.service';
 
 import { CatalogError } from '../errors/catalog-errors';
 import type {
+  ArchivedBundleItem,
   ArchivedVariantItem,
   BundleComponentLine,
   BundleDetail,
@@ -530,6 +531,7 @@ export class CatalogServerService {
     const term = query.q.trim();
     const where: Prisma.BundleWhereInput = {
       userId,
+      deletedAt: null,
       ...(term
         ? {
             OR: [
@@ -609,6 +611,7 @@ export class CatalogServerService {
     const term = query.q.trim();
     const where: Prisma.BundleWhereInput = {
       userId,
+      deletedAt: null,
       ...(term
         ? {
             OR: [
@@ -648,7 +651,7 @@ export class CatalogServerService {
     const ids = [...new Set(bundleIds)];
     if (ids.length === 0) return;
     await prisma.bundle.updateMany({
-      where: { id: { in: ids }, userId },
+      where: { id: { in: ids }, userId, deletedAt: null },
       data: { labelPrintedAt: new Date() },
     });
     appLogger.info('catalog.bundle.labels.printed', { userId, count: ids.length });
@@ -719,16 +722,98 @@ export class CatalogServerService {
     return this.buildBundleDetail(userId, bundleId);
   }
 
-  /** Delete a bundle (cascades its items). Past sale/PO lines keep their name snapshots. */
+  /**
+   * Archive a bundle (soft-delete): free its SKU like a variant and hide it from
+   * every list/scan, keeping its composition + image so it can be restored. Past
+   * sale/PO lines kept their own name snapshots regardless.
+   */
   async deleteBundle(userId: string, bundleId: string): Promise<void> {
     await this.assertBundleOwned(userId, bundleId);
     const bundle = await prisma.bundle.findUnique({
       where: { id: bundleId },
-      select: { imageKey: true },
+      select: { sku: true },
     });
-    await prisma.bundle.delete({ where: { id: bundleId } });
-    if (bundle?.imageKey) await this.deleteStorageObject(bundle.imageKey);
-    appLogger.info('catalog.bundle.deleted', { userId, bundleId });
+    if (!bundle) throw CatalogError.notFound('Bundle not found.');
+
+    await prisma.bundle.update({
+      where: { id: bundleId },
+      data: { deletedAt: new Date(), sku: archivedSku(bundle.sku, bundleId) },
+    });
+    appLogger.info('catalog.bundle.archived', { userId, bundleId });
+  }
+
+  /**
+   * The user's archived bundles, newest-archived first, each with the original SKU
+   * restore would reinstate and whether that SKU is still free across live
+   * variants/bundles. A 0-component bundle was auto-archived when its last component
+   * variant was deleted.
+   */
+  async listArchivedBundles(userId: string): Promise<ArchivedBundleItem[]> {
+    const rows = await prisma.bundle.findMany({
+      where: { userId, deletedAt: { not: null } },
+      orderBy: { deletedAt: 'desc' },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        imageUrl: true,
+        deletedAt: true,
+        _count: { select: { items: true } },
+      },
+    });
+
+    const taken = await this.takenSkus(
+      userId,
+      rows.map((row) => unarchiveSku(row.sku, row.id)),
+    );
+
+    return rows.flatMap((row) => {
+      if (!row.deletedAt) return [];
+      const sku = unarchiveSku(row.sku, row.id);
+      const restorable = !taken.has(sku);
+      return [
+        {
+          id: row.id,
+          sku,
+          name: row.name,
+          imageUrl: row.imageUrl,
+          componentCount: row._count.items,
+          restorable,
+          blockReason: restorable ? null : `SKU "${sku}" sudah dipakai varian atau bundel lain.`,
+          deletedAt: row.deletedAt.toISOString(),
+        },
+      ];
+    });
+  }
+
+  /**
+   * Bring an archived bundle back: reinstate its original SKU and clear `deletedAt`.
+   * Refused when a live variant or bundle now owns that SKU (the shared scan namespace
+   * must stay unique); the unique index is the final guard against a race. A restored
+   * bundle may have 0 components (auto-archived) — the edit screen lets the user re-add.
+   */
+  async restoreBundle(userId: string, bundleId: string): Promise<{ id: string }> {
+    const archived = await prisma.bundle.findFirst({
+      where: { id: bundleId, userId, deletedAt: { not: null } },
+      select: { id: true, sku: true },
+    });
+    if (!archived) throw CatalogError.notFound('Archived bundle not found.');
+
+    const sku = unarchiveSku(archived.sku, archived.id);
+    if ((await this.takenSkus(userId, [sku])).has(sku)) throw CatalogError.duplicateSku(sku);
+
+    try {
+      await prisma.bundle.update({
+        where: { id: bundleId },
+        data: { deletedAt: null, sku },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) throw CatalogError.duplicateSku(sku);
+      throw error;
+    }
+
+    appLogger.info('catalog.bundle.restored', { userId, bundleId });
+    return { id: bundleId };
   }
 
   /** Set/replace a bundle's image from a just-uploaded R2 object; drops the old one. */
@@ -785,7 +870,7 @@ export class CatalogServerService {
     if (bundleIds.length === 0) return resolved;
 
     const bundles = await prisma.bundle.findMany({
-      where: { id: { in: bundleIds }, userId },
+      where: { id: { in: bundleIds }, userId, deletedAt: null },
       include: bundleDetailInclude,
     });
     for (const bundle of bundles) {
@@ -814,11 +899,21 @@ export class CatalogServerService {
 
     const bundle =
       (await prisma.bundle.findFirst({
-        where: { userId, isActive: true, barcode: { equals: term, mode: 'insensitive' } },
+        where: {
+          userId,
+          isActive: true,
+          deletedAt: null,
+          barcode: { equals: term, mode: 'insensitive' },
+        },
         select: { id: true },
       })) ??
       (await prisma.bundle.findFirst({
-        where: { userId, isActive: true, sku: { equals: term, mode: 'insensitive' } },
+        where: {
+          userId,
+          isActive: true,
+          deletedAt: null,
+          sku: { equals: term, mode: 'insensitive' },
+        },
         select: { id: true },
       }));
     if (!bundle) return null;
@@ -828,7 +923,7 @@ export class CatalogServerService {
 
   private async buildBundleDetail(userId: string, bundleId: string): Promise<BundleDetail> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId },
+      where: { id: bundleId, userId, deletedAt: null },
       include: bundleDetailInclude,
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
@@ -855,7 +950,7 @@ export class CatalogServerService {
 
   private async assertBundleOwned(userId: string, bundleId: string): Promise<void> {
     const bundle = await prisma.bundle.findFirst({
-      where: { id: bundleId, userId },
+      where: { id: bundleId, userId, deletedAt: null },
       select: { id: true },
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
@@ -872,7 +967,12 @@ export class CatalogServerService {
   ): Promise<void> {
     const [bundleClash, variantClash] = await Promise.all([
       prisma.bundle.findFirst({
-        where: { userId, sku, ...(excludeBundleId ? { id: { not: excludeBundleId } } : {}) },
+        where: {
+          userId,
+          sku,
+          deletedAt: null,
+          ...(excludeBundleId ? { id: { not: excludeBundleId } } : {}),
+        },
         select: { id: true },
       }),
       prisma.productVariant.findFirst({
@@ -921,6 +1021,11 @@ export class CatalogServerService {
     const now = new Date();
     await prisma.$transaction(async (tx) => {
       await this.archiveVariantRows(tx, variants, now);
+      await this.cascadeBundleComponentRemoval(
+        tx,
+        variants.map((variant) => variant.id),
+        now,
+      );
       await tx.product.update({ where: { id: productId }, data: { deletedAt: now } });
     });
 
@@ -946,7 +1051,14 @@ export class CatalogServerService {
     }
 
     const now = new Date();
-    await prisma.$transaction((tx) => this.archiveVariantRows(tx, variants, now));
+    await prisma.$transaction(async (tx) => {
+      await this.archiveVariantRows(tx, variants, now);
+      await this.cascadeBundleComponentRemoval(
+        tx,
+        variants.map((variant) => variant.id),
+        now,
+      );
+    });
 
     appLogger.info('catalog.variants.deleted', { userId, productId, count: variants.length });
   }
@@ -1035,7 +1147,7 @@ export class CatalogServerService {
         select: { sku: true },
       }),
       prisma.bundle.findMany({
-        where: { userId, sku: { in: skus } },
+        where: { userId, sku: { in: skus }, deletedAt: null },
         select: { sku: true },
       }),
     ]);
@@ -1126,6 +1238,31 @@ export class CatalogServerService {
     const damaged = sumInventory(variants, 'damagedStock');
     if (damaged > 0) warnings.push(`${damaged} damaged unit${damaged === 1 ? '' : 's'} recorded.`);
 
+    const bundleLinks = await prisma.bundleItem.findMany({
+      where: { productVariantId: { in: ids }, bundle: { deletedAt: null } },
+      select: { bundleId: true, bundle: { select: { name: true } } },
+    });
+    if (bundleLinks.length > 0) {
+      const nameByBundle = new Map(bundleLinks.map((link) => [link.bundleId, link.bundle.name]));
+      const removedByBundle = new Map<string, number>();
+      for (const link of bundleLinks) {
+        removedByBundle.set(link.bundleId, (removedByBundle.get(link.bundleId) ?? 0) + 1);
+      }
+      const totals = await prisma.bundleItem.groupBy({
+        by: ['bundleId'],
+        where: { bundleId: { in: [...nameByBundle.keys()] } },
+        _count: true,
+      });
+      const emptied = totals.filter(
+        (total) => (removedByBundle.get(total.bundleId) ?? 0) >= total._count,
+      ).length;
+      const names = [...nameByBundle.values()];
+      warnings.push(
+        `Dipakai sebagai komponen di ${names.length} bundel (${quoteNames(names)}) — komponennya akan dihapus` +
+          (emptied > 0 ? `, dan ${emptied} bundel yang jadi kosong akan diarsipkan.` : '.'),
+      );
+    }
+
     return {
       blockers: { blocked: reasons.length > 0, reasons, warnings, variantCount: variants.length },
       variants: variants.map((variant) => ({ id: variant.id, sku: variant.sku })),
@@ -1142,6 +1279,43 @@ export class CatalogServerService {
       await tx.productVariant.update({
         where: { id: variant.id },
         data: { deletedAt: now, sku: archivedSku(variant.sku, variant.id) },
+      });
+    }
+  }
+
+  /**
+   * When variants are archived, drop them from every live bundle that lists them as
+   * a component, then archive any such bundle left with no components (it can no
+   * longer be built or sold). An archived bundle frees its SKU like a variant. Items
+   * of already-archived bundles are left untouched so a restore keeps its composition.
+   */
+  private async cascadeBundleComponentRemoval(
+    tx: Prisma.TransactionClient,
+    variantIds: string[],
+    now: Date,
+  ): Promise<void> {
+    if (variantIds.length === 0) return;
+
+    const affected = await tx.bundleItem.findMany({
+      where: { productVariantId: { in: variantIds }, bundle: { deletedAt: null } },
+      select: { bundleId: true },
+    });
+    if (affected.length === 0) return;
+
+    await tx.bundleItem.deleteMany({
+      where: { productVariantId: { in: variantIds }, bundle: { deletedAt: null } },
+    });
+
+    for (const bundleId of [...new Set(affected.map((item) => item.bundleId))]) {
+      if ((await tx.bundleItem.count({ where: { bundleId } })) > 0) continue;
+      const bundle = await tx.bundle.findFirst({
+        where: { id: bundleId, deletedAt: null },
+        select: { id: true, sku: true },
+      });
+      if (!bundle) continue;
+      await tx.bundle.update({
+        where: { id: bundle.id },
+        data: { deletedAt: now, sku: archivedSku(bundle.sku, bundle.id) },
       });
     }
   }

@@ -78,6 +78,9 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 - _(shipped 2026-06-12: archived-variant view + restore on product detail — a collapsible
   "Varian terarsip" section lists soft-deleted variants; restore un-mangles the original SKU and
   is refused when a live variant/bundle now owns it.)_
+- _(shipped 2026-06-12: bundle archive — `Bundle.deletedAt` soft-delete (manual delete now archives,
+  restorable); deleting a variant warns if it's a bundle component, then on confirm drops it from
+  every live bundle and auto-archives any bundle left empty; "Bundel terarsip" view + restore.)_
 
 ## Locked decisions (don't relitigate without a reason)
 
