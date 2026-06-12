@@ -51,9 +51,13 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
 
 ## Pandu (assistant) pattern — honesty is a hard rule
 
-- **`PanduDock`** (`components/pandu/`): bottom-right pill → sea-glass card; suppressed on
-  `/recordings`, `/dashboard/sales/new`, `/dashboard/purchasing/new`. Hero NL bar on the
-  dashboard only. Both route through **`routePanduQuery`** (keyword → existing URL filters).
+- **`PanduDock`** (`components/pandu/`): a compact icon-only pill (falcon eye, no text) →
+  sea-glass card; suppressed via the shared `isShellSuppressedRoute` list. The pill is
+  **draggable along the right edge** (pointer-captured, ≥6px = drag not click) and can be
+  **tucked into a slim edge tab** (ChevronsRight in the card header hides; the edge tab
+  restores) — both persisted in `store/pandu-store.ts` (`dockBottomOffset`, `dockCollapsed`),
+  render gated behind `mounted` so SSR agrees. Free-text questions route through
+  **`routePanduQuery`** (keyword → existing URL filters) — same router as the command palette.
 - **Stub contract (jujur)**: nudges (`usePanduNudges`) are deterministic rules over queries that
   already exist — real numbers, rule-ranked, max 3, labeled "otomatis"; the card carries a
   permanent "Pratinjau" label; no generated prose, EVER, until the real AI lands. Dismissals
