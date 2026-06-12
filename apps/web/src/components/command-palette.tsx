@@ -11,13 +11,18 @@ import {
   type ReactNode,
 } from 'react';
 import type { Route } from 'next';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { CornerDownLeft, Plus, Search } from 'lucide-react';
 
 import { BrandMark } from '@/components/brand-mark';
-import { CREATE_ACTIONS, sidebarNavSections } from '@/components/layout/nav-config';
+import {
+  CREATE_ACTIONS,
+  isShellSuppressedRoute,
+  sidebarNavSections,
+} from '@/components/layout/nav-config';
 import { PANDU_SUGGESTIONS, routePanduQuery } from '@/components/pandu/pandu-router';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { useEntityJump } from '@/components/use-entity-jump';
 import { cn } from '@/lib/utils';
 
 /*
@@ -25,6 +30,8 @@ import { cn } from '@/lib/utils';
  * buat apa saja, tanya Pandu" (Ctrl+K / ⌘K, or the navbar search button).
  * Honest by construction: every result is a real route; free-text falls
  * through the same keyword router Pandu uses, never a generated answer.
+ * Code-looking queries (S00001, PO00001, a resi, a SKU/barcode) additionally
+ * resolve to real records as "Lompat ke" entries — see use-entity-jump.
  */
 
 type PaletteEntry = {
@@ -104,6 +111,36 @@ function buildEntries(query: string): readonly PaletteEntry[] {
   return hits.length > 0 ? hits : SUGGESTION_ENTRIES;
 }
 
+/**
+ * A query is a code candidate when it could be an entity code (no spaces,
+ * 3–64 chars) and doesn't already match a menu/create entry — "produk" is a
+ * menu word, "S00001" is a code.
+ */
+function toCodeCandidate(query: string): string {
+  const trimmed = query.trim();
+  if (!/^\S{3,64}$/.test(trimmed)) return '';
+
+  const tokens = [trimmed.toLowerCase()];
+  const matchesMenu =
+    CREATE_ENTRIES.some((entry) => matches(entry, tokens)) ||
+    NAV_ENTRIES.some((entry) => matches(entry, tokens));
+
+  return matchesMenu ? '' : trimmed;
+}
+
+/** True when a wedge-scan's trailing Enter would land in a form field anyway. */
+function isEditableElement(element: Element | null): boolean {
+  if (!element) return false;
+  if (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  ) {
+    return true;
+  }
+  return element instanceof HTMLElement && element.isContentEditable;
+}
+
 type CommandPaletteContextValue = { open: () => void };
 
 const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
@@ -119,25 +156,51 @@ export function useCommandPalette(): CommandPaletteContextValue {
 function PaletteDialog({
   open,
   onOpenChange,
+  initialQuery,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-filled draft (a wedge-scanned code); '' for a fresh open. */
+  initialQuery: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const activeRef = useRef<HTMLButtonElement | null>(null);
 
-  const entries = useMemo(() => buildEntries(query), [query]);
-  const noDirectHit = entries === SUGGESTION_ENTRIES;
+  // Entity lookups fire only for code-looking queries (and only while open —
+  // a closed palette never passes a candidate).
+  const codeCandidate = open ? toCodeCandidate(query) : '';
+  const { entries: jumpHits, isLooking } = useEntityJump(codeCandidate);
 
-  // Reset the draft whenever the palette opens fresh.
+  const baseEntries = useMemo(() => buildEntries(query), [query]);
+  const entries = useMemo(() => {
+    if (jumpHits.length === 0) return baseEntries;
+
+    const jumpEntries: PaletteEntry[] = jumpHits.map((hit) => ({
+      id: hit.id,
+      title: hit.title,
+      hint: 'Data',
+      icon: hit.icon,
+      href: hit.href,
+      haystack: '',
+    }));
+    // A real record beats the "Pandu belum paham" suggestions — keep only
+    // genuine nav/create hits below the jump group.
+    const navHits = baseEntries === SUGGESTION_ENTRIES ? [] : baseEntries;
+    return [...jumpEntries, ...navHits];
+  }, [baseEntries, jumpHits]);
+
+  const noDirectHit = entries === SUGGESTION_ENTRIES;
+  const showJumpGroup = jumpHits.length > 0 || (isLooking && codeCandidate.length > 0);
+
+  // Reset the draft whenever the palette opens fresh (or with a scanned code).
   useEffect(() => {
     if (open) {
-      setQuery('');
+      setQuery(initialQuery);
       setActiveIndex(0);
     }
-  }, [open]);
+  }, [open, initialQuery]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -202,6 +265,16 @@ function PaletteDialog({
           aria-label="Hasil"
           className="max-h-[min(420px,60svh)] overflow-y-auto p-2"
         >
+          {showJumpGroup ? (
+            <>
+              <p className="eyebrow text-muted-foreground px-3 pt-1 pb-1.5">Lompat ke</p>
+              {isLooking ? (
+                <p aria-live="polite" className="text-muted-foreground px-3 py-2 text-sm">
+                  Mencari kode…
+                </p>
+              ) : null}
+            </>
+          ) : null}
           {noDirectHit ? (
             <p className="text-muted-foreground px-3 pt-2 pb-1 text-sm">
               Pandu belum paham yang itu — coba salah satu ini:
@@ -275,11 +348,14 @@ function PaletteDialog({
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [initialQuery, setInitialQuery] = useState('');
+  const pathname = usePathname();
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
+        setInitialQuery('');
         setOpen((current) => !current);
       }
     }
@@ -288,12 +364,62 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const value = useMemo<CommandPaletteContextValue>(() => ({ open: () => setOpen(true) }), []);
+  // Scan-wedge: a hardware scanner "types" the code faster than any human and
+  // finishes with Enter. When that lands on chrome (palette closed, focus not
+  // in a field, route not a scan-owning screen) open the palette pre-filled so
+  // the entity lookups take it from there.
+  useEffect(() => {
+    if (open) return; // the palette's own input owns the keys while open
+
+    let buffer = '';
+    let lastKeyAt = 0;
+
+    function onScanKey(event: KeyboardEvent) {
+      if (event.isComposing) return;
+      const now = Date.now();
+
+      if (event.key === 'Enter') {
+        const scanned = buffer;
+        const gap = now - lastKeyAt;
+        buffer = '';
+        if (
+          scanned.length >= 6 &&
+          gap <= 100 &&
+          !isEditableElement(document.activeElement) &&
+          !isShellSuppressedRoute(pathname)
+        ) {
+          // Only the triggering Enter is swallowed; printable keys pass through.
+          event.preventDefault();
+          setInitialQuery(scanned);
+          setOpen(true);
+        }
+        return;
+      }
+
+      if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
+      // A human types slower than the wedge — any gap >50ms restarts the buffer.
+      buffer = now - lastKeyAt <= 50 ? buffer + event.key : event.key;
+      lastKeyAt = now;
+    }
+
+    document.addEventListener('keydown', onScanKey);
+    return () => document.removeEventListener('keydown', onScanKey);
+  }, [open, pathname]);
+
+  const value = useMemo<CommandPaletteContextValue>(
+    () => ({
+      open: () => {
+        setInitialQuery('');
+        setOpen(true);
+      },
+    }),
+    [],
+  );
 
   return (
     <CommandPaletteContext.Provider value={value}>
       {children}
-      <PaletteDialog open={open} onOpenChange={setOpen} />
+      <PaletteDialog open={open} onOpenChange={setOpen} initialQuery={initialQuery} />
     </CommandPaletteContext.Provider>
   );
 }
