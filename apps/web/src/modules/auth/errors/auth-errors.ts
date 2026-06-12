@@ -4,6 +4,7 @@ export const AUTH_ERROR_CODES = {
   FORBIDDEN: 'FORBIDDEN',
   EMAIL_TAKEN: 'EMAIL_TAKEN',
   ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
+  ACCESS_REVOKED: 'ACCESS_REVOKED',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
 } as const;
 
@@ -15,6 +16,7 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   FORBIDDEN: 'Kamu tidak punya akses untuk tindakan ini.',
   EMAIL_TAKEN: 'Email ini sudah terdaftar.',
   ACCOUNT_DISABLED: 'Akun ini sudah tidak aktif.',
+  ACCESS_REVOKED: 'Akses kamu ke organisasi ini sudah dicabut. Hubungi pemilik toko.',
   VALIDATION_ERROR: 'Periksa lagi isianmu, ya.',
 };
 
@@ -45,5 +47,9 @@ export class AuthError extends Error {
 
   static accountDisabled() {
     return new AuthError(AUTH_ERROR_CODES.ACCOUNT_DISABLED);
+  }
+
+  static accessRevoked() {
+    return new AuthError(AUTH_ERROR_CODES.ACCESS_REVOKED);
   }
 }

@@ -13,6 +13,8 @@ export function useCurrentUser() {
         email: session.user.email,
         role: session.user.role,
         displayName: session.user.displayName ?? null,
+        organizationId: session.user.organizationId,
+        orgRole: session.user.orgRole,
       }
     : null;
 

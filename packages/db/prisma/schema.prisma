@@ -12,6 +12,15 @@ enum UserRole {
   USER
 }
 
+/**
+ * Role within an organization (workspace). Separate from UserRole = platform admin.
+ */
+enum OrgRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
 enum RecordingStatus {
   RECORDING
   UPLOADING
@@ -57,8 +66,97 @@ model User {
   recordingShareLinks        RecordingShareLink[]
   bundles                    Bundle[]
   stockOpnames               StockOpname[]
+  membership                 OrganizationMember?
+  createdInvites             OrganizationInvite[]        @relation("InviteCreatedBy")
+  usedInvites                OrganizationInvite[]        @relation("InviteUsedBy")
 
   @@map("users")
+}
+
+/**
+ * The workspace every piece of shop data belongs to. For accounts that existed
+ * before organizations, id := the owner User.id (the backfill trick) — that
+ * keeps R2 storage-key prefixes and per-scope code sequences valid verbatim.
+ * New registrations get a fresh cuid.
+ */
+model Organization {
+  id                String    @id @default(cuid())
+  name              String
+  /**
+   * Storage quota lives on the org (moved off User; the whole shop shares it).
+   */
+  storageQuotaBytes BigInt    @default(524288000)
+  storageUsedBytes  BigInt    @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  members OrganizationMember[]
+  invites OrganizationInvite[]
+
+  pairingSessions            PairingSession[]
+  recordings                 Recording[]
+  recordingShareLinks        RecordingShareLink[]
+  marketplaceConnections     MarketplaceConnection[]
+  auditLogs                  AuditLog[]
+  products                   Product[]
+  productVariants            ProductVariant[]
+  bundles                    Bundle[]
+  stockLedgerEntries         StockLedger[]
+  marketplaceProducts        MarketplaceProduct[]
+  marketplaceProductMappings MarketplaceProductMapping[]
+  marketplaceSyncJobs        MarketplaceSyncJob[]
+  orders                     Order[]
+  returns                    Return[]
+  sales                      Sale[]
+  saleRefunds                SaleRefund[]
+  purchaseOrders             PurchaseOrder[]
+  stockOpnames               StockOpname[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  /**
+   * v1: ONE membership per user (drop this unique to allow multi-org later).
+   */
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id])
+  role           OrgRole      @default(STAFF)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@map("organization_members")
+}
+
+/**
+ * A single-use, role-tagged join code (shared via WA — no email infra).
+ */
+model OrganizationInvite {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  /**
+   * 8 chars from A-Z2-9 (no 0/O/1/I) — typed by hand at registration.
+   */
+  code            String       @unique
+  role            OrgRole
+  expiresAt       DateTime
+  createdByUserId String
+  createdBy       User         @relation("InviteCreatedBy", fields: [createdByUserId], references: [id])
+  usedByUserId    String?
+  usedBy          User?        @relation("InviteUsedBy", fields: [usedByUserId], references: [id])
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId])
+  @@map("organization_invites")
 }
 
 enum PairingSessionStatus {
@@ -68,7 +166,9 @@ enum PairingSessionStatus {
   EXPIRED
 }
 
-/** What a paired phone drives: packing-video recordings, POS, or purchase-order restock. */
+/**
+ * What a paired phone drives: packing-video recordings, POS, or purchase-order restock.
+ */
 enum PairingPurpose {
   RECORDING
   POS
@@ -77,20 +177,23 @@ enum PairingPurpose {
 }
 
 model PairingSession {
-  id          String               @id @default(uuid())
-  userId      String
-  user        User                 @relation(fields: [userId], references: [id])
-  pairingCode String
-  status      PairingSessionStatus @default(PENDING)
-  purpose     PairingPurpose       @default(RECORDING)
-  connectedAt DateTime?
-  lastSeenAt  DateTime?
-  expiresAt   DateTime
-  deviceInfo  Json?
-  lastScanAt  DateTime?
-  lastBarcode String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id             String               @id @default(uuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id])
+  // Pairing is a device/auth artifact: queries stay per-user (deliberate exception).
+  organizationId String?
+  organization   Organization?        @relation(fields: [organizationId], references: [id])
+  pairingCode    String
+  status         PairingSessionStatus @default(PENDING)
+  purpose        PairingPurpose       @default(RECORDING)
+  connectedAt    DateTime?
+  lastSeenAt     DateTime?
+  expiresAt      DateTime
+  deviceInfo     Json?
+  lastScanAt     DateTime?
+  lastBarcode    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -100,8 +203,13 @@ model PairingSession {
 
 model Recording {
   id                String          @id @default(cuid())
+  /**
+   * Actor: who recorded. Scope queries use organizationId.
+   */
   userId            String
   user              User            @relation(fields: [userId], references: [id])
+  organizationId    String?
+  organization      Organization?   @relation(fields: [organizationId], references: [id])
   noResi            String
   generatedFilename String
   storageProvider   String
@@ -130,18 +238,20 @@ model Recording {
 }
 
 model RecordingShareLink {
-  id           String    @id @default(cuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id])
-  recordingId  String
-  recording    Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  recordingId    String
+  recording      Recording     @relation(fields: [recordingId], references: [id], onDelete: Cascade)
   // Opaque share token, stored hashed (sha256) — the raw token lives only in the URL.
-  tokenHash    String    @unique
-  expiresAt    DateTime
-  revokedAt    DateTime?
-  viewCount    Int       @default(0)
-  lastViewedAt DateTime?
-  createdAt    DateTime  @default(now())
+  tokenHash      String        @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  viewCount      Int           @default(0)
+  lastViewedAt   DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([recordingId])
   @@index([userId])
@@ -152,6 +262,8 @@ model MarketplaceConnection {
   id                    String              @id @default(cuid())
   userId                String
   user                  User                @relation(fields: [userId], references: [id])
+  organizationId        String?
+  organization          Organization?       @relation(fields: [organizationId], references: [id])
   provider              MarketplaceProvider
   shopId                String
   shopName              String
@@ -176,16 +288,30 @@ model MarketplaceConnection {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  action    String
-  resource  String
-  metadata  Json?
-  createdAt DateTime @default(now())
+  id             String        @id @default(cuid())
+  /**
+   * Actor (null = system/platform event).
+   */
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  /**
+   * Nullable: platform-level events have no org.
+   */
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  action         String
+  /**
+   * Resource TYPE (e.g. 'sale', 'product'); the row id goes in resourceId.
+   */
+  resource       String
+  resourceId     String?
+  ipAddress      String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
 
   @@index([userId])
   @@index([action])
+  @@index([organizationId, createdAt])
   @@map("audit_logs")
 }
 
@@ -212,16 +338,18 @@ enum StockLedgerSource {
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  name        String
-  description String?
-  category    String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  name           String
+  description    String?
+  category       String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
 
   variants ProductVariant[]
 
@@ -230,17 +358,19 @@ model Product {
 }
 
 model ProductVariant {
-  id                String    @id @default(cuid())
+  id                String        @id @default(cuid())
   userId            String
-  user              User      @relation(fields: [userId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id])
   productId         String
-  product           Product   @relation(fields: [productId], references: [id])
+  product           Product       @relation(fields: [productId], references: [id])
   sku               String
   name              String
   barcode           String?
-  price             Decimal   @db.Decimal(12, 2)
-  cost              Decimal?  @db.Decimal(12, 2)
-  weight            Decimal?  @db.Decimal(10, 3) // kilograms
+  price             Decimal       @db.Decimal(12, 2)
+  cost              Decimal?      @db.Decimal(12, 2)
+  weight            Decimal?      @db.Decimal(10, 3) // kilograms
   dimensions        Json?
   // Parent variant name (e.g. "iPhone 16") when this row is a subvariant under a
   // grouped variant; null when the variant stands alone. The variant stays the SKU.
@@ -248,14 +378,14 @@ model ProductVariant {
   // Per-variant photo: R2 object key + its public URL. null = none.
   imageKey          String?
   imageUrl          String?
-  isActive          Boolean   @default(true)
-  lowStockThreshold Int       @default(0)
-  alertEnabled      Boolean   @default(true)
+  isActive          Boolean       @default(true)
+  lowStockThreshold Int           @default(0)
+  alertEnabled      Boolean       @default(true)
   leadTimeDays      Int? // supplier lead time (days) for reorder planning; null = use global default
   minOrderQty       Int? // minimum reorder quantity (MOQ); null = no minimum
   labelPrintedAt    DateTime? // when a QR/barcode label was last printed for this variant; null = never
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   deletedAt         DateTime?
 
   inventory           Inventory?
@@ -283,19 +413,21 @@ model ProductVariant {
  * is the scannable label code.
  */
 model Bundle {
-  id             String    @id @default(cuid())
+  id             String        @id @default(cuid())
   userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   sku            String
   barcode        String?
   name           String
-  price          Decimal   @db.Decimal(12, 2)
-  isActive       Boolean   @default(true) // inactive bundles can't be sold/bought (hidden from POS/PO pickers + scan)
+  price          Decimal       @db.Decimal(12, 2)
+  isActive       Boolean       @default(true) // inactive bundles can't be sold/bought (hidden from POS/PO pickers + scan)
   imageKey       String?
   imageUrl       String?
   labelPrintedAt DateTime? // when a QR/barcode label was last printed; null = never
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   // Soft-delete (archive). The @@unique([userId, sku]) spans archived rows, so the
   // SKU is mangled on archive (see archivedSku) to free the original for reuse.
   deletedAt      DateTime?
@@ -308,7 +440,9 @@ model Bundle {
   @@map("bundles")
 }
 
-/** One component line of a bundle: `quantity` units of `productVariant` per bundle. */
+/**
+ * One component line of a bundle: `quantity` units of `productVariant` per bundle.
+ */
 model BundleItem {
   id               String         @id @default(cuid())
   bundleId         String
@@ -339,18 +473,23 @@ model Inventory {
 }
 
 model StockLedger {
-  id           String            @id @default(cuid())
-  userId       String
-  user         User              @relation(fields: [userId], references: [id])
-  variantId    String
-  variant      ProductVariant    @relation(fields: [variantId], references: [id])
-  delta        Int
-  balanceAfter Int
-  reason       StockLedgerReason
-  source       StockLedgerSource
-  referenceId  String?
-  note         String?
-  createdAt    DateTime          @default(now())
+  id             String            @id @default(cuid())
+  /**
+   * Actor: who triggered the movement. Scope queries use organizationId.
+   */
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id])
+  variantId      String
+  variant        ProductVariant    @relation(fields: [variantId], references: [id])
+  delta          Int
+  balanceAfter   Int
+  reason         StockLedgerReason
+  source         StockLedgerSource
+  referenceId    String?
+  note           String?
+  createdAt      DateTime          @default(now())
 
   // Serves the reorder report's per-bucket demand sums (userId + reason IN + createdAt range).
   @@index([userId, reason, createdAt])
@@ -371,6 +510,8 @@ model MarketplaceProduct {
   id                      String                @id @default(cuid())
   userId                  String
   user                    User                  @relation(fields: [userId], references: [id])
+  organizationId          String?
+  organization            Organization?         @relation(fields: [organizationId], references: [id])
   marketplaceConnectionId String
   connection              MarketplaceConnection @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
   provider                MarketplaceProvider
@@ -401,6 +542,8 @@ model MarketplaceProductMapping {
   id                      String                   @id @default(cuid())
   userId                  String
   user                    User                     @relation(fields: [userId], references: [id])
+  organizationId          String?
+  organization            Organization?            @relation(fields: [organizationId], references: [id])
   marketplaceConnectionId String
   connection              MarketplaceConnection    @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
   marketplaceProductId    String                   @unique
@@ -443,8 +586,13 @@ enum MarketplaceSyncJobStatus {
 
 model MarketplaceSyncJob {
   id                          String                    @id @default(cuid())
+  /**
+   * Actor: who triggered the change that enqueued this job.
+   */
   userId                      String
   user                        User                      @relation(fields: [userId], references: [id])
+  organizationId              String?
+  organization                Organization?             @relation(fields: [organizationId], references: [id])
   marketplaceConnectionId     String
   connection                  MarketplaceConnection     @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
   marketplaceProductMappingId String
@@ -479,6 +627,8 @@ model Order {
   id                      String                @id @default(cuid())
   userId                  String
   user                    User                  @relation(fields: [userId], references: [id])
+  organizationId          String?
+  organization            Organization?         @relation(fields: [organizationId], references: [id])
   marketplaceConnectionId String
   connection              MarketplaceConnection @relation(fields: [marketplaceConnectionId], references: [id], onDelete: Cascade)
   provider                MarketplaceProvider
@@ -509,7 +659,9 @@ model Order {
    * order has been packed + recorded. Matched by noResi (no FK).
    */
   fulfilledAt             DateTime?
-  /** Free-text reason captured when an order is cancelled manually (null otherwise). */
+  /**
+   * Free-text reason captured when an order is cancelled manually (null otherwise).
+   */
   cancelReason            String?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
@@ -533,7 +685,9 @@ model OrderItem {
   externalName      String
   quantity          Int
   unitPrice         Decimal?        @db.Decimal(12, 2)
-  /** COGS snapshot: the variant's cost at reserve time. null = unknown (pre-backfill). */
+  /**
+   * COGS snapshot: the variant's cost at reserve time. null = unknown (pre-backfill).
+   */
   unitCost          Decimal?        @db.Decimal(12, 2)
   /**
    * Resolved internal variant (via marketplace mapping); null when unresolved.
@@ -559,20 +713,26 @@ enum ReturnDisposition {
 }
 
 model Return {
-  id           String       @id @default(cuid())
-  userId       String
-  user         User         @relation(fields: [userId], references: [id])
-  orderId      String
-  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status       ReturnStatus @default(PENDING)
-  reason       String?
-  /** True when opened automatically from a detected post-ship cancellation. */
-  autoDetected Boolean      @default(false)
-  /** Copied from the order for packing-video evidence lookup (matched by noResi). */
-  noResi       String?
-  processedAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status         ReturnStatus  @default(PENDING)
+  reason         String?
+  /**
+   * True when opened automatically from a detected post-ship cancellation.
+   */
+  autoDetected   Boolean       @default(false)
+  /**
+   * Copied from the order for packing-video evidence lookup (matched by noResi).
+   */
+  noResi         String?
+  processedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   items ReturnItem[]
 
@@ -586,11 +746,15 @@ model ReturnItem {
   id               String             @id @default(cuid())
   returnId         String
   return           Return             @relation(fields: [returnId], references: [id], onDelete: Cascade)
-  /** Snapshot of the returned order line (plain refs, not FKs). */
+  /**
+   * Snapshot of the returned order line (plain refs, not FKs).
+   */
   orderItemId      String
   productVariantId String?
   quantity         Int
-  /** Set when the return is processed; null while PENDING. */
+  /**
+   * Set when the return is processed; null while PENDING.
+   */
   disposition      ReturnDisposition?
 
   @@index([returnId])
@@ -608,34 +772,55 @@ enum SalePaymentMethod {
 enum SaleStatus {
   COMPLETED
   VOID
-  /** At least one line has been partially/fully refunded (sale itself stands). */
+  /**
+   * At least one line has been partially/fully refunded (sale itself stands).
+   */
   PARTIALLY_REFUNDED
 }
 
 model Sale {
-  id            String            @id @default(cuid())
-  userId        String
-  user          User              @relation(fields: [userId], references: [id])
-  /** Readable reference (e.g. S00001), generated per-user at create. */
-  code          String
-  customerName  String?
-  paymentMethod SalePaymentMethod @default(CASH)
-  status        SaleStatus        @default(COMPLETED)
-  /** Sum of line gross (qty x unitPrice) before discount/tax. Backfilled = totalAmount for legacy rows. */
-  subtotalAmount Decimal          @default(0) @db.Decimal(14, 2)
-  /** Cart-level discount, resolved to rupiah at checkout (allocated per line on SaleItem). */
-  discountAmount Decimal          @default(0) @db.Decimal(14, 2)
-  /** PPN rate in percent (e.g. 11). 0 = no tax on this sale. */
-  taxRate        Decimal          @default(0) @db.Decimal(5, 2)
-  /** Resolved tax in rupiah (contained in totalAmount when taxInclusive). */
-  taxAmount      Decimal          @default(0) @db.Decimal(14, 2)
-  /** true = prices already contain PPN; false = PPN added on top of the base. */
-  taxInclusive   Boolean          @default(false)
-  /** Amount payable: (subtotal - discount) + tax when exclusive; the base itself when inclusive. */
-  totalAmount   Decimal           @db.Decimal(14, 2)
-  note          String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  /**
+   * Actor: the kasir who rang it up. Scope queries use organizationId.
+   */
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id])
+  /**
+   * Readable reference (e.g. S00001), generated per-organization at create.
+   */
+  code           String
+  customerName   String?
+  paymentMethod  SalePaymentMethod @default(CASH)
+  status         SaleStatus        @default(COMPLETED)
+  /**
+   * Sum of line gross (qty x unitPrice) before discount/tax. Backfilled = totalAmount for legacy rows.
+   */
+  subtotalAmount Decimal           @default(0) @db.Decimal(14, 2)
+  /**
+   * Cart-level discount, resolved to rupiah at checkout (allocated per line on SaleItem).
+   */
+  discountAmount Decimal           @default(0) @db.Decimal(14, 2)
+  /**
+   * PPN rate in percent (e.g. 11). 0 = no tax on this sale.
+   */
+  taxRate        Decimal           @default(0) @db.Decimal(5, 2)
+  /**
+   * Resolved tax in rupiah (contained in totalAmount when taxInclusive).
+   */
+  taxAmount      Decimal           @default(0) @db.Decimal(14, 2)
+  /**
+   * true = prices already contain PPN; false = PPN added on top of the base.
+   */
+  taxInclusive   Boolean           @default(false)
+  /**
+   * Amount payable: (subtotal - discount) + tax when exclusive; the base itself when inclusive.
+   */
+  totalAmount    Decimal           @db.Decimal(14, 2)
+  note           String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   items   SaleItem[]
   refunds SaleRefund[]
@@ -651,16 +836,24 @@ model SaleItem {
   sale             Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  /** Snapshot of the variant at sale time, for stable history. */
+  /**
+   * Snapshot of the variant at sale time, for stable history.
+   */
   sku              String
   name             String
   quantity         Int
   unitPrice        Decimal        @db.Decimal(12, 2)
-  /** COGS snapshot: the variant's cost at sale time. null = unknown (pre-backfill). */
+  /**
+   * COGS snapshot: the variant's cost at sale time. null = unknown (pre-backfill).
+   */
   unitCost         Decimal?       @db.Decimal(12, 2)
-  /** This line's share of the cart discount (allocated by gross, largest-remainder). */
+  /**
+   * This line's share of the cart discount (allocated by gross, largest-remainder).
+   */
   discountAmount   Decimal        @default(0) @db.Decimal(12, 2)
-  /** Snapshot of the bundle this line came from (null = a standalone variant line). */
+  /**
+   * Snapshot of the bundle this line came from (null = a standalone variant line).
+   */
   bundleName       String?
 
   refundItems SaleRefundItem[]
@@ -670,19 +863,27 @@ model SaleItem {
   @@map("sale_items")
 }
 
-/** A partial/per-item refund against a counter sale (the sale itself stands). */
+/**
+ * A partial/per-item refund against a counter sale (the sale itself stands).
+ */
 model SaleRefund {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  saleId      String
-  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  /** Readable reference (e.g. RF00001), generated per-user at create. */
-  code        String
-  /** Cash returned to the buyer (sum of line amounts, incl. their PPN share). */
-  totalAmount Decimal  @db.Decimal(14, 2)
-  note        String?
-  createdAt   DateTime @default(now())
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  saleId         String
+  sale           Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  /**
+   * Readable reference (e.g. RF00001), generated per-user at create.
+   */
+  code           String
+  /**
+   * Cash returned to the buyer (sum of line amounts, incl. their PPN share).
+   */
+  totalAmount    Decimal       @db.Decimal(14, 2)
+  note           String?
+  createdAt      DateTime      @default(now())
 
   items SaleRefundItem[]
 
@@ -699,11 +900,15 @@ model SaleRefundItem {
   saleItem         SaleItem       @relation(fields: [saleItemId], references: [id], onDelete: Cascade)
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  /** Snapshots at refund time, for stable history. */
+  /**
+   * Snapshots at refund time, for stable history.
+   */
   sku              String
   name             String
   quantity         Int
-  /** Cash refunded for this line: qty x net unit (discount netted, PPN share included). */
+  /**
+   * Cash refunded for this line: qty x net unit (discount netted, PPN share included).
+   */
   amount           Decimal        @db.Decimal(12, 2)
 
   @@index([refundId])
@@ -719,19 +924,23 @@ enum PurchaseOrderStatus {
 }
 
 model PurchaseOrder {
-  id           String              @id @default(cuid())
-  userId       String
-  user         User                @relation(fields: [userId], references: [id])
-  /** Readable reference (e.g. PO00001), generated per-user at create. */
-  code         String
-  supplierName String?
-  status       PurchaseOrderStatus @default(ORDERED)
-  note         String?
-  totalCost    Decimal             @db.Decimal(14, 2)
-  orderedAt    DateTime            @default(now())
-  receivedAt   DateTime?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  id             String              @id @default(cuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
+  /**
+   * Readable reference (e.g. PO00001), generated per-user at create.
+   */
+  code           String
+  supplierName   String?
+  status         PurchaseOrderStatus @default(ORDERED)
+  note           String?
+  totalCost      Decimal             @db.Decimal(14, 2)
+  orderedAt      DateTime            @default(now())
+  receivedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   items PurchaseOrderItem[]
 
@@ -747,13 +956,17 @@ model PurchaseOrderItem {
   purchaseOrder    PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  /** Snapshot of the variant at order time, for stable history. */
+  /**
+   * Snapshot of the variant at order time, for stable history.
+   */
   sku              String
   name             String
   quantity         Int
   receivedQuantity Int            @default(0)
   unitCost         Decimal        @db.Decimal(12, 2)
-  /** Snapshot of the bundle this line came from (null = a standalone variant line). */
+  /**
+   * Snapshot of the bundle this line came from (null = a standalone variant line).
+   */
   bundleName       String?
 
   @@index([purchaseOrderId])
@@ -774,17 +987,21 @@ enum StockOpnameStatus {
  * append-only StockLedger as a RECONCILE row and corrects the Inventory cache.
  */
 model StockOpname {
-  id          String            @id @default(cuid())
-  userId      String
-  user        User              @relation(fields: [userId], references: [id])
-  /** Readable reference (e.g. OP00001), generated per-user at create. */
-  code        String
-  status      StockOpnameStatus @default(DRAFT)
-  note        String?
-  startedAt   DateTime          @default(now())
-  completedAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization?     @relation(fields: [organizationId], references: [id])
+  /**
+   * Readable reference (e.g. OP00001), generated per-user at create.
+   */
+  code           String
+  status         StockOpnameStatus @default(DRAFT)
+  note           String?
+  startedAt      DateTime          @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   items StockOpnameItem[]
 
@@ -800,13 +1017,19 @@ model StockOpnameItem {
   stockOpname      StockOpname    @relation(fields: [stockOpnameId], references: [id], onDelete: Cascade)
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
-  /** Snapshot of the variant at count time, for stable history. */
+  /**
+   * Snapshot of the variant at count time, for stable history.
+   */
   sku              String
   name             String
-  /** Available stock the system showed when this line was added to the count. */
+  /**
+   * Available stock the system showed when this line was added to the count.
+   */
   systemQuantity   Int
   countedQuantity  Int
-  /** countedQuantity − systemQuantity, stored for stable history + the variance report. */
+  /**
+   * countedQuantity − systemQuantity, stored for stable history + the variance report.
+   */
   variance         Int
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt

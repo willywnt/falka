@@ -1,17 +1,24 @@
-import type { UserRole } from '@falka/types';
+import type { OrgRole } from '@falka/types';
+
+/** What the shell needs to know about "my organization": name + my role. */
+export interface OrgSummary {
+  id: string;
+  name: string;
+  role: OrgRole;
+}
 
 export interface UserListItem {
   id: string;
   email: string;
   name: string;
-  role: UserRole;
+  role: OrgRole;
   createdAt: string;
 }
 
 export interface UsersModuleConfig {
-  defaultRole: UserRole;
+  defaultRole: OrgRole;
 }
 
 export const usersModuleConfig: UsersModuleConfig = {
-  defaultRole: 'member',
+  defaultRole: 'STAFF',
 };

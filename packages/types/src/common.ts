@@ -16,7 +16,6 @@ export interface AuditLogEntry {
 export interface Organization {
   id: string;
   name: string;
-  slug: string;
   storageUsedBytes: number;
   storageQuotaBytes: number;
   createdAt: Date;

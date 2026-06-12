@@ -11,6 +11,8 @@ import {
 } from '@/lib/api/rate-limit';
 import { getRequestIp, runWithRequestContext } from '@/lib/api/request-context';
 import { AppError } from '@/lib/errors';
+import { orgRoleAtLeast } from '@/lib/org-role';
+import { resolveOrgContext, type OrgContext } from '@/modules/auth/services/org-context';
 import { getCurrentUser } from '@/modules/auth/services/session';
 import type { AuthUser } from '@/modules/auth/types';
 
@@ -23,11 +25,12 @@ type RouteContext<TParams extends RouteParams = RouteParams> = {
 
 /**
  * Context handed to a wrapped handler: the Next route params plus the
- * authenticated user (guaranteed non-null — every route requires auth or admin)
- * and the resolved request id.
+ * authenticated user, their org context (id + role, re-validated against the
+ * DB on every request — never trusted from the 30-day JWT), and the request id.
  */
 export type ApiHandlerContext<TParams extends RouteParams = RouteParams> = RouteContext<TParams> & {
   user: AuthUser;
+  org: OrgContext;
   requestId: string;
 };
 
@@ -39,16 +42,17 @@ type ApiHandler<TParams extends RouteParams> = (
 /**
  * Every wrapped route must gate on either an authenticated user or an admin, so
  * the handler can rely on a non-null `user`. `rateLimit` is optional.
+ * `minOrgRole` additionally requires that role (or higher) in the user's org.
  */
-export type ApiRouteOptions = { rateLimit?: RateLimitScope } & (
-  | { requireAuth: true; requireAdmin?: never }
-  | { requireAdmin: true; requireAuth?: never }
-);
+export type ApiRouteOptions = {
+  rateLimit?: RateLimitScope;
+  minOrgRole?: 'ADMIN' | 'OWNER';
+} & ({ requireAuth: true; requireAdmin?: never } | { requireAdmin: true; requireAuth?: never });
 
 /**
  * Wraps a Route Handler with the cross-cutting concerns every API route shares:
- * request-id correlation context, auth/admin gating, optional rate limiting, and
- * centralized error mapping (handleApiError). Handlers stay pure orchestration.
+ * request-id correlation context, auth/admin/org gating, optional rate limiting,
+ * and centralized error mapping (handleApiError). Handlers stay pure orchestration.
  */
 export function withApiRoute<TParams extends RouteParams = RouteParams>(
   handler: ApiHandler<TParams>,
@@ -70,9 +74,28 @@ export function withApiRoute<TParams extends RouteParams = RouteParams>(
           return handleApiError(AppError.forbidden('Admin access required'), requestId);
         }
 
+        // Membership is re-resolved per request: a removed member 401s on the
+        // very next call (the fetch client then routes them back to /login).
+        const org = user ? await resolveOrgContext(user.id) : null;
+
+        if (!org) {
+          return handleApiError(
+            AppError.unauthorized('Akses organisasi kamu sudah tidak aktif.'),
+            requestId,
+          );
+        }
+
+        if (options.minOrgRole && !orgRoleAtLeast(org.role, options.minOrgRole)) {
+          return handleApiError(
+            AppError.forbidden('Aksi ini butuh peran yang lebih tinggi di organisasimu.'),
+            requestId,
+          );
+        }
+
         const handlerContext: ApiHandlerContext<TParams> = {
           ...context,
           user: user as AuthUser,
+          org,
           requestId,
         };
 

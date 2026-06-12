@@ -1,10 +1,11 @@
-export type UserRole = 'owner' | 'admin' | 'member' | 'viewer';
+/** Role within an organization — mirrors the Prisma `OrgRole` enum. */
+export type OrgRole = 'OWNER' | 'ADMIN' | 'STAFF';
 
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: UserRole;
+  role: OrgRole;
   organizationId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -13,7 +14,7 @@ export interface User {
 export interface Session {
   userId: string;
   organizationId: string;
-  role: UserRole;
+  role: OrgRole;
   expiresAt: Date;
 }
 
@@ -25,7 +26,7 @@ export interface AuthCredentials {
 export interface AuthTokenPayload {
   sub: string;
   orgId: string;
-  role: UserRole;
+  role: OrgRole;
   iat: number;
   exp: number;
 }

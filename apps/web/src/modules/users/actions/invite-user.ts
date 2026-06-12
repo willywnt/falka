@@ -5,7 +5,7 @@ import { inviteUserSchema } from '../validators';
 export async function inviteUserAction(formData: FormData) {
   const parsed = inviteUserSchema.safeParse({
     email: formData.get('email'),
-    role: formData.get('role') ?? 'member',
+    role: formData.get('role') ?? 'STAFF',
   });
 
   if (!parsed.success) {

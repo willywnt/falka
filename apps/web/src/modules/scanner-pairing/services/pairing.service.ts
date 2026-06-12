@@ -137,7 +137,9 @@ export class PairingService {
 
     const user = await pairingRepository.findSessionUser(session.userId);
 
-    if (!user) {
+    // No membership = the session owner's org access was revoked — the QR
+    // must not mint a session for them anymore.
+    if (!user || !user.membership) {
       throw PairingError.notFound();
     }
 
@@ -151,6 +153,8 @@ export class PairingService {
       email: user.email,
       role: user.role,
       displayName: user.displayName,
+      organizationId: user.membership.organizationId,
+      orgRole: user.membership.role,
     };
   }
 

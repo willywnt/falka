@@ -1,14 +1,21 @@
-import { MarketplaceProvider, PrismaClient, RecordingStatus, UserRole } from '@prisma/client';
+import {
+  MarketplaceProvider,
+  OrgRole,
+  PrismaClient,
+  RecordingStatus,
+  UserRole,
+} from '@prisma/client';
 import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
 import argon2 from 'argon2';
 
-import { DEMO_SHOP_ID, DEMO_USER_EMAIL, DEMO_VARIANTS } from './demo-data';
+import { DEMO_SHOP_ID, DEMO_STAFF_EMAIL, DEMO_USER_EMAIL, DEMO_VARIANTS } from './demo-data';
 
 const prisma = new PrismaClient();
 
 const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@falka.local';
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 const SEED_DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? 'Demo123!';
+const SEED_STAFF_PASSWORD = process.env.SEED_STAFF_PASSWORD ?? 'Staff123!';
 
 async function hashSeedPassword(password: string): Promise<string> {
   return argon2.hash(password, {
@@ -20,30 +27,59 @@ async function hashSeedPassword(password: string): Promise<string> {
 }
 
 /**
+ * Ensure the user owns an organization (id := user.id — the same identity the
+ * backfill migration uses, so storage-key prefixes stay valid) and holds the
+ * given role in it. Idempotent.
+ */
+async function ensureOwnOrganization(user: { id: string; displayName: string | null }) {
+  const organization = await prisma.organization.upsert({
+    where: { id: user.id },
+    update: {},
+    create: {
+      id: user.id,
+      name: user.displayName ?? 'Toko demo',
+      storageQuotaBytes: BigInt(DEFAULT_STORAGE_QUOTA_BYTES),
+    },
+  });
+
+  await prisma.organizationMember.upsert({
+    where: { userId: user.id },
+    update: { role: OrgRole.OWNER },
+    create: { organizationId: organization.id, userId: user.id, role: OrgRole.OWNER },
+  });
+
+  return organization;
+}
+
+/**
  * Idempotently seed a small mapped catalog (product → variant → stocked inventory →
  * listing → sync-ready mapping) so a freshly seeded DB can demonstrate the
  * reserve → ship → release order lifecycle out of the box. Skips any variant whose
  * SKU already exists, so re-running the seed is safe.
  */
 async function seedInventoryDemo(
-  userId: string,
+  scope: { userId: string; organizationId: string },
   connection: { id: string; shopId: string; provider: MarketplaceProvider },
 ) {
+  const { userId, organizationId } = scope;
   let created = 0;
 
   for (const demo of DEMO_VARIANTS) {
     const existingVariant = await prisma.productVariant.findFirst({
-      where: { userId, sku: demo.sku },
+      where: { organizationId, sku: demo.sku },
     });
     if (existingVariant) continue;
 
     const product =
-      (await prisma.product.findFirst({ where: { userId, name: demo.productName } })) ??
-      (await prisma.product.create({ data: { userId, name: demo.productName } }));
+      (await prisma.product.findFirst({ where: { organizationId, name: demo.productName } })) ??
+      (await prisma.product.create({
+        data: { userId, organizationId, name: demo.productName },
+      }));
 
     const variant = await prisma.productVariant.create({
       data: {
         userId,
+        organizationId,
         productId: product.id,
         sku: demo.sku,
         name: demo.variantName,
@@ -57,6 +93,7 @@ async function seedInventoryDemo(
     await prisma.stockLedger.create({
       data: {
         userId,
+        organizationId,
         variantId: variant.id,
         delta: demo.stock,
         balanceAfter: demo.stock,
@@ -69,6 +106,7 @@ async function seedInventoryDemo(
     const listing = await prisma.marketplaceProduct.create({
       data: {
         userId,
+        organizationId,
         marketplaceConnectionId: connection.id,
         provider: connection.provider,
         externalProductId: `${connection.shopId}-P${demo.index}`,
@@ -84,6 +122,7 @@ async function seedInventoryDemo(
     await prisma.marketplaceProductMapping.create({
       data: {
         userId,
+        organizationId,
         marketplaceConnectionId: connection.id,
         marketplaceProductId: listing.id,
         productVariantId: variant.id,
@@ -108,6 +147,7 @@ async function main() {
 
   const adminPasswordHash = await hashSeedPassword(SEED_ADMIN_PASSWORD);
   const demoPasswordHash = await hashSeedPassword(SEED_DEMO_PASSWORD);
+  const staffPasswordHash = await hashSeedPassword(SEED_STAFF_PASSWORD);
 
   const admin = await prisma.user.upsert({
     where: { email: SEED_ADMIN_EMAIL },
@@ -125,6 +165,7 @@ async function main() {
       storageUsedBytes: BigInt(0),
     },
   });
+  await ensureOwnOrganization(admin);
 
   console.log(`Admin user: ${admin.email} (${admin.role})`);
 
@@ -143,22 +184,49 @@ async function main() {
       storageQuotaBytes: BigInt(DEFAULT_STORAGE_QUOTA_BYTES),
     },
   });
+  const demoOrg = await ensureOwnOrganization(demoUser);
 
   console.log(`Demo user: ${demoUser.email} (${demoUser.role})`);
 
+  // A STAFF member inside the demo org — RBAC is testable straight after seed.
+  const staffUser = await prisma.user.upsert({
+    where: { email: DEMO_STAFF_EMAIL },
+    update: {
+      displayName: 'Demo Staf',
+      role: UserRole.USER,
+      passwordHash: staffPasswordHash,
+    },
+    create: {
+      email: DEMO_STAFF_EMAIL,
+      passwordHash: staffPasswordHash,
+      displayName: 'Demo Staf',
+      role: UserRole.USER,
+      storageQuotaBytes: BigInt(DEFAULT_STORAGE_QUOTA_BYTES),
+    },
+  });
+  await prisma.organizationMember.upsert({
+    where: { userId: staffUser.id },
+    update: { organizationId: demoOrg.id, role: OrgRole.STAFF },
+    create: { organizationId: demoOrg.id, userId: staffUser.id, role: OrgRole.STAFF },
+  });
+
+  console.log(`Staff user: ${staffUser.email} (STAFF of ${demoOrg.name})`);
+
   const existingRecording = await prisma.recording.findFirst({
-    where: { userId: demoUser.id, noResi: 'SEED-RESI-001' },
+    where: { organizationId: demoOrg.id, noResi: 'SEED-RESI-001' },
   });
 
   if (!existingRecording) {
     const recording = await prisma.recording.create({
       data: {
         userId: demoUser.id,
+        organizationId: demoOrg.id,
         noResi: 'SEED-RESI-001',
         generatedFilename: 'seed-recording-001.webm',
         storageProvider: 'cloudflare-r2',
         storageBucket: 'falka-recordings',
-        storageKey: `users/${demoUser.id}/seed-recording-001.webm`,
+        // Org-prefixed key — matches the production format `${orgId}/...`.
+        storageKey: `${demoOrg.id}/seed-recording-001.webm`,
         publicUrl: 'https://example.r2.dev/users/seed-recording-001.webm',
         mimeType: 'video/webm',
         fileSizeBytes: BigInt(1_048_576),
@@ -176,7 +244,7 @@ async function main() {
   const connection =
     (await prisma.marketplaceConnection.findFirst({
       where: {
-        userId: demoUser.id,
+        organizationId: demoOrg.id,
         provider: MarketplaceProvider.SHOPEE,
         shopId: DEMO_SHOP_ID,
       },
@@ -184,6 +252,7 @@ async function main() {
     (await prisma.marketplaceConnection.create({
       data: {
         userId: demoUser.id,
+        organizationId: demoOrg.id,
         provider: MarketplaceProvider.SHOPEE,
         shopId: DEMO_SHOP_ID,
         shopName: 'Seed Shopee Store',
@@ -195,17 +264,19 @@ async function main() {
 
   console.log(`Sample marketplace connection: ${connection.provider} / ${connection.shopName}`);
 
-  await seedInventoryDemo(demoUser.id, connection);
+  await seedInventoryDemo({ userId: demoUser.id, organizationId: demoOrg.id }, connection);
 
   await prisma.auditLog.create({
     data: {
       userId: admin.id,
+      organizationId: admin.id,
       action: 'seed.completed',
       resource: 'database',
       metadata: {
         seededAt: new Date().toISOString(),
         enums: {
           userRoles: Object.values(UserRole),
+          orgRoles: Object.values(OrgRole),
           recordingStatuses: Object.values(RecordingStatus),
           marketplaceProviders: Object.values(MarketplaceProvider),
         },

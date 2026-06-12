@@ -1,4 +1,5 @@
 import type {
+  OrgRole,
   PairingPurpose,
   PairingSession,
   PairingSessionStatus,
@@ -12,6 +13,8 @@ export type PairingSessionUser = {
   email: string;
   role: UserRole;
   displayName: string | null;
+  /** Auto-sign-in mints a full session, so the org claims ride along. */
+  membership: { organizationId: string; role: OrgRole } | null;
 };
 
 export type CreatePairingSessionData = {
@@ -129,7 +132,13 @@ export class PairingRepository {
   async findSessionUser(userId: string): Promise<PairingSessionUser | null> {
     return prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, role: true, displayName: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        displayName: true,
+        membership: { select: { organizationId: true, role: true } },
+      },
     });
   }
 }

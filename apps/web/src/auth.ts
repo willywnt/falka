@@ -97,6 +97,8 @@ export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
             email: user.email,
             role: user.role,
             displayName: user.displayName,
+            organizationId: user.organizationId,
+            orgRole: user.orgRole,
           };
         } catch {
           await recordFailedLoginAttempt(parsed.data.email, ip);

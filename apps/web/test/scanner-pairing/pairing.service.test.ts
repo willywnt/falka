@@ -85,6 +85,7 @@ describe('authorizeUserByPairingCode', () => {
       email: 'owner@example.com',
       role: 'USER',
       displayName: 'Owner',
+      membership: { organizationId: 'org-1', role: 'OWNER' },
     });
 
     const user = await service.authorizeUserByPairingCode('pair-1', PAIRING_CODE);
@@ -94,6 +95,23 @@ describe('authorizeUserByPairingCode', () => {
       email: 'owner@example.com',
       role: 'USER',
       displayName: 'Owner',
+      organizationId: 'org-1',
+      orgRole: 'OWNER',
+    });
+  });
+
+  it('refuses the QR sign-in when the session owner lost org access', async () => {
+    repoMock.findById.mockResolvedValue(fakeSession({ status: 'PENDING' }));
+    repoMock.findSessionUser.mockResolvedValue({
+      id: USER,
+      email: 'owner@example.com',
+      role: 'USER',
+      displayName: 'Owner',
+      membership: null,
+    });
+
+    await expect(service.authorizeUserByPairingCode('pair-1', PAIRING_CODE)).rejects.toMatchObject({
+      code: PAIRING_ERROR_CODES.PAIRING_NOT_FOUND,
     });
   });
 });

@@ -16,6 +16,7 @@ export const apiRoutes = {
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
   storage: `${API_BASE_PATH}/storage`,
+  org: `${API_BASE_PATH}/org`,
 } as const;
 
 export type ApiRouteKey = keyof typeof apiRoutes;

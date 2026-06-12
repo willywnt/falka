@@ -1,4 +1,4 @@
-import type { UserRole } from '@prisma/client';
+import type { OrgRole, UserRole } from '@prisma/client';
 import type { NextAuthConfig } from 'next-auth';
 
 import { getAuthSessionCookieName, usesSecureAuthCookies } from '@/lib/auth-cookies';
@@ -79,6 +79,10 @@ export const authConfig = {
         token.email = user.email;
         token.role = user.role;
         token.displayName = user.displayName;
+        // Org claims are a sign-in-time HINT; org-context re-resolves from the
+        // DB per request so revocation doesn't wait out the 30-day token.
+        token.organizationId = user.organizationId;
+        token.orgRole = user.orgRole;
       }
 
       return token;
@@ -89,6 +93,8 @@ export const authConfig = {
         session.user.email = token.email as string;
         session.user.role = token.role as UserRole;
         session.user.displayName = (token.displayName as string | null | undefined) ?? null;
+        session.user.organizationId = token.organizationId as string;
+        session.user.orgRole = token.orgRole as OrgRole;
       }
 
       return session;

@@ -1,7 +1,7 @@
 /**
  * Reset ONLY the demo lifecycle data so the order pull → reserve/ship/release/return
  * flow can be re-tested from scratch, without nuking the rest of the database:
- *   - deletes the demo user's orders (cascades order items + returns)
+ *   - deletes the demo org's orders (cascades order items + returns)
  *   - clears the demo store's pull cooldown (lastOrdersPulledAt)
  *   - resets each demo variant's stock to its seed level (reserved/damaged → 0)
  *     and replaces its ledger with a single fresh RESTOCK row
@@ -17,26 +17,32 @@ import { DEMO_SHOP_ID, DEMO_USER_EMAIL, DEMO_VARIANTS } from '../prisma/demo-dat
 const prisma = new PrismaClient();
 
 async function main() {
-  const demoUser = await prisma.user.findUnique({ where: { email: DEMO_USER_EMAIL } });
-  if (!demoUser) {
+  const demoUser = await prisma.user.findUnique({
+    where: { email: DEMO_USER_EMAIL },
+    select: { id: true, membership: { select: { organizationId: true } } },
+  });
+  if (!demoUser?.membership) {
     console.log(
-      `No demo user (${DEMO_USER_EMAIL}). Run \`pnpm --filter @falka/db db:seed\` first.`,
+      `No demo user/org (${DEMO_USER_EMAIL}). Run \`pnpm --filter @falka/db db:seed\` first.`,
     );
     return;
   }
   const userId = demoUser.id;
+  const organizationId = demoUser.membership.organizationId;
 
-  const deletedOrders = await prisma.order.deleteMany({ where: { userId } });
-  const deletedSales = await prisma.sale.deleteMany({ where: { userId } });
+  const deletedOrders = await prisma.order.deleteMany({ where: { organizationId } });
+  const deletedSales = await prisma.sale.deleteMany({ where: { organizationId } });
 
   await prisma.marketplaceConnection.updateMany({
-    where: { userId, shopId: DEMO_SHOP_ID },
+    where: { organizationId, shopId: DEMO_SHOP_ID },
     data: { lastOrdersPulledAt: null },
   });
 
   let resetVariants = 0;
   for (const demo of DEMO_VARIANTS) {
-    const variant = await prisma.productVariant.findFirst({ where: { userId, sku: demo.sku } });
+    const variant = await prisma.productVariant.findFirst({
+      where: { organizationId, sku: demo.sku },
+    });
     if (!variant) continue;
 
     await prisma.$transaction(async (tx) => {
@@ -54,6 +60,7 @@ async function main() {
       await tx.stockLedger.create({
         data: {
           userId,
+          organizationId,
           variantId: variant.id,
           delta: demo.stock,
           balanceAfter: demo.stock,
