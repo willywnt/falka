@@ -8,6 +8,7 @@ import {
   Plus,
   ScanLine,
   ShoppingCart,
+  Star,
   Trash2,
   Volume2,
   VolumeX,
@@ -49,10 +50,28 @@ import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/conne
 
 import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sales';
 import { usePosScanner, type PosScannerStatus } from '../hooks/use-pos-scanner';
+import { usePosFavoritesStore } from '../store/pos-favorites.store';
 import { computeSaleTotals } from '../utils/sale-totals';
 import type { ScannedSaleItem, SellableVariant } from '../types';
 
 const SCAN_SOUND_STORAGE_KEY = 'falka-pos-scan-sound';
+
+/** Common rupiah notes for the quick-tender row, smallest first. */
+const CASH_DENOMINATIONS = [10_000, 20_000, 50_000, 100_000, 200_000, 500_000];
+
+/** Subtle keyboard-hint chip (desktop only) — mirrors the command-palette style. */
+function KbdHint({ label, className }: { label: string; className?: string }) {
+  return (
+    <kbd
+      className={cn(
+        'bg-muted text-muted-foreground pointer-events-none hidden rounded px-1.5 py-0.5 font-sans text-[10px] md:inline-block',
+        className,
+      )}
+    >
+      {label}
+    </kbd>
+  );
+}
 
 /** Per-state copy + accent for the POS phone-scanner indicator. */
 const SCAN_STATUS_META: Record<
@@ -160,6 +179,8 @@ export function PosTerminal() {
   // focus imperatively once the query resolves to desktop.)
   const isDesktop = useMediaQuery('(min-width: 640px)');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const paymentSectionRef = useRef<HTMLDivElement>(null);
+  const payButtonRef = useRef<HTMLButtonElement>(null);
   const didAutoFocusRef = useRef(false);
   useEffect(() => {
     if (isDesktop && !didAutoFocusRef.current) {
@@ -197,6 +218,10 @@ export function PosTerminal() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const { soundOn, toggleSound } = useScanSoundPref(SCAN_SOUND_STORAGE_KEY);
 
+  // Pinned favorites (ids only — the items themselves come from the queries above).
+  const { favoriteVariantIds, favoriteBundleIds, toggleFavoriteVariant, toggleFavoriteBundle } =
+    usePosFavoritesStore();
+
   // Unlock Web Audio on the first interaction so scan beeps can play.
   useSoundUnlock();
 
@@ -224,6 +249,45 @@ export function PosTerminal() {
     [subtotal, discountType, discountValue, taxEnabled, taxRate, taxInclusive],
   );
   const total = totals.totalAmount;
+
+  // Quick cash tender: the 3 smallest common notes that still cover the total.
+  const quickTenderValues = useMemo(
+    () => CASH_DENOMINATIONS.filter((value) => value >= total).slice(0, 3),
+    [total],
+  );
+
+  // Minimal kasir shortcuts (desktop only): '/' jumps to the product search when
+  // focus is NOT in an editable element; F8 jumps to payment from anywhere (its
+  // whole point is escaping an input straight to the pay button).
+  const canPay = cart.length > 0 && !createSale.isPending;
+  useEffect(() => {
+    if (!isDesktop) return;
+
+    function isEditableTarget(target: EventTarget | null): boolean {
+      return (
+        target instanceof HTMLElement &&
+        (target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          target.isContentEditable)
+      );
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === '/' && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (event.key === 'F8') {
+        event.preventDefault();
+        paymentSectionRef.current?.scrollIntoView({ block: 'nearest' });
+        if (canPay) payButtonRef.current?.focus();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktop, canPay]);
 
   // Total demand and known availability PER variant across the whole cart, so a
   // variant sold both standalone AND inside a bundle warns once their combined
@@ -474,12 +538,16 @@ export function PosTerminal() {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input
-            ref={searchInputRef}
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Cari SKU atau nama produk..."
-          />
+          <div className="relative">
+            <Input
+              ref={searchInputRef}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Cari SKU atau nama produk..."
+              className="md:pr-8"
+            />
+            <KbdHint label="/" className="absolute top-1/2 right-2 -translate-y-1/2" />
+          </div>
           {scannerEnabled && scanMeta.hint ? (
             <p
               className={cn(
@@ -509,6 +577,8 @@ export function PosTerminal() {
                   onRetry={() => void refetchVariants()}
                   hasSearch={Boolean(debouncedSearch)}
                   onAdd={addVariantToCart}
+                  favoriteIds={favoriteVariantIds}
+                  onToggleFavorite={toggleFavoriteVariant}
                 />
               </TabsContent>
               <TabsContent value="bundling" className="mt-3">
@@ -520,6 +590,8 @@ export function PosTerminal() {
                   hasSearch={Boolean(debouncedSearch)}
                   isAdding={resolveBundleDetail.isPending}
                   onAdd={handleAddBundleFromList}
+                  favoriteIds={favoriteBundleIds}
+                  onToggleFavorite={toggleFavoriteBundle}
                 />
               </TabsContent>
             </Tabs>
@@ -531,6 +603,8 @@ export function PosTerminal() {
               onRetry={() => void refetchVariants()}
               hasSearch={Boolean(debouncedSearch)}
               onAdd={addVariantToCart}
+              favoriteIds={favoriteVariantIds}
+              onToggleFavorite={toggleFavoriteVariant}
             />
           )}
 
@@ -582,7 +656,7 @@ export function PosTerminal() {
             </div>
           )}
 
-          <div className="space-y-2">
+          <div ref={paymentSectionRef} className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
                 <Label htmlFor="payment">Pembayaran</Label>
@@ -725,10 +799,35 @@ export function PosTerminal() {
                     </span>
                   )}
                 </p>
+                {cart.length > 0 ? (
+                  <div className="col-span-2 flex flex-wrap gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCashReceived(total)}
+                    >
+                      Uang pas
+                    </Button>
+                    {quickTenderValues.map((value) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="num"
+                        onClick={() => setCashReceived(value)}
+                      >
+                        {formatCurrency(value)}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
             <Button
+              ref={payButtonRef}
               className="w-full"
               size="lg"
               onClick={() => void handleCheckout()}
@@ -736,6 +835,10 @@ export function PosTerminal() {
             >
               <Banknote className="size-4" />
               {createSale.isPending ? 'Memproses...' : 'Bayar'}
+              <KbdHint
+                label="F8"
+                className="bg-primary-foreground/15 text-primary-foreground/80 ml-1"
+              />
             </Button>
           </div>
         </CardContent>
@@ -768,6 +871,78 @@ export function PosTerminal() {
   );
 }
 
+/** Star toggle for pinning a row to the POS favorites strip. */
+function FavoriteToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const label = active ? 'Lepas dari favorit' : 'Sematkan ke favorit';
+  return (
+    <ActionTooltip label={label}>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="size-8 shrink-0"
+        aria-pressed={active}
+        onClick={onToggle}
+      >
+        <Star
+          className={cn(
+            'size-4',
+            active ? 'text-highlight-strong fill-current' : 'text-muted-foreground',
+          )}
+        />
+        <span className="sr-only">{label}</span>
+      </Button>
+    </ActionTooltip>
+  );
+}
+
+/**
+ * The "Favorit" quick-add strip above the results (search empty only). Favorites
+ * resolve against the currently fetched page; the ones it can't find render as a
+ * muted note instead of vanishing silently.
+ */
+function FavoritesStrip<T>({
+  items,
+  skippedCount,
+  getKey,
+  getLabel,
+  onAdd,
+}: {
+  items: T[];
+  skippedCount: number;
+  getKey: (item: T) => string;
+  getLabel: (item: T) => string;
+  onAdd: (item: T) => void;
+}) {
+  if (items.length === 0 && skippedCount === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground text-xs font-medium">Favorit</p>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item) => (
+            <Button
+              key={getKey(item)}
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => onAdd(item)}
+            >
+              <Star className="text-highlight-strong size-3.5 fill-current" aria-hidden />
+              <span className="max-w-40 truncate">{getLabel(item)}</span>
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {skippedCount > 0 ? (
+        <p className="text-muted-foreground text-xs">
+          Sebagian favorit tidak tampil di halaman ini.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** The variant search list (shared between the no-tabs and Products-tab layouts). */
 function ProductResults({
   variants,
@@ -776,6 +951,8 @@ function ProductResults({
   onRetry,
   hasSearch,
   onAdd,
+  favoriteIds,
+  onToggleFavorite,
 }: {
   variants: SellableVariant[] | undefined;
   isLoading: boolean;
@@ -783,6 +960,8 @@ function ProductResults({
   onRetry: () => void;
   hasSearch: boolean;
   onAdd: (variant: SellableVariant) => void;
+  favoriteIds: string[];
+  onToggleFavorite: (variantId: string) => void;
 }) {
   if (isLoading) {
     return (
@@ -798,39 +977,65 @@ function ProductResults({
     return <ErrorState className="p-6" title="Gagal memuat produk" onRetry={onRetry} />;
   }
 
+  const favoriteVariants = favoriteIds
+    .map((id) => variants?.find((variant) => variant.variantId === id))
+    .filter((variant): variant is SellableVariant => variant !== undefined);
+  const favoritesStrip =
+    !hasSearch && favoriteIds.length > 0 ? (
+      <FavoritesStrip
+        items={favoriteVariants}
+        skippedCount={favoriteIds.length - favoriteVariants.length}
+        getKey={(variant) => variant.variantId}
+        getLabel={(variant) => formatProductVariantLabel(variant.productName, variant)}
+        onAdd={onAdd}
+      />
+    ) : null;
+
   if ((variants?.length ?? 0) === 0) {
     return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'Tidak ada produk yang cocok.' : 'Ketik untuk mencari produk.'}
-      </p>
+      <div className="space-y-3">
+        {favoritesStrip}
+        <p className="text-muted-foreground py-6 text-center text-sm">
+          {hasSearch ? 'Tidak ada produk yang cocok.' : 'Ketik untuk mencari produk.'}
+        </p>
+      </div>
     );
   }
 
   return (
-    <ul className="divide-y rounded-lg border">
-      {variants?.map((variant) => (
-        <li key={variant.variantId} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <ImageThumb src={variant.imageUrl} alt={variant.name} />
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">
-                {formatProductVariantLabel(variant.productName, variant)}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {variant.sku} · {formatCurrency(variant.price)} ·{' '}
-                <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
-                  {variant.availableStock} tersedia
-                </span>
+    <div className="space-y-3">
+      {favoritesStrip}
+      <ul className="divide-y rounded-lg border">
+        {variants?.map((variant) => (
+          <li key={variant.variantId} className="flex items-center justify-between gap-3 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <ImageThumb src={variant.imageUrl} alt={variant.name} />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">
+                  {formatProductVariantLabel(variant.productName, variant)}
+                </div>
+                <div className="text-muted-foreground text-xs">
+                  {variant.sku} · {formatCurrency(variant.price)} ·{' '}
+                  <span className={variant.availableStock <= 0 ? 'text-destructive' : ''}>
+                    {variant.availableStock} tersedia
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => onAdd(variant)}>
-            <Plus className="size-4" />
-            Tambah
-          </Button>
-        </li>
-      ))}
-    </ul>
+            <div className="flex shrink-0 items-center gap-1">
+              <FavoriteToggle
+                active={favoriteIds.includes(variant.variantId)}
+                onToggle={() => onToggleFavorite(variant.variantId)}
+              />
+              <Button size="sm" variant="outline" onClick={() => onAdd(variant)}>
+                <Plus className="size-4" />
+                Tambah
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -843,6 +1048,8 @@ function BundleResults({
   hasSearch,
   isAdding,
   onAdd,
+  favoriteIds,
+  onToggleFavorite,
 }: {
   bundles: BundleListItem[] | undefined;
   isLoading: boolean;
@@ -851,6 +1058,8 @@ function BundleResults({
   hasSearch: boolean;
   isAdding: boolean;
   onAdd: (bundle: BundleListItem) => void;
+  favoriteIds: string[];
+  onToggleFavorite: (bundleId: string) => void;
 }) {
   if (isLoading) {
     return (
@@ -866,45 +1075,71 @@ function BundleResults({
     return <ErrorState className="p-6" title="Gagal memuat bundel" onRetry={onRetry} />;
   }
 
+  const favoriteBundles = favoriteIds
+    .map((id) => bundles?.find((bundle) => bundle.id === id))
+    .filter((bundle): bundle is BundleListItem => bundle !== undefined);
+  const favoritesStrip =
+    !hasSearch && favoriteIds.length > 0 ? (
+      <FavoritesStrip
+        items={favoriteBundles}
+        skippedCount={favoriteIds.length - favoriteBundles.length}
+        getKey={(bundle) => bundle.id}
+        getLabel={(bundle) => bundle.name}
+        onAdd={onAdd}
+      />
+    ) : null;
+
   if ((bundles?.length ?? 0) === 0) {
     return (
-      <p className="text-muted-foreground py-6 text-center text-sm">
-        {hasSearch ? 'Tidak ada bundel yang cocok.' : 'Belum ada bundel.'}
-      </p>
+      <div className="space-y-3">
+        {favoritesStrip}
+        <p className="text-muted-foreground py-6 text-center text-sm">
+          {hasSearch ? 'Tidak ada bundel yang cocok.' : 'Belum ada bundel.'}
+        </p>
+      </div>
     );
   }
 
   return (
-    <ul className="divide-y rounded-lg border">
-      {bundles?.map((bundle) => (
-        <li key={bundle.id} className="flex items-center justify-between gap-3 px-3 py-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <ImageThumb src={bundle.imageUrl} alt={bundle.name} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium">{bundle.name}</span>
-                <Badge
-                  variant="outline"
-                  className="border-violet-500/40 text-violet-600 dark:text-violet-400"
-                >
-                  Bundel
-                </Badge>
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {bundle.sku} · {formatCurrency(bundle.price)} · {bundle.totalVariant} item ·{' '}
-                <span className={bundle.available <= 0 ? 'text-destructive' : ''}>
-                  {bundle.available} tersedia
-                </span>
+    <div className="space-y-3">
+      {favoritesStrip}
+      <ul className="divide-y rounded-lg border">
+        {bundles?.map((bundle) => (
+          <li key={bundle.id} className="flex items-center justify-between gap-3 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <ImageThumb src={bundle.imageUrl} alt={bundle.name} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium">{bundle.name}</span>
+                  <Badge
+                    variant="outline"
+                    className="border-violet-500/40 text-violet-600 dark:text-violet-400"
+                  >
+                    Bundel
+                  </Badge>
+                </div>
+                <div className="text-muted-foreground text-xs">
+                  {bundle.sku} · {formatCurrency(bundle.price)} · {bundle.totalVariant} item ·{' '}
+                  <span className={bundle.available <= 0 ? 'text-destructive' : ''}>
+                    {bundle.available} tersedia
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <Button size="sm" variant="outline" disabled={isAdding} onClick={() => onAdd(bundle)}>
-            <Plus className="size-4" />
-            Tambah
-          </Button>
-        </li>
-      ))}
-    </ul>
+            <div className="flex shrink-0 items-center gap-1">
+              <FavoriteToggle
+                active={favoriteIds.includes(bundle.id)}
+                onToggle={() => onToggleFavorite(bundle.id)}
+              />
+              <Button size="sm" variant="outline" disabled={isAdding} onClick={() => onAdd(bundle)}>
+                <Plus className="size-4" />
+                Tambah
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
