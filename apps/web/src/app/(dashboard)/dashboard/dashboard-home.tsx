@@ -1,16 +1,27 @@
 'use client';
 
+import { useState } from 'react';
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Boxes, LineChart, ScrollText, ShoppingCart, Video, type LucideIcon } from 'lucide-react';
+import {
+  Boxes,
+  LineChart,
+  Moon,
+  ScrollText,
+  ShoppingCart,
+  Video,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { STAT_TONES, type StatTone } from '@/components/stat-card';
 import { WaveHairline } from '@/components/maritime-art';
+import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
 import { InventoryDashboard } from '@/modules/inventory/components/inventory-dashboard';
 import { cn } from '@/lib/utils';
 
 import { Briefing } from './briefing';
+import { TutupHariDialog } from './tutup-hari-dialog';
 
 type QuickAction = {
   label: string;
@@ -77,21 +88,33 @@ function todayLabel(): string {
 export function DashboardHome() {
   const { user } = useCurrentUser();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
+  const [tutupHariOpen, setTutupHariOpen] = useState(false);
 
   return (
     <div className="space-y-6">
       <div className="space-y-4 pt-1">
-        <div className="space-y-1.5">
-          <p className="eyebrow text-primary" suppressHydrationWarning>
-            Anjungan · {todayLabel()}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight" suppressHydrationWarning>
-            {greeting()}
-            {firstName ? `, ${firstName}` : ''} 👋
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Ringkasan toko kamu — stok, pesanan, dan yang perlu diperhatikan hari ini.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="eyebrow text-primary" suppressHydrationWarning>
+              Anjungan · {todayLabel()}
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight" suppressHydrationWarning>
+              {greeting()}
+              {firstName ? `, ${firstName}` : ''} 👋
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Ringkasan toko kamu — stok, pesanan, dan yang perlu diperhatikan hari ini.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="sm:shrink-0"
+            onClick={() => setTutupHariOpen(true)}
+          >
+            <Moon className="size-4" />
+            Tutup hari
+          </Button>
         </div>
 
         <Briefing />
@@ -131,6 +154,8 @@ export function DashboardHome() {
       </div>
 
       <InventoryDashboard />
+
+      <TutupHariDialog open={tutupHariOpen} onOpenChange={setTutupHariOpen} />
     </div>
   );
 }
