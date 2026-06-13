@@ -14,6 +14,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   '/mobile',
   '/marketplace',
   '/settings',
+  '/admin',
 ] as const;
 
 export const AUTH_ROUTE_PREFIXES = ['/login', '/register'] as const;

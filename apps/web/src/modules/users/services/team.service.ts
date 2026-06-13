@@ -9,6 +9,7 @@ import { orgRoleAtLeast } from '@/lib/org-role';
 import { auditService } from '@/modules/audit/services/audit.service';
 
 import { generateInviteCode } from '../utils/invite-code';
+import { assertMemberCapacity } from './member-capacity';
 import type { TeamInviteItem, TeamMemberItem } from '../types';
 
 /** Days an invite code stays usable before it expires. */
@@ -80,6 +81,8 @@ export class TeamService {
     if (role === 'ADMIN' && !orgRoleAtLeast(actor.role, 'OWNER')) {
       throw AppError.forbidden('Hanya pemilik yang bisa mengundang admin.');
     }
+
+    await assertMemberCapacity(prisma, organizationId);
 
     const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
