@@ -8,16 +8,35 @@ alwaysApply: false
 
 ## Route Handler = orchestration only (`app/api/**/route.ts`)
 Wrap with `withApiRoute` (auth/admin XOR, rate-limit, request-id, central error map).
-Handler gets non-null `{ user, requestId }`. Parse input with Zod, call ONE service, return.
+Handler gets non-null `{ user, org, requestId }`. Parse input with Zod, call ONE service, return.
 ```ts
 const schema = z.object({ noResi: z.string().trim().min(1).max(64) });
-export const GET = withApiRoute(async (request, { user }) => {
+export const GET = withApiRoute(async (request, { org }) => {
   const parsed = schema.safeParse({ noResi: new URL(request.url).searchParams.get('noResi') ?? '' });
   if (!parsed.success) return apiValidationError(parsed.error);
-  return apiSuccess(await recordingServerService.findRecentDuplicateResi(user.id, parsed.data.noResi));
+  return apiSuccess(await recordingServerService.findRecentDuplicateResi(org.id, parsed.data.noResi));
 }, { requireAuth: true });
 ```
 NO business logic, NO Prisma, NO manual auth in the handler.
+
+## Organization scope + RBAC (the data boundary)
+Data is scoped by **`organizationId`**, never by user. `withApiRoute` re-resolves the caller's
+membership from the DB **every request** (`resolveOrgContext`; a removed member 401s immediately,
+not at JWT expiry) and hands the handler `org: { id, role }`. Pass **`org.id`** as the scope arg
+to services; pass **`user.id`** ONLY as the actor (who did it) for rows that record it.
+- Services take `organizationId` first; writers take `actorUserId` too and persist BOTH
+  (`userId` is now actor/creator semantics, NOT scope). Per-org code sequences (S/PO/OP/RF) count
+  `where: { organizationId }` inside a tx wrapped in `retryOnCodeCollision` (the `[organizationId,
+code]` unique index guards the race).
+- Gate elevated routes with **`minOrgRole: 'ADMIN' | 'OWNER'`** (per-export → 403 below it);
+  pages use `requireOrgRole(min)`. STAFF is blocked from reports, money-sensitive actions (refund/
+  void, PO cancel, delete, adjust/dispose, opname post) and marketplace management — server is the
+  boundary; client hiding (`useOrg`/`useIsOrgAdmin`/nav `minRole`) is cosmetic.
+- **Deliberate exceptions (stay user-scoped)**: scanner-pairing (device artifact), upload/recording
+  rate-limit keys, `AuditLog`/`PairingSession.organizationId` are nullable. R2 keys are
+  `${organizationId}/...` (backfilled org id == old user id, so old keys stay valid).
+- Audit sensitive actions best-effort AFTER the tx via `auditService.log({ organizationId,
+actorUserId, action, resource, resourceId?, metadata? })` — never throws, never inside the tx.
 
 ## Layering
 - **Service** (`*.service.ts`): business logic, HTTP-free; server svc start `import 'server-only'`;

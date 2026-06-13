@@ -123,6 +123,26 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
   (POS/PO/opname/recordings) · "Opname stok" (nav) · "Tampilkan QR code" (row action). Dates/relative times go through `lib/formatters` (id-ID;
   date-fns `id` locale) — never `en-US` formatting.
 
+## Roles & team (org RBAC in the UI)
+
+- **`useOrg()`** (`modules/users/hooks/use-org.ts`) → `{ org: { id, name, role } | null }` FRESH
+  from `GET /api/v1/org` (not the JWT) so a role change shows on refetch; **`useIsOrgAdmin()`** →
+  `{ isAdmin }` (loading/null reads as NOT admin — no flash of privileged UI). Role labels via
+  `orgRoleLabel` (Pemilik/Admin/Staf), comparisons via `orgRoleAtLeast` (`@/lib/org-role`).
+- **Nav gating is ONE source**: `nav-config.tsx` items carry `minRole?`; `visibleNavSections(role)`
+  / `visibleNavItems(items, role)` filter the sidebar, MobileTabBar, and command-palette entries
+  together. The Laporan group is `minRole: 'ADMIN'`. The navbar account menu shows org name + a
+  role badge.
+- **Hiding is cosmetic, server is the boundary** (`minOrgRole` route guards). STAFF lose the
+  buttons for: Tutup hari + profit cards (home), refund/void (sale detail), PO cancel, product/
+  variant/bundle delete, stock adjust + damage write-off, opname Posting, and all marketplace
+  connect/disconnect/map/sync controls. Wrap with `useIsOrgAdmin`; default-hide while loading.
+- **Settings** is role-gated server-side: Umum (all; org rename inline for ADMIN+), and
+  Penyimpanan / Tim / Riwayat aktivitas only for ADMIN+. **Tim** = member table (role badges,
+  OWNER-only role-change + remove behind AlertDialog, OWNER/self rows action-less) + invite
+  section (create STAFF/ADMIN per authority, copy + WhatsApp share + revoke). **Riwayat aktivitas**
+  = paginated audit log (humanized action labels). Register has an optional "Kode undangan" field.
+
 ## Shell & auth
 
 - **`components/layout/nav-config.tsx` is the SINGLE source for shell navigation**: job-based

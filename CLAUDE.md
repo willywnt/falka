@@ -143,6 +143,31 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
    `recording_triggered`, `station_recording_state`, `scanner_heartbeat`,
    `session_state`, `pairing_error`. Don't rename/repurpose payloads.
 5. **Behavior of the 2 happy flows** — refactor structure freely, but behavior must not change.
+6. **Organization scope** — domain data is scoped by `organizationId` (NOT `userId`); `userId`
+   on a domain row is the **actor/creator**. Services take `organizationId` first (+ `actorUserId`
+   for writers, persisting both). `withApiRoute` hands handlers `{ user, org }` and re-validates
+   membership per request; gate elevated routes with `minOrgRole`. Don't reintroduce `userId`
+   scoping. Detail: `.cursor/rules/10-api-and-data.mdc` + `docs/roadmap/org-foundation.md`.
+
+## 8a. Organization, roles & team (multi-user per shop)
+
+- **Models**: `Organization` (owns the shop's data + storage quota), `OrganizationMember`
+  (one per user in v1: `@@unique([userId])`), `OrganizationInvite` (single-use code). `OrgRole`
+  = `OWNER | ADMIN | STAFF` (separate from platform `UserRole ADMIN|USER`). Backfill identity:
+  for pre-org accounts `Organization.id == owner User.id` (keeps R2 keys + code sequences valid).
+- **Auth**: sign-in (credentials + pairing QR) resolves membership; no active membership ⇒ login
+  refused (`AuthError.accessRevoked`). JWT carries `organizationId`/`orgRole` as a HINT; the DB is
+  authoritative (re-resolved per request).
+- **RBAC** (server = boundary, UI hiding cosmetic): STAFF blocked from reports + money-sensitive
+  actions (sale refund/void, PO cancel, product/variant/bundle delete, stock adjust/dispose,
+  opname posting) + marketplace management (GETs + `orders/pull` stay open). Team authority is
+  **hybrid**: ADMIN lists members + mints/revokes STAFF invites; OWNER additionally changes roles,
+  removes members, and mints ADMIN invites. The OWNER row is immutable via the team UI.
+- **Invites**: 8-char code (`A-Z2-9`, no 0/O/1/I), 7-day expiry, shared via WhatsApp; register
+  with an optional `inviteCode` claims it atomically in the register tx (joins the org with the
+  invite's role, no new org). No code ⇒ new own-org OWNER.
+- **Audit**: `auditService.log` writes best-effort AFTER each sensitive tx; Settings → Riwayat
+  aktivitas (ADMIN+) lists it. Settings tabs (Penyimpanan/Tim/Riwayat) are role-gated server-side.
 
 ## 9. Quality gate — green after EVERY change
 
