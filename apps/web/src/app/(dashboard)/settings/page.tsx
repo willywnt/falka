@@ -18,7 +18,8 @@ export const metadata: Metadata = {
 
 type SettingsTab = 'general' | 'storage' | 'team' | 'activity' | 'access';
 
-const ADMIN_TABS: ReadonlySet<SettingsTab> = new Set(['storage', 'team', 'activity']);
+// Penyimpanan is visible to everyone (read-only quota view); Tim + Riwayat are ADMIN+.
+const ADMIN_TABS: ReadonlySet<SettingsTab> = new Set(['team', 'activity']);
 
 function resolveTab(
   value: string | string[] | undefined,
@@ -61,9 +62,9 @@ export default async function SettingsPage({
       <Tabs defaultValue={defaultTab} className="max-w-2xl">
         <TabsList>
           <TabsTrigger value="general">Umum</TabsTrigger>
+          <TabsTrigger value="storage">Penyimpanan</TabsTrigger>
           {isAdmin ? (
             <>
-              <TabsTrigger value="storage">Penyimpanan</TabsTrigger>
               <TabsTrigger value="team">Tim</TabsTrigger>
               <TabsTrigger value="activity">Riwayat aktivitas</TabsTrigger>
             </>
@@ -73,11 +74,11 @@ export default async function SettingsPage({
         <TabsContent value="general">
           <GeneralSettings />
         </TabsContent>
+        <TabsContent value="storage">
+          <StorageSettingsCard />
+        </TabsContent>
         {isAdmin ? (
           <>
-            <TabsContent value="storage">
-              <StorageSettingsCard />
-            </TabsContent>
             <TabsContent value="team">
               <TeamSettings />
             </TabsContent>

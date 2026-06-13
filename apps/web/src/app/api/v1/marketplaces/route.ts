@@ -10,7 +10,7 @@ export const GET = withApiRoute(
     const connections = await marketplaceServerService.listConnections(org.id);
     return apiSuccess(connections);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'marketplace.view' },
 );
 
 export const POST = withApiRoute(

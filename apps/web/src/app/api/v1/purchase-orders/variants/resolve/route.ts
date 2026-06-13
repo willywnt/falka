@@ -15,7 +15,7 @@ export const GET = withApiRoute(
     const result = await purchasingServerService.resolveScannedItem(org.id, parsed.data.code);
     return apiSuccess(result);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'purchasing.view' },
 );
 
 export function OPTIONS() {

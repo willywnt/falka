@@ -63,13 +63,21 @@ export const authConfig = {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const isLoggedIn = Boolean(auth?.user);
+      // Platform admin-ops operators belong in /admin and never see the shop.
+      const isPlatformAdmin = auth?.user?.role === 'ADMIN';
+      const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
+      const home = isPlatformAdmin ? '/admin' : '/dashboard';
 
       if (isProtectedPath(pathname)) {
-        return isLoggedIn;
+        if (!isLoggedIn) return false;
+        if (isPlatformAdmin && !isAdminArea) {
+          return Response.redirect(new URL('/admin', request.nextUrl));
+        }
+        return true;
       }
 
       if (isLoggedIn && isAuthPath(pathname)) {
-        return Response.redirect(new URL('/dashboard', request.nextUrl));
+        return Response.redirect(new URL(home, request.nextUrl));
       }
 
       return true;

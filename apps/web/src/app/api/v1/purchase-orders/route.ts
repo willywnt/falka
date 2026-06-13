@@ -10,7 +10,7 @@ export const GET = withApiRoute(
     const orders = await purchasingServerService.listPurchaseOrders(org.id);
     return apiSuccess(orders);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'purchasing.view' },
 );
 
 export const POST = withApiRoute(
@@ -22,7 +22,7 @@ export const POST = withApiRoute(
     const order = await purchasingServerService.createPurchaseOrder(org.id, user.id, parsed.data);
     return apiSuccess(order, 201);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'purchasing.view' },
 );
 
 export function OPTIONS() {

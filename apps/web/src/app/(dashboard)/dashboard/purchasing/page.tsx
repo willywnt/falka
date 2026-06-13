@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 
 import { PageHeader } from '@/components/page-header';
+import { requireOrgPermission } from '@/modules/auth/services/session';
 import { PurchasingDashboard } from '@/modules/purchasing/components/purchasing-dashboard';
 
 export const metadata: Metadata = {
   title: 'Pembelian',
 };
 
-export default function PurchasingPage() {
+export default async function PurchasingPage() {
+  await requireOrgPermission('purchasing.view');
+
   return (
     <div className="space-y-6">
       <PageHeader

@@ -26,6 +26,7 @@ import { StatCard } from '@/components/stat-card';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
+import { useHasPermission } from '@/modules/users/hooks/use-org';
 
 import { REORDER_DEFAULTS } from '../config';
 import { useReorderReportQuery } from '../hooks/use-inventory';
@@ -103,6 +104,7 @@ function ReorderReportContent() {
   const [filters, setFilters] = useUrlFilters(URL_DEFAULTS);
   const windowDays = parseWindowDays(filters.window);
   const reorderOnly = filters.reorderOnly === '1';
+  const { allowed: canPurchase } = useHasPermission('purchasing.view');
 
   const { data, isLoading, error, refetch } = useReorderReportQuery({
     windowDays,
@@ -170,12 +172,14 @@ function ReorderReportContent() {
               Hanya yang perlu restok
             </Label>
           </div>
-          <Button size="sm" asChild>
-            <Link href="/dashboard/purchasing/new">
-              <Truck className="size-4" />
-              Buat pembelian
-            </Link>
-          </Button>
+          {canPurchase ? (
+            <Button size="sm" asChild>
+              <Link href="/dashboard/purchasing/new">
+                <Truck className="size-4" />
+                Buat pembelian
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 

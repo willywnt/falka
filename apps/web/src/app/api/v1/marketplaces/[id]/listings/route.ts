@@ -15,7 +15,7 @@ export const GET = withApiRoute<RouteParams>(
     const listings = await marketplaceMappingService.listListings(org.id, parsed.data.id);
     return apiSuccess(listings);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'marketplace.view' },
 );
 
 export function OPTIONS() {

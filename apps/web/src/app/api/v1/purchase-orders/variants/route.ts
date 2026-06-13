@@ -18,7 +18,7 @@ export const GET = withApiRoute(
     const result = await purchasingServerService.searchVariants(org.id, parsed.data);
     return apiSuccess(result);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'purchasing.view' },
 );
 
 export function OPTIONS() {

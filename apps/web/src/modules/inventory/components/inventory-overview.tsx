@@ -99,6 +99,7 @@ function RowActionsMenu({
   onDispose: (item: StockOverviewItem) => void;
 }) {
   const { allowed: canAdjust } = useHasPermission('inventory.adjust');
+  const { allowed: canPurchase } = useHasPermission('purchasing.view');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -118,12 +119,14 @@ function RowActionsMenu({
             Lihat aktivitas
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`/dashboard/purchasing/new?variant=${item.variantId}`}>
-            <Truck className="size-4" />
-            Buat PO
-          </Link>
-        </DropdownMenuItem>
+        {canPurchase ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/purchasing/new?variant=${item.variantId}`}>
+              <Truck className="size-4" />
+              Buat PO
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         {canAdjust && item.damagedStock > 0 ? (
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"

@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
-import { useIsOrgAdmin, useOrg, useRenameOrgMutation } from '@/modules/users/hooks/use-org';
+import { useOrg, useRenameOrgMutation } from '@/modules/users/hooks/use-org';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -96,10 +96,10 @@ export function GeneralSettings() {
   );
 }
 
-/** Org name display + inline rename (ADMIN+). STAFF see a read-only name. */
+/** Org name display + inline rename (OWNER only). Everyone else sees a read-only name. */
 function OrganizationSection() {
   const { org, isLoading } = useOrg();
-  const { isAdmin } = useIsOrgAdmin();
+  const isOwner = org?.role === 'OWNER';
   const renameOrg = useRenameOrgMutation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -169,7 +169,7 @@ function OrganizationSection() {
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-right font-medium">{org?.name ?? '—'}</span>
-            {isAdmin ? (
+            {isOwner ? (
               <Button
                 type="button"
                 variant="ghost"

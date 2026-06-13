@@ -4,12 +4,24 @@ import type { OrgRole } from '@prisma/client';
  * The configurable permission catalog. Each key gates a set of routes/actions;
  * an organization's OWNER turns keys on/off per role (ADMIN, STAFF) from the
  * "Peran & akses" dashboard. OWNER always has every permission (never stored).
- * Defaults reproduce the original hardcoded behavior (ADMIN all, STAFF none),
- * so an org with no overrides behaves exactly as before this feature.
+ *
+ * Two tiers:
+ *  - VIEW keys (reports.view, purchasing.view, marketplace.view) gate a whole
+ *    section — when off, its nav menu + pages + actions all disappear for that role.
+ *  - ACTION keys gate a single button while the surrounding page stays visible.
+ *
+ * Defaults: ADMIN gets everything, STAFF gets nothing — so by default STAFF is a
+ * pure daily-ops role (Kasir/Pesanan/Inventaris/Opname-count/Katalog/Rekam/Retur)
+ * with no reports, purchasing, marketplace, or money/config actions. The OWNER
+ * widens or narrows this per role from the matrix.
  */
 
 export const PERMISSION_KEYS = [
+  // View/section keys — hide the nav menu + page when off.
   'reports.view',
+  'purchasing.view',
+  'marketplace.view',
+  // Action keys — hide the button; the page stays visible.
   'sales.refund',
   'purchasing.cancel',
   'catalog.delete',
@@ -32,6 +44,15 @@ export const PERMISSION_META: Record<PermissionKey, { label: string; description
   'reports.view': {
     label: 'Lihat laporan & laba',
     description: 'Buka laporan laba/channel/nilai stok/stok mati, kartu profit, dan Tutup hari.',
+  },
+  'purchasing.view': {
+    label: 'Akses pembelian (PO)',
+    description:
+      'Lihat menu Pembelian, buat PO, dan terima barang. Tanpa ini menunya disembunyikan.',
+  },
+  'marketplace.view': {
+    label: 'Akses marketplace',
+    description: 'Lihat menu Marketplace dan koneksi toko. Tanpa ini menunya disembunyikan.',
   },
   'sales.refund': {
     label: 'Refund & void penjualan',

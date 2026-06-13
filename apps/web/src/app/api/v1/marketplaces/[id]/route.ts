@@ -15,7 +15,7 @@ export const GET = withApiRoute<RouteParams>(
     const connection = await marketplaceServerService.getConnectionById(org.id, parsed.data.id);
     return apiSuccess(connection);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'marketplace.view' },
 );
 
 export const DELETE = withApiRoute<RouteParams>(

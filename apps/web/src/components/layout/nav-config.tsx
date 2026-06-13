@@ -91,6 +91,7 @@ export const sidebarNavSections: readonly NavSection[] = [
         href: '/dashboard/marketplace',
         icon: ShoppingBag,
         keywords: ['marketplace', 'shopee', 'tokopedia', 'lazada', 'listing', 'toko', 'sinkron'],
+        permission: 'marketplace.view',
       },
     ],
   },
@@ -127,6 +128,7 @@ export const sidebarNavSections: readonly NavSection[] = [
         href: '/dashboard/purchasing',
         icon: Truck,
         keywords: ['pembelian', 'po', 'purchase', 'supplier', 'pemasok', 'terima barang'],
+        permission: 'purchasing.view',
       },
     ],
   },
@@ -230,6 +232,7 @@ export const CREATE_ACTIONS: readonly NavItem[] = [
     href: '/dashboard/purchasing/new',
     icon: Truck,
     keywords: ['beli', 'po baru', 'restok'],
+    permission: 'purchasing.view',
   },
   {
     title: 'Produk baru',

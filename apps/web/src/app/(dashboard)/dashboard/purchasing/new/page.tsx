@@ -6,13 +6,16 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/page-header';
+import { requireOrgPermission } from '@/modules/auth/services/session';
 import { PoForm } from '@/modules/purchasing/components/po-form';
 
 export const metadata: Metadata = {
   title: 'Pembelian baru',
 };
 
-export default function NewPurchaseOrderPage() {
+export default async function NewPurchaseOrderPage() {
+  await requireOrgPermission('purchasing.view');
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2">

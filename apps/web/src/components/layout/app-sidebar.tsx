@@ -5,7 +5,7 @@ import { APP_NAME } from '@falka/config/constants';
 import { Plus } from 'lucide-react';
 
 import { BrandBadge } from '@/components/brand-mark';
-import { CREATE_ACTIONS } from '@/components/layout/nav-config';
+import { CREATE_ACTIONS, navItemAllowed } from '@/components/layout/nav-config';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useOrg } from '@/modules/users/hooks/use-org';
 
-/* The create menu reads CREATE_ACTIONS (nav-config) — same list as the palette. */
+/* The create menu reads CREATE_ACTIONS (nav-config) — same list as the palette,
+ * filtered by the same role/permission gate so a STAFF without purchasing.view
+ * never sees the "Buat PO" shortcut. */
 function SidebarCreate({ collapsed }: { collapsed: boolean }) {
+  const { org } = useOrg();
+  const actions = CREATE_ACTIONS.filter((action) =>
+    navItemAllowed(action, org?.role ?? null, org?.permissions ?? null),
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -39,7 +47,7 @@ function SidebarCreate({ collapsed }: { collapsed: boolean }) {
       <DropdownMenuContent align="start" className="w-52">
         <DropdownMenuLabel>Buat</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {CREATE_ACTIONS.map((action) => {
+        {actions.map((action) => {
           const Icon = action.icon;
           return (
             <DropdownMenuItem key={action.title} asChild>

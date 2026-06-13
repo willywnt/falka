@@ -22,7 +22,7 @@ export const PATCH = withApiRoute(
     const name = await orgService.rename(org.id, parsed.data.name);
     return apiSuccess({ name });
   },
-  { requireAuth: true, minOrgRole: 'ADMIN' },
+  { requireAuth: true, minOrgRole: 'OWNER' },
 );
 
 export function OPTIONS() {

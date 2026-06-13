@@ -15,7 +15,7 @@ export const GET = withApiRoute<RouteParams>(
     const order = await purchasingServerService.getPurchaseOrder(org.id, parsed.data.id);
     return apiSuccess(order);
   },
-  { requireAuth: true },
+  { requireAuth: true, requirePermission: 'purchasing.view' },
 );
 
 export function OPTIONS() {

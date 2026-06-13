@@ -63,6 +63,8 @@ const CREATE_ENTRIES: readonly PaletteEntry[] = CREATE_ACTIONS.map((action) => (
   icon: action.icon,
   href: action.href,
   haystack: toHaystack(action.title, 'buat', action.keywords),
+  minRole: action.minRole,
+  permission: action.permission,
 }));
 
 const NAV_ENTRIES: readonly PaletteEntry[] = sidebarNavSections.flatMap((section) =>
@@ -98,16 +100,17 @@ function buildEntries(
   permissions: readonly PermissionKey[] | null,
 ): readonly PaletteEntry[] {
   // Role/permission-gated destinations drop out at render time (cosmetic — server still guards).
+  const createEntries = CREATE_ENTRIES.filter((entry) => navItemAllowed(entry, role, permissions));
   const navEntries = NAV_ENTRIES.filter((entry) => navItemAllowed(entry, role, permissions));
   const trimmed = query.trim().toLowerCase();
 
   if (!trimmed) {
-    return [...CREATE_ENTRIES, ...navEntries];
+    return [...createEntries, ...navEntries];
   }
 
   const tokens = trimmed.split(/\s+/);
   const hits = [
-    ...CREATE_ENTRIES.filter((entry) => matches(entry, tokens)),
+    ...createEntries.filter((entry) => matches(entry, tokens)),
     ...navEntries.filter((entry) => matches(entry, tokens)),
   ];
 
