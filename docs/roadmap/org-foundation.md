@@ -60,7 +60,30 @@ owner-immutability, all three registration paths, audit best-effort.
 3. Remove a member → their next request 401s → login refused with the access-revoked message.
 4. Riwayat aktivitas shows refund/delete/team/login events.
 
+## Follow-up shipped (2026-06-13): configurable RBAC + admin-ops + invite-only
+
+Three commits on `feat/org-foundation` (all gates green: typecheck · lint · 322 vitest · build):
+
+- **Configurable permissions** (`feat(org): per-organization configurable permissions`): an 8-key
+  catalog (`modules/users/permissions/`) replaces the hardcoded ADMIN gate. `Organization.permissions`
+  (Json, null = defaults = original behavior) holds an ADMIN/STAFF allow-matrix the OWNER edits in
+  Settings → "Peran & akses". `withApiRoute` gains `requirePermission` (OWNER bypasses); routes +
+  report pages moved off `minOrgRole:'ADMIN'` to it; owner-only routes keep `minOrgRole:'OWNER'`.
+  Client gates via `useHasPermission` + nav `permission`.
+- **Admin-ops console + plan limits** (`feat(org): admin-ops console + per-org plan limits`):
+  `app/(admin)/admin` (gated by `requirePlatformAdmin` = `UserRole.ADMIN`) provisions orgs + owner
+  accounts (typed password) and edits `plan` / `memberLimit` / storage quota; routes under
+  `/api/v1/admin/organizations`. `assertMemberCapacity` enforces the member cap at invite time.
+- **Invite-only registration** (`feat(auth): invite-only registration`): `registerUser` requires a
+  code (no own-org branch); landing/login self-signup CTAs removed.
+
+**Still manual-QA-pending**: as OWNER edit the matrix → a STAFF gains/loses an action (API 200↔403 +
+button shows/hides); as platform admin create an org + owner → owner logs in; set memberLimit and
+hit the cap; `/register` without a code refused; non-admin to `/admin` redirected.
+
 ## Not built (future)
 
 - Multi-org per user (drop the `@@unique([userId])` on membership), ownership transfer, a second
-  OWNER. Email-based invites. Per-resource finer permissions beyond the three tiers.
+  OWNER. Email-based invites. Per-resource finer permissions beyond the catalog. Real billing
+  integration (the `plan` field is a labeled placeholder). Forced password reset on first login
+  for admin-provisioned accounts (the initial password is shared manually in plaintext).

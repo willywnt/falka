@@ -28,10 +28,15 @@ to services; pass **`user.id`** ONLY as the actor (who did it) for rows that rec
   (`userId` is now actor/creator semantics, NOT scope). Per-org code sequences (S/PO/OP/RF) count
   `where: { organizationId }` inside a tx wrapped in `retryOnCodeCollision` (the `[organizationId,
 code]` unique index guards the race).
-- Gate elevated routes with **`minOrgRole: 'ADMIN' | 'OWNER'`** (per-export → 403 below it);
-  pages use `requireOrgRole(min)`. STAFF is blocked from reports, money-sensitive actions (refund/
-  void, PO cancel, delete, adjust/dispose, opname post) and marketplace management — server is the
-  boundary; client hiding (`useOrg`/`useIsOrgAdmin`/nav `minRole`) is cosmetic.
+- Gate elevated routes with **`requirePermission: '<key>'`** (the per-org configurable catalog;
+  OWNER bypasses, ADMIN/STAFF checked against `org.permissions`) — used for reports, refund/void,
+  PO cancel, delete, adjust/dispose, opname post, marketplace manage, team manage. Reserve
+  **`minOrgRole: 'OWNER'`** for genuinely owner-only routes (member role-change/remove, the matrix
+  editor). Pages use `requireOrgPermission(key)` / `requireOrgRole(min)`; `requirePlatformAdmin()`
+  guards the admin-ops console. Server is the boundary; client hiding (`useHasPermission`, nav
+  `permission`) is cosmetic. The catalog + pure `resolvePermissions` live in
+  `modules/users/permissions/`; new orgs come only from `/api/v1/admin/organizations` and
+  registration is invite-only.
 - **Deliberate exceptions (stay user-scoped)**: scanner-pairing (device artifact), upload/recording
   rate-limit keys, `AuditLog`/`PairingSession.organizationId` are nullable. R2 keys are
   `${organizationId}/...` (backfilled org id == old user id, so old keys stay valid).
