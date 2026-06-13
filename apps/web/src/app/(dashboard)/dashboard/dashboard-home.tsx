@@ -17,6 +17,7 @@ import { STAT_TONES, type StatTone } from '@/components/stat-card';
 import { WaveHairline } from '@/components/maritime-art';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 import { InventoryDashboard } from '@/modules/inventory/components/inventory-dashboard';
 import { cn } from '@/lib/utils';
 
@@ -87,6 +88,7 @@ function todayLabel(): string {
 
 export function DashboardHome() {
   const { user } = useCurrentUser();
+  const { isAdmin } = useIsOrgAdmin();
   const firstName = (user?.displayName ?? user?.email ?? '').split(/[\s@]/)[0];
   const [tutupHariOpen, setTutupHariOpen] = useState(false);
 
@@ -106,15 +108,17 @@ export function DashboardHome() {
               Ringkasan toko kamu — stok, pesanan, dan yang perlu diperhatikan hari ini.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="sm:shrink-0"
-            onClick={() => setTutupHariOpen(true)}
-          >
-            <Moon className="size-4" />
-            Tutup hari
-          </Button>
+          {isAdmin ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:shrink-0"
+              onClick={() => setTutupHariOpen(true)}
+            >
+              <Moon className="size-4" />
+              Tutup hari
+            </Button>
+          ) : null}
         </div>
 
         <Briefing />
@@ -155,7 +159,7 @@ export function DashboardHome() {
 
       <InventoryDashboard />
 
-      <TutupHariDialog open={tutupHariOpen} onOpenChange={setTutupHariOpen} />
+      {isAdmin ? <TutupHariDialog open={tutupHariOpen} onOpenChange={setTutupHariOpen} /> : null}
     </div>
   );
 }

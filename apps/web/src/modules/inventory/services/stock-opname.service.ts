@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
+import { auditService } from '@/modules/audit/services/audit.service';
 
 import { inventoryServerService } from './inventory-server.service';
 import { StockOpnameError } from '../errors/stock-opname-errors';
@@ -430,6 +431,14 @@ export class StockOpnameService {
       actorUserId,
       opnameId: id,
       posted: affected.length,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'opname.completed',
+      resource: 'stock_opname',
+      resourceId: id,
+      metadata: { code: opname.code, varianceItemCount: affected.length },
     });
     await this.propagateAffected(organizationId, actorUserId, affected);
     return this.getOpname(organizationId, id);

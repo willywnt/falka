@@ -13,7 +13,7 @@ export const GET = withApiRoute(
     const report = await reportingServerService.getProfitReport(org.id, parsed.data);
     return apiSuccess(report);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

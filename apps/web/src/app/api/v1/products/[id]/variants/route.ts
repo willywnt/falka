@@ -32,7 +32,7 @@ export const POST = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (request, { org, params }) => {
+  async (request, { user, org, params }) => {
     const parsedParams = productIdParamSchema.safeParse(await params);
     if (!parsedParams.success) return apiNotFound('Product not found');
 
@@ -40,10 +40,15 @@ export const DELETE = withApiRoute<RouteParams>(
     const parsed = deleteVariantsSchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    await catalogServerService.deleteVariants(org.id, parsedParams.data.id, parsed.data.variantIds);
+    await catalogServerService.deleteVariants(
+      org.id,
+      user.id,
+      parsedParams.data.id,
+      parsed.data.variantIds,
+    );
     return apiSuccess({ ok: true });
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

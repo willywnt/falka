@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { z } from 'zod';
 
 import { authConfig } from '@/auth.config';
+import { auditService } from '@/modules/audit/services/audit.service';
 import { authService } from '@/modules/auth/services/auth.service';
 import {
   isLoginBlocked,
@@ -91,6 +92,13 @@ export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
           const user = await authService.authenticateUser(parsed.data.email, parsed.data.password);
 
           recordSuccessfulLogin(user.id, ip);
+          void auditService.log({
+            organizationId: user.organizationId,
+            actorUserId: user.id,
+            action: 'auth.login',
+            resource: 'session',
+            ipAddress: ip,
+          });
 
           return {
             id: user.id,

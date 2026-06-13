@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import type { MarketplaceConnectionListItem } from '../types';
 import {
@@ -26,6 +27,7 @@ export function MarketplaceDashboard() {
 
   const { data, isLoading, error, refetch } = useMarketplaceConnectionsQuery();
   const disconnectMutation = useDisconnectMarketplaceMutation();
+  const { isAdmin } = useIsOrgAdmin();
 
   async function handleDisconnectConfirm() {
     if (!disconnectTarget) return;
@@ -64,10 +66,12 @@ export function MarketplaceDashboard() {
             )}
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="size-4" />
-          Hubungkan toko
-        </Button>
+        {isAdmin ? (
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="size-4" />
+            Hubungkan toko
+          </Button>
+        ) : null}
       </div>
 
       {isLoading ? (

@@ -7,27 +7,32 @@ import {
   isShellSuppressedRoute,
   MOBILE_TABS,
   resolveActiveHref,
+  visibleNavItems,
 } from '@/components/layout/nav-config';
 import { useOpsPulse } from '@/components/layout/use-ops-pulse';
 import { cn } from '@/lib/utils';
+import { useOrg } from '@/modules/users/hooks/use-org';
 
 /** Bottom navigation for phones — in normal flow (no overlap hacks), hidden md+. */
 export function MobileTabBar() {
   const pathname = usePathname();
   const pulse = useOpsPulse();
+  const { org } = useOrg();
 
   if (isShellSuppressedRoute(pathname)) {
     return null;
   }
 
-  const activeHref = resolveActiveHref(pathname, MOBILE_TABS);
+  // Same cosmetic role gate as the sidebar (no tab is gated today — wired so they can't drift).
+  const tabs = visibleNavItems(MOBILE_TABS, org?.role ?? null);
+  const activeHref = resolveActiveHref(pathname, tabs);
 
   return (
     <nav
       aria-label="Navigasi bawah"
       className="bg-card/95 supports-[backdrop-filter]:bg-card/80 grid shrink-0 grid-cols-5 border-t backdrop-blur md:hidden"
     >
-      {MOBILE_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = tab.href === activeHref;
         const count = tab.pulse ? pulse[tab.pulse] : undefined;

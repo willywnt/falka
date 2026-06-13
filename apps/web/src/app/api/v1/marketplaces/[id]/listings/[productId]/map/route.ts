@@ -28,7 +28,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(listing);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export const DELETE = withApiRoute<RouteParams>(
@@ -43,7 +43,7 @@ export const DELETE = withApiRoute<RouteParams>(
     );
     return apiSuccess(listing);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

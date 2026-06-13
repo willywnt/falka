@@ -5,6 +5,7 @@ import { enqueuePropagateInventoryStock } from '@falka/queue';
 import type { Inventory, StockLedger } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
+import { auditService } from '@/modules/audit/services/audit.service';
 
 import { InventoryError } from '../errors/inventory-errors';
 import type {
@@ -244,6 +245,14 @@ export class InventoryServerService {
       reason: input.reason,
       balanceAfter: outcome.entry.balanceAfter,
     });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'inventory.adjusted',
+      resource: 'inventory',
+      resourceId: variantId,
+      metadata: { variantId, delta: input.delta },
+    });
 
     await this.propagateToMarketplaces(
       organizationId,
@@ -307,6 +316,14 @@ export class InventoryServerService {
     });
 
     appLogger.info('inventory.damage_written_off', { organizationId, actorUserId, variantId });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'inventory.damage_disposed',
+      resource: 'inventory',
+      resourceId: variantId,
+      metadata: { variantId, quantity },
+    });
     return outcome;
   }
 

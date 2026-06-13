@@ -7,13 +7,14 @@ import { ChevronRight } from 'lucide-react';
 import {
   allNavItems,
   resolveActiveHref,
-  sidebarNavSections,
+  visibleNavSections,
   type NavItem,
 } from '@/components/layout/nav-config';
 import { useOpsPulse } from '@/components/layout/use-ops-pulse';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useOrg } from '@/modules/users/hooks/use-org';
 
 /** Live count chip on a nav row — restock urgency lights the suar amber. */
 function NavPulseBadge({ item, count }: { item: NavItem; count: number | undefined }) {
@@ -45,13 +46,16 @@ export function SidebarNav({
   const activeHref = resolveActiveHref(pathname, allNavItems());
   const { collapsedSections, toggleSection } = useSidebar();
   const pulse = useOpsPulse();
+  const { org } = useOrg();
+  // While the org is loading the role reads as STAFF — gated items never flash.
+  const sections = visibleNavSections(org?.role ?? null);
 
   return (
     <nav
       aria-label="Navigasi utama"
       className={cn('flex flex-col gap-4', collapsed ? 'px-2' : 'px-3')}
     >
-      {sidebarNavSections.map((section, index) => {
+      {sections.map((section, index) => {
         const label = section.label;
         const sectionCollapsed = label ? collapsedSections.has(label) : false;
         // The icon rail always shows items; the expanded sidebar honours the accordion.

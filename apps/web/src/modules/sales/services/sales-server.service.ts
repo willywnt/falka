@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
+import { auditService } from '@/modules/audit/services/audit.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
 import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-allocation';
@@ -279,6 +280,14 @@ export class SalesServerService {
       saleId: sale.id,
       code: sale.code,
     });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'sales.voided',
+      resource: 'sale',
+      resourceId: sale.id,
+      metadata: { code: sale.code, totalAmount: Number(sale.totalAmount) },
+    });
 
     await this.propagateAffected(organizationId, actorUserId, [
       ...new Set(sale.items.map((item) => item.productVariantId)),
@@ -403,6 +412,14 @@ export class SalesServerService {
       code: created.code,
       items: lines.length,
       totalAmount,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'sales.refunded',
+      resource: 'sale',
+      resourceId: sale.id,
+      metadata: { code: created.code, totalAmount },
     });
 
     await this.propagateAffected(organizationId, actorUserId, [

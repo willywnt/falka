@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Route } from 'next';
+import type { OrgRole } from '@falka/types';
 import { usePathname, useRouter } from 'next/navigation';
 import { CornerDownLeft, Plus, Search } from 'lucide-react';
 
@@ -18,12 +19,15 @@ import { BrandMark } from '@/components/brand-mark';
 import {
   CREATE_ACTIONS,
   isShellSuppressedRoute,
+  navRoleAllows,
   sidebarNavSections,
+  type NavItem,
 } from '@/components/layout/nav-config';
 import { PANDU_SUGGESTIONS, routePanduQuery } from '@/components/pandu/pandu-router';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useEntityJump } from '@/components/use-entity-jump';
 import { cn } from '@/lib/utils';
+import { useOrg } from '@/modules/users/hooks/use-org';
 
 /*
  * The command palette — one deterministic surface for "pergi ke mana saja,
@@ -42,6 +46,8 @@ type PaletteEntry = {
   icon: ComponentType<{ className?: string }>;
   href: Route;
   haystack: string;
+  /** Carried over from the NavItem — gated entries are filtered out at render time. */
+  minRole?: NavItem['minRole'];
 };
 
 function toHaystack(...parts: Array<string | readonly string[] | undefined>): string {
@@ -65,6 +71,7 @@ const NAV_ENTRIES: readonly PaletteEntry[] = sidebarNavSections.flatMap((section
     icon: item.icon,
     href: item.href,
     haystack: toHaystack(item.title, section.label, item.keywords),
+    minRole: item.minRole,
   })),
 );
 
@@ -82,17 +89,19 @@ function matches(entry: PaletteEntry, tokens: readonly string[]): boolean {
   return tokens.every((token) => entry.haystack.includes(token));
 }
 
-function buildEntries(query: string): readonly PaletteEntry[] {
+function buildEntries(query: string, role: OrgRole | null): readonly PaletteEntry[] {
+  // Role-gated destinations drop out at render time (cosmetic — server still guards).
+  const navEntries = NAV_ENTRIES.filter((entry) => navRoleAllows(role, entry.minRole));
   const trimmed = query.trim().toLowerCase();
 
   if (!trimmed) {
-    return [...CREATE_ENTRIES, ...NAV_ENTRIES];
+    return [...CREATE_ENTRIES, ...navEntries];
   }
 
   const tokens = trimmed.split(/\s+/);
   const hits = [
     ...CREATE_ENTRIES.filter((entry) => matches(entry, tokens)),
-    ...NAV_ENTRIES.filter((entry) => matches(entry, tokens)),
+    ...navEntries.filter((entry) => matches(entry, tokens)),
   ];
 
   // Free text falls through Pandu's honest keyword router (navigate-only).
@@ -167,13 +176,15 @@ function PaletteDialog({
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const activeRef = useRef<HTMLButtonElement | null>(null);
+  const { org } = useOrg();
+  const role = org?.role ?? null;
 
   // Entity lookups fire only for code-looking queries (and only while open —
   // a closed palette never passes a candidate).
   const codeCandidate = open ? toCodeCandidate(query) : '';
   const { entries: jumpHits, isLooking } = useEntityJump(codeCandidate);
 
-  const baseEntries = useMemo(() => buildEntries(query), [query]);
+  const baseEntries = useMemo(() => buildEntries(query, role), [query, role]);
   const entries = useMemo(() => {
     if (jumpHits.length === 0) return baseEntries;
 

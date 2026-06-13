@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import {
   useDeleteVariantsMutation,
@@ -74,6 +75,7 @@ export function ProductDetail({
   const [addSubGroup, setAddSubGroup] = useState<string | null>(null);
   const markPrinted = useMarkLabelsPrintedMutation();
   const deleteVariants = useDeleteVariantsMutation(productId);
+  const { isAdmin } = useIsOrgAdmin();
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
@@ -181,19 +183,21 @@ export function ProductDetail({
               Lihat aktivitas
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() =>
-              setDeleteTarget({
-                variantIds: [variant.id],
-                kind: grouped ? 'subvariant' : 'variant',
-                label: formatVariantLabel(variant),
-              })
-            }
-          >
-            <Trash2 className="size-4" />
-            {grouped ? 'Hapus subvarian' : 'Hapus varian'}
-          </DropdownMenuItem>
+          {isAdmin ? (
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() =>
+                setDeleteTarget({
+                  variantIds: [variant.id],
+                  kind: grouped ? 'subvariant' : 'variant',
+                  label: formatVariantLabel(variant),
+                })
+              }
+            >
+              <Trash2 className="size-4" />
+              {grouped ? 'Hapus subvarian' : 'Hapus varian'}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -218,19 +222,21 @@ export function ProductDetail({
             <Plus className="size-4" />
             Tambah subvarian
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() =>
-              setDeleteTarget({
-                variantIds: variants.map((variant) => variant.id),
-                kind: 'variant',
-                label: name,
-              })
-            }
-          >
-            <Trash2 className="size-4" />
-            Hapus varian
-          </DropdownMenuItem>
+          {isAdmin ? (
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() =>
+                setDeleteTarget({
+                  variantIds: variants.map((variant) => variant.id),
+                  kind: 'variant',
+                  label: name,
+                })
+              }
+            >
+              <Trash2 className="size-4" />
+              Hapus varian
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     );

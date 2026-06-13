@@ -9,7 +9,7 @@ export const GET = withApiRoute(
     const report = await reportingServerService.getInventoryValuation(org.id);
     return apiSuccess(report);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

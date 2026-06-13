@@ -2,13 +2,16 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 import { PageHeader } from '@/components/page-header';
+import { requireOrgRole } from '@/modules/auth/services/session';
 import { StockHealthInsights } from '@/modules/reporting/components/stock-health-insights';
 
 export const metadata: Metadata = {
   title: 'Stok mati & ABC',
 };
 
-export default function StockHealthPage() {
+export default async function StockHealthPage() {
+  await requireOrgRole('ADMIN');
+
   return (
     <div className="space-y-6">
       <PageHeader

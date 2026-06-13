@@ -14,6 +14,7 @@ import { getTokenStatus } from '../utils/token-lifecycle';
 import { isSupportedMarketplaceProvider } from './provider.registry';
 import { marketplaceEncryptionService } from './encryption.service';
 import { appLogger } from '@/lib/logger';
+import { auditService } from '@/modules/audit/services/audit.service';
 
 function resolveConnectionStatus(
   isActive: boolean,
@@ -115,10 +116,8 @@ export class MarketplaceServerService {
     }
 
     const connection = await prisma.$transaction(async (tx) => {
-      let saved: MarketplaceConnection;
-
       if (existing) {
-        saved = await tx.marketplaceConnection.update({
+        return tx.marketplaceConnection.update({
           where: { id: existing.id },
           data: {
             shopName: input.shopName,
@@ -128,38 +127,21 @@ export class MarketplaceServerService {
             isActive: true,
           },
         });
-      } else {
-        saved = await tx.marketplaceConnection.create({
-          data: {
-            userId: actorUserId,
-            organizationId,
-            provider: input.provider as MarketplaceProvider,
-            shopId: input.shopId,
-            shopName: input.shopName,
-            encryptedAccessToken,
-            encryptedRefreshToken,
-            tokenExpiresAt: input.expiresAt,
-            isActive: true,
-          },
-        });
       }
 
-      await tx.auditLog.create({
+      return tx.marketplaceConnection.create({
         data: {
           userId: actorUserId,
           organizationId,
-          action: 'marketplace.connected',
-          resource: 'marketplace_connection',
-          metadata: {
-            connectionId: saved.id,
-            provider: saved.provider,
-            shopId: saved.shopId,
-            shopName: saved.shopName,
-          },
+          provider: input.provider as MarketplaceProvider,
+          shopId: input.shopId,
+          shopName: input.shopName,
+          encryptedAccessToken,
+          encryptedRefreshToken,
+          tokenExpiresAt: input.expiresAt,
+          isActive: true,
         },
       });
-
-      return saved;
     });
 
     appLogger.info('marketplace.connected', {
@@ -167,6 +149,18 @@ export class MarketplaceServerService {
       connectionId: connection.id,
       provider: connection.provider,
       shopId: connection.shopId,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'marketplace.connected',
+      resource: 'marketplace_connection',
+      metadata: {
+        connectionId: connection.id,
+        provider: connection.provider,
+        shopId: connection.shopId,
+        shopName: connection.shopName,
+      },
     });
 
     return mapConnection(connection);
@@ -183,28 +177,9 @@ export class MarketplaceServerService {
       return mapConnection(connection);
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const saved = await tx.marketplaceConnection.update({
-        where: { id: connectionId },
-        data: { isActive: false },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          userId: actorUserId,
-          organizationId,
-          action: 'marketplace.disconnected',
-          resource: 'marketplace_connection',
-          metadata: {
-            connectionId: saved.id,
-            provider: saved.provider,
-            shopId: saved.shopId,
-            shopName: saved.shopName,
-          },
-        },
-      });
-
-      return saved;
+    const updated = await prisma.marketplaceConnection.update({
+      where: { id: connectionId },
+      data: { isActive: false },
     });
 
     appLogger.info('marketplace.disconnected', {
@@ -212,6 +187,18 @@ export class MarketplaceServerService {
       connectionId,
       provider: updated.provider,
       shopId: updated.shopId,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'marketplace.disconnected',
+      resource: 'marketplace_connection',
+      metadata: {
+        connectionId: updated.id,
+        provider: updated.provider,
+        shopId: updated.shopId,
+        shopName: updated.shopName,
+      },
     });
 
     return mapConnection(updated);

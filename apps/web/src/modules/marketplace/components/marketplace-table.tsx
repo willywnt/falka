@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 
 import { formatDateTime } from '@/lib/formatters';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 /** Token still valid but inside the 24h warning window — worth a heads-up badge. */
 function isExpiringSoon(connection: MarketplaceConnectionListItem): boolean {
@@ -44,8 +45,12 @@ export function MarketplaceTable({
   onDisconnect: (connection: MarketplaceConnectionListItem) => void;
   isDisconnecting?: boolean;
 }) {
-  // The ⋯ menu — shared by the sm+ table and the <sm card list.
+  const { isAdmin } = useIsOrgAdmin();
+
+  // The ⋯ menu — shared by the sm+ table and the <sm card list. Disconnect is
+  // its only entry, so STAFF gets no menu at all (cosmetic; server guards).
   function renderRowActions(connection: MarketplaceConnectionListItem) {
+    if (!isAdmin) return null;
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -3,13 +3,16 @@ import { Suspense } from 'react';
 
 import { PageHeader } from '@/components/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { requireOrgRole } from '@/modules/auth/services/session';
 import { ReportsInsights } from '@/modules/reporting/components/reports-insights';
 
 export const metadata: Metadata = {
   title: 'Laba & channel',
 };
 
-export default function ProfitReportPage() {
+export default async function ProfitReportPage() {
+  await requireOrgRole('ADMIN');
+
   return (
     <div className="space-y-6">
       <PageHeader

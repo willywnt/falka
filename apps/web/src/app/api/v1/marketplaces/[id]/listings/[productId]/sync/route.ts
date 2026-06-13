@@ -27,7 +27,7 @@ export const PATCH = withApiRoute<RouteParams>(
     );
     return apiSuccess(listing);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export const POST = withApiRoute<RouteParams>(
@@ -43,7 +43,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(listing);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

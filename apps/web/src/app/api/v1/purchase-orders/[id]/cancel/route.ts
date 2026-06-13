@@ -19,7 +19,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(order);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

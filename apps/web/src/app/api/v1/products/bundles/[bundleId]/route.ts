@@ -41,14 +41,14 @@ export const PATCH = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { org, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Bundle not found');
 
-    await catalogServerService.deleteBundle(org.id, parsed.data.bundleId);
+    await catalogServerService.deleteBundle(org.id, user.id, parsed.data.bundleId);
     return apiSuccess({ id: parsed.data.bundleId });
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

@@ -15,7 +15,7 @@ export const POST = withApiRoute<RouteParams>(
     const opname = await stockOpnameService.completeOpname(org.id, user.id, parsedParams.data.id);
     return apiSuccess(opname);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

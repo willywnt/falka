@@ -30,7 +30,7 @@ export const DELETE = withApiRoute<RouteParams>(
     );
     return apiSuccess(connection);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

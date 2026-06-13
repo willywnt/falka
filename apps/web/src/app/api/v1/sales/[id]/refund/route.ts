@@ -24,7 +24,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(sale);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

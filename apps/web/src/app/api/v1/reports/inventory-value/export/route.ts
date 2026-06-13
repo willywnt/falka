@@ -17,7 +17,7 @@ export const GET = withApiRoute(
       },
     });
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

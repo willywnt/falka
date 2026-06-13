@@ -15,7 +15,7 @@ export const POST = withApiRoute<RouteParams>(
     const result = await marketplaceImportService.rerunAutoMap(org.id, user.id, parsed.data.id);
     return apiSuccess(result);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

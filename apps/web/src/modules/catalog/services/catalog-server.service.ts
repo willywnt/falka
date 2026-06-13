@@ -4,6 +4,7 @@ import { buildPaginatedResult, notDeleted, prisma, type PaginatedResult } from '
 import { Prisma, type Inventory, type Product, type ProductVariant } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
+import { auditService } from '@/modules/audit/services/audit.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
 import { returnsServerService } from '@/modules/returns/services/returns-server.service';
@@ -761,11 +762,11 @@ export class CatalogServerService {
    * every list/scan, keeping its composition + image so it can be restored. Past
    * sale/PO lines kept their own name snapshots regardless.
    */
-  async deleteBundle(organizationId: string, bundleId: string): Promise<void> {
+  async deleteBundle(organizationId: string, actorUserId: string, bundleId: string): Promise<void> {
     await this.assertBundleOwned(organizationId, bundleId);
     const bundle = await prisma.bundle.findUnique({
       where: { id: bundleId },
-      select: { sku: true },
+      select: { sku: true, name: true },
     });
     if (!bundle) throw CatalogError.notFound('Bundle not found.');
 
@@ -774,6 +775,14 @@ export class CatalogServerService {
       data: { deletedAt: new Date(), sku: archivedSku(bundle.sku, bundleId) },
     });
     appLogger.info('catalog.bundle.archived', { organizationId, bundleId });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'catalog.bundle_deleted',
+      resource: 'bundle',
+      resourceId: bundleId,
+      metadata: { sku: bundle.sku, name: bundle.name },
+    });
   }
 
   /**
@@ -1048,7 +1057,11 @@ export class CatalogServerService {
     }
   }
 
-  async deleteProduct(organizationId: string, productId: string): Promise<void> {
+  async deleteProduct(
+    organizationId: string,
+    actorUserId: string,
+    productId: string,
+  ): Promise<void> {
     await this.assertProductOwned(organizationId, productId);
 
     const { blockers, variants } = await this.computeDeletionBlockers(organizationId, productId);
@@ -1057,20 +1070,28 @@ export class CatalogServerService {
     }
 
     const now = new Date();
-    await prisma.$transaction(async (tx) => {
+    const product = await prisma.$transaction(async (tx) => {
       await this.archiveVariantRows(tx, variants, now);
       await this.cascadeBundleComponentRemoval(
         tx,
         variants.map((variant) => variant.id),
         now,
       );
-      await tx.product.update({ where: { id: productId }, data: { deletedAt: now } });
+      return tx.product.update({ where: { id: productId }, data: { deletedAt: now } });
     });
 
     appLogger.info('catalog.product.deleted', {
       organizationId,
       productId,
       variants: variants.length,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'catalog.product_deleted',
+      resource: 'product',
+      resourceId: productId,
+      metadata: { name: product.name, variantCount: variants.length },
     });
   }
 
@@ -1081,6 +1102,7 @@ export class CatalogServerService {
    */
   async deleteVariants(
     organizationId: string,
+    actorUserId: string,
     productId: string,
     variantIds: string[],
   ): Promise<void> {
@@ -1111,6 +1133,16 @@ export class CatalogServerService {
       productId,
       count: variants.length,
     });
+    for (const variant of variants) {
+      void auditService.log({
+        organizationId,
+        actorUserId,
+        action: 'catalog.variant_deleted',
+        resource: 'product_variant',
+        resourceId: variant.id,
+        metadata: { sku: variant.sku, name: variant.name },
+      });
+    }
   }
 
   /**
@@ -1226,7 +1258,10 @@ export class CatalogServerService {
     organizationId: string,
     productId: string,
     variantIds?: string[],
-  ): Promise<{ blockers: DeletionBlockers; variants: { id: string; sku: string }[] }> {
+  ): Promise<{
+    blockers: DeletionBlockers;
+    variants: { id: string; sku: string; name: string }[];
+  }> {
     const variants = await prisma.productVariant.findMany({
       where: {
         productId,
@@ -1319,7 +1354,11 @@ export class CatalogServerService {
 
     return {
       blockers: { blocked: reasons.length > 0, reasons, warnings, variantCount: variants.length },
-      variants: variants.map((variant) => ({ id: variant.id, sku: variant.sku })),
+      variants: variants.map((variant) => ({
+        id: variant.id,
+        sku: variant.sku,
+        name: variant.name,
+      })),
     };
   }
 

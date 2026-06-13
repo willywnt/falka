@@ -45,6 +45,7 @@ import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { formatVariantLabel } from '@/lib/variant-label';
 import { useMarkLabelsPrintedMutation } from '@/modules/catalog/hooks/use-products';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import { REORDER_DEFAULTS } from '../config';
 import { useReorderReportQuery, useStockOverviewQuery } from '../hooks/use-inventory';
@@ -97,6 +98,7 @@ function RowActionsMenu({
   onShowQr: (item: StockOverviewItem) => void;
   onDispose: (item: StockOverviewItem) => void;
 }) {
+  const { isAdmin } = useIsOrgAdmin();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -122,7 +124,7 @@ function RowActionsMenu({
             Buat PO
           </Link>
         </DropdownMenuItem>
-        {item.damagedStock > 0 ? (
+        {isAdmin && item.damagedStock > 0 ? (
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
             onClick={() => onDispose(item)}
@@ -164,6 +166,7 @@ export function InventoryOverview() {
   const [disposeTarget, setDisposeTarget] = useState<StockOverviewItem | null>(null);
   const [qrTarget, setQrTarget] = useState<StockOverviewItem | null>(null);
   const markPrinted = useMarkLabelsPrintedMutation();
+  const { isAdmin } = useIsOrgAdmin();
 
   useEffect(() => {
     if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch });
@@ -320,14 +323,16 @@ export function InventoryOverview() {
                   ) : null}
 
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setAdjustTarget(item)}
-                    >
-                      <SlidersHorizontal className="size-4" />
-                      Sesuaikan
-                    </Button>
+                    {isAdmin ? (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setAdjustTarget(item)}
+                      >
+                        <SlidersHorizontal className="size-4" />
+                        Sesuaikan
+                      </Button>
+                    ) : null}
                     <RowActionsMenu
                       item={item}
                       onShowQr={setQrTarget}
@@ -431,10 +436,16 @@ export function InventoryOverview() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setAdjustTarget(item)}>
-                            <SlidersHorizontal className="size-4" />
-                            Sesuaikan
-                          </Button>
+                          {isAdmin ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAdjustTarget(item)}
+                            >
+                              <SlidersHorizontal className="size-4" />
+                              Sesuaikan
+                            </Button>
+                          ) : null}
                           <RowActionsMenu
                             item={item}
                             onShowQr={setQrTarget}

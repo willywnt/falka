@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
+import { auditService } from '@/modules/audit/services/audit.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
 import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-allocation';
@@ -431,6 +432,14 @@ export class PurchasingServerService {
     });
 
     appLogger.info('purchasing.cancelled', { organizationId, actorUserId, purchaseOrderId: id });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'purchasing.cancelled',
+      resource: 'purchase_order',
+      resourceId: id,
+      metadata: { code: order.code },
+    });
     return this.getPurchaseOrder(organizationId, id);
   }
 

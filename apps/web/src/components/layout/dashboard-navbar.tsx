@@ -18,12 +18,14 @@ import { usePathname } from 'next/navigation';
 
 import { logoutAction } from '@/modules/auth/actions/logout';
 import { useCurrentUser } from '@/modules/auth/hooks/use-current-user';
+import { useOrg } from '@/modules/users/hooks/use-org';
 import { BrandBadge } from '@/components/brand-mark';
 import { CommandPaletteTrigger, useCommandPalette } from '@/components/command-palette';
 import { resolveNavTitle } from '@/components/layout/nav-config';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
 import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -41,11 +43,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { orgRoleLabel } from '@/lib/org-role';
 
 export function DashboardNavbar() {
   const { toggle } = useSidebar();
   const { setTheme, resolvedTheme } = useTheme();
   const { user } = useCurrentUser();
+  const { org } = useOrg();
   const { open: openPalette } = useCommandPalette();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const pathname = usePathname();
@@ -138,6 +142,17 @@ export function DashboardNavbar() {
                     <p className="text-muted-foreground mt-1 truncate text-xs leading-none">
                       {user.email}
                     </p>
+                  ) : null}
+                  {/* Org identity — nothing renders while it loads (org stays null). */}
+                  {org ? (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="text-muted-foreground min-w-0 truncate text-xs leading-none">
+                        {org.name}
+                      </span>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                        {orgRoleLabel(org.role)}
+                      </Badge>
+                    </div>
                   ) : null}
                 </div>
               </div>

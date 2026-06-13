@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 
 import { PageHeader } from '@/components/page-header';
+import { requireOrgRole } from '@/modules/auth/services/session';
 import { InventoryValuationReport } from '@/modules/reporting/components/inventory-valuation-report';
 
 export const metadata: Metadata = {
   title: 'Nilai stok',
 };
 
-export default function InventoryValuationPage() {
+export default async function InventoryValuationPage() {
+  await requireOrgRole('ADMIN');
+
   return (
     <div className="space-y-6">
       <PageHeader

@@ -32,6 +32,7 @@ import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { VariantPickerDialog } from '@/components/variant-picker-dialog';
 import { formatDateTime } from '@/lib/formatters';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import { useMarketplaceConnectionQuery } from '../hooks/use-marketplace-connections';
 import {
@@ -73,6 +74,7 @@ function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
 
 export function MarketplaceConnectionDetail({ connectionId }: { connectionId: string }) {
   const [mapTarget, setMapTarget] = useState<string | null>(null);
+  const { isAdmin } = useIsOrgAdmin();
 
   const connectionQuery = useMarketplaceConnectionQuery(connectionId);
   const listingsQuery = useMarketplaceListingsQuery(connectionId);
@@ -197,7 +199,9 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   }
 
   // Row actions (sync switch + icon buttons, or the map buttons) — shared by table & cards.
+  // Mapping/sync controls are ADMIN-only, so STAFF sees no actions here (cosmetic; server guards).
   function renderListingActions(listing: MarketplaceListingItem) {
+    if (!isAdmin) return null;
     const mapping = listing.mapping;
     const suggested = listing.suggestedVariant;
 
@@ -333,20 +337,23 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             <Skeleton className="h-8 w-48" />
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => void handleRerunAutoMap()}
-            disabled={rerunMutation.isPending || listings.length === 0}
-          >
-            <Wand2 className="size-4" />
-            {rerunMutation.isPending ? 'Mengaitkan...' : 'Auto-kait lagi'}
-          </Button>
-          <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
-            <DownloadCloud className="size-4" />
-            {importMutation.isPending ? 'Mengimpor...' : 'Impor listing'}
-          </Button>
-        </div>
+        {/* Both header actions are ADMIN-only — drop the whole strip, not an empty box. */}
+        {isAdmin ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void handleRerunAutoMap()}
+              disabled={rerunMutation.isPending || listings.length === 0}
+            >
+              <Wand2 className="size-4" />
+              {rerunMutation.isPending ? 'Mengaitkan...' : 'Auto-kait lagi'}
+            </Button>
+            <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
+              <DownloadCloud className="size-4" />
+              {importMutation.isPending ? 'Mengimpor...' : 'Impor listing'}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {listings.length > 0 ? (
@@ -389,10 +396,12 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
           title="Belum ada listing diimpor"
           description="Impor listing toko ini, lalu kaitkan satu per satu ke produk."
           action={
-            <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
-              <DownloadCloud className="size-4" />
-              Impor listing
-            </Button>
+            isAdmin ? (
+              <Button onClick={() => void handleImport()} disabled={importMutation.isPending}>
+                <DownloadCloud className="size-4" />
+                Impor listing
+              </Button>
+            ) : undefined
           }
         />
       ) : (

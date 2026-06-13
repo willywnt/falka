@@ -27,7 +27,7 @@ export const POST = withApiRoute(
     );
     return apiSuccess(connection, 201);
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

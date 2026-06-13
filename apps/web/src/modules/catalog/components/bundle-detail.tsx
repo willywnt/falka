@@ -27,6 +27,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/stat-card';
 import { formatCurrency } from '@/lib/formatters';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import {
   useBundleQuery,
@@ -40,6 +41,7 @@ import { BundleImage } from './bundle-image';
 export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
   const router = useRouter();
   const { data, isLoading, error } = useBundleQuery(bundleId);
+  const { isAdmin } = useIsOrgAdmin();
   const updateBundle = useUpdateBundleMutation(bundleId);
   const deleteBundle = useDeleteBundleMutation();
 
@@ -254,48 +256,51 @@ export function BundleDetailEditor({ bundleId }: { bundleId: string }) {
             hint="Jumlah maksimal yang bisa kamu jual, dari stok komponen. Diperbarui setelah kamu simpan."
           />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Arsipkan bundel</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-muted-foreground text-sm">
-                Menyembunyikan bundel dari daftar, POS, dan scan. Varian komponen dan stoknya tidak
-                terpengaruh, dan bundel bisa dipulihkan lagi.
-              </p>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="text-destructive w-full"
-                    disabled={deleteBundle.isPending}
-                  >
-                    <Trash2 className="size-4" />
-                    Arsipkan bundel
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Arsipkan “{data.name}”?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Bundel disembunyikan dari daftar, POS, dan scan. Varian komponen serta stoknya
-                      tidak terpengaruh, SKU-nya dibebaskan, dan bundel bisa dipulihkan kapan saja
-                      dari “Bundel terarsip”.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => void handleDelete()}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          {/* The whole card exists for the archive action — STAFF doesn't get an empty shell. */}
+          {isAdmin ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Arsipkan bundel</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-muted-foreground text-sm">
+                  Menyembunyikan bundel dari daftar, POS, dan scan. Varian komponen dan stoknya
+                  tidak terpengaruh, dan bundel bisa dipulihkan lagi.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="text-destructive w-full"
+                      disabled={deleteBundle.isPending}
                     >
-                      Arsipkan
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
-          </Card>
+                      <Trash2 className="size-4" />
+                      Arsipkan bundel
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Arsipkan “{data.name}”?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bundel disembunyikan dari daftar, POS, dan scan. Varian komponen serta
+                        stoknya tidak terpengaruh, SKU-nya dibebaskan, dan bundel bisa dipulihkan
+                        kapan saja dari “Bundel terarsip”.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => void handleDelete()}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Arsipkan
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

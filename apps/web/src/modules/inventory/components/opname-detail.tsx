@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
 import { formatProductVariantLabel } from '@/lib/variant-label';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import { OpnameAddItem } from './opname-add-item';
 import {
@@ -78,6 +79,7 @@ export function OpnameDetail({ opnameId }: { opnameId: string }) {
 
 function OpnameContent({ data }: { data: StockOpnameData }) {
   const router = useRouter();
+  const { isAdmin } = useIsOrgAdmin();
   const completeMutation = useCompleteOpnameMutation(data.id);
   const cancelMutation = useCancelOpnameMutation(data.id);
   const [confirmPost, setConfirmPost] = useState(false);
@@ -145,10 +147,15 @@ function OpnameContent({ data }: { data: StockOpnameData }) {
               <XCircle className="size-4" />
               Batalkan
             </Button>
-            <Button onClick={() => setConfirmPost(true)} disabled={busy || data.items.length === 0}>
-              <ClipboardCheck className="size-4" />
-              Posting
-            </Button>
+            {isAdmin ? (
+              <Button
+                onClick={() => setConfirmPost(true)}
+                disabled={busy || data.items.length === 0}
+              >
+                <ClipboardCheck className="size-4" />
+                Posting
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>

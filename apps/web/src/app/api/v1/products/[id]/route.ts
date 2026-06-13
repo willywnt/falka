@@ -38,14 +38,14 @@ export const PATCH = withApiRoute<RouteParams>(
 );
 
 export const DELETE = withApiRoute<RouteParams>(
-  async (_request, { org, params }) => {
+  async (_request, { user, org, params }) => {
     const parsed = productIdParamSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Product not found');
 
-    await catalogServerService.deleteProduct(org.id, parsed.data.id);
+    await catalogServerService.deleteProduct(org.id, user.id, parsed.data.id);
     return apiSuccess({ id: parsed.data.id });
   },
-  { requireAuth: true },
+  { requireAuth: true, minOrgRole: 'ADMIN' },
 );
 
 export function OPTIONS() {

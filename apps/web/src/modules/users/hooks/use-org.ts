@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import { orgRoleAtLeast } from '@/lib/org-role';
 
 import { orgKeys } from './org-keys';
 import type { OrgSummary } from '../types';
@@ -28,6 +29,19 @@ export function useOrg() {
     org: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
+  };
+}
+
+/**
+ * Cosmetic ADMIN gate for hiding privileged UI — while the org is loading (or
+ * missing) it reads as NOT admin, so gated controls never flash for STAFF.
+ * Server-side guards remain the real boundary.
+ */
+export function useIsOrgAdmin(): { isAdmin: boolean; isLoading: boolean } {
+  const { org, isLoading } = useOrg();
+  return {
+    isAdmin: org !== null && orgRoleAtLeast(org.role, 'ADMIN'),
+    isLoading,
   };
 }
 

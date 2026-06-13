@@ -1,4 +1,5 @@
 import type { Route } from 'next';
+import type { OrgRole } from '@falka/types';
 import {
   Boxes,
   ClipboardCheck,
@@ -22,6 +23,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { orgRoleAtLeast } from '@/lib/org-role';
+
 /*
  * Single source of truth for shell navigation: the sidebar IA, the mobile tab
  * bar, the "Buat" create menu, the command palette, and the bottom-of-screen
@@ -44,6 +47,8 @@ export type NavItem = {
   pulse?: OpsPulseKey;
   /** Extra lowercase match words for the command palette. */
   keywords?: readonly string[];
+  /** Minimum org role to SEE this item — cosmetic hiding only; the server still guards. */
+  minRole?: 'ADMIN' | 'OWNER';
 };
 
 export type NavSection = {
@@ -178,18 +183,21 @@ export const sidebarNavSections: readonly NavSection[] = [
         href: '/dashboard/reports/profit',
         icon: LineChart,
         keywords: ['laba', 'profit', 'omzet', 'margin', 'channel', 'laporan'],
+        minRole: 'ADMIN',
       },
       {
         title: 'Nilai stok',
         href: '/dashboard/reports/inventory-value',
         icon: Coins,
         keywords: ['nilai', 'valuasi', 'modal', 'aset'],
+        minRole: 'ADMIN',
       },
       {
         title: 'Stok mati & ABC',
         href: '/dashboard/reports/dead-stock',
         icon: TrendingDown,
         keywords: ['stok mati', 'dead stock', 'abc', 'pareto', 'mengendap'],
+        minRole: 'ADMIN',
       },
     ],
   },
@@ -275,6 +283,30 @@ export function resolveActiveHref(pathname: string, items: readonly NavItem[]): 
   }
 
   return best;
+}
+
+/**
+ * Cosmetic role gate shared by the sidebar, the mobile tabs, and the command
+ * palette — `null` (org still loading / unknown) reads as STAFF so gated items
+ * never flash. Server guards remain the real boundary.
+ */
+export function navRoleAllows(role: OrgRole | null, minRole?: NavItem['minRole']): boolean {
+  return !minRole || (role !== null && orgRoleAtLeast(role, minRole));
+}
+
+/** The items the given role may see. */
+export function visibleNavItems(
+  items: readonly NavItem[],
+  role: OrgRole | null,
+): readonly NavItem[] {
+  return items.filter((item) => navRoleAllows(role, item.minRole));
+}
+
+/** Sidebar sections for the given role — sections left with no items are dropped. */
+export function visibleNavSections(role: OrgRole | null): readonly NavSection[] {
+  return sidebarNavSections
+    .map((section) => ({ ...section, items: visibleNavItems(section.items, role) }))
+    .filter((section) => section.items.length > 0);
 }
 
 const ALL_NAV_ITEMS: readonly NavItem[] = sidebarNavSections.flatMap((section) => section.items);

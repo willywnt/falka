@@ -31,6 +31,7 @@ import {
 import { ImageThumb } from '@/components/image-thumb';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { useIsOrgAdmin } from '@/modules/users/hooks/use-org';
 
 import { useSaleQuery, useVoidSaleMutation } from '../hooks/use-sales';
 import type { SaleItemDetail } from '../types';
@@ -63,6 +64,7 @@ function groupItems(items: SaleItemDetail[]): ItemGroup[] {
 
 export function SaleDetail({ saleId }: { saleId: string }) {
   const { data, isLoading, error } = useSaleQuery(saleId);
+  const { isAdmin } = useIsOrgAdmin();
   const voidMutation = useVoidSaleMutation();
   const [voidOpen, setVoidOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -188,7 +190,8 @@ export function SaleDetail({ saleId }: { saleId: string }) {
             <StatusBadge tone="warn">Refund sebagian</StatusBadge>
           ) : null}
           <div className="ml-auto flex items-center gap-2">
-            {data.status !== 'VOID' &&
+            {isAdmin &&
+            data.status !== 'VOID' &&
             data.items.some((item) => item.quantity - item.refundedQuantity > 0) ? (
               <Button variant="outline" size="sm" onClick={() => setRefundOpen(true)}>
                 <Undo2 className="size-4" />
@@ -359,7 +362,7 @@ export function SaleDetail({ saleId }: { saleId: string }) {
             </CardContent>
           </Card>
 
-          {data.status === 'COMPLETED' ? (
+          {isAdmin && data.status === 'COMPLETED' ? (
             <AlertDialog open={voidOpen} onOpenChange={setVoidOpen}>
               <AlertDialogTrigger asChild>
                 <Button
