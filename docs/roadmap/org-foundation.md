@@ -77,9 +77,24 @@ Three commits on `feat/org-foundation` (all gates green: typecheck · lint · 32
 - **Invite-only registration** (`feat(auth): invite-only registration`): `registerUser` requires a
   code (no own-org branch); landing/login self-signup CTAs removed.
 
-**Still manual-QA-pending**: as OWNER edit the matrix → a STAFF gains/loses an action (API 200↔403 +
-button shows/hides); as platform admin create an org + owner → owner logs in; set memberLimit and
-hit the cap; `/register` without a code refused; non-admin to `/admin` redirected.
+### RBAC refinements (same day, commit `feat(org): view-tier permissions…`)
+
+- **View-tier permission keys**: catalog grew to 10. `purchasing.view` + `marketplace.view` join
+  `reports.view` as VIEW keys that hide a whole section (nav menu + pages + create entries +
+  deep-link "Buat PO" buttons), not just a button. Their GET routes + pages are now
+  `requirePermission`-gated. New default: STAFF gets NOTHING (all keys off) = pure daily-ops; the
+  earlier "STAFF sees menus, just can't act" is gone.
+- **Store rename is OWNER-only** (was ADMIN): `PATCH /api/v1/org` → `minOrgRole:'OWNER'`, inline
+  editor shows only for OWNER.
+- **Platform admin-ops is confined to `/admin`**: login routes a `UserRole.ADMIN` there, and the
+  `authorized` callback + `(dashboard)` layout bounce them out of the shop dashboard entirely. The
+  seed `admin@falka.local` is therefore a pure operator (its own org is unused).
+- **STAFF can see Penyimpanan**: the read-only storage/quota Settings tab is visible to all roles.
+
+**Still manual-QA-pending**: as OWNER edit the matrix → a STAFF gains/loses a menu+action (API
+200↔403 + nav/button shows/hides); turn off `purchasing.view`/`marketplace.view` for ADMIN → those
+menus vanish; as platform admin → land on `/admin`, `/dashboard` bounces back to `/admin`; create an
+org + owner, set memberLimit and hit the cap; `/register` without a code refused.
 
 ## Not built (future)
 

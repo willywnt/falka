@@ -131,25 +131,28 @@ light + dark via `next-themes`. Change the accent only via `--primary`/`--ring`/
   not allowed, no flash); `useIsOrgAdmin()` stays for team-management visibility. Role labels via
   `orgRoleLabel`, comparisons via `orgRoleAtLeast` (`@/lib/org-role`); permission catalog +
   `PERMISSION_META` (ID labels) in `modules/users/permissions/`.
-- **Nav gating is ONE source**: `nav-config.tsx` items carry `minRole?` and/or `permission?`;
-  `visibleNavSections(role, permissions)` / `visibleNavItems(...)` filter the sidebar, MobileTabBar,
-  and command-palette together. The Laporan group is `permission: 'reports.view'`. The navbar
-  account menu shows org name + a role badge.
-- **Hiding is cosmetic, server is the boundary** (`requirePermission` route guards). Gate each
-  action with `useHasPermission`: Tutup hari + profit cards → `reports.view`; refund/void →
-  `sales.refund`; PO cancel → `purchasing.cancel`; catalog deletes → `catalog.delete`; stock
-  adjust + write-off → `inventory.adjust`; opname Posting → `opname.post`; marketplace
-  connect/map/sync → `marketplace.manage`. Default-hide while loading.
-- **Settings** is role-gated server-side: Umum (all; org rename inline for ADMIN+),
-  Penyimpanan / Tim / Riwayat aktivitas for ADMIN+, and **"Peran & akses"** (the permission matrix
-  editor) for OWNER only. **Tim** = member table (role badges, OWNER-only role-change + remove
-  behind AlertDialog, OWNER/self rows action-less) + invite section (create STAFF/ADMIN per
-  authority, copy + WhatsApp share + revoke). **Riwayat aktivitas** = paginated audit log. Register
-  REQUIRES a "Kode undangan" (invite-only); self-signup CTAs are gone (landing/login → "Masuk").
+- **Nav gating is ONE source**: `nav-config.tsx` items + CREATE_ACTIONS carry `minRole?` and/or
+  `permission?`; `navItemAllowed(item, role, permissions)` / `visibleNavSections(role, permissions)`
+  filter the sidebar, MobileTabBar, command-palette, AND the "Buat" create menu together. VIEW-tier
+  permissions hide whole menus: Laporan → `reports.view`, Pembelian → `purchasing.view`, Marketplace
+  → `marketplace.view`. The navbar account menu shows org name + a role badge.
+- **Hiding is cosmetic, server is the boundary** (`requirePermission` route guards + page
+  `requireOrgPermission`). Gate each action with `useHasPermission`: Tutup hari + profit cards →
+  `reports.view`; refund/void → `sales.refund`; PO cancel → `purchasing.cancel`; catalog deletes →
+  `catalog.delete`; stock adjust + write-off → `inventory.adjust`; opname Posting → `opname.post`;
+  marketplace connect/map/sync → `marketplace.manage`; "Buat PO" deep links → `purchasing.view`.
+  Default-hide while loading.
+- **Settings** tabs: Umum (all) + **Penyimpanan (ALL roles — read-only quota)**; Tim + Riwayat
+  aktivitas for ADMIN+; **"Peran & akses"** (the permission matrix editor) for OWNER only. **Store
+  rename** in Umum is OWNER-only (inline editor + `minOrgRole:'OWNER'` route). **Tim** = member
+  table (role badges, OWNER-only role-change + remove behind AlertDialog) + invite section.
+  **Riwayat aktivitas** = paginated audit log. Register REQUIRES a "Kode undangan" (invite-only);
+  self-signup CTAs are gone (landing/login → "Masuk").
 - **Admin-ops console** (`app/(admin)/admin`, platform `UserRole.ADMIN` only via
   `requirePlatformAdmin` — its OWN minimal layout, NOT the shop shell): provision orgs + owner
   accounts (typed initial password) and edit per-org plan/member-limit/quota, plus the read-only
-  Operasional metrics panel.
+  Operasional metrics panel. A platform admin lands here on login and is **bounced out of the shop
+  dashboard** (`authorized` callback + `(dashboard)` layout) — it's a pure operator account.
 
 ## Shell & auth
 

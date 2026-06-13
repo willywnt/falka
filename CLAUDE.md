@@ -159,29 +159,37 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 - **Auth**: sign-in (credentials + pairing QR) resolves membership; no active membership ⇒ login
   refused (`AuthError.accessRevoked`). JWT carries `organizationId`/`orgRole` as a HINT; the DB is
   authoritative (re-resolved per request).
-- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 8
-  permission keys (`modules/users/permissions/catalog.ts`: reports.view, sales.refund,
-  purchasing.cancel, catalog.delete, inventory.adjust, opname.post, marketplace.manage,
-  team.manage) maps each sensitive action; the OWNER edits an ADMIN/STAFF allow-matrix in
-  Settings → "Peran & akses". OWNER always has all keys; defaults reproduce the original behavior
-  (ADMIN all, STAFF none) so an unedited org is unchanged. Stored in `Organization.permissions`
-  (Json, null = defaults), resolved per request into `org.permissions` by `resolveOrgContext`.
-  Gate routes with **`requirePermission: '<key>'`** (OWNER bypasses); reserve **`minOrgRole:
-'OWNER'`** for genuinely owner-only routes (member role-change/remove, the matrix editor).
-  Client mirrors it with `useHasPermission(key)` (NOT role checks). Team authority stays **hybrid**:
-  ADMIN (with `team.manage`) lists members + mints/revokes STAFF invites; OWNER additionally
-  changes roles, removes members, mints ADMIN invites. The OWNER row is immutable via the team UI.
+- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 10
+  permission keys (`modules/users/permissions/catalog.ts`) in two tiers: **VIEW keys**
+  (`reports.view`, `purchasing.view`, `marketplace.view`) hide a whole section — nav menu + pages
+  - create entries + deep-link buttons — when off; **ACTION keys** (`sales.refund`,
+    `purchasing.cancel`, `catalog.delete`, `inventory.adjust`, `opname.post`, `marketplace.manage`,
+    `team.manage`) hide a single button. The OWNER edits an ADMIN/STAFF allow-matrix in Settings →
+    "Peran & akses". OWNER always has all keys; **defaults = ADMIN all on, STAFF all off** (STAFF is
+    pure daily-ops: Kasir/Pesanan/Inventaris/Opname-count/Katalog/Rekam/Retur — no reports,
+    purchasing, marketplace, or money/config). Stored in `Organization.permissions` (Json, null =
+    defaults), resolved per request into `org.permissions` by `resolveOrgContext`. Gate routes with
+    **`requirePermission: '<key>'`** (OWNER bypasses) + pages with `requireOrgPermission`; reserve
+    **`minOrgRole: 'OWNER'`** for owner-only (member role-change/remove, the matrix editor, **store
+    rename** `PATCH /api/v1/org`). Client mirrors it with `useHasPermission(key)` + nav `permission`
+    (NOT role checks). Team authority stays **hybrid**: ADMIN (with `team.manage`) lists members +
+    mints/revokes STAFF invites; OWNER additionally changes roles, removes members, mints ADMIN
+    invites; the OWNER row is immutable. Settings: Penyimpanan is visible to ALL roles (read-only
+    quota); Tim/Riwayat = ADMIN+; Peran & akses = OWNER only.
 - **Invites**: 8-char code (`A-Z2-9`, no 0/O/1/I), 7-day expiry, shared via WhatsApp; subject to
   the org's `memberLimit` (`assertMemberCapacity`: members + pending invites < limit; null =
   unlimited). **Registration is invite-only** — `inviteCode` is REQUIRED; `registerUser` claims it
   atomically in the register tx (joins the org with the invite's role). New organizations are NOT
   self-served: they're provisioned by the admin-ops console.
-- **Platform admin-ops** (`app/(admin)/admin`, gated by `requirePlatformAdmin` = `UserRole.ADMIN`):
-  provisions new orgs + their OWNER account (typed initial password), and edits per-org config —
-  `plan` (subscription label) + `memberLimit` + storage quota — the hooks a real plan tier reads.
-  Routes under `/api/v1/admin/organizations` (`requireAdmin`). Billing is a labeled placeholder.
+- **Platform admin-ops** (`app/(admin)/admin`, gated by `requirePlatformAdmin` = `UserRole.ADMIN`,
+  its OWN minimal chrome): provisions new orgs + their OWNER account (typed initial password), and
+  edits per-org config — `plan` (subscription label) + `memberLimit` + storage quota — the hooks a
+  real plan tier reads. Routes under `/api/v1/admin/organizations` (`requireAdmin`). Billing is a
+  labeled placeholder. **A platform-admin is confined to `/admin`**: login routes there and the
+  `authorized` callback + `(dashboard)` layout bounce them out of the shop entirely (so the seed
+  `admin@falka.local` never uses a shop dashboard — it's a pure operator account).
 - **Audit**: `auditService.log` writes best-effort AFTER each sensitive tx; Settings → Riwayat
-  aktivitas (ADMIN+) lists it. Settings tabs (Penyimpanan/Tim/Riwayat) are role-gated server-side.
+  aktivitas (ADMIN+) lists it.
 
 ## 9. Quality gate — green after EVERY change
 
