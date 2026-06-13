@@ -124,14 +124,9 @@ export default async function HomePage() {
                 </Link>
               </Button>
             ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Masuk</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/register">Buat akun</Link>
-                </Button>
-              </>
+              <Button asChild>
+                <Link href="/login">Masuk</Link>
+              </Button>
             )}
           </div>
         </div>
@@ -164,17 +159,12 @@ export default async function HomePage() {
                   </Link>
                 </Button>
               ) : (
-                <>
-                  <Button size="lg" asChild>
-                    <Link href="/register">
-                      Mulai sekarang
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild>
-                    <Link href="/login">Masuk</Link>
-                  </Button>
-                </>
+                <Button size="lg" asChild>
+                  <Link href="/login">
+                    Masuk
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
               )}
             </div>
           </div>
@@ -326,14 +316,9 @@ export default async function HomePage() {
                 Buka aplikasi
               </Link>
             ) : (
-              <>
-                <Link href="/login" className="hover:text-foreground">
-                  Masuk
-                </Link>
-                <Link href="/register" className="hover:text-foreground">
-                  Buat akun
-                </Link>
-              </>
+              <Link href="/login" className="hover:text-foreground">
+                Masuk
+              </Link>
             )}
           </div>
         </div>

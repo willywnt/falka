@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
 import { prisma } from '@falka/db';
 import type { OrgRole, UserRole } from '@prisma/client';
+
+import { assertMemberCapacity } from '@/modules/users/services/member-capacity';
 
 import { AuthError } from '../errors/auth-errors';
 import type { AuthUser } from '../types';
@@ -71,18 +72,20 @@ export class AuthService {
   }
 
   /**
-   * Registration creates the user in one transaction and either:
-   *  - with an invite code: atomically claims the (single-use, unexpired) code
-   *    and joins that organization with the code's role — NO new org; or
-   *  - without a code: creates the user's own organization as OWNER.
+   * Registration is invite-only: new organizations are provisioned by the
+   * platform admin-ops console, so the public path only JOINS an existing org.
+   * One transaction creates the user, atomically claims the (single-use,
+   * unexpired) code, enforces the org's member cap, and adds the membership
+   * with the code's role.
    */
   async registerUser(input: {
     email: string;
     password: string;
     displayName?: string;
-    inviteCode?: string;
+    inviteCode: string;
   }): Promise<AuthUser> {
     const normalizedEmail = normalizeEmail(input.email);
+    const inviteCode = input.inviteCode.trim().toUpperCase();
 
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -95,70 +98,39 @@ export class AuthService {
 
     const passwordHash = await hashPassword(input.password);
     const displayName = input.displayName?.trim() || null;
-    const inviteCode = input.inviteCode?.trim().toUpperCase() || null;
 
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: {
-          email: normalizedEmail,
-          passwordHash,
-          displayName,
-        },
+        data: { email: normalizedEmail, passwordHash, displayName },
         select: { id: true, email: true, role: true, displayName: true },
       });
 
-      if (inviteCode) {
-        // Atomic claim: only an unused, unrevoked, unexpired code flips to used.
-        // count 0 means the code lost the race or never qualified.
-        const claim = await tx.organizationInvite.updateMany({
-          where: {
-            code: inviteCode,
-            usedAt: null,
-            revokedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          data: { usedAt: new Date(), usedByUserId: user.id },
-        });
-
-        if (claim.count === 0) {
-          throw AuthError.invalidInviteCode();
-        }
-
-        const invite = await tx.organizationInvite.findUnique({
-          where: { code: inviteCode },
-          select: { organizationId: true, role: true },
-        });
-
-        if (!invite) {
-          throw AuthError.invalidInviteCode();
-        }
-
-        const membership = await tx.organizationMember.create({
-          data: {
-            organizationId: invite.organizationId,
-            userId: user.id,
-            role: invite.role,
-          },
-          select: { organizationId: true, role: true },
-        });
-
-        return toAuthUser({ ...user, membership });
-      }
-
-      const organization = await tx.organization.create({
-        data: {
-          name: `Toko ${displayName ?? normalizedEmail.split('@')[0]}`,
-          storageQuotaBytes: BigInt(DEFAULT_STORAGE_QUOTA_BYTES),
-        },
-        select: { id: true },
+      // Atomic claim: only an unused, unrevoked, unexpired code flips to used.
+      // count 0 means the code lost the race or never qualified.
+      const claim = await tx.organizationInvite.updateMany({
+        where: { code: inviteCode, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date(), usedByUserId: user.id },
       });
 
+      if (claim.count === 0) {
+        throw AuthError.invalidInviteCode();
+      }
+
+      const invite = await tx.organizationInvite.findUnique({
+        where: { code: inviteCode },
+        select: { organizationId: true, role: true },
+      });
+
+      if (!invite) {
+        throw AuthError.invalidInviteCode();
+      }
+
+      // Respect the org's plan cap even if the limit was lowered after the code
+      // went out (the just-claimed code no longer counts as a pending seat).
+      await assertMemberCapacity(tx, invite.organizationId);
+
       const membership = await tx.organizationMember.create({
-        data: {
-          organizationId: organization.id,
-          userId: user.id,
-          role: 'OWNER',
-        },
+        data: { organizationId: invite.organizationId, userId: user.id, role: invite.role },
         select: { organizationId: true, role: true },
       });
 

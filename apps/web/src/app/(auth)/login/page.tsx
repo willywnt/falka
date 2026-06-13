@@ -22,12 +22,12 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="text-muted-foreground mt-6 text-center text-sm">
-          Belum punya akun?{' '}
+          Punya kode undangan?{' '}
           <Link
             href="/register"
             className="text-foreground font-medium underline-offset-4 hover:underline"
           >
-            Buat akun
+            Gabung di sini
           </Link>
         </p>
       </CardContent>

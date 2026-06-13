@@ -11,13 +11,13 @@ export const registerSchema = z
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Konfirmasi password kamu dulu'),
     displayName: z.string().trim().max(100, 'Nama maksimal 100 karakter').optional(),
-    // Optional join code from a shop owner; absent = create your own shop.
+    // Required: registration is invite-only — new orgs come from admin-ops, the
+    // public path only joins an existing org via a code.
     inviteCode: z
       .string()
       .trim()
       .toUpperCase()
-      .regex(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/, 'Kode undangan tidak valid')
-      .optional(),
+      .regex(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/, 'Kode undangan tidak valid'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Password dan konfirmasinya tidak sama',

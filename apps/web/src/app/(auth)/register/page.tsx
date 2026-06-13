@@ -5,7 +5,7 @@ import { RegisterForm } from '@/modules/auth/components/register-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const metadata: Metadata = {
-  title: 'Buat akun',
+  title: 'Gabung dengan kode undangan',
 };
 
 export default async function RegisterPage({
@@ -19,8 +19,10 @@ export default async function RegisterPage({
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Buat akun</CardTitle>
-        <CardDescription>Mulai pakai Falka</CardDescription>
+        <CardTitle className="text-2xl">Gabung dengan kode undangan</CardTitle>
+        <CardDescription>
+          Masukkan kode undangan dari pemilik toko untuk gabung ke timnya.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <RegisterForm initialInviteCode={inviteCode} />

@@ -1,16 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * Registration's org wiring (Prisma + password hashing mocked): no code creates
- * the user's own organization as OWNER; a valid code is atomically claimed and
- * joins that org with the invite's role (no new org); a code that fails the
+ * Registration is invite-only (new orgs come from admin-ops). With Prisma,
+ * password hashing, and the capacity guard mocked: a valid code is atomically
+ * claimed and joins that org with the invite's role; a code that fails the
  * conditional claim (used/revoked/expired/unknown) rejects as invalid.
  */
 
 const { prismaMock, txMock } = vi.hoisted(() => {
   const txMock = {
     user: { create: vi.fn() },
-    organization: { create: vi.fn() },
     organizationMember: { create: vi.fn() },
     organizationInvite: { updateMany: vi.fn(), findUnique: vi.fn() },
   };
@@ -28,6 +27,9 @@ vi.mock('@/modules/auth/utils/password', () => ({
   hashPassword: vi.fn(async () => 'hashed'),
   verifyPassword: vi.fn(async () => true),
 }));
+vi.mock('@/modules/users/services/member-capacity', () => ({
+  assertMemberCapacity: vi.fn(async () => undefined),
+}));
 
 const { AuthService } = await import('@/modules/auth/services/auth.service');
 
@@ -41,30 +43,6 @@ beforeEach(() => {
     email: 'new@example.com',
     role: 'USER',
     displayName: 'Pendaftar',
-  });
-});
-
-describe('registerUser — own organization (no code)', () => {
-  it('creates an OWNER membership in a fresh org', async () => {
-    txMock.organization.create.mockResolvedValue({ id: 'org-new' });
-    txMock.organizationMember.create.mockResolvedValue({
-      organizationId: 'org-new',
-      role: 'OWNER',
-    });
-
-    const user = await service.registerUser({
-      email: 'new@example.com',
-      password: 'password123',
-      displayName: 'Pendaftar',
-    });
-
-    expect(txMock.organization.create).toHaveBeenCalledTimes(1);
-    expect(txMock.organizationMember.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ role: 'OWNER', userId: 'u-new' }),
-      }),
-    );
-    expect(user).toMatchObject({ organizationId: 'org-new', orgRole: 'OWNER' });
   });
 });
 
@@ -92,7 +70,11 @@ describe('registerUser — join via invite code', () => {
         where: expect.objectContaining({ code: 'ABCD2345', usedAt: null, revokedAt: null }),
       }),
     );
-    expect(txMock.organization.create).not.toHaveBeenCalled();
+    expect(txMock.organizationMember.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org-host', role: 'STAFF' }),
+      }),
+    );
     expect(user).toMatchObject({ organizationId: 'org-host', orgRole: 'STAFF' });
   });
 

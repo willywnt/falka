@@ -45,9 +45,7 @@ export function RegisterForm({ initialInviteCode }: { initialInviteCode?: string
     if (values.displayName) {
       formData.set('displayName', values.displayName);
     }
-    if (values.inviteCode) {
-      formData.set('inviteCode', values.inviteCode);
-    }
+    formData.set('inviteCode', values.inviteCode);
 
     const result = await registerAction(formData);
 
@@ -169,10 +167,7 @@ export function RegisterForm({ initialInviteCode }: { initialInviteCode?: string
             name="inviteCode"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
-                  Kode undangan{' '}
-                  <span className="text-muted-foreground font-normal">(opsional)</span>
-                </FormLabel>
+                <FormLabel required>Kode undangan</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="8 karakter"
@@ -183,7 +178,7 @@ export function RegisterForm({ initialInviteCode }: { initialInviteCode?: string
                   />
                 </FormControl>
                 <FormDescription>
-                  Dapat kode dari pemilik toko? Masukkan di sini untuk gabung ke timnya.
+                  Akun dibuat lewat undangan pemilik toko. Masukkan kode yang kamu terima.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

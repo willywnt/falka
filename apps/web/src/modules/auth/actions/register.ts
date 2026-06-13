@@ -19,7 +19,7 @@ export async function registerAction(formData: FormData): Promise<AuthActionResu
     password: formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
     displayName: formData.get('displayName') || undefined,
-    inviteCode: formData.get('inviteCode') || undefined,
+    inviteCode: formData.get('inviteCode') ?? '',
   });
 
   if (!parsed.success) {
