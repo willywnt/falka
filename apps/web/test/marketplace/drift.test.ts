@@ -90,6 +90,15 @@ describe('computeStockDrift', () => {
     expect(result.totalMapped).toBe(1);
   });
 
+  it('counts a repeated unmapped external key only once (distinct keys)', () => {
+    const result = computeStockDrift({
+      mapped: [mapped({ externalVariantId: 'A', internalAvailable: 10 })],
+      external: [external('A', 10), external('DUP', 5), external('DUP', 9)],
+    });
+
+    expect(result.unmappedExternal).toBe(1);
+  });
+
   it('orders lines worst-first: bigger drift, then missing, then in-sync', () => {
     const result = computeStockDrift({
       mapped: [

@@ -114,11 +114,11 @@ export function computeStockDrift(input: {
     });
   }
 
+  // Count DISTINCT external keys (externalByKey is already deduped) so a provider
+  // that repeats a SKU row can't inflate the "unmapped" tally.
   let unmappedExternal = 0;
-  for (const row of input.external) {
-    if (!mappedKeys.has(externalKey(row.externalProductId, row.externalVariantId))) {
-      unmappedExternal += 1;
-    }
+  for (const key of externalByKey.keys()) {
+    if (!mappedKeys.has(key)) unmappedExternal += 1;
   }
 
   lines.sort((a, b) => severity(b) - severity(a));
