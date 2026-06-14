@@ -159,6 +159,35 @@ available via the provider adapter; `Dev` stub simulates success, `Unwired` stub
 marks `MarketplaceSyncJob` + mapping `lastSyncStatus` + listing snapshot. Retryable failures
 throw so BullMQ retries.
 
+## Lazada (REAL adapter + OAuth onboarding) — live-validated 2026-06-14
+LAZADA is the one **real** provider (others are stubs). Signer (HMAC-SHA256, prepend apiPath, UPPER
+hex), REST client, import (`/products/get`), stock-push (`/product/price_quantity/update`), token
+helpers (`exchangeLazadaCode`/`refreshLazadaToken`) and `buildLazadaQuantityPayload` all live in
+**`@falka/marketplace-providers`** (shared web+worker). The import/stock adapters are **env-gated**:
+real only when `LAZADA_APP_KEY`+`LAZADA_APP_SECRET` are set, else fall back to the stub.
+- **OAuth onboarding (multi-seller):** each org connects its own shop. `GET /marketplaces/lazada/oauth/
+authorize` (gated `marketplace.manage`) → encrypted `state` (org+actor sealed with
+  `MARKETPLACE_ENCRYPTION_SECRET`, 15-min TTL, pure codec `utils/oauth-state.ts`) → `auth.lazada.com`.
+  `GET …/oauth/callback` is **PUBLIC** (the redirect may not carry the Falka cookie — state is the
+  authority) → exchange code → `marketplaceServerService.upsertOAuthConnection` (create / reactivate /
+  **re-auth refreshes the token**) → redirect `/marketplace?lazada=connected|error` (toasted). Manual
+  paste stays as a dev/fallback for providers without OAuth.
+- **Token refresh** `POST /marketplaces/:id/refresh` + **Test koneksi** `POST /marketplaces/:id/test`
+  (`/seller/get`); buttons on the connection detail (Lazada only). Env adds `LAZADA_OAUTH_REDIRECT_URI`.
+- **Dev tooling:** `pnpm lazada:smoke|token|products|stock|stock-sellable` (read `.env`/`apps/web/.env.local`).
+- **Lazada-side gotchas (cost real time):** (1) app **category is fixed at creation** — use **"Seller
+  In-house APP"** (ISV for public), NOT "LazPay Open API" (Wallet-only → no Product API). (2) **`SellerSku`
+  is DEPRECATED** for `price_quantity/update` (E0501) → key by **ItemId+SkuId**. (3) token-create/refresh
+  fields are at the **top level** of the envelope, not under `data`. (4) ISV/in-house dev apps must
+  **whitelist the seller short code** (Auth Management). (5) callback must be **https** → ngrok in dev.
+  (6) gateway must match the seller's **region** (ID=`api.lazada.co.id/rest`). (7) `MARKETPLACE_ENCRYPTION_
+SECRET` identical web↔worker. (8) `SELLER_NOT_PERMITTED`/E501 on stock-write = a Lazada
+  **account/warehouse** rule (dropshipping / post-2022 eligibility), NOT a code bug — worker treats E501 as
+  non-retryable.
+- **Deferred:** multi-region per-connection `region`/`baseUrl` (needs migration — currently one env
+  `LAZADA_API_BASE_URL`); a scheduled refresh worker (refresh is manual-route only); a real self-fulfilled
+  stock-write success test.
+
 ## Cross-module composition (respect boundary §3)
 - catalog→inventory ONLY via the inventory service (no cross-table writes). orders→inventory via
   the lifecycle trio (`applyOrderReserveTx`/`ShipTx`/`ReleaseTx`); orders→returns via its service

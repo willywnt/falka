@@ -216,8 +216,9 @@ silently change) · when unsure between approaches, **ASK** — boundary beats d
 
 ## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders · returns · sales/POS · purchasing · order-aware recordings)
 
-Internal inventory = **source of truth**, integrated with marketplaces (adapter-first, STUBS).
-Detail: `.cursor/rules/40-inventory-marketplace.mdc` + `docs/roadmap/inventory-mvp.md`.
+Internal inventory = **source of truth**, integrated with marketplaces (adapter-first; **LAZADA is a
+REAL, OAuth-onboarded, live-validated adapter** — Shopee/Tokopedia stay STUBS). Detail:
+`.cursor/rules/40-inventory-marketplace.mdc` (Lazada OAuth section) + `docs/roadmap/inventory-mvp.md`.
 
 - **`StockLedger` (append-only, available-centric) is the truth; `Inventory` is a fast-read cache**
   (available/reserved/damaged/incoming) — every stock change = 1 ledger row + 1 Inventory update in
