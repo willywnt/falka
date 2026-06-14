@@ -1,5 +1,9 @@
 import { getServerEnv } from '@falka/config/env.server';
-import { createLazadaClient, isLazadaSuccess } from '@falka/marketplace-providers';
+import {
+  buildLazadaQuantityPayload,
+  createLazadaClient,
+  isLazadaSuccess,
+} from '@falka/marketplace-providers';
 import type { LazadaClient, LazadaResponse } from '@falka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
@@ -13,25 +17,6 @@ import { MarketplaceSyncError, SYNC_ERROR_CODES } from '../sync-errors.js';
 const STOCK_UPDATE_PATH = '/product/price_quantity/update';
 const SELLER_GET_PATH = '/seller/get';
 const DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-/** LazOP price/quantity update payload, keyed by SellerSku when known, else ItemId+SkuId. */
-function buildQuantityPayload(params: StockProviderUpdateParams): string {
-  const identity = params.externalSku
-    ? `<SellerSku>${escapeXml(params.externalSku)}</SellerSku>`
-    : `<ItemId>${escapeXml(params.externalProductId)}</ItemId>` +
-      `<SkuId>${escapeXml(params.externalVariantId)}</SkuId>`;
-
-  return `<Request><Product><Skus><Sku>${identity}<Quantity>${params.quantity}</Quantity></Sku></Skus></Product></Request>`;
-}
 
 function mapLazadaError(response: LazadaResponse): MarketplaceSyncError {
   const message = `Lazada rejected the request (code ${response.code}${
@@ -70,7 +55,7 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
     const response = await this.client.call(STOCK_UPDATE_PATH, {
       method: 'POST',
       accessToken: params.accessToken,
-      params: { payload: buildQuantityPayload(params) },
+      params: { payload: buildLazadaQuantityPayload(params) },
     });
 
     if (!isLazadaSuccess(response)) {
