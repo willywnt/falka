@@ -4,6 +4,8 @@ export { exchangeLazadaCode, refreshLazadaToken } from './oauth.js';
 export type { LazadaTokenResult, LazadaCountryUser } from './oauth.js';
 export { buildLazadaQuantityPayload } from './stock-payload.js';
 export type { LazadaStockPayloadInput } from './stock-payload.js';
+export { fetchLazadaListings, LazadaApiError } from './listings.js';
+export type { LazadaListingItem } from './listings.js';
 export type {
   LazadaCallOptions,
   LazadaClient,

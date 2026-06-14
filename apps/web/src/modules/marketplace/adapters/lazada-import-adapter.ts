@@ -1,67 +1,24 @@
 import 'server-only';
 
 import { getServerEnv } from '@falka/config/env.server';
-import { createLazadaClient, isLazadaSuccess } from '@falka/marketplace-providers';
+import {
+  createLazadaClient,
+  fetchLazadaListings,
+  LazadaApiError,
+} from '@falka/marketplace-providers';
 import type { LazadaClient } from '@falka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
 import type { MarketplaceImportAdapter, NormalizedListing } from './import-adapter';
 
-const PRODUCTS_GET_PATH = '/products/get';
 const DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';
-const PAGE_LIMIT = 50;
-/** Safety cap so a paging bug can't loop forever (≈1000 listings). */
-const MAX_PAGES = 20;
-
-type LazadaApiSku = {
-  SkuId?: number | string;
-  SellerSku?: string;
-  quantity?: number;
-  Status?: string;
-};
-
-type LazadaApiProduct = {
-  item_id?: number | string;
-  status?: string;
-  attributes?: { name?: string };
-  skus?: LazadaApiSku[];
-};
-
-type LazadaProductsGetData = { products?: LazadaApiProduct[] };
-
-function mapProducts(products: LazadaApiProduct[]): NormalizedListing[] {
-  const listings: NormalizedListing[] = [];
-
-  for (const product of products) {
-    const externalProductId = String(product.item_id ?? '');
-    const productName = product.attributes?.name ?? 'Lazada product';
-
-    for (const sku of product.skus ?? []) {
-      const externalVariantId = String(sku.SkuId ?? '');
-      if (!externalProductId || !externalVariantId) continue;
-
-      listings.push({
-        externalProductId,
-        externalVariantId,
-        externalSku: sku.SellerSku ?? null,
-        externalProductName: productName,
-        externalVariantName: null,
-        stock: typeof sku.quantity === 'number' ? sku.quantity : 0,
-        status: sku.Status ?? product.status ?? 'active',
-        raw: { item_id: product.item_id, ...sku } as Record<string, unknown>,
-      });
-    }
-  }
-
-  return listings;
-}
 
 /**
- * Imports a Lazada shop's live listings via the LazOP /products/get API, paging
- * until exhausted. Real provider adapter — replaces the stub for LAZADA once the
- * app credentials are configured. The response shape (item_id / attributes.name /
- * skus[].SkuId/SellerSku/quantity) should be re-verified against the sandbox.
+ * Imports a Lazada shop's live listings via the shared LazOP `/products/get`
+ * fetcher, mapping each SKU to our cross-provider {@link NormalizedListing}.
+ * Real provider adapter — replaces the stub for LAZADA once the app credentials
+ * are configured. The same fetcher backs the worker drift-reconciliation job.
  */
 export class LazadaImportAdapter implements MarketplaceImportAdapter {
   readonly provider: MarketplaceProvider = 'LAZADA';
@@ -80,30 +37,28 @@ export class LazadaImportAdapter implements MarketplaceImportAdapter {
     shopId: string;
     accessToken: string;
   }): Promise<NormalizedListing[]> {
-    const listings: NormalizedListing[] = [];
+    try {
+      const items = await fetchLazadaListings(this.client, { accessToken: params.accessToken });
 
-    for (let page = 0; page < MAX_PAGES; page += 1) {
-      const response = await this.client.call<LazadaProductsGetData>(PRODUCTS_GET_PATH, {
-        method: 'GET',
-        accessToken: params.accessToken,
-        params: { filter: 'all', limit: PAGE_LIMIT, offset: page * PAGE_LIMIT },
-      });
-
-      if (!isLazadaSuccess(response)) {
+      return items.map((item) => ({
+        externalProductId: item.itemId,
+        externalVariantId: item.skuId,
+        externalSku: item.sellerSku,
+        externalProductName: item.productName,
+        externalVariantName: null,
+        stock: item.quantity,
+        status: item.status,
+        raw: item.raw,
+      }));
+    } catch (error) {
+      if (error instanceof LazadaApiError) {
         throw MarketplaceError.validation(
-          `Lazada import failed (code ${response.code}${
-            response.message ? `: ${response.message}` : ''
+          `Lazada import failed (code ${error.code}${
+            error.providerMessage ? `: ${error.providerMessage}` : ''
           }).`,
         );
       }
-
-      const products = response.data?.products ?? [];
-      if (products.length === 0) break;
-
-      listings.push(...mapProducts(products));
-      if (products.length < PAGE_LIMIT) break;
+      throw error;
     }
-
-    return listings;
   }
 }
