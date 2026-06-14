@@ -6,10 +6,9 @@
  * valid ~30 minutes). Run this to print the tokens, then paste the access_token into the
  * "Tambah marketplace" modal to create the LAZADA connection.
  *
- * Usage:
- *   pnpm --filter @falka/marketplace-providers build
- *   node scripts/lazada-token.mjs <authorization_code>
- *   node scripts/lazada-token.mjs --refresh <refresh_token>
+ * Usage (builds the provider package first):
+ *   pnpm lazada:token <authorization_code>
+ *   pnpm lazada:token -- --refresh <refresh_token>
  *
  * Reads LAZADA_APP_KEY / LAZADA_APP_SECRET / LAZADA_API_BASE_URL from .env or apps/web/.env.local.
  */
@@ -17,7 +16,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { exchangeLazadaCode, refreshLazadaToken } from '@falka/marketplace-providers';
+// Root scripts can't resolve workspace packages by name, so import the built dist directly
+// (the `pnpm lazada:token` script builds it first).
+import {
+  exchangeLazadaCode,
+  refreshLazadaToken,
+} from '../packages/marketplace-providers/dist/index.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 

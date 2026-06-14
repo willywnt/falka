@@ -7,9 +7,8 @@
  *   - an "invalid/expired code" style error => signing + app_key are GOOD (you just
  *     used a fake code). That is the success signal for this smoke test.
  *
- * Usage:
- *   pnpm --filter @falka/marketplace-providers build   # build the package once
- *   node scripts/lazada-smoke.mjs
+ * Usage (builds the provider package first):
+ *   pnpm lazada:smoke
  *
  * Reads LAZADA_APP_KEY / LAZADA_APP_SECRET / LAZADA_API_BASE_URL from .env or
  * apps/web/.env.local (or the real process env).
@@ -18,7 +17,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createLazadaClient } from '@falka/marketplace-providers';
+// Root scripts can't resolve workspace packages by name, so import the built dist directly
+// (the `pnpm lazada:smoke` script builds it first).
+import { createLazadaClient } from '../packages/marketplace-providers/dist/index.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
