@@ -68,7 +68,7 @@ class LazadaOAuthService {
     const shopName = token.account ?? `Lazada ${seller?.short_code ?? shopId}`;
     const expiresAt = token.expiresIn > 0 ? new Date(Date.now() + token.expiresIn * 1000) : null;
 
-    const connection = await marketplaceServerService.createConnection(
+    const connection = await marketplaceServerService.upsertOAuthConnection(
       organizationId,
       actorUserId,
       {

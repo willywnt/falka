@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +28,26 @@ export function MarketplaceDashboard() {
   const { data, isLoading, error, refetch } = useMarketplaceConnectionsQuery();
   const disconnectMutation = useDisconnectMarketplaceMutation();
   const { allowed: canManage } = useHasPermission('marketplace.manage');
+
+  // The Lazada OAuth callback redirects back here with ?lazada=connected|error — toast once,
+  // then strip the param so a refresh doesn't repeat it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('lazada');
+    if (!status) return;
+
+    if (status === 'connected') {
+      toast.success('Lazada terhubung', { description: 'Toko berhasil dihubungkan via OAuth.' });
+    } else {
+      toast.error('Gagal menghubungkan Lazada', {
+        description: 'Coba ulangi, atau cek izin & token di Lazada.',
+      });
+    }
+
+    params.delete('lazada');
+    const query = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+  }, []);
 
   async function handleDisconnectConfirm() {
     if (!disconnectTarget) return;

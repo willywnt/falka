@@ -166,6 +166,79 @@ export class MarketplaceServerService {
     return mapConnection(connection);
   }
 
+  /**
+   * Create-or-update a connection from an OAuth grant. Unlike createConnection, re-authorizing
+   * an already-active shop UPDATES its tokens (a fresh consent = a fresh token) instead of
+   * throwing — re-auth is a legitimate recovery when the refresh token has lapsed.
+   */
+  async upsertOAuthConnection(
+    organizationId: string,
+    actorUserId: string,
+    input: CreateMarketplaceConnectionInput,
+  ): Promise<MarketplaceConnectionDetail> {
+    if (!isSupportedMarketplaceProvider(input.provider)) {
+      throw MarketplaceError.invalidProvider();
+    }
+
+    const encryptedAccessToken = marketplaceEncryptionService.encryptToken(input.accessToken);
+    const encryptedRefreshToken = input.refreshToken
+      ? marketplaceEncryptionService.encryptToken(input.refreshToken)
+      : null;
+
+    const existing = await prisma.marketplaceConnection.findFirst({
+      where: { organizationId, provider: input.provider, shopId: input.shopId, deletedAt: null },
+    });
+
+    const connection = existing
+      ? await prisma.marketplaceConnection.update({
+          where: { id: existing.id },
+          data: {
+            shopName: input.shopName,
+            encryptedAccessToken,
+            encryptedRefreshToken,
+            tokenExpiresAt: input.expiresAt,
+            isActive: true,
+          },
+        })
+      : await prisma.marketplaceConnection.create({
+          data: {
+            userId: actorUserId,
+            organizationId,
+            provider: input.provider as MarketplaceProvider,
+            shopId: input.shopId,
+            shopName: input.shopName,
+            encryptedAccessToken,
+            encryptedRefreshToken,
+            tokenExpiresAt: input.expiresAt,
+            isActive: true,
+          },
+        });
+
+    appLogger.info('marketplace.connected', {
+      organizationId,
+      connectionId: connection.id,
+      provider: connection.provider,
+      shopId: connection.shopId,
+      reconnected: Boolean(existing),
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'marketplace.connected',
+      resource: 'marketplace_connection',
+      metadata: {
+        connectionId: connection.id,
+        provider: connection.provider,
+        shopId: connection.shopId,
+        shopName: connection.shopName,
+        reconnected: Boolean(existing),
+        via: 'oauth',
+      },
+    });
+
+    return mapConnection(connection);
+  }
+
   async disconnectConnection(
     organizationId: string,
     actorUserId: string,
