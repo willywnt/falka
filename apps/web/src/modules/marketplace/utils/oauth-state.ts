@@ -22,7 +22,9 @@ export function encodeOAuthState(
   now: number = Date.now(),
 ): string {
   const payload: OAuthStatePayload = { ...input, issuedAt: now };
-  return encrypt(JSON.stringify(payload), secret);
+  // base64url-wrap the ciphertext so the state survives the OAuth redirect round-trip — the
+  // raw encrypt output is base64 with +/=/ which a provider can mangle (notably + -> space).
+  return Buffer.from(encrypt(JSON.stringify(payload), secret), 'utf8').toString('base64url');
 }
 
 export function decodeOAuthState(
@@ -32,7 +34,8 @@ export function decodeOAuthState(
 ): { organizationId: string; actorUserId: string } {
   let payload: OAuthStatePayload;
   try {
-    payload = JSON.parse(decrypt(state, secret)) as OAuthStatePayload;
+    const sealed = Buffer.from(state, 'base64url').toString('utf8');
+    payload = JSON.parse(decrypt(sealed, secret)) as OAuthStatePayload;
   } catch {
     throw new Error('Invalid OAuth state.');
   }

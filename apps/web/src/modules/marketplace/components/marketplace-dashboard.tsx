@@ -39,12 +39,14 @@ export function MarketplaceDashboard() {
     if (status === 'connected') {
       toast.success('Lazada terhubung', { description: 'Toko berhasil dihubungkan via OAuth.' });
     } else {
+      const reason = params.get('reason');
       toast.error('Gagal menghubungkan Lazada', {
-        description: 'Coba ulangi, atau cek izin & token di Lazada.',
+        description: reason ? reason : 'Coba ulangi, atau cek izin & token di Lazada.',
       });
     }
 
     params.delete('lazada');
+    params.delete('reason');
     const query = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
   }, []);
