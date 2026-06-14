@@ -19,16 +19,3 @@ export const DEFAULT_JOB_OPTIONS = {
 export function buildScheduledJobId(queueName: string, jobName: string, cadence: string): string {
   return `scheduled:${queueName}:${jobName}:${cadence}`;
 }
-
-export function isPendingStorageKey(storageKey: string): boolean {
-  return storageKey.startsWith('pending/');
-}
-
-/**
- * Recording storage keys are prefixed by the owning organization id. (Accounts
- * that predate organizations kept their old `recordings/<userId>/` keys — the
- * backfill set org.id := that userId, so the prefix stays valid verbatim.)
- */
-export function isOrgRecordingStorageKey(storageKey: string, organizationId: string): boolean {
-  return storageKey.startsWith(`recordings/${organizationId}/`);
-}

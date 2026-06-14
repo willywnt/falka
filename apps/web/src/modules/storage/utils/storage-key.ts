@@ -1,5 +1,9 @@
 import { generateId } from '@falka/utils/crypto';
 
+// Org/pending key predicates are shared infra — re-exported from @falka/storage so the
+// web app and the worker validate keys identically (see packages/storage/src/keys.ts).
+export { isOrgStorageKey, isPendingStorageKey } from '@falka/storage';
+
 /**
  * Generates a unique recording filename.
  * Example: rec_20260527_a1b2c3d4.webm
@@ -41,16 +45,4 @@ export function generateStorageKey(
 /** Builds a product-image object key: {organization_id}/{generated_filename} (flat, no date). */
 export function generateProductImageKey(organizationId: string, generatedFilename: string): string {
   return `${organizationId}/${generatedFilename}`;
-}
-
-/**
- * Whether a storage key is a final object owned by `organizationId`. Security boundary
- * for upload completion and deletion. The trailing slash blocks org-id prefix injection.
- */
-export function isOrgStorageKey(storageKey: string, organizationId: string): boolean {
-  return storageKey.startsWith(`${organizationId}/`);
-}
-
-export function isPendingStorageKey(storageKey: string): boolean {
-  return storageKey.startsWith('pending/');
 }

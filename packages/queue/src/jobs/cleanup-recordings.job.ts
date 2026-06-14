@@ -1,14 +1,13 @@
 import { prisma } from '@falka/db';
 import { RECORDING_RETENTION_DAYS } from '@falka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider } from '@falka/storage';
+import { getObjectStorageProvider, isOrgStorageKey, isPendingStorageKey } from '@falka/storage';
 
 import {
   cleanupRecordingsJobSchema,
   type CleanupRecordingsJobPayload,
   type JobResultMetadata,
 } from '../types/index.js';
-import { isOrgRecordingStorageKey, isPendingStorageKey } from '../utils/index.js';
 
 type CleanupStats = JobResultMetadata;
 
@@ -63,7 +62,7 @@ async function finalizeRecordingDeletion(params: {
     const decrementOrgId =
       current.fileSizeBytes > 0n &&
       organizationId !== null &&
-      isOrgRecordingStorageKey(storageKey, organizationId)
+      isOrgStorageKey(storageKey, organizationId)
         ? organizationId
         : null;
 

@@ -1,6 +1,6 @@
 import { prisma } from '@falka/db';
 import { logger } from '@falka/logger/server';
-import { getObjectStorageProvider } from '@falka/storage';
+import { getObjectStorageProvider, isPendingStorageKey } from '@falka/storage';
 
 import type { JobResultMetadata } from '../types/index.js';
 import {
@@ -52,7 +52,9 @@ export async function processVerifyStorageConsistencyJob(
     }
   }
 
-  const storageKeys = await storage.listObjectKeys('recordings/', payload.batchSize);
+  // Recording keys are `<organizationId>/...` (no shared prefix across orgs), and this
+  // provider points at the private recordings bucket, so scan from the bucket root.
+  const storageKeys = await storage.listObjectKeys('', payload.batchSize);
   const dbKeys = new Set(
     recordings
       .map((recording) => recording.storageKey)
@@ -61,6 +63,8 @@ export async function processVerifyStorageConsistencyJob(
 
   for (const storageKey of storageKeys) {
     if (dbKeys.has(storageKey)) continue;
+    // In-flight uploads legitimately have no completed recording row yet.
+    if (isPendingStorageKey(storageKey)) continue;
 
     const referenced = await prisma.recording.findFirst({
       where: { storageKey },

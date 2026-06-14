@@ -1,14 +1,13 @@
 import { prisma } from '@falka/db';
 import { FAILED_UPLOAD_RETENTION_DAYS, STALE_RECORDING_SESSION_HOURS } from '@falka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider } from '@falka/storage';
+import { getObjectStorageProvider, isPendingStorageKey } from '@falka/storage';
 
 import {
   cleanupFailedUploadsJobSchema,
   type CleanupFailedUploadsJobPayload,
   type JobResultMetadata,
 } from '../types/index.js';
-import { isPendingStorageKey } from '../utils/index.js';
 
 type CleanupFailedUploadStats = JobResultMetadata;
 
