@@ -24,6 +24,7 @@ import {
   aggregateInventoryValuation,
   type ValuationVariant,
 } from '../utils/inventory-valuation-aggregate';
+import { computePaymentMix, type PaymentMixInput } from '../utils/payment-mix';
 import { aggregateProfit, aggregateProfitBySku, type SoldLine } from '../utils/profit-aggregate';
 
 const DEFAULT_RANGE_DAYS = 30;
@@ -306,6 +307,34 @@ export class ReportingServerService {
   }
 
   /**
+   * POS payment-method mix over the range: gross total received per tender across
+   * realized counter sales (COMPLETED / PARTIALLY_REFUNDED). Gross `totalAmount`
+   * so it reconciles to the till / QRIS settlement — a payment view, not net-of-tax.
+   */
+  private async loadPosPaymentMix(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<PaymentMixInput[]> {
+    const rows = await prisma.sale.groupBy({
+      by: ['paymentMethod'],
+      where: {
+        organizationId,
+        status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] },
+        createdAt: { gte: from, lte: to },
+      },
+      _sum: { totalAmount: true },
+      _count: { _all: true },
+    });
+
+    return rows.map((row) => ({
+      method: row.paymentMethod,
+      amount: Number(row._sum.totalAmount ?? 0),
+      salesCount: row._count._all,
+    }));
+  }
+
+  /**
    * Per-channel performance: the profit metrics per channel plus revenue share,
    * transactions + average order value, refunds/return rate, and a channel ×
    * period revenue trend. Same realized-sales basis as the profit report.
@@ -315,8 +344,16 @@ export class ReportingServerService {
     query: ProfitReportQuery,
   ): Promise<ChannelPerformanceReport> {
     const { lines, from, to } = await this.loadSoldLines(organizationId, query);
-    const transactions = await this.loadTransactionCounts(organizationId, from, to);
-    return aggregateChannelPerformance(lines, transactions, { from, to, groupBy: query.groupBy });
+    const [transactions, paymentRows] = await Promise.all([
+      this.loadTransactionCounts(organizationId, from, to),
+      this.loadPosPaymentMix(organizationId, from, to),
+    ]);
+    return aggregateChannelPerformance(lines, transactions, {
+      from,
+      to,
+      groupBy: query.groupBy,
+      paymentMix: computePaymentMix(paymentRows),
+    });
   }
 
   /**

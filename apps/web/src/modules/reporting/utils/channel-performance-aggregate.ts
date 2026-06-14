@@ -2,6 +2,7 @@ import type {
   ChannelPerformanceReport,
   ChannelPerformanceRow,
   ChannelTrendPeriod,
+  PaymentMixRow,
   ProfitChannel,
   ProfitPeriodGranularity,
 } from '../types';
@@ -33,7 +34,13 @@ function pct(part: number, whole: number): number | null {
 export function aggregateChannelPerformance(
   lines: SoldLine[],
   transactions: TransactionsByChannel,
-  opts: { from: Date; to: Date; groupBy: ProfitPeriodGranularity },
+  opts: {
+    from: Date;
+    to: Date;
+    groupBy: ProfitPeriodGranularity;
+    /** POS payment-method mix (computed upstream); defaults to none. */
+    paymentMix?: PaymentMixRow[];
+  },
 ): ChannelPerformanceReport {
   const accByChannel = new Map<ProfitChannel, Acc>();
   const refundByChannel = new Map<ProfitChannel, number>();
@@ -119,5 +126,6 @@ export function aggregateChannelPerformance(
     },
     byChannel,
     trend,
+    paymentMix: opts.paymentMix ?? [],
   };
 }

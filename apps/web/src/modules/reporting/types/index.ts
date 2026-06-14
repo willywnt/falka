@@ -1,4 +1,4 @@
-import type { MarketplaceProvider } from '@prisma/client';
+import type { MarketplaceProvider, SalePaymentMethod } from '@prisma/client';
 
 /** Where a realized sale happened: the offline counter or a marketplace channel. */
 export type ProfitChannel = 'POS' | MarketplaceProvider;
@@ -85,6 +85,22 @@ export type ChannelPerformanceRow = ProfitMetrics & {
   returnRatePct: number | null;
 };
 
+/**
+ * How counter (POS) customers paid over the range: total RECEIVED per tender
+ * (gross `totalAmount`, so it reconciles to the till / QRIS settlement — a
+ * payment concept, not net-of-tax revenue). Marketplace orders have no tender, so
+ * this is POS-only.
+ */
+export type PaymentMixRow = {
+  method: SalePaymentMethod;
+  /** Gross total received via this method over the range (money string). */
+  amount: string;
+  /** Number of POS sales paid with this method. */
+  salesCount: number;
+  /** Share of the period's total POS receipts (%, null when the total is 0). */
+  sharePct: number | null;
+};
+
 /** One row of the channel × period trend matrix: net revenue per channel for a period. */
 export type ChannelTrendPeriod = {
   period: string;
@@ -110,6 +126,8 @@ export type ChannelPerformanceReport = {
   byChannel: ChannelPerformanceRow[];
   /** Per-period rows, oldest first (the trend matrix's rows). */
   trend: ChannelTrendPeriod[];
+  /** POS payment-method mix over the range (gross receipts per tender). */
+  paymentMix: PaymentMixRow[];
 };
 
 /**

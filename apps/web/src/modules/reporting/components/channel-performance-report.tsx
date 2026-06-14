@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import type { SalePaymentMethod } from '@prisma/client';
 import { Banknote, Crown, Percent, Receipt, Store, Wallet } from 'lucide-react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -24,6 +25,14 @@ import { channelLabel } from '../utils/channel-label';
 import { formatPct, marginClass } from '../utils/format';
 import { useChannelPerformanceQuery, type ProfitReportParams } from '../hooks/use-reporting';
 import type { ChannelPerformanceReport as ChannelReportData } from '../types';
+
+const PAYMENT_METHOD_LABELS: Record<SalePaymentMethod, string> = {
+  CASH: 'Tunai',
+  QRIS: 'QRIS',
+  TRANSFER: 'Transfer',
+  CARD: 'Kartu',
+  OTHER: 'Lainnya',
+};
 
 const ChannelDonutChart = dynamic(
   () => import('@/components/charts/channel-donut-chart').then((m) => m.ChannelDonutChart),
@@ -360,6 +369,38 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
           </div>
         </CardContent>
       </Card>
+
+      {data.paymentMix.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Metode pembayaran (POS)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-3 text-xs">
+              Total diterima per metode di kasir (kotor, sebelum refund).
+            </p>
+            <ul className="space-y-3">
+              {data.paymentMix.map((row) => (
+                <li key={row.method} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">{PAYMENT_METHOD_LABELS[row.method]}</span>
+                    <span className="text-muted-foreground num">
+                      {formatCurrency(row.amount)} · {row.salesCount} transaksi ·{' '}
+                      <span className="text-foreground">{formatPct(row.sharePct)}</span>
+                    </span>
+                  </div>
+                  <div className="bg-muted h-2 overflow-hidden rounded-full">
+                    <div
+                      className="bg-primary h-full rounded-full"
+                      style={{ width: `${row.sharePct ?? 0}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
