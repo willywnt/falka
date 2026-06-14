@@ -7,6 +7,7 @@ import {
   DownloadCloud,
   Link2,
   Link2Off,
+  PlugZap,
   RefreshCw,
   ShoppingCart,
   Wand2,
@@ -34,7 +35,11 @@ import { VariantPickerDialog } from '@/components/variant-picker-dialog';
 import { formatDateTime } from '@/lib/formatters';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 
-import { useMarketplaceConnectionQuery } from '../hooks/use-marketplace-connections';
+import {
+  useMarketplaceConnectionQuery,
+  useRefreshConnectionMutation,
+  useTestConnectionMutation,
+} from '../hooks/use-marketplace-connections';
 import {
   useImportListingsMutation,
   useMapListingMutation,
@@ -84,6 +89,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   const unmapMutation = useUnmapListingMutation(connectionId);
   const syncToggleMutation = useSetSyncEnabledMutation(connectionId);
   const syncNowMutation = useSyncNowMutation(connectionId);
+  const refreshMutation = useRefreshConnectionMutation(connectionId);
+  const testMutation = useTestConnectionMutation(connectionId);
 
   async function handleImport() {
     try {
@@ -156,6 +163,32 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
       });
     } catch (error) {
       toast.error('Gagal sinkronisasi', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      });
+    }
+  }
+
+  async function handleRefreshToken() {
+    try {
+      await refreshMutation.mutateAsync();
+      toast.success('Token diperbarui', { description: 'Akses ke Lazada diperpanjang.' });
+    } catch (error) {
+      toast.error('Gagal memperbarui token', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      });
+    }
+  }
+
+  async function handleTestConnection() {
+    try {
+      const result = await testMutation.mutateAsync();
+      if (result.ready) {
+        toast.success('Koneksi sehat', { description: 'Token Lazada valid.' });
+      } else {
+        toast.error('Koneksi bermasalah', { description: result.reason ?? 'Token tidak valid.' });
+      }
+    } catch (error) {
+      toast.error('Gagal tes koneksi', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -340,6 +373,26 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         {/* Both header actions need marketplace.manage — drop the whole strip, not an empty box. */}
         {canManage ? (
           <div className="flex flex-wrap gap-2">
+            {connection?.provider === 'LAZADA' ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleTestConnection()}
+                  disabled={testMutation.isPending}
+                >
+                  <PlugZap className="size-4" />
+                  {testMutation.isPending ? 'Mengetes...' : 'Test koneksi'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleRefreshToken()}
+                  disabled={refreshMutation.isPending}
+                >
+                  <RefreshCw className="size-4" />
+                  {refreshMutation.isPending ? 'Memperbarui...' : 'Perbarui token'}
+                </Button>
+              </>
+            ) : null}
             <Button
               variant="outline"
               onClick={() => void handleRerunAutoMap()}

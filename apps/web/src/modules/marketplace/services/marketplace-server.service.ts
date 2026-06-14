@@ -224,6 +224,50 @@ export class MarketplaceServerService {
     };
   }
 
+  /**
+   * Re-seal a connection's tokens after an OAuth refresh (new access token, possibly a
+   * rotated refresh token + a new expiry). Keeps the old refresh token if the provider
+   * didn't return a new one. Server-only — decrypted tokens never leave the server.
+   */
+  async applyRefreshedTokens(
+    organizationId: string,
+    actorUserId: string,
+    connectionId: string,
+    input: { accessToken: string; refreshToken: string | null; expiresAt: Date | null },
+  ): Promise<MarketplaceConnectionDetail> {
+    const connection = await this.getOwnedConnection(connectionId, organizationId);
+
+    const encryptedAccessToken = marketplaceEncryptionService.encryptToken(input.accessToken);
+    const encryptedRefreshToken = input.refreshToken
+      ? marketplaceEncryptionService.encryptToken(input.refreshToken)
+      : connection.encryptedRefreshToken;
+
+    const updated = await prisma.marketplaceConnection.update({
+      where: { id: connectionId },
+      data: {
+        encryptedAccessToken,
+        encryptedRefreshToken,
+        tokenExpiresAt: input.expiresAt,
+        isActive: true,
+      },
+    });
+
+    appLogger.info('marketplace.token_refreshed', {
+      organizationId,
+      connectionId,
+      provider: updated.provider,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'marketplace.token_refreshed',
+      resource: 'marketplace_connection',
+      metadata: { connectionId, provider: updated.provider, shopId: updated.shopId },
+    });
+
+    return mapConnection(updated);
+  }
+
   private async getOwnedConnection(connectionId: string, organizationId: string) {
     const connection = await prisma.marketplaceConnection.findFirst({
       where: {

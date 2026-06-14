@@ -6,10 +6,7 @@ import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
 
-import type {
-  MarketplaceConnectionDetail,
-  MarketplaceConnectionListItem,
-} from '../types';
+import type { MarketplaceConnectionDetail, MarketplaceConnectionListItem } from '../types';
 import type { CreateMarketplaceConnectionInput } from '../validators/create-connection';
 
 export const marketplaceKeys = {
@@ -67,6 +64,45 @@ export function useCreateMarketplaceConnectionMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: marketplaceKeys.all });
+    },
+  });
+}
+
+export function useRefreshConnectionMutation(connectionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await apiFetch<MarketplaceConnectionDetail>(
+        `${apiRoutes.marketplace}/${connectionId}/refresh`,
+        { method: 'POST' },
+      );
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: marketplaceKeys.all });
+    },
+  });
+}
+
+export function useTestConnectionMutation(connectionId: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const result = await apiFetch<{ ready: boolean; reason?: string }>(
+        `${apiRoutes.marketplace}/${connectionId}/test`,
+        { method: 'POST' },
+      );
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
     },
   });
 }

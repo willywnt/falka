@@ -1,7 +1,12 @@
 import 'server-only';
 
 import { getServerEnv } from '@falka/config/env.server';
-import { exchangeLazadaCode } from '@falka/marketplace-providers';
+import {
+  createLazadaClient,
+  exchangeLazadaCode,
+  isLazadaSuccess,
+  refreshLazadaToken,
+} from '@falka/marketplace-providers';
 import { MarketplaceProvider } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
@@ -83,6 +88,74 @@ class LazadaOAuthService {
     });
 
     return { connectionId: connection.id };
+  }
+
+  /** Renew a connection's access token from its stored refresh token (re-seal + new expiry). */
+  async refreshConnection(
+    organizationId: string,
+    actorUserId: string,
+    connectionId: string,
+  ): Promise<void> {
+    const env = getServerEnv();
+    if (!env.LAZADA_APP_KEY || !env.LAZADA_APP_SECRET) {
+      throw MarketplaceError.validation('Kredensial app Lazada belum dikonfigurasi.');
+    }
+
+    const tokens = await marketplaceServerService.getDecryptedTokens(organizationId, connectionId);
+    if (tokens.provider !== MarketplaceProvider.LAZADA) {
+      throw MarketplaceError.validation('Hanya koneksi Lazada yang mendukung refresh token.');
+    }
+    if (!tokens.refreshToken) {
+      throw MarketplaceError.validation('Tidak ada refresh token tersimpan untuk koneksi ini.');
+    }
+
+    const refreshed = await refreshLazadaToken({
+      appKey: env.LAZADA_APP_KEY,
+      appSecret: env.LAZADA_APP_SECRET,
+      baseUrl: env.LAZADA_API_BASE_URL ?? DEFAULT_BASE_URL,
+      refreshToken: tokens.refreshToken,
+    });
+
+    const expiresAt =
+      refreshed.expiresIn > 0 ? new Date(Date.now() + refreshed.expiresIn * 1000) : null;
+
+    await marketplaceServerService.applyRefreshedTokens(organizationId, actorUserId, connectionId, {
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken || null,
+      expiresAt,
+    });
+
+    appLogger.info('marketplace.lazada.oauth.refreshed', { organizationId, connectionId });
+  }
+
+  /** Probe a connection's token with GET /seller/get so the user can verify it before relying on it. */
+  async testConnection(
+    organizationId: string,
+    connectionId: string,
+  ): Promise<{ ready: boolean; reason?: string }> {
+    const env = getServerEnv();
+    if (!env.LAZADA_APP_KEY || !env.LAZADA_APP_SECRET) {
+      throw MarketplaceError.validation('Kredensial app Lazada belum dikonfigurasi.');
+    }
+
+    const tokens = await marketplaceServerService.getDecryptedTokens(organizationId, connectionId);
+    if (tokens.provider !== MarketplaceProvider.LAZADA) {
+      throw MarketplaceError.validation('Hanya koneksi Lazada yang bisa dites.');
+    }
+
+    const client = createLazadaClient({
+      appKey: env.LAZADA_APP_KEY,
+      appSecret: env.LAZADA_APP_SECRET,
+      baseUrl: env.LAZADA_API_BASE_URL ?? DEFAULT_BASE_URL,
+    });
+    const response = await client.call('/seller/get', {
+      method: 'GET',
+      accessToken: tokens.accessToken,
+    });
+
+    return isLazadaSuccess(response)
+      ? { ready: true }
+      : { ready: false, reason: response.message ?? `Lazada error ${response.code}` };
   }
 }
 
