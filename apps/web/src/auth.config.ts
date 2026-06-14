@@ -36,6 +36,40 @@ function isAuthPath(pathname: string): boolean {
   );
 }
 
+export type RouteAccessDecision =
+  | { type: 'allow' }
+  | { type: 'signin' }
+  | { type: 'redirect'; to: string };
+
+/**
+ * Single source of route-gating truth, shared by `authorized` (below) and the middleware.
+ * The middleware uses the custom-function form of `auth()`, where `authorized` returning
+ * `false` does NOT auto-redirect — so the middleware must read this decision and act on it.
+ * Keeping the rules here means the two paths can never disagree (HARD CONSTRAINT #2).
+ */
+export function resolveRouteAccess(
+  pathname: string,
+  auth: { user?: { role?: UserRole | null } | null } | null,
+): RouteAccessDecision {
+  const isLoggedIn = Boolean(auth?.user);
+  // Platform admin-ops operators belong in /admin and never see the shop.
+  const isPlatformAdmin = auth?.user?.role === 'ADMIN';
+  const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
+  const home = isPlatformAdmin ? '/admin' : '/dashboard';
+
+  if (isProtectedPath(pathname)) {
+    if (!isLoggedIn) return { type: 'signin' };
+    if (isPlatformAdmin && !isAdminArea) return { type: 'redirect', to: '/admin' };
+    return { type: 'allow' };
+  }
+
+  if (isLoggedIn && isAuthPath(pathname)) {
+    return { type: 'redirect', to: home };
+  }
+
+  return { type: 'allow' };
+}
+
 export const authConfig = {
   pages: AUTH_PAGES,
   session: {
@@ -61,26 +95,13 @@ export const authConfig = {
   trustHost: true,
   callbacks: {
     authorized({ auth, request }) {
-      const { pathname } = request.nextUrl;
-      const isLoggedIn = Boolean(auth?.user);
-      // Platform admin-ops operators belong in /admin and never see the shop.
-      const isPlatformAdmin = auth?.user?.role === 'ADMIN';
-      const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
-      const home = isPlatformAdmin ? '/admin' : '/dashboard';
-
-      if (isProtectedPath(pathname)) {
-        if (!isLoggedIn) return false;
-        if (isPlatformAdmin && !isAdminArea) {
-          return Response.redirect(new URL('/admin', request.nextUrl));
-        }
-        return true;
+      const decision = resolveRouteAccess(request.nextUrl.pathname, auth);
+      if (decision.type === 'redirect') {
+        return Response.redirect(new URL(decision.to, request.nextUrl));
       }
-
-      if (isLoggedIn && isAuthPath(pathname)) {
-        return Response.redirect(new URL(home, request.nextUrl));
-      }
-
-      return true;
+      // `signin` => false lets next-auth send the bare-`auth` form to the login page;
+      // the middleware (custom-function form) enforces the same decision explicitly.
+      return decision.type === 'allow';
     },
     jwt({ token, user }) {
       if (user) {
