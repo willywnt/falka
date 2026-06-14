@@ -96,9 +96,17 @@ Three commits on `feat/org-foundation` (all gates green: typecheck · lint · 32
 menus vanish; as platform admin → land on `/admin`, `/dashboard` bounces back to `/admin`; create an
 org + owner, set memberLimit and hit the cap; `/register` without a code refused.
 
+## Locked: one organization per user
+
+**1 user = 1 organization** is the locked model, enforced by the `@unique` on
+`OrganizationMember.userId`. The redundant `@@unique([organizationId, userId])` composite was
+removed (migration `20260614000000_drop_member_composite_unique`); team reads/writes key off the
+`userId` unique, org-scoped by a preceding ownership check. Multi-org per user is intentionally
+not supported — re-introducing it means dropping the `userId @unique`, not adding a constraint.
+
 ## Not built (future)
 
-- Multi-org per user (drop the `@@unique([userId])` on membership), ownership transfer, a second
+- Multi-org per user (see above — intentionally not supported), ownership transfer, a second
   OWNER. Email-based invites. Per-resource finer permissions beyond the catalog. Real billing
   integration (the `plan` field is a labeled placeholder). Forced password reset on first login
   for admin-provisioned accounts (the initial password is shared manually in plaintext).

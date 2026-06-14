@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     organizationInvite: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
-    organizationMember: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    organizationMember: { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() },
   },
 }));
 
@@ -75,7 +75,7 @@ describe('createInvite', () => {
 
 describe('member mutations', () => {
   it('refuses to change the OWNER row', async () => {
-    prismaMock.organizationMember.findUnique.mockResolvedValue({ role: 'OWNER' });
+    prismaMock.organizationMember.findFirst.mockResolvedValue({ role: 'OWNER' });
 
     await expect(
       service.updateMemberRole(ORG, 'u-owner', 'u-owner', 'ADMIN'),
@@ -84,7 +84,7 @@ describe('member mutations', () => {
   });
 
   it('refuses to remove the OWNER row', async () => {
-    prismaMock.organizationMember.findUnique.mockResolvedValue({ role: 'OWNER' });
+    prismaMock.organizationMember.findFirst.mockResolvedValue({ role: 'OWNER' });
 
     await expect(service.removeMember(ORG, 'u-owner', 'u-owner')).rejects.toMatchObject({
       code: 'FORBIDDEN',
@@ -93,18 +93,18 @@ describe('member mutations', () => {
   });
 
   it('changes a STAFF member to ADMIN', async () => {
-    prismaMock.organizationMember.findUnique.mockResolvedValue({ role: 'STAFF' });
+    prismaMock.organizationMember.findFirst.mockResolvedValue({ role: 'STAFF' });
 
     await service.updateMemberRole(ORG, 'u-owner', 'u-staff', 'ADMIN');
 
     expect(prismaMock.organizationMember.update).toHaveBeenCalledWith({
-      where: { organizationId_userId: { organizationId: ORG, userId: 'u-staff' } },
+      where: { userId: 'u-staff' },
       data: { role: 'ADMIN' },
     });
   });
 
   it('throws not-found for an unknown member', async () => {
-    prismaMock.organizationMember.findUnique.mockResolvedValue(null);
+    prismaMock.organizationMember.findFirst.mockResolvedValue(null);
 
     await expect(service.removeMember(ORG, 'u-owner', 'ghost')).rejects.toMatchObject({
       code: 'NOT_FOUND',

@@ -153,8 +153,10 @@ export class TeamService {
 
     if (member.role === role) return;
 
+    // userId is globally unique (one org per user), and getModifiableMember already
+    // confirmed this membership belongs to organizationId and is not the OWNER.
     await prisma.organizationMember.update({
-      where: { organizationId_userId: { organizationId, userId: memberUserId } },
+      where: { userId: memberUserId },
       data: { role },
     });
 
@@ -177,7 +179,7 @@ export class TeamService {
     await this.getModifiableMember(organizationId, memberUserId);
 
     await prisma.organizationMember.delete({
-      where: { organizationId_userId: { organizationId, userId: memberUserId } },
+      where: { userId: memberUserId },
     });
 
     void auditService.log({
@@ -191,8 +193,10 @@ export class TeamService {
 
   /** A member that exists in the org and is NOT the (immutable) OWNER. */
   private async getModifiableMember(organizationId: string, memberUserId: string) {
-    const member = await prisma.organizationMember.findUnique({
-      where: { organizationId_userId: { organizationId, userId: memberUserId } },
+    // Org-scoped lookup: userId is globally unique, so this resolves the member only when
+    // they belong to organizationId (null otherwise) — the org boundary stays intact.
+    const member = await prisma.organizationMember.findFirst({
+      where: { userId: memberUserId, organizationId },
       select: { role: true },
     });
 

@@ -130,7 +130,8 @@ model OrganizationMember {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   /**
-   * v1: ONE membership per user (drop this unique to allow multi-org later).
+   * Exactly ONE organization per user (locked decision). This @unique on userId is the
+   * single source of that rule; multi-org per user is intentionally not supported.
    */
   userId         String       @unique
   user           User         @relation(fields: [userId], references: [id])
@@ -138,7 +139,6 @@ model OrganizationMember {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@unique([organizationId, userId])
   @@index([organizationId])
   @@map("organization_members")
 }
