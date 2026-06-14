@@ -9,6 +9,7 @@ import {
   processCleanupRecordingsJob,
   processPropagateInventoryStockJob,
   processReconcileMarketplaceDriftJob,
+  processRefreshMarketplaceTokensJob,
   processRecalculateStorageJob,
   processSyncMarketplaceStockJob,
   processVerifyStorageConsistencyJob,
@@ -61,7 +62,13 @@ export function registerAllWorkers() {
 
   createWorker(QUEUE_NAMES.MARKETPLACE_RECONCILE, {
     concurrency: 1,
-    processor: async (job: Job) => runJobWithLogging(job, processReconcileMarketplaceDriftJob),
+    processor: async (job: Job) => {
+      if (job.name === JOB_NAMES.REFRESH_MARKETPLACE_TOKENS) {
+        return runJobWithLogging(job, processRefreshMarketplaceTokensJob);
+      }
+
+      return runJobWithLogging(job, processReconcileMarketplaceDriftJob);
+    },
   });
 
   return {

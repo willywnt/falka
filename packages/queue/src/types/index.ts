@@ -21,6 +21,7 @@ export const JOB_NAMES = {
   PROPAGATE_INVENTORY_STOCK: 'propagate-inventory-stock',
   SYNC_MARKETPLACE_STOCK: 'sync-marketplace-stock',
   RECONCILE_MARKETPLACE_DRIFT: 'reconcile-marketplace-drift',
+  REFRESH_MARKETPLACE_TOKENS: 'refresh-marketplace-tokens',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -98,6 +99,15 @@ export type ReconcileMarketplaceDriftJobPayload = z.infer<
   typeof reconcileMarketplaceDriftJobSchema
 >;
 
+export const refreshMarketplaceTokensJobSchema = z.object({
+  /** Refresh tokens that expire within this many days (catches lapsed ones too). */
+  expiringWithinDays: z.number().int().positive().max(60).default(7),
+  /** Max connections to refresh per run. */
+  batchSize: z.number().int().positive().max(500).default(100),
+});
+
+export type RefreshMarketplaceTokensJobPayload = z.infer<typeof refreshMarketplaceTokensJobSchema>;
+
 export type JobPayloadMap = {
   [JOB_NAMES.CLEANUP_RECORDINGS]: CleanupRecordingsJobPayload;
   [JOB_NAMES.RECALCULATE_STORAGE]: RecalculateStorageJobPayload;
@@ -107,6 +117,7 @@ export type JobPayloadMap = {
   [JOB_NAMES.PROPAGATE_INVENTORY_STOCK]: PropagateInventoryStockJobPayload;
   [JOB_NAMES.SYNC_MARKETPLACE_STOCK]: SyncMarketplaceStockJobPayload;
   [JOB_NAMES.RECONCILE_MARKETPLACE_DRIFT]: ReconcileMarketplaceDriftJobPayload;
+  [JOB_NAMES.REFRESH_MARKETPLACE_TOKENS]: RefreshMarketplaceTokensJobPayload;
 };
 
 export type JobResultMetadata = {

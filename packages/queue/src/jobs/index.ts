@@ -26,6 +26,10 @@ import {
   getDefaultReconcileMarketplaceDriftPayload,
   processReconcileMarketplaceDriftJob,
 } from './reconcile-marketplace-drift.job.js';
+import {
+  getDefaultRefreshMarketplaceTokensPayload,
+  processRefreshMarketplaceTokensJob,
+} from './refresh-marketplace-tokens.job.js';
 import { processSyncMarketplaceStockJob } from './sync-marketplace-stock.job.js';
 
 export {
@@ -44,4 +48,6 @@ export {
   processSyncMarketplaceStockJob,
   processReconcileMarketplaceDriftJob,
   getDefaultReconcileMarketplaceDriftPayload,
+  processRefreshMarketplaceTokensJob,
+  getDefaultRefreshMarketplaceTokensPayload,
 };

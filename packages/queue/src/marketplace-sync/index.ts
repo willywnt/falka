@@ -9,3 +9,4 @@ export * from './sync-repository.js';
 export * from './sync-engine.js';
 export * from './drift.js';
 export * from './drift-repository.js';
+export * from './token-repository.js';

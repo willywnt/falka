@@ -7,6 +7,7 @@ import {
   getDefaultCleanupFailedUploadsPayload,
   getDefaultCleanupRecordingsPayload,
   getDefaultReconcileMarketplaceDriftPayload,
+  getDefaultRefreshMarketplaceTokensPayload,
   getDefaultRecalculateStoragePayload,
   getDefaultVerifyStorageConsistencyPayload,
 } from '../jobs/index.js';
@@ -82,6 +83,19 @@ export async function registerScheduledJobs(): Promise<void> {
         'daily',
       ),
       repeat: { pattern: '0 6 * * *' },
+    },
+  );
+
+  await marketplaceReconcileQueue.add(
+    JOB_NAMES.REFRESH_MARKETPLACE_TOKENS,
+    getDefaultRefreshMarketplaceTokensPayload(),
+    {
+      jobId: buildScheduledJobId(
+        QUEUE_NAMES.MARKETPLACE_RECONCILE,
+        JOB_NAMES.REFRESH_MARKETPLACE_TOKENS,
+        'daily',
+      ),
+      repeat: { pattern: '0 5 * * *' },
     },
   );
 
