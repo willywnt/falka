@@ -37,6 +37,8 @@ const serverEnvSchema = z
     LAZADA_APP_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
     LAZADA_APP_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
     LAZADA_API_BASE_URL: optionalUrl,
+    // OAuth redirect/callback URL registered in the Lazada app (must match exactly).
+    LAZADA_OAUTH_REDIRECT_URI: optionalUrl,
 
     MARKETPLACE_ENCRYPTION_SECRET: z.string().min(32),
 
