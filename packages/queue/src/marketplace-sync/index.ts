@@ -7,3 +7,4 @@ export * from './providers/lazada-stock-provider.js';
 export * from './register-providers.js';
 export * from './sync-repository.js';
 export * from './sync-engine.js';
+export * from './drift.js';

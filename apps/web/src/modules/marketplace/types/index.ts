@@ -1,3 +1,4 @@
+import type { StockDriftSummary } from '@falka/queue';
 import type {
   MarketplaceMappingStatus,
   MarketplaceProvider,
@@ -74,4 +75,43 @@ export type MarketplaceListingItem = {
 export type ImportListingsResult = {
   imported: number;
   autoMapped: number;
+};
+
+export type MarketplaceHealthTone = 'ok' | 'warn' | 'danger';
+
+/** A per-connection health snapshot, computed on-read from local data (no provider call). */
+export type MarketplaceConnectionHealth = {
+  connectionId: string;
+  provider: MarketplaceProvider;
+  shopId: string;
+  shopName: string;
+  isActive: boolean;
+  connectionStatus: MarketplaceConnectionStatus;
+  tokenStatus: TokenStatus;
+  tokenExpiresAt: string | null;
+  /** Whole days until the token expires; negative once expired, null when unset. */
+  tokenExpiresInDays: number | null;
+  tokenExpiringSoon: boolean;
+  lastImportedAt: string | null;
+  lastOrdersPulledAt: string | null;
+  mappedCount: number;
+  syncEnabledCount: number;
+  needsReviewCount: number;
+  failedSyncCount: number;
+  /** Sync-job outcomes over the recent window (last 7 days). */
+  recentSync: { success: number; failed: number; pending: number };
+  tone: MarketplaceHealthTone;
+};
+
+// Drift shapes live in @falka/queue so the worker reconciliation job and this
+// web service compute drift the same way; re-exported here for the client.
+export type { StockDriftLine, StockDriftStatus, StockDriftSummary } from '@falka/queue';
+
+/** The result of a live drift check against one connection's provider. */
+export type MarketplaceDriftReport = {
+  connectionId: string;
+  provider: MarketplaceProvider;
+  shopName: string;
+  checkedAt: string;
+  summary: StockDriftSummary;
 };
