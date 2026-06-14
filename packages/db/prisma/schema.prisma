@@ -4,7 +4,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Runtime: the pooled connection (Neon -pooler / PgBouncer) — safe for serverless.
   url      = env("DATABASE_URL")
+  // Migrations + introspection: a DIRECT (non-pooled) connection. PgBouncer can't hold the
+  // session advisory lock `migrate deploy` needs (P1002 timeout), so point migrations at the
+  // direct endpoint. Locally set DIRECT_URL to the same value as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
