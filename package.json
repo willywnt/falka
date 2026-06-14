@@ -31,6 +31,7 @@
     "db:reset-demo": "pnpm --filter @falka/db db:reset-demo",
     "lazada:smoke": "pnpm --filter @falka/marketplace-providers build && node scripts/lazada-smoke.mjs",
     "lazada:token": "pnpm --filter @falka/marketplace-providers build && node scripts/lazada-token.mjs",
+    "lazada:products": "pnpm --filter @falka/marketplace-providers build && node scripts/lazada-products.mjs",
     "prepare": "node scripts/prepare.mjs"
   },
   "devDependencies": {
