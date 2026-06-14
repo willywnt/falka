@@ -7,6 +7,7 @@ export const QUEUE_NAMES = {
   AUDIT_CLEANUP: 'audit-cleanup',
   MARKETPLACE_PROPAGATE: 'marketplace-propagate',
   MARKETPLACE_STOCK_SYNC: 'marketplace-stock-sync',
+  MARKETPLACE_RECONCILE: 'marketplace-reconcile',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -19,6 +20,7 @@ export const JOB_NAMES = {
   VERIFY_STORAGE_CONSISTENCY: 'verify-storage-consistency',
   PROPAGATE_INVENTORY_STOCK: 'propagate-inventory-stock',
   SYNC_MARKETPLACE_STOCK: 'sync-marketplace-stock',
+  RECONCILE_MARKETPLACE_DRIFT: 'reconcile-marketplace-drift',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -87,6 +89,15 @@ export const syncMarketplaceStockJobSchema = z.object({
 
 export type SyncMarketplaceStockJobPayload = z.infer<typeof syncMarketplaceStockJobSchema>;
 
+export const reconcileMarketplaceDriftJobSchema = z.object({
+  /** Max connections to reconcile per run (caps provider calls). */
+  batchSize: z.number().int().positive().max(500).default(100),
+});
+
+export type ReconcileMarketplaceDriftJobPayload = z.infer<
+  typeof reconcileMarketplaceDriftJobSchema
+>;
+
 export type JobPayloadMap = {
   [JOB_NAMES.CLEANUP_RECORDINGS]: CleanupRecordingsJobPayload;
   [JOB_NAMES.RECALCULATE_STORAGE]: RecalculateStorageJobPayload;
@@ -95,6 +106,7 @@ export type JobPayloadMap = {
   [JOB_NAMES.VERIFY_STORAGE_CONSISTENCY]: VerifyStorageConsistencyJobPayload;
   [JOB_NAMES.PROPAGATE_INVENTORY_STOCK]: PropagateInventoryStockJobPayload;
   [JOB_NAMES.SYNC_MARKETPLACE_STOCK]: SyncMarketplaceStockJobPayload;
+  [JOB_NAMES.RECONCILE_MARKETPLACE_DRIFT]: ReconcileMarketplaceDriftJobPayload;
 };
 
 export type JobResultMetadata = {

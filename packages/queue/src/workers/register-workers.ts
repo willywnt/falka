@@ -8,6 +8,7 @@ import {
   processCleanupFailedUploadsJob,
   processCleanupRecordingsJob,
   processPropagateInventoryStockJob,
+  processReconcileMarketplaceDriftJob,
   processRecalculateStorageJob,
   processSyncMarketplaceStockJob,
   processVerifyStorageConsistencyJob,
@@ -56,6 +57,11 @@ export function registerAllWorkers() {
           job.opts.attempts ?? JOB_DEFAULT_ATTEMPTS,
         ),
       ),
+  });
+
+  createWorker(QUEUE_NAMES.MARKETPLACE_RECONCILE, {
+    concurrency: 1,
+    processor: async (job: Job) => runJobWithLogging(job, processReconcileMarketplaceDriftJob),
   });
 
   return {

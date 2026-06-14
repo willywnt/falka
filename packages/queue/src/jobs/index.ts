@@ -22,6 +22,10 @@ import {
   buildPropagateInventoryStockEnqueueOptions,
   processPropagateInventoryStockJob,
 } from './propagate-inventory-stock.job.js';
+import {
+  getDefaultReconcileMarketplaceDriftPayload,
+  processReconcileMarketplaceDriftJob,
+} from './reconcile-marketplace-drift.job.js';
 import { processSyncMarketplaceStockJob } from './sync-marketplace-stock.job.js';
 
 export {
@@ -38,4 +42,6 @@ export {
   processPropagateInventoryStockJob,
   buildPropagateInventoryStockEnqueueOptions,
   processSyncMarketplaceStockJob,
+  processReconcileMarketplaceDriftJob,
+  getDefaultReconcileMarketplaceDriftPayload,
 };

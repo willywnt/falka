@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { prisma } from '@falka/db';
-import { computeStockDrift } from '@falka/queue';
-import type { DriftExternalInput, DriftMappedInput } from '@falka/queue';
+import { computeStockDrift, findDriftMappedListings } from '@falka/queue';
+import type { DriftExternalInput } from '@falka/queue';
 
 import { appLogger } from '@/lib/logger';
 
@@ -27,52 +27,7 @@ export class MarketplaceReconciliationService {
       throw MarketplaceError.validation('Marketplace connection is not active.');
     }
 
-    const listingRows = await prisma.marketplaceProduct.findMany({
-      where: {
-        marketplaceConnectionId: connectionId,
-        organizationId,
-        deletedAt: null,
-        mapping: { isNot: null },
-      },
-      select: {
-        id: true,
-        externalProductId: true,
-        externalVariantId: true,
-        externalSku: true,
-        mapping: {
-          select: {
-            syncEnabled: true,
-            productVariant: {
-              select: {
-                id: true,
-                sku: true,
-                name: true,
-                product: { select: { name: true } },
-                inventory: { select: { availableStock: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const mapped: DriftMappedInput[] = [];
-    for (const row of listingRows) {
-      if (!row.mapping) continue;
-      const variant = row.mapping.productVariant;
-      mapped.push({
-        marketplaceProductId: row.id,
-        externalProductId: row.externalProductId,
-        externalVariantId: row.externalVariantId,
-        externalSku: row.externalSku,
-        variantId: variant.id,
-        variantSku: variant.sku,
-        variantName: variant.name,
-        productName: variant.product.name,
-        internalAvailable: variant.inventory?.availableStock ?? 0,
-        syncEnabled: row.mapping.syncEnabled,
-      });
-    }
+    const mapped = await findDriftMappedListings(organizationId, connectionId);
 
     const adapter = getMarketplaceImportAdapter(connection.provider);
     const listings = await adapter.fetchListings({

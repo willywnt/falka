@@ -2,6 +2,7 @@ import { getServerEnv } from '@falka/config/env.server';
 import {
   buildLazadaQuantityPayload,
   createLazadaClient,
+  fetchLazadaListings,
   isLazadaSuccess,
 } from '@falka/marketplace-providers';
 import type { LazadaClient, LazadaResponse } from '@falka/marketplace-providers';
@@ -10,6 +11,7 @@ import type { MarketplaceProvider } from '@prisma/client';
 import type { NormalizedStockUpdateResponse } from '../stock-normalizer.js';
 import type {
   MarketplaceStockProviderAdapter,
+  ProviderListingSnapshot,
   StockProviderUpdateParams,
 } from '../stock-provider.registry.js';
 import { MarketplaceSyncError, SYNC_ERROR_CODES } from '../sync-errors.js';
@@ -82,5 +84,14 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
     return isLazadaSuccess(response)
       ? { ready: true }
       : { ready: false, reason: response.message ?? `Lazada error ${response.code}` };
+  }
+
+  async fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[]> {
+    const items = await fetchLazadaListings(this.client, { accessToken: params.accessToken });
+    return items.map((item) => ({
+      externalProductId: item.itemId,
+      externalVariantId: item.skuId,
+      stock: item.quantity,
+    }));
   }
 }

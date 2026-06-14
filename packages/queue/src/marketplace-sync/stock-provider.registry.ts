@@ -8,10 +8,23 @@ import type {
 
 export type StockProviderUpdateParams = NormalizedStockUpdateRequest & { accessToken: string };
 
+/** Current external stock for one listing SKU, as reported by the provider. */
+export type ProviderListingSnapshot = {
+  externalProductId: string;
+  externalVariantId: string;
+  stock: number;
+};
+
 export interface MarketplaceStockProviderAdapter {
   readonly provider: MarketplaceProvider;
   updateStock(params: StockProviderUpdateParams): Promise<NormalizedStockUpdateResponse>;
   validateStockSync(accessToken: string): Promise<{ ready: boolean; reason?: string }>;
+  /**
+   * Pull current external stock per SKU for drift reconciliation (read-only).
+   * Returns null when the provider can't enumerate listings (e.g. the Dev/Unwired
+   * stub) so the reconciliation job skips it instead of flagging false drift.
+   */
+  fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[] | null>;
 }
 
 /** Simulates a successful push so the whole pipeline is exercisable without real APIs. */
@@ -29,6 +42,10 @@ export class DevMarketplaceStockProvider implements MarketplaceStockProviderAdap
   validateStockSync(): Promise<{ ready: boolean }> {
     return Promise.resolve({ ready: true });
   }
+
+  fetchListings(): Promise<ProviderListingSnapshot[] | null> {
+    return Promise.resolve(null);
+  }
 }
 
 /** Stand-in for a provider whose real adapter has not been wired yet. */
@@ -43,6 +60,10 @@ export class UnwiredMarketplaceStockProvider implements MarketplaceStockProvider
 
   validateStockSync(): Promise<{ ready: boolean; reason?: string }> {
     return Promise.resolve({ ready: false, reason: 'Provider adapter not wired.' });
+  }
+
+  fetchListings(): Promise<ProviderListingSnapshot[] | null> {
+    return Promise.resolve(null);
   }
 }
 

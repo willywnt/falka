@@ -6,6 +6,7 @@ import {
   getDefaultCleanupAuditLogsPayload,
   getDefaultCleanupFailedUploadsPayload,
   getDefaultCleanupRecordingsPayload,
+  getDefaultReconcileMarketplaceDriftPayload,
   getDefaultRecalculateStoragePayload,
   getDefaultVerifyStorageConsistencyPayload,
 } from '../jobs/index.js';
@@ -16,6 +17,7 @@ export async function registerScheduledJobs(): Promise<void> {
   const storageQueue = createQueue(QUEUE_NAMES.STORAGE_RECALCULATION);
   const uploadRecoveryQueue = createQueue(QUEUE_NAMES.UPLOAD_RECOVERY);
   const auditCleanupQueue = createQueue(QUEUE_NAMES.AUDIT_CLEANUP);
+  const marketplaceReconcileQueue = createQueue(QUEUE_NAMES.MARKETPLACE_RECONCILE);
 
   await recordingCleanupQueue.add(
     JOB_NAMES.CLEANUP_RECORDINGS,
@@ -69,6 +71,19 @@ export async function registerScheduledJobs(): Promise<void> {
     jobId: buildScheduledJobId(QUEUE_NAMES.AUDIT_CLEANUP, JOB_NAMES.CLEANUP_AUDIT_LOGS, 'daily'),
     repeat: { pattern: '0 4 * * *' },
   });
+
+  await marketplaceReconcileQueue.add(
+    JOB_NAMES.RECONCILE_MARKETPLACE_DRIFT,
+    getDefaultReconcileMarketplaceDriftPayload(),
+    {
+      jobId: buildScheduledJobId(
+        QUEUE_NAMES.MARKETPLACE_RECONCILE,
+        JOB_NAMES.RECONCILE_MARKETPLACE_DRIFT,
+        'daily',
+      ),
+      repeat: { pattern: '0 6 * * *' },
+    },
+  );
 
   logger.info('queue.schedulers.registered', {
     queues: Object.values(QUEUE_NAMES),
