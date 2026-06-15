@@ -82,14 +82,15 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 
 ## 🎯 Mid-size features (1 session each)
 
-| #   | Item                                                                 | Module            | Effort | Gate | Notes                                                                                                                                                                                                                    |
-| --- | -------------------------------------------------------------------- | ----------------- | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Per-channel performance report**                                   | reporting         | S      | 🟢   | Shipped: revenue share, AOV, return rate, trend matrix, charts, **POS payment-method mix** (2026-06-15). Remaining: fulfillment time per channel (paid→shipped) + inventory turnover.                                    |
-| 2   | ✅ **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace | L      | 🟢   | **Shipped 2026-06-15** (see ✅ section above): on-demand + scheduled drift detect, on-read provider-health dashboard + nav pulse, scheduled token auto-refresh. Deferred: persistent drift audit-log + alert thresholds. |
-| 3   | **Supplier entity + per-supplier lead time**                         | purchasing        | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.                                         |
+| #   | Item                                                                 | Module            | Effort | Gate | Notes                                                                                                                                                                                                                                  |
+| --- | -------------------------------------------------------------------- | ----------------- | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | ✅ **Per-channel performance report**                                | reporting         | S      | 🟢   | **Done 2026-06-15**: revenue share, AOV, return rate, trend matrix, charts, **POS payment-method mix**, **per-channel time-to-ship** (placedAt→shipped). Deferred: inventory turnover (needs historical inventory we don't track yet). |
+| 2   | ✅ **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace | L      | 🟢   | **Shipped 2026-06-15** (see ✅ section above): on-demand + scheduled drift detect, on-read provider-health dashboard + nav pulse, scheduled token auto-refresh. Deferred: persistent drift audit-log + alert thresholds.               |
+| 3   | **Supplier entity + per-supplier lead time**                         | purchasing        | L      | 🟡   | `Supplier` + `PurchaseOrder.supplierId`; per-supplier `leadTimeDays`/MOQ the reorder report prefers over the variant default. (Free-text `supplierName` today.) Precursor to AP.                                                       |
 
 > _Shipped from this table: **Dead-stock & ABC analysis** + **Stock opname / cycle count** (2026-06-11)
-> · **Phase 6 reconciliation + provider-health + token auto-refresh** (2026-06-15)._
+> · **Phase 6 reconciliation + provider-health + token auto-refresh** + **Per-channel performance report**
+> (2026-06-15)._
 
 ## 🛰️ Big bets (multi-session / gated, sequenced later)
 
