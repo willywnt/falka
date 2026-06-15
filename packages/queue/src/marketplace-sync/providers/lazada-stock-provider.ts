@@ -1,6 +1,6 @@
 import { getServerEnv } from '@falka/config/env.server';
 import {
-  buildLazadaQuantityPayload,
+  buildLazadaSellableStockPayload,
   createLazadaClient,
   fetchLazadaListings,
   isLazadaSuccess,
@@ -16,7 +16,10 @@ import type {
 } from '../stock-provider.registry.js';
 import { MarketplaceSyncError, SYNC_ERROR_CODES } from '../sync-errors.js';
 
-const STOCK_UPDATE_PATH = '/product/price_quantity/update';
+// Sets ABSOLUTE sellable stock; POST only (a GET returns UnsupportedHTTPMethod). This is
+// the stock-only path dropshipping-warehouse sellers can use — /product/price_quantity/update
+// returns SELLER_NOT_PERMITTED for them (live-validated 2026-06-15).
+const STOCK_ADJUST_PATH = '/product/stock/sellable/adjust';
 const SELLER_GET_PATH = '/seller/get';
 const DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';
 
@@ -29,9 +32,9 @@ function mapLazadaError(response: LazadaResponse): MarketplaceSyncError {
     return new MarketplaceSyncError(SYNC_ERROR_CODES.INVALID_TOKEN, message, { retryable: false });
   }
 
-  // E501 ("Update product failed") is a business-rule rejection carried in detail[].bizCheck
-  // (e.g. SELLER_NOT_PERMITTED, locked item) — permanent for this product/seller even though
-  // type is ISP, so retrying never helps. Don't burn retries on it.
+  // A 501 ("…failed") is a business-rule rejection (e.g. SELLER_NOT_PERMITTED, locked item)
+  // — permanent for this product/seller even though type is ISP, so retrying never helps.
+  // Don't burn retries on it.
   if (response.code === '501') {
     return MarketplaceSyncError.syncFailed(message, false);
   }
@@ -61,10 +64,10 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
   }
 
   async updateStock(params: StockProviderUpdateParams): Promise<NormalizedStockUpdateResponse> {
-    const response = await this.client.call(STOCK_UPDATE_PATH, {
+    const response = await this.client.call(STOCK_ADJUST_PATH, {
       method: 'POST',
       accessToken: params.accessToken,
-      params: { payload: buildLazadaQuantityPayload(params) },
+      params: { payload: buildLazadaSellableStockPayload(params) },
     });
 
     if (!isLazadaSuccess(response)) {

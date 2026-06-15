@@ -1,14 +1,16 @@
 /**
- * Push a stock quantity to ONE Lazada SKU via /product/price_quantity/update — the same
- * payload the worker ships (buildLazadaQuantityPayload). Verifies the outbound write path
- * in isolation (no Redis/worker). WARNING: this changes REAL stock on Lazada — use a
- * throwaway test SKU.
+ * Push a SKU's ABSOLUTE sellable quantity to Lazada via /product/stock/sellable/adjust —
+ * the same payload the worker ships (buildLazadaSellableStockPayload). This is the
+ * stock-only write path that dropshipping-warehouse sellers can use (the old
+ * /product/price_quantity/update returns SELLER_NOT_PERMITTED for them). Verifies the
+ * outbound write in isolation (no Redis/worker). WARNING: this changes REAL stock on
+ * Lazada — use a throwaway SKU, or set a SKU to its CURRENT value for a safe no-op probe.
  *
  * Usage (builds the provider package first):
- *   pnpm lazada:stock <access_token> <item_id> <sku_id> <quantity>     # /product/price_quantity/update (XML)
- *   pnpm lazada:stock-sellable <access_token> <sku_id> <quantity>      # /product/stock/sellable/update (multi-warehouse sellable)
- * (item_id + sku_id come from the import dump; Lazada deprecated SellerSku for this API.)
+ *   pnpm lazada:stock <access_token> <item_id> <sku_id> <quantity> [seller_sku]
  *
+ * (item_id + sku_id come from the import dump / `pnpm lazada:products`.) The call is a POST
+ * — Lazada returns UnsupportedHTTPMethod for a GET on this path.
  * Reads LAZADA_APP_KEY / LAZADA_APP_SECRET / LAZADA_API_BASE_URL from .env or apps/web/.env.local.
  */
 import { readFileSync, existsSync } from 'node:fs';
@@ -16,7 +18,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  buildLazadaQuantityPayload,
+  buildLazadaSellableStockPayload,
   createLazadaClient,
   isLazadaSuccess,
 } from '../packages/marketplace-providers/dist/index.js';
@@ -41,16 +43,9 @@ loadEnvFiles();
 const appKey = process.env.LAZADA_APP_KEY;
 const appSecret = process.env.LAZADA_APP_SECRET;
 const baseUrl = process.env.LAZADA_API_BASE_URL ?? 'https://api.lazada.co.id/rest';
-// Two modes:
-//   price_quantity (default): <token> <item_id> <sku_id> <qty>  -> /product/price_quantity/update (XML)
-//   sellable (--sellable):    <token> --sellable <sku_id> <qty> -> /product/stock/sellable/update (skuId/sellableQuantity)
-const argv = process.argv.slice(2);
-const sellable = argv.includes('--sellable');
-const pos = argv.filter((a) => a !== '--sellable');
-const accessToken = pos[0];
-const itemId = sellable ? undefined : pos[1];
-const skuId = sellable ? pos[1] : pos[2];
-const quantity = Number(sellable ? pos[2] : pos[3]);
+
+const [accessToken, itemId, skuId, quantityArg, sellerSku] = process.argv.slice(2);
+const quantity = Number(quantityArg);
 
 if (!appKey || !appSecret) {
   console.error(
@@ -58,40 +53,31 @@ if (!appKey || !appSecret) {
   );
   process.exit(1);
 }
-if (!accessToken || !skuId || !Number.isFinite(quantity) || (!sellable && !itemId)) {
+if (!accessToken || !itemId || !skuId || !Number.isFinite(quantity)) {
   console.error(
-    'Usage:\n  pnpm lazada:stock <access_token> <item_id> <sku_id> <quantity>\n  pnpm lazada:stock <access_token> --sellable <sku_id> <quantity>',
+    'Usage:\n  pnpm lazada:stock <access_token> <item_id> <sku_id> <quantity> [seller_sku]',
   );
   process.exit(1);
 }
 
 const client = createLazadaClient({ appKey, appSecret, baseUrl });
-let res;
-if (sellable) {
-  console.log(
-    `Pushing sellableQuantity=${quantity} to SkuId=${skuId} via /product/stock/sellable/update`,
-  );
-  res = await client.call('/product/stock/sellable/update', {
-    method: 'POST',
-    accessToken,
-    params: { skuId, sellableQuantity: quantity },
-  });
-} else {
-  const payload = buildLazadaQuantityPayload({
-    externalProductId: itemId,
-    externalVariantId: skuId,
-    quantity,
-  });
-  console.log(
-    `Pushing quantity=${quantity} to ItemId=${itemId} SkuId=${skuId} via /product/price_quantity/update`,
-  );
-  console.log(`payload: ${payload}`);
-  res = await client.call('/product/price_quantity/update', {
-    method: 'POST',
-    accessToken,
-    params: { payload },
-  });
-}
+const payload = buildLazadaSellableStockPayload({
+  externalProductId: itemId,
+  externalVariantId: skuId,
+  externalSku: sellerSku ?? null,
+  quantity,
+});
+
+console.log(
+  `Setting SellableQuantity=${quantity} on ItemId=${itemId} SkuId=${skuId} via /product/stock/sellable/adjust (POST)`,
+);
+console.log(`payload: ${payload}`);
+
+const res = await client.call('/product/stock/sellable/adjust', {
+  method: 'POST',
+  accessToken,
+  params: { payload },
+});
 
 console.log('\nEnvelope:');
 console.log(`  code: ${res.code}  type: ${res.type ?? '-'}  message: ${res.message ?? '-'}`);
@@ -101,9 +87,9 @@ console.log(JSON.stringify(res.raw, null, 2));
 
 if (isLazadaSuccess(res)) {
   console.log(
-    `\n✅ Stock pushed. Check SkuId ${skuId} in Lazada Seller Center — it should read ${quantity}.`,
+    `\n✅ Accepted. Check SkuId ${skuId} in Lazada Seller Center — sellable should read ${quantity}.`,
   );
 } else {
-  console.log('\n❌ Push failed — paste this whole output.');
+  console.log('\n❌ Rejected — paste this whole output.');
   process.exitCode = 1;
 }
