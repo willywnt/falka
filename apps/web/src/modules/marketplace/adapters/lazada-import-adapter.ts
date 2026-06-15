@@ -38,7 +38,12 @@ export class LazadaImportAdapter implements MarketplaceImportAdapter {
     accessToken: string;
   }): Promise<NormalizedListing[]> {
     try {
-      const items = await fetchLazadaListings(this.client, { accessToken: params.accessToken });
+      // Import is idempotent + re-runnable, so keep a throttled tail rather than failing
+      // a whole large-catalog import on Lazada's flow control.
+      const items = await fetchLazadaListings(this.client, {
+        accessToken: params.accessToken,
+        onThrottle: 'partial',
+      });
 
       return items.map((item) => ({
         externalProductId: item.itemId,

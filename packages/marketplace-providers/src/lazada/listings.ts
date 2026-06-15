@@ -5,6 +5,31 @@ const PRODUCTS_GET_PATH = '/products/get';
 const PAGE_LIMIT = 50;
 /** Safety cap so a paging bug can't loop forever (≈1000 listings). */
 const MAX_PAGES = 20;
+/** Pace pages so a large catalog doesn't trip Lazada's Sentinel flow control. */
+const PAGE_DELAY_MS = 1200;
+/** Retries for a single page when Lazada throttles it (E1002 sentinel / system busy). */
+const MAX_PAGE_RETRIES = 4;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Lazada's flow-control / "system busy" responses are transient — the same call
+ * usually succeeds after a short wait. Seen while paging a large catalog: E1002
+ * ("third-party service sentinel") and E506 ("Get product failed"), both intermittent
+ * backend throttles rather than bad input.
+ */
+function isTransientLazadaError(code: string, message: string | undefined): boolean {
+  return (
+    code === '1002' ||
+    code === '506' ||
+    code === 'SellerCallLimit' ||
+    /sentinel|system\s*busy|flow\s*control|try\s*again|get product failed|access frequency|frequency exceeds/i.test(
+      message ?? '',
+    )
+  );
+}
 
 type LazadaApiSku = {
   SkuId?: number | string;
@@ -60,18 +85,52 @@ export class LazadaApiError extends Error {
  */
 export async function fetchLazadaListings(
   client: LazadaClient,
-  params: { accessToken: string },
+  params: {
+    accessToken: string;
+    /**
+     * When Lazada keeps throttling a page after retries: 'throw' (default — correct
+     * for drift, which needs the full set) or 'partial' (return what's collected so
+     * far — used by import, which is idempotent and re-runnable).
+     */
+    onThrottle?: 'throw' | 'partial';
+  },
 ): Promise<LazadaListingItem[]> {
   const items: LazadaListingItem[] = [];
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const response = await client.call<LazadaProductsGetData>(PRODUCTS_GET_PATH, {
+    let response = await client.call<LazadaProductsGetData>(PRODUCTS_GET_PATH, {
       method: 'GET',
       accessToken: params.accessToken,
       params: { filter: 'all', limit: PAGE_LIMIT, offset: page * PAGE_LIMIT },
     });
 
+    // Back off and retry this page when Lazada throttles it (a large catalog pages
+    // many times — Sentinel flow control trips on the burst, not on bad input).
+    for (
+      let attempt = 1;
+      attempt <= MAX_PAGE_RETRIES &&
+      !isLazadaSuccess(response) &&
+      isTransientLazadaError(response.code, response.message);
+      attempt += 1
+    ) {
+      await sleep(PAGE_DELAY_MS * 2 * attempt);
+      response = await client.call<LazadaProductsGetData>(PRODUCTS_GET_PATH, {
+        method: 'GET',
+        accessToken: params.accessToken,
+        params: { filter: 'all', limit: PAGE_LIMIT, offset: page * PAGE_LIMIT },
+      });
+    }
+
     if (!isLazadaSuccess(response)) {
+      // Import tolerates a throttled tail: keep the pages we already have instead of
+      // discarding everything (it re-imports next time). Drift must be complete → throws.
+      if (
+        params.onThrottle === 'partial' &&
+        items.length > 0 &&
+        isTransientLazadaError(response.code, response.message)
+      ) {
+        break;
+      }
       throw new LazadaApiError(response.code, response.message);
     }
 
@@ -99,6 +158,9 @@ export async function fetchLazadaListings(
     }
 
     if (products.length < PAGE_LIMIT) break;
+
+    // Gentle pacing before the next page keeps a large catalog under flow control.
+    await sleep(PAGE_DELAY_MS);
   }
 
   return items;
