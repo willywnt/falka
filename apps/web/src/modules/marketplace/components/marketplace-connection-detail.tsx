@@ -233,32 +233,44 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   const totalListings = listingsMeta?.total ?? 0;
   const hasFilter = search.trim().length > 0 || statusFilter !== ALL_STATUS;
 
-  // Mapping summary (SKU badge + status + last-sync stamp) — shared by table & cards.
-  function renderMappingInfo(mapping: MarketplaceListingMapping | null) {
-    if (!mapping) return <Badge variant="outline">Belum dikaitkan</Badge>;
+  // "Dikaitkan ke": the internal variant (product · variant on top, SKU below) — same
+  // format as the listing name. Unmapped rows show nothing (no badge), per design.
+  function renderLinkedTo(mapping: MarketplaceListingMapping | null) {
+    if (!mapping) return <span className="text-muted-foreground">—</span>;
 
+    const label = [mapping.productName, mapping.variantName].filter(Boolean).join(' · ');
     return (
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{mapping.variantSku}</Badge>
-          {mapping.autoMapped ? (
-            <span className="text-muted-foreground text-xs">otomatis</span>
-          ) : null}
+      <div className="max-w-[18rem] space-y-0.5">
+        <div className="flex items-center gap-2">
+          <EllipsisTooltip
+            text={label}
+            className="text-sm font-medium"
+            contentClassName="max-w-xs"
+          />
           {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
             <StatusBadge tone="warn">Tinjau</StatusBadge>
           ) : null}
         </div>
-        {mapping.syncEnabled || mapping.lastSyncedAt ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <SyncStatusBadge mapping={mapping} />
-            {mapping.lastSyncedAt ? (
-              <span className="text-muted-foreground text-xs">
-                Sinkron <span suppressHydrationWarning>{formatDateTime(mapping.lastSyncedAt)}</span>
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+        <p className="text-muted-foreground num truncate text-xs">{mapping.variantSku}</p>
       </div>
+    );
+  }
+
+  // "Status": the sync badge (Sudah sinkron / gagal / menunggu), or off/— when not syncing.
+  function renderSyncStatus(mapping: MarketplaceListingMapping | null) {
+    if (!mapping) return <span className="text-muted-foreground">—</span>;
+    if (!mapping.syncEnabled)
+      return <span className="text-muted-foreground text-xs">Sinkron mati</span>;
+    return <SyncStatusBadge mapping={mapping} />;
+  }
+
+  // "Terakhir sinkron": when the last stock push landed.
+  function renderLastSync(mapping: MarketplaceListingMapping | null) {
+    if (!mapping?.lastSyncedAt) return <span className="text-muted-foreground">—</span>;
+    return (
+      <span className="text-muted-foreground num text-xs" suppressHydrationWarning>
+        {formatDateTime(mapping.lastSyncedAt)}
+      </span>
     );
   }
 
@@ -517,14 +529,16 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                   <TableHead>Listing</TableHead>
                   <TableHead className="text-right">Stok</TableHead>
                   <TableHead>Dikaitkan ke</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Terakhir sinkron</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {listings.map((listing) => (
                   <TableRow key={listing.marketplaceProductId}>
-                    <TableCell className="max-w-0">
-                      <div className="w-full">
+                    <TableCell>
+                      <div className="max-w-[450px]">
                         <EllipsisTooltip
                           text={listing.externalProductName}
                           className="font-medium"
@@ -538,7 +552,11 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                       </div>
                     </TableCell>
                     <TableCell className="num text-right">{listing.stock}</TableCell>
-                    <TableCell>{renderMappingInfo(listing.mapping)}</TableCell>
+                    <TableCell>{renderLinkedTo(listing.mapping)}</TableCell>
+                    <TableCell>{renderSyncStatus(listing.mapping)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {renderLastSync(listing.mapping)}
+                    </TableCell>
                     <TableCell className="text-right">{renderListingActions(listing)}</TableCell>
                   </TableRow>
                 ))}
@@ -560,7 +578,22 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                     Stok <span className="num text-foreground font-medium">{listing.stock}</span>
                   </p>
                 </div>
-                <div className="mt-3">{renderMappingInfo(listing.mapping)}</div>
+                {listing.mapping ? (
+                  <dl className="mt-3 space-y-2">
+                    <div>
+                      <dt className="text-muted-foreground text-xs">Dikaitkan ke</dt>
+                      <dd className="mt-0.5">{renderLinkedTo(listing.mapping)}</dd>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {renderSyncStatus(listing.mapping)}
+                      {listing.mapping.lastSyncedAt ? (
+                        <span className="text-muted-foreground text-xs">
+                          · Sinkron {renderLastSync(listing.mapping)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </dl>
+                ) : null}
                 <div className="mt-3">{renderListingActions(listing)}</div>
               </div>
             ))}
