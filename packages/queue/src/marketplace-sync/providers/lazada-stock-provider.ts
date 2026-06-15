@@ -16,10 +16,12 @@ import type {
 } from '../stock-provider.registry.js';
 import { MarketplaceSyncError, SYNC_ERROR_CODES } from '../sync-errors.js';
 
-// Sets ABSOLUTE sellable stock; POST only (a GET returns UnsupportedHTTPMethod). This is
-// the stock-only path dropshipping-warehouse sellers can use — /product/price_quantity/update
-// returns SELLER_NOT_PERMITTED for them (live-validated 2026-06-15).
-const STOCK_ADJUST_PATH = '/product/stock/sellable/adjust';
+// Sets ABSOLUTE sellable stock; POST with the XML payload (a GET → UnsupportedHTTPMethod;
+// simple skuId/sellableQuantity params → E006). This is the stock-only path dropshipping-
+// warehouse sellers can use — /product/price_quantity/update returns SELLER_NOT_PERMITTED
+// for them. (Sibling /product/stock/sellable/ADJUST is a DELTA, not absolute — don't use it
+// for sync.) Live-validated 2026-06-15.
+const STOCK_UPDATE_PATH = '/product/stock/sellable/update';
 const SELLER_GET_PATH = '/seller/get';
 const DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';
 
@@ -64,7 +66,7 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
   }
 
   async updateStock(params: StockProviderUpdateParams): Promise<NormalizedStockUpdateResponse> {
-    const response = await this.client.call(STOCK_ADJUST_PATH, {
+    const response = await this.client.call(STOCK_UPDATE_PATH, {
       method: 'POST',
       accessToken: params.accessToken,
       params: { payload: buildLazadaSellableStockPayload(params) },

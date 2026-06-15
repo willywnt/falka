@@ -161,8 +161,8 @@ throw so BullMQ retries.
 
 ## Lazada (REAL adapter + OAuth onboarding) — live-validated 2026-06-14
 LAZADA is the one **real** provider (others are stubs). Signer (HMAC-SHA256, prepend apiPath, UPPER
-hex), REST client, import (`/products/get`), stock-push (**`/product/stock/sellable/adjust`**, POST,
-absolute `SellableQuantity`), token helpers (`exchangeLazadaCode`/`refreshLazadaToken`) and
+hex), REST client, import (`/products/get`), stock-push (**`/product/stock/sellable/update`**, POST +
+XML, **absolute** `SellableQuantity`), token helpers (`exchangeLazadaCode`/`refreshLazadaToken`) and
 `buildLazadaSellableStockPayload` all live in **`@falka/marketplace-providers`** (shared web+worker). The import/stock adapters are **env-gated**:
 real only when `LAZADA_APP_KEY`+`LAZADA_APP_SECRET` are set, else fall back to the stub.
 - **OAuth onboarding (multi-seller):** each org connects its own shop. `GET /marketplaces/lazada/oauth/
@@ -175,8 +175,8 @@ authorize` (gated `marketplace.manage`) → encrypted `state` (org+actor sealed 
 - **Token refresh** `POST /marketplaces/:id/refresh` + **Test koneksi** `POST /marketplaces/:id/test`
   (`/seller/get`); buttons on the connection detail (Lazada only). Env adds `LAZADA_OAUTH_REDIRECT_URI`.
 - **Dev tooling:** `pnpm lazada:smoke|token|products|stock|seller` (read `.env`/`apps/web/.env.local`).
-  `lazada:stock <token> <itemId> <skuId> <qty> [sellerSku]` posts the real adjust payload — set a SKU to
-  its current value for a safe no-op probe.
+  `lazada:stock <token> <itemId> <skuId> <qty> [sellerSku]` posts the real sellable/update payload — set a
+  SKU to its current value for a safe no-op probe (it's an absolute set).
 - **Lazada-side gotchas (cost real time):** (1) app **category is fixed at creation** — use **"Seller
   In-house APP"** (ISV for public), NOT "LazPay Open API" (Wallet-only → no Product API). (2) **`SellerSku`
   is DEPRECATED** for `price_quantity/update` (E0501) → key by **ItemId+SkuId**. (3) token-create/refresh
@@ -185,9 +185,11 @@ authorize` (gated `marketplace.manage`) → encrypted `state` (org+actor sealed 
   (6) gateway must match the seller's **region** (ID=`api.lazada.co.id/rest`). (7) `MARKETPLACE_ENCRYPTION_
 SECRET` identical web↔worker. (8) **stock-write FIX (live-validated 2026-06-15):** `/product/price_quantity/
 update` returns `SELLER_NOT_PERMITTED`/E501 for **dropshipping-warehouse** sellers — use
-  **`/product/stock/sellable/adjust`** instead (POST only — a GET returns `UnsupportedHTTPMethod`; XML
-  `<SellableQuantity>` is the ABSOLUTE sellable count). This is the stock-only path those accounts can call;
-  it never touches price. Verified `code:0` on a real dropshipping SKU via a 0→0 no-op.
+  **`/product/stock/sellable/update`** instead (POST + the XML `<SellableQuantity>` payload = **absolute**
+  set; a GET → `UnsupportedHTTPMethod`; the simple `skuId`/`sellableQuantity` params → E006). ⚠️ The sibling
+  **`/product/stock/sellable/adjust`** takes the SAME XML but applies it as a **DELTA** (live-confirmed:
+  0→set5→set5 = 10, and a `-10` brought it back) — do NOT use adjust for sync (it would accumulate). Both
+  are stock-only (never touch price). Verified `code:0` + absolute set/read-back on a real dropshipping SKU.
 - **Deferred:** multi-region per-connection `region`/`baseUrl` (needs migration — currently one env
   `LAZADA_API_BASE_URL`).
 

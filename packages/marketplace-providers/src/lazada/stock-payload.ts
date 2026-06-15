@@ -18,11 +18,14 @@ export type LazadaStockPayloadInput = {
 };
 
 /**
- * LazOP `/product/stock/sellable/adjust` payload — sets a SKU's ABSOLUTE sellable
+ * LazOP `/product/stock/sellable/update` payload — sets a SKU's ABSOLUTE sellable
  * quantity (what stock sync needs: push the internal `available` as the new sellable
  * count). Replaces `/product/price_quantity/update`, which dropshipping-warehouse
  * sellers can't call (`SELLER_NOT_PERMITTED` / E501); this endpoint is the
- * stock-only path that works for them and never touches price.
+ * stock-only path that works for them and never touches price. Must be POST with this
+ * XML payload (simple skuId/sellableQuantity params return E006). NOTE: the sibling
+ * `/product/stock/sellable/adjust` takes the SAME payload but applies it as a DELTA, so
+ * the path matters — `update` = absolute set, `adjust` = increment.
  *
  * Identify by ItemId + SkuId (Lazada deprecated SellerSku for stock writes); SellerSku
  * is still included when known (Lazada's own demo carries all three) but never relied on.

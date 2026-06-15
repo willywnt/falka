@@ -1,5 +1,5 @@
 /**
- * Push a SKU's ABSOLUTE sellable quantity to Lazada via /product/stock/sellable/adjust —
+ * Push a SKU's ABSOLUTE sellable quantity to Lazada via /product/stock/sellable/update —
  * the same payload the worker ships (buildLazadaSellableStockPayload). This is the
  * stock-only write path that dropshipping-warehouse sellers can use (the old
  * /product/price_quantity/update returns SELLER_NOT_PERMITTED for them). Verifies the
@@ -69,11 +69,11 @@ const payload = buildLazadaSellableStockPayload({
 });
 
 console.log(
-  `Setting SellableQuantity=${quantity} on ItemId=${itemId} SkuId=${skuId} via /product/stock/sellable/adjust (POST)`,
+  `Setting SellableQuantity=${quantity} on ItemId=${itemId} SkuId=${skuId} via /product/stock/sellable/update (POST)`,
 );
 console.log(`payload: ${payload}`);
 
-const res = await client.call('/product/stock/sellable/adjust', {
+const res = await client.call('/product/stock/sellable/update', {
   method: 'POST',
   accessToken,
   params: { payload },

@@ -2,10 +2,11 @@ import { buildLazadaSellableStockPayload } from '@falka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Pins the LazOP /product/stock/sellable/adjust payload — the exact XML the worker ships
+ * Pins the LazOP /product/stock/sellable/update payload — the exact XML the worker ships
  * and the dev verification script sends (live-validated 2026-06-15 against a dropshipping
- * seller, where /product/price_quantity/update returns SELLER_NOT_PERMITTED). Sets the
- * ABSOLUTE sellable quantity; identify by ItemId + SkuId (+ SellerSku when known).
+ * seller, where /product/price_quantity/update returns SELLER_NOT_PERMITTED). POST + this
+ * XML sets the ABSOLUTE sellable quantity (the /adjust sibling takes the same XML but as a
+ * DELTA). Identify by ItemId + SkuId (+ SellerSku when known).
  */
 describe('buildLazadaSellableStockPayload', () => {
   it('emits ItemId + SkuId + SellerSku + SellableQuantity when all are present', () => {
