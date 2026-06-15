@@ -523,15 +523,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
               <TableBody>
                 {listings.map((listing) => (
                   <TableRow key={listing.marketplaceProductId}>
-                    <TableCell>
-                      <div className="max-w-[16rem] lg:max-w-[24rem]">
+                    <TableCell className="max-w-0">
+                      <div className="w-full">
                         <EllipsisTooltip
                           text={listing.externalProductName}
                           className="font-medium"
+                          contentClassName="max-w-xs"
                         />
                         <EllipsisTooltip
                           text={listingSubtitle(listing)}
                           className="text-muted-foreground text-xs"
+                          contentClassName="max-w-xs"
                         />
                       </div>
                     </TableCell>
