@@ -101,6 +101,19 @@ export type PaymentMixRow = {
   sharePct: number | null;
 };
 
+/**
+ * Average time-to-ship per marketplace channel: from `placedAt` (the order date)
+ * to when it shipped (`inventoryShippedAt`), over shipped/completed orders in the
+ * range. POS has no fulfillment leg, so it never appears here.
+ */
+export type ChannelFulfillmentRow = {
+  channel: ProfitChannel;
+  /** Mean hours from order placed to shipped. */
+  avgHours: number;
+  /** Orders that contributed (shipped, with a ship timestamp). */
+  orderCount: number;
+};
+
 /** One row of the channel × period trend matrix: net revenue per channel for a period. */
 export type ChannelTrendPeriod = {
   period: string;
@@ -128,6 +141,8 @@ export type ChannelPerformanceReport = {
   trend: ChannelTrendPeriod[];
   /** POS payment-method mix over the range (gross receipts per tender). */
   paymentMix: PaymentMixRow[];
+  /** Average time-to-ship per marketplace channel (POS excluded). */
+  fulfillment: ChannelFulfillmentRow[];
 };
 
 /**

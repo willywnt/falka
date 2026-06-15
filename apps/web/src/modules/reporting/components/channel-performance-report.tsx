@@ -24,7 +24,18 @@ import { channelColor } from '../utils/channel-color';
 import { channelLabel } from '../utils/channel-label';
 import { formatPct, marginClass } from '../utils/format';
 import { useChannelPerformanceQuery, type ProfitReportParams } from '../hooks/use-reporting';
-import type { ChannelPerformanceReport as ChannelReportData } from '../types';
+import type {
+  ChannelFulfillmentRow,
+  ChannelPerformanceReport as ChannelReportData,
+} from '../types';
+
+/** Avg time-to-ship as a compact human string ("18 jam" / "1,5 hari"). */
+function formatFulfillment(row: ChannelFulfillmentRow | undefined): string {
+  if (!row) return '—';
+  if (row.avgHours < 1) return '< 1 jam';
+  if (row.avgHours < 24) return `${Math.round(row.avgHours)} jam`;
+  return `${(row.avgHours / 24).toFixed(1).replace('.', ',')} hari`;
+}
 
 const PAYMENT_METHOD_LABELS: Record<SalePaymentMethod, string> = {
   CASH: 'Tunai',
@@ -88,6 +99,8 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
   const colorOf = new Map(
     data.byChannel.map((row, index) => [row.channel, channelColor(row.channel, index)]),
   );
+  const fulfillmentByChannel = new Map(data.fulfillment.map((row) => [row.channel, row]));
+  const hasFulfillment = data.fulfillment.length > 0;
   const donutData = data.byChannel.map((row) => ({
     name: channelLabel(row.channel),
     value: Number(row.grossRevenue),
@@ -301,6 +314,14 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
                     <dt className="text-muted-foreground text-xs">Retur</dt>
                     <dd className="num">{formatPct(row.returnRatePct)}</dd>
                   </div>
+                  {fulfillmentByChannel.has(row.channel) ? (
+                    <div>
+                      <dt className="text-muted-foreground text-xs">Waktu kirim</dt>
+                      <dd className="num">
+                        {formatFulfillment(fulfillmentByChannel.get(row.channel))}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
               </li>
             ))}
@@ -319,6 +340,9 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
                   <TableHead className="text-right">Transaksi</TableHead>
                   <TableHead className="text-right">AOV</TableHead>
                   <TableHead className="text-right">Retur</TableHead>
+                  {hasFulfillment ? (
+                    <TableHead className="text-right">Waktu kirim</TableHead>
+                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -362,6 +386,11 @@ function ChannelContent({ data }: { data: ChannelReportData }) {
                     <TableCell className="text-muted-foreground num text-right">
                       {formatPct(row.returnRatePct)}
                     </TableCell>
+                    {hasFulfillment ? (
+                      <TableCell className="text-muted-foreground num text-right">
+                        {formatFulfillment(fulfillmentByChannel.get(row.channel))}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>

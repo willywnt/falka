@@ -20,6 +20,7 @@ import {
   type TransactionsByChannel,
 } from '../utils/channel-performance-aggregate';
 import { aggregateDeadStock, type DeadStockVariant } from '../utils/dead-stock-aggregate';
+import { aggregateFulfillment, type FulfillmentInput } from '../utils/fulfillment';
 import {
   aggregateInventoryValuation,
   type ValuationVariant,
@@ -335,6 +336,39 @@ export class ReportingServerService {
   }
 
   /**
+   * Per-channel time-to-ship: shipped/completed marketplace orders placed in the
+   * range that carry a ship timestamp, as (channel, placedAt → inventoryShippedAt)
+   * pairs for the fulfillment aggregate. POS sales have no fulfillment leg.
+   */
+  private async loadFulfillment(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<FulfillmentInput[]> {
+    const orders = await prisma.order.findMany({
+      where: {
+        organizationId,
+        status: { in: ['SHIPPED', 'COMPLETED'] },
+        placedAt: { gte: from, lte: to },
+        inventoryShippedAt: { not: null },
+      },
+      select: { provider: true, placedAt: true, inventoryShippedAt: true },
+    });
+
+    return orders.flatMap((order) =>
+      order.inventoryShippedAt
+        ? [
+            {
+              channel: order.provider as ProfitChannel,
+              placedAt: order.placedAt,
+              shippedAt: order.inventoryShippedAt,
+            },
+          ]
+        : [],
+    );
+  }
+
+  /**
    * Per-channel performance: the profit metrics per channel plus revenue share,
    * transactions + average order value, refunds/return rate, and a channel ×
    * period revenue trend. Same realized-sales basis as the profit report.
@@ -344,15 +378,17 @@ export class ReportingServerService {
     query: ProfitReportQuery,
   ): Promise<ChannelPerformanceReport> {
     const { lines, from, to } = await this.loadSoldLines(organizationId, query);
-    const [transactions, paymentRows] = await Promise.all([
+    const [transactions, paymentRows, fulfillmentRows] = await Promise.all([
       this.loadTransactionCounts(organizationId, from, to),
       this.loadPosPaymentMix(organizationId, from, to),
+      this.loadFulfillment(organizationId, from, to),
     ]);
     return aggregateChannelPerformance(lines, transactions, {
       from,
       to,
       groupBy: query.groupBy,
       paymentMix: computePaymentMix(paymentRows),
+      fulfillment: aggregateFulfillment(fulfillmentRows),
     });
   }
 

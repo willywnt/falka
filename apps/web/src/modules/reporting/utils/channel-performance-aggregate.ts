@@ -1,4 +1,5 @@
 import type {
+  ChannelFulfillmentRow,
   ChannelPerformanceReport,
   ChannelPerformanceRow,
   ChannelTrendPeriod,
@@ -40,6 +41,8 @@ export function aggregateChannelPerformance(
     groupBy: ProfitPeriodGranularity;
     /** POS payment-method mix (computed upstream); defaults to none. */
     paymentMix?: PaymentMixRow[];
+    /** Per-channel time-to-ship (computed upstream); defaults to none. */
+    fulfillment?: ChannelFulfillmentRow[];
   },
 ): ChannelPerformanceReport {
   const accByChannel = new Map<ProfitChannel, Acc>();
@@ -127,5 +130,6 @@ export function aggregateChannelPerformance(
     byChannel,
     trend,
     paymentMix: opts.paymentMix ?? [],
+    fulfillment: opts.fulfillment ?? [],
   };
 }
