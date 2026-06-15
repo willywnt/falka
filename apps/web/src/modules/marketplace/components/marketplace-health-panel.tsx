@@ -188,7 +188,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
             </StatusBadge>
             {report.summary.unmappedExternal > 0 ? (
               <StatusBadge tone="info">
-                <span className="num">{report.summary.unmappedExternal}</span> belum dipetakan
+                <span className="num">{report.summary.unmappedExternal}</span> belum dikaitkan
               </StatusBadge>
             ) : null}
             <span className="text-muted-foreground text-xs">

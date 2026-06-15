@@ -25,6 +25,14 @@ export interface MarketplaceStockProviderAdapter {
    * stub) so the reconciliation job skips it instead of flagging false drift.
    */
   fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[] | null>;
+  /**
+   * Pull current external stock for SPECIFIC items only (drift) — far cheaper than a
+   * full-catalog scan. Optional; the job falls back to {@link fetchListings} when absent.
+   */
+  fetchListingsForItems?(params: {
+    accessToken: string;
+    externalProductIds: string[];
+  }): Promise<ProviderListingSnapshot[] | null>;
 }
 
 /** Simulates a successful push so the whole pipeline is exercisable without real APIs. */

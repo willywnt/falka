@@ -4,6 +4,7 @@ import { logger } from '@falka/utils/logger';
 
 import {
   computeStockDrift,
+  countConnectionListings,
   findActiveConnectionsForDrift,
   findDriftMappedListings,
   getMarketplaceStockProvider,
@@ -68,10 +69,20 @@ export async function processReconcileMarketplaceDriftJob(
     }
 
     try {
+      const mapped = await findDriftMappedListings(connection.organizationId, connection.id);
+      // Nothing mapped → nothing to reconcile; don't call the provider.
+      if (mapped.length === 0) {
+        stats.skipped += 1;
+        continue;
+      }
+
       await getProviderRateLimiter(connection.provider).acquire();
-      const external = await getMarketplaceStockProvider(connection.provider).fetchListings({
-        accessToken,
-      });
+      const adapter = getMarketplaceStockProvider(connection.provider);
+      const externalProductIds = [...new Set(mapped.map((item) => item.externalProductId))];
+      // Pull ONLY the mapped items when the adapter supports it (no full-catalog scan).
+      const external = adapter.fetchListingsForItems
+        ? await adapter.fetchListingsForItems({ accessToken, externalProductIds })
+        : await adapter.fetchListings({ accessToken });
 
       // Provider can't enumerate listings (stub) — nothing to reconcile.
       if (external === null) {
@@ -79,8 +90,10 @@ export async function processReconcileMarketplaceDriftJob(
         continue;
       }
 
-      const mapped = await findDriftMappedListings(connection.organizationId, connection.id);
       const summary = computeStockDrift({ mapped, external });
+      // Per-item drift only pulls mapped items, so report the real "not yet mapped" from the DB.
+      const total = await countConnectionListings(connection.organizationId, connection.id);
+      const unmappedExternal = Math.max(0, total - mapped.length);
       const driftCount = summary.drifted + summary.missingExternal;
       totalDrifted += driftCount;
       stats.succeeded += 1;
@@ -93,7 +106,7 @@ export async function processReconcileMarketplaceDriftJob(
         inSync: summary.inSync,
         drifted: summary.drifted,
         missingExternal: summary.missingExternal,
-        unmappedExternal: summary.unmappedExternal,
+        unmappedExternal,
       };
       if (driftCount > 0) {
         logger.warn('marketplace.drift.detected', logContext);

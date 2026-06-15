@@ -2,6 +2,7 @@ import { getServerEnv } from '@falka/config/env.server';
 import {
   buildLazadaSellableStockPayload,
   createLazadaClient,
+  fetchLazadaItemsStock,
   fetchLazadaListings,
   isLazadaSuccess,
 } from '@falka/marketplace-providers';
@@ -125,6 +126,21 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
 
   async fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[]> {
     const items = await fetchLazadaListings(this.client, { accessToken: params.accessToken });
+    return items.map((item) => ({
+      externalProductId: item.itemId,
+      externalVariantId: item.skuId,
+      stock: item.quantity,
+    }));
+  }
+
+  async fetchListingsForItems(params: {
+    accessToken: string;
+    externalProductIds: string[];
+  }): Promise<ProviderListingSnapshot[]> {
+    const items = await fetchLazadaItemsStock(this.client, {
+      accessToken: params.accessToken,
+      itemIds: params.externalProductIds,
+    });
     return items.map((item) => ({
       externalProductId: item.itemId,
       externalVariantId: item.skuId,

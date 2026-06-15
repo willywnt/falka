@@ -14,6 +14,16 @@ export type DriftConnection = {
   tokenExpiresAt: Date | null;
 };
 
+/** Total non-deleted imported listings for a connection (drives the real "unmapped" count). */
+export async function countConnectionListings(
+  organizationId: string,
+  connectionId: string,
+): Promise<number> {
+  return prisma.marketplaceProduct.count({
+    where: { marketplaceConnectionId: connectionId, organizationId, deletedAt: null },
+  });
+}
+
 /** Active connections to reconcile, oldest-imported first, capped at `limit`. */
 export async function findActiveConnectionsForDrift(limit: number): Promise<DriftConnection[]> {
   return prisma.marketplaceConnection.findMany({
