@@ -190,6 +190,10 @@ update` returns `SELLER_NOT_PERMITTED`/E501 for **dropshipping-warehouse** selle
   **`/product/stock/sellable/adjust`** takes the SAME XML but applies it as a **DELTA** (live-confirmed:
   0→set5→set5 = 10, and a `-10` brought it back) — do NOT use adjust for sync (it would accumulate). Both
   are stock-only (never touch price). Verified `code:0` + absolute set/read-back on a real dropshipping SKU.
+  (9) **KNOWN GAP — multi-warehouse (found 2026-06-16):** a SKU with several `multiWarehouseInventories[]`
+  only gets ONE warehouse set by the bare `<SellableQuantity>` (default/last) → multi-warehouse SKUs never
+  reconcile. Single-warehouse/dropshipping is fine. Backlogged (mid-size #4): capture `warehouseCode` at
+  import + `<MultiWarehouseInventories><WarehouseCode>` payload + a sync-warehouse policy.
 - **Deferred:** multi-region per-connection `region`/`baseUrl` (needs migration — currently one env
   `LAZADA_API_BASE_URL`).
 
