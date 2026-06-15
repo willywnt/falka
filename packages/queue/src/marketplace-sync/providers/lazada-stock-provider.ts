@@ -47,6 +47,27 @@ function mapLazadaError(response: LazadaResponse): MarketplaceSyncError {
 }
 
 /**
+ * Per-SKU errors Lazada carries in `raw.detail[]` even when the ENVELOPE is `code:0`
+ * (e.g. a non-existent item → `{field:'ItemId', message:'ITEM_NOT_FOUND', code:'E0501'}`).
+ * A real success has no `detail`, so any populated entry means the SKU was NOT updated.
+ */
+function extractDetailErrors(raw: Record<string, unknown> | null): string[] {
+  const detail = raw && Array.isArray(raw.detail) ? raw.detail : [];
+  const errors: string[] = [];
+  for (const entry of detail) {
+    if (entry && typeof entry === 'object') {
+      const record = entry as Record<string, unknown>;
+      const code = typeof record.code === 'string' ? record.code : undefined;
+      const message = typeof record.message === 'string' ? record.message : undefined;
+      if (code || message) {
+        errors.push([record.field, message, code].filter(Boolean).join(' '));
+      }
+    }
+  }
+  return errors;
+}
+
+/**
  * Pushes available stock to a Lazada listing via the LazOP price/quantity update
  * API. Real provider adapter — replaces the Dev stub once registered (see the
  * worker bootstrap). The access token it receives is already decrypted by the
@@ -74,6 +95,17 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
 
     if (!isLazadaSuccess(response)) {
       throw mapLazadaError(response);
+    }
+
+    // Lazada can answer `code:0` yet reject the SKU in `detail[]` (e.g. ITEM_NOT_FOUND) —
+    // that's NOT a real update, so don't mark the mapping synced. Non-retryable: a missing
+    // or locked item won't fix itself on retry.
+    const detailErrors = extractDetailErrors(response.raw);
+    if (detailErrors.length > 0) {
+      throw MarketplaceSyncError.syncFailed(
+        `Lazada rejected the SKU: ${detailErrors.join('; ')}`,
+        false,
+      );
     }
 
     return {
