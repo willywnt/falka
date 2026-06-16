@@ -7,6 +7,7 @@ import type { Prisma } from '@prisma/client';
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
 import { auditService } from '@/modules/audit/services/audit.service';
+import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 
 import { inventoryServerService } from './inventory-server.service';
 import { StockOpnameError } from '../errors/stock-opname-errors';
@@ -439,6 +440,18 @@ export class StockOpnameService {
       resource: 'stock_opname',
       resourceId: id,
       metadata: { code: opname.code, varianceItemCount: affected.length },
+    });
+    void notificationServerService.emit({
+      organizationId,
+      actorUserId,
+      type: 'OPNAME_POSTED',
+      title: 'Opname stok diposting',
+      body: `Opname ${opname.code} diposting — ${affected.length} item dengan selisih dikoreksi.`,
+      href: `/dashboard/inventory/opname/${id}`,
+      dedupeKey: `opname-posted:${id}`,
+      entityType: 'stockOpname',
+      entityId: id,
+      data: { code: opname.code, varianceItemCount: affected.length },
     });
     await this.propagateAffected(organizationId, actorUserId, affected);
     return this.getOpname(organizationId, id);

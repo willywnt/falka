@@ -12,6 +12,7 @@ import type { MarketplaceConnection, Prisma } from '@prisma/client';
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
+import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { returnsServerService } from '@/modules/returns/services/returns-server.service';
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
@@ -600,6 +601,23 @@ export class OrdersServerService {
         });
         applied += 1;
         reservedNow = true;
+      }
+
+      // New-order alert: fire once, when this order first becomes reserved (newly PAID).
+      // Idempotent across re-pulls via the order-keyed dedupeKey.
+      if (!wasReserved && reservedNow) {
+        void notificationServerService.emit({
+          organizationId,
+          actorUserId,
+          type: 'ORDER_PLACED',
+          title: 'Pesanan baru dibayar',
+          body: `Pesanan ${order.externalOrderId} di ${connection.provider} sudah dibayar${order.buyerName ? ` (${order.buyerName})` : ''} — siap diproses.`,
+          href: '/dashboard/orders',
+          dedupeKey: `order-placed:${saved.id}`,
+          entityType: 'order',
+          entityId: saved.id,
+          data: { provider: connection.provider, externalOrderId: order.externalOrderId },
+        });
       }
 
       if (isShippedStatus && reservedNow && !wasShipped && !wasReleased) {

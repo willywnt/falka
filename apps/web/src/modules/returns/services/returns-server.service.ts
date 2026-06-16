@@ -6,6 +6,7 @@ import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
+import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 
 import { ReturnError } from '../errors/return-errors';
 import type { ListReturnsQuery } from '../validators/list-returns';
@@ -266,6 +267,19 @@ export class ReturnsServerService {
       actorUserId,
       returnId,
       restockedVariants: restocked.size,
+    });
+
+    void notificationServerService.emit({
+      organizationId,
+      actorUserId,
+      type: 'RETURN_PROCESSED',
+      title: 'Retur selesai diproses',
+      body: `${restocked.size} varian direstok dari retur ${ret.items.length}-item.`,
+      href: `/dashboard/returns/${returnId}`,
+      dedupeKey: `return-processed:${returnId}`,
+      entityType: 'return',
+      entityId: returnId,
+      data: { restockedVariants: restocked.size, itemCount: ret.items.length },
     });
     await this.propagateRestocked(organizationId, actorUserId, restocked);
     return this.getReturn(organizationId, returnId);

@@ -7,6 +7,7 @@ import type { Prisma } from '@prisma/client';
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
 import { auditService } from '@/modules/audit/services/audit.service';
+import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
 import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-allocation';
@@ -358,6 +359,7 @@ export class PurchasingServerService {
     }
 
     const affected = new Set<string>();
+    let fullyReceived = false;
 
     await prisma.$transaction(async (tx) => {
       for (const [itemId, qty] of receipts) {
@@ -377,7 +379,7 @@ export class PurchasingServerService {
         affected.add(item.productVariantId);
       }
 
-      const fullyReceived = order.items.every((item) => {
+      fullyReceived = order.items.every((item) => {
         const received = item.receivedQuantity + (receipts.get(item.id) ?? 0);
         return received >= item.quantity;
       });
@@ -396,6 +398,23 @@ export class PurchasingServerService {
       actorUserId,
       purchaseOrderId: id,
       lines: receipts.size,
+    });
+
+    const totalReceived = order.items.reduce(
+      (sum, item) => sum + item.receivedQuantity + (receipts.get(item.id) ?? 0),
+      0,
+    );
+    void notificationServerService.emit({
+      organizationId,
+      actorUserId,
+      type: 'PURCHASE_RECEIVED',
+      title: fullyReceived ? 'Barang PO diterima penuh' : 'Barang PO diterima sebagian',
+      body: `${receipts.size} item masuk dari PO ${order.code}${order.supplierName ? ` · ${order.supplierName}` : ''}.`,
+      href: `/dashboard/purchasing/${id}`,
+      dedupeKey: `purchase-received:${id}:${totalReceived}`,
+      entityType: 'purchaseOrder',
+      entityId: id,
+      data: { code: order.code, fullyReceived, lines: receipts.size },
     });
     await this.propagateAffected(organizationId, actorUserId, [...affected]);
     return this.getPurchaseOrder(organizationId, id);

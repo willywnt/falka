@@ -7,6 +7,7 @@ import type { Prisma } from '@prisma/client';
 import { appLogger } from '@/lib/logger';
 import { retryOnCodeCollision } from '@/lib/db-retry';
 import { auditService } from '@/modules/audit/services/audit.service';
+import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
 import { catalogServerService } from '@/modules/catalog/services/catalog-server.service';
 import { allocateBundleUnitAmounts } from '@/modules/catalog/utils/bundle-allocation';
@@ -549,6 +550,19 @@ export class SalesServerService {
           unitPrice: Number(line.unitPrice),
           unitCost: Number(line.unitCost),
         })),
+      });
+
+      void notificationServerService.emit({
+        organizationId,
+        actorUserId,
+        type: 'SALE_BELOW_COST',
+        title: 'Penjualan di bawah modal',
+        body: `${belowCostLines.length} barang di nota ${created.code} terjual di bawah harga modal.`,
+        href: `/dashboard/sales/${created.id}`,
+        dedupeKey: `sale-below-cost:${created.id}`,
+        entityType: 'sale',
+        entityId: created.id,
+        data: { code: created.code, lineCount: belowCostLines.length },
       });
     }
 
