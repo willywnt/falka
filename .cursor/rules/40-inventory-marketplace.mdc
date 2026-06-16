@@ -158,6 +158,17 @@ exist) → `propagate-inventory-stock` job (fan-out, idempotent per ledger event
 available via the provider adapter; `Dev` stub simulates success, `Unwired` stub rejects) →
 marks `MarketplaceSyncJob` + mapping `lastSyncStatus` + listing snapshot. Retryable failures
 throw so BullMQ retries.
+**Coalescing (shipped 2026-06-16):** AUTO changes pass `{ coalesce: true }` to
+`enqueuePropagateInventoryStock` → a STABLE per-(org, variant) jobId (`buildCoalescedPropagateJobId`)
++ a 60s delay (`MARKETPLACE_SYNC_COALESCE_WINDOW_MS`); BullMQ dedups a burst into one delayed propagate
+that re-reads LATEST available → one push per variant per window instead of one per change
+(`removeOnComplete/Fail: true` frees the jobId). **Manual syncs (`syncNow`, `syncAllListings`) stay
+immediate** (no coalesce). Next lever (multi-SKU-per-call batching) = Approach B in
+`docs/roadmap/sync-batching.md`, build only when many DISTINCT SKUs change at once.
+**Bulk + indicator UI:** "Sinkron semua" on the drift panel (`POST /[id]/sync-all`) re-pushes all
+sync-enabled listings; a `GET /[id]/sync-status` in-flight (PENDING/PROCESSING) poll drives a
+"sinkronisasi berjalan" indicator + disables sync buttons until it drains. A CONFIRMED mapping
+(manual map / order-resolve / EXACT auto-map) auto-enables `syncEnabled` (NEEDS_REVIEW stays off).
 
 ## Lazada (REAL adapter + OAuth onboarding) — live-validated 2026-06-14
 LAZADA is the one **real** provider (others are stubs). Signer (HMAC-SHA256, prepend apiPath, UPPER
