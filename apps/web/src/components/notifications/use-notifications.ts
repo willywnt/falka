@@ -8,31 +8,43 @@ import {
   useReorderReportQuery,
 } from '@/modules/inventory/hooks/use-inventory';
 import { useMarketplaceHealthQuery } from '@/modules/marketplace/hooks/use-marketplace-health';
+import {
+  useMarkAllNotificationsReadMutation,
+  useMarkNotificationReadMutation,
+  useNotificationsQuery,
+} from '@/modules/notifications/hooks/use-notifications-data';
+import { severityToTone } from '@/modules/notifications/notification-meta';
+import type { NotificationListItem } from '@/modules/notifications/types';
 import { useOrdersQuery } from '@/modules/orders/hooks/use-orders';
 import { useReturnsQuery } from '@/modules/returns/hooks/use-returns';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 import { formatCurrency } from '@/lib/formatters';
 import { useNotificationsStore } from '@/store/notifications-store';
 
-export type AppNotificationTone = 'urgent' | 'info';
+import { mergeNotificationFeeds } from './merge-notifications';
+import type { AppNotification } from './types';
 
-export type AppNotification = {
-  /** Stable per-datum id — marking read re-arms when the underlying number changes. */
-  id: string;
-  tone: AppNotificationTone;
-  title: string;
-  description: string;
-  href: Route;
-  read: boolean;
-};
+function persistedToAppNotification(item: NotificationListItem): AppNotification {
+  return {
+    id: item.id,
+    tone: severityToTone(item.severity),
+    title: item.title,
+    description: item.body,
+    href: (item.href ?? '/dashboard') as Route,
+    read: item.read,
+  };
+}
 
 /**
- * The shell's notification tray feed — the "what needs me" inbox behind the
- * navbar bell. STUB CONTRACT (jujur, mirrors Pandu): every number is REAL data
- * from queries the app already keeps warm (ops-pulse + Pandu share these exact
- * keys, so TanStack serves them from cache — no extra network); only the
- * selection + ordering is rule-based. This selector is the single piece that a
- * future persistent notification store would swap.
+ * The shell's notification tray feed — a UNION of two tiers (see
+ * docs/roadmap/notification-engine.md):
+ *  - PERSISTED rows (discrete lifecycle events, server read state) via the
+ *    notifications module, and
+ *  - LIVE DERIVED signals (the rolled-up "needs my attention" counts) computed
+ *    from queries the app already keeps warm — read state still client-side this
+ *    phase. STUB CONTRACT (jujur, mirrors Pandu): every number is REAL data; only
+ *    selection + ordering is rule-based. The two tiers reconcile by id/dedupeKey,
+ *    so the bell's external contract never changes.
  */
 export function useNotifications() {
   const orders = useOrdersQuery(1, 1, { status: 'PAID' });
@@ -45,19 +57,22 @@ export function useNotifications() {
   });
   const { allowed: canViewMarketplace } = useHasPermission('marketplace.view');
   const marketplaceHealth = useMarketplaceHealthQuery(canViewMarketplace);
+  const persisted = useNotificationsQuery();
 
   const readIds = useNotificationsStore((state) => state.readIds);
-  const markRead = useNotificationsStore((state) => state.markRead);
-  const markAllRead = useNotificationsStore((state) => state.markAllRead);
+  const storeMarkRead = useNotificationsStore((state) => state.markRead);
+  const storeMarkAllRead = useNotificationsStore((state) => state.markAllRead);
+  const markReadMutation = useMarkNotificationReadMutation();
+  const markAllReadMutation = useMarkAllNotificationsReadMutation();
 
   const invSummary = dashboard.data?.summary;
   const reorderSummary = reorder.data?.summary;
 
   // Highest-attention first so the tray reads top-down by urgency.
-  const candidates: Omit<AppNotification, 'read'>[] = [];
+  const derivedCandidates: Omit<AppNotification, 'read'>[] = [];
 
   if (invSummary && invSummary.oversoldCount > 0) {
-    candidates.push({
+    derivedCandidates.push({
       id: `oversold:${invSummary.oversoldCount}`,
       tone: 'urgent',
       title: 'Stok oversold',
@@ -71,7 +86,7 @@ export function useNotifications() {
     const days =
       topUrgent?.daysOfCover != null ? Math.max(0, Math.round(topUrgent.daysOfCover)) : null;
     const others = reorderSummary.urgentCount - 1;
-    candidates.push({
+    derivedCandidates.push({
       id: `restock-urgent:${reorderSummary.urgentCount}:${topUrgent?.variantId ?? 'none'}`,
       tone: 'urgent',
       title: 'Restok mendesak',
@@ -86,7 +101,7 @@ export function useNotifications() {
     const dangerCount =
       marketplaceHealth.data?.filter((item) => item.tone === 'danger').length ?? 0;
     if (dangerCount > 0) {
-      candidates.push({
+      derivedCandidates.push({
         id: `marketplace-danger:${dangerCount}`,
         tone: 'urgent',
         title: 'Channel marketplace bermasalah',
@@ -97,7 +112,7 @@ export function useNotifications() {
   }
 
   if (orders.data && orders.data.meta.total > 0) {
-    candidates.push({
+    derivedCandidates.push({
       id: `orders-to-ship:${orders.data.meta.total}`,
       tone: 'info',
       title: 'Pesanan siap dikirim',
@@ -107,7 +122,7 @@ export function useNotifications() {
   }
 
   if (returns.data && returns.data.meta.total > 0) {
-    candidates.push({
+    derivedCandidates.push({
       id: `returns-pending:${returns.data.meta.total}`,
       tone: 'info',
       title: 'Retur menunggu diproses',
@@ -117,7 +132,7 @@ export function useNotifications() {
   }
 
   if (invSummary && invSummary.lowStockCount > 0) {
-    candidates.push({
+    derivedCandidates.push({
       id: `low-stock:${invSummary.lowStockCount}`,
       tone: 'info',
       title: 'Stok menipis',
@@ -127,7 +142,7 @@ export function useNotifications() {
   }
 
   if (reorderSummary && reorderSummary.deadStockCount > 0) {
-    candidates.push({
+    derivedCandidates.push({
       id: `dead-stock:${reorderSummary.deadStockCount}:${reorderSummary.deadStockValue}`,
       tone: 'info',
       title: 'Modal mengendap',
@@ -136,20 +151,46 @@ export function useNotifications() {
     });
   }
 
-  const items: AppNotification[] = candidates.map((candidate) => ({
+  const derivedItems: AppNotification[] = derivedCandidates.map((candidate) => ({
     ...candidate,
     read: readIds.includes(candidate.id),
   }));
 
-  const unreadCount = items.reduce((total, item) => (item.read ? total : total + 1), 0);
+  const persistedListItems = persisted.data?.items ?? [];
+  const persistedItems = persistedListItems.map(persistedToAppNotification);
+  const persistedDedupeKeys = new Set(persistedListItems.map((item) => item.dedupeKey));
+  const persistedIds = new Set(persistedListItems.map((item) => item.id));
+
+  const items = mergeNotificationFeeds(persistedItems, derivedItems, persistedDedupeKeys);
+
+  const derivedUnread = derivedItems.filter(
+    (item) => !item.read && !persistedDedupeKeys.has(item.id),
+  ).length;
+  const unreadCount = (persisted.data?.unreadCount ?? 0) + derivedUnread;
+
+  function markRead(id: string) {
+    if (persistedIds.has(id)) {
+      markReadMutation.mutate(id);
+    } else {
+      storeMarkRead(id);
+    }
+  }
+
+  function markAllRead() {
+    if ((persisted.data?.unreadCount ?? 0) > 0) markAllReadMutation.mutate();
+    storeMarkAllRead(derivedItems.map((item) => item.id));
+  }
 
   return {
     items,
     unreadCount,
     hasUrgentUnread: items.some((item) => !item.read && item.tone === 'urgent'),
+    // A persisted-feed error does NOT blank the tray — the derived signals still render.
     isLoading: orders.isLoading || returns.isLoading || dashboard.isLoading || reorder.isLoading,
     isError: Boolean(orders.error ?? returns.error ?? dashboard.error ?? reorder.error),
     markRead,
-    markAllRead: () => markAllRead(items.map((item) => item.id)),
+    markAllRead,
   };
 }
+
+export type { AppNotification, AppNotificationTone } from './types';
