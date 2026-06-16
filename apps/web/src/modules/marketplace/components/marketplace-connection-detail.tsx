@@ -7,6 +7,7 @@ import {
   DownloadCloud,
   Link2,
   Link2Off,
+  Loader2,
   PlugZap,
   RefreshCw,
   Search,
@@ -45,6 +46,7 @@ import {
   useRefreshConnectionMutation,
   useTestConnectionMutation,
 } from '../hooks/use-marketplace-connections';
+import { useSyncStatusQuery } from '../hooks/use-marketplace-health';
 import {
   useImportListingsMutation,
   useMapListingMutation,
@@ -103,6 +105,7 @@ function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
 
 export function MarketplaceConnectionDetail({ connectionId }: { connectionId: string }) {
   const [mapTarget, setMapTarget] = useState<string | null>(null);
+  const [pendingSyncId, setPendingSyncId] = useState<string | null>(null);
   const { allowed: canManage } = useHasPermission('marketplace.manage');
 
   const { page, setPage, pageSize, setPageSize } = usePagination(20);
@@ -125,6 +128,10 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   const syncNowMutation = useSyncNowMutation(connectionId);
   const refreshMutation = useRefreshConnectionMutation(connectionId);
   const testMutation = useTestConnectionMutation(connectionId);
+  // Shared in-flight signal (the drift panel polls the same query): a queued/processing sync
+  // disables every "kirim stok" button until it drains, and the listing's status refreshes.
+  const syncStatusQuery = useSyncStatusQuery(connectionId, canManage);
+  const syncing = (syncStatusQuery.data?.inFlight ?? 0) > 0 || syncNowMutation.isPending;
 
   async function handleImport() {
     try {
@@ -315,10 +322,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                 <Button
                   variant="ghost"
                   size="icon"
-                  disabled={syncNowMutation.isPending}
-                  onClick={() => void handleSyncNow(listing.marketplaceProductId)}
+                  disabled={syncing}
+                  onClick={() => {
+                    setPendingSyncId(listing.marketplaceProductId);
+                    void handleSyncNow(listing.marketplaceProductId);
+                  }}
                 >
-                  <RefreshCw className="size-4" />
+                  {syncing && pendingSyncId === listing.marketplaceProductId ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
                   <span className="sr-only">Kirim stok sekarang</span>
                 </Button>
               </TooltipTrigger>

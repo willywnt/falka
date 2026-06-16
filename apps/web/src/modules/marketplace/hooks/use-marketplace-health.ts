@@ -112,6 +112,6 @@ export function useSyncStatusQuery(connectionId: string, enabled = true) {
       return result.data;
     },
     enabled: Boolean(connectionId) && enabled,
-    refetchInterval: (query) => ((query.state.data?.inFlight ?? 0) > 0 ? 3000 : false),
+    refetchInterval: (query) => ((query.state.data?.inFlight ?? 0) > 0 ? 2000 : false),
   });
 }

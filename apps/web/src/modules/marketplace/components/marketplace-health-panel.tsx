@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, RadarIcon, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -102,17 +102,36 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
   // Surface the actionable rows (over/under/missing); in-sync listings stay collapsed.
   const problems = report?.summary.lines.filter((line) => line.status !== 'in_sync') ?? [];
 
+  const [pendingSyncId, setPendingSyncId] = useState<string | null>(null);
   const inFlight = syncStatusQuery.data?.inFlight ?? 0;
-  const syncing = inFlight > 0 || syncAllMutation.isPending;
+  const syncing = inFlight > 0 || syncAllMutation.isPending || syncNowMutation.isPending;
 
-  // When the queued syncs drain to 0, refresh the health + listing statuses they changed.
+  // When the queued syncs drain to 0: refresh the statuses they changed, re-run the drift
+  // check so the table reflects the push, and auto-close it once everything is back in sync.
+  const driftMutationRef = useRef(driftMutation);
+  driftMutationRef.current = driftMutation;
   const prevInFlight = useRef(0);
   useEffect(() => {
-    if (prevInFlight.current > 0 && inFlight === 0) {
-      void queryClient.invalidateQueries({ queryKey: marketplaceKeys.healthDetail(connectionId) });
-      void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
-    }
+    const drained = prevInFlight.current > 0 && inFlight === 0;
     prevInFlight.current = inFlight;
+    if (!drained) return;
+
+    setPendingSyncId(null);
+    void queryClient.invalidateQueries({ queryKey: marketplaceKeys.healthDetail(connectionId) });
+    void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
+
+    const drift = driftMutationRef.current;
+    if (!drift.data) return; // No drift table open → nothing to re-check.
+    drift.mutate(undefined, {
+      onSuccess: (fresh) => {
+        if (fresh.summary.lines.every((line) => line.status === 'in_sync')) {
+          drift.reset();
+          toast.success('Semua listing sudah sinkron', {
+            description: 'Tidak ada lagi selisih stok — panel drift ditutup.',
+          });
+        }
+      },
+    });
   }, [inFlight, connectionId, queryClient]);
 
   async function handleDriftCheck() {
@@ -157,16 +176,24 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     if (!line.syncEnabled) {
       return <span className="text-muted-foreground text-xs">Sinkron mati</span>;
     }
+    const rowPending = syncing && pendingSyncId === line.marketplaceProductId;
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            disabled={syncNowMutation.isPending || syncing}
-            onClick={() => void handleSyncNow(line.marketplaceProductId)}
+            disabled={syncing}
+            onClick={() => {
+              setPendingSyncId(line.marketplaceProductId);
+              void handleSyncNow(line.marketplaceProductId);
+            }}
           >
-            <RefreshCw className="size-4" />
+            {rowPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
             <span className="sr-only">Kirim stok sekarang</span>
           </Button>
         </TooltipTrigger>
@@ -191,32 +218,15 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
           </p>
         </div>
         {canManage ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {syncing ? (
-              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
-                <Loader2 className="size-3.5 animate-spin" />
-                {inFlight > 0 ? `${inFlight} sinkronisasi berjalan` : 'Mengantre sinkronisasi…'}
-              </span>
-            ) : null}
-            <Button
-              variant="outline"
-              onClick={() => void handleSyncAll()}
-              disabled={syncing}
-              className="shrink-0"
-            >
-              <RefreshCw className={`size-4${syncing ? 'animate-spin' : ''}`} />
-              Sinkron semua
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => void handleDriftCheck()}
-              disabled={driftMutation.isPending}
-              className="shrink-0"
-            >
-              <RadarIcon className="size-4" />
-              {driftMutation.isPending ? 'Memeriksa...' : 'Periksa drift'}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => void handleDriftCheck()}
+            disabled={driftMutation.isPending || syncing}
+            className="shrink-0"
+          >
+            <RadarIcon className="size-4" />
+            {driftMutation.isPending ? 'Memeriksa...' : 'Periksa drift'}
+          </Button>
         ) : null}
       </div>
 
@@ -248,6 +258,23 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
             <span className="text-muted-foreground text-xs">
               Diperiksa <span suppressHydrationWarning>{formatDateTime(report.checkedAt)}</span>
             </span>
+            {canManage ? (
+              syncing ? (
+                <span className="text-muted-foreground ml-auto inline-flex items-center gap-1.5 text-xs">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {inFlight > 0 ? `${inFlight} sinkronisasi berjalan` : 'Mengantre sinkronisasi…'}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleSyncAll()}
+                  className="text-primary ml-auto inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
+                >
+                  <RefreshCw className="size-3.5" />
+                  Sinkronkan semua
+                </button>
+              )
+            ) : null}
           </div>
 
           {problems.length === 0 ? (

@@ -9,6 +9,7 @@ import type { PageMeta } from '@/hooks/use-pagination';
 
 import type { ImportListingsResult, MarketplaceListingItem } from '../types';
 import type { ListingStatusFilter } from '../validators/list-listings';
+import { marketplaceKeys } from './use-marketplace-connections';
 
 /** A page of listings (mirror of the server's PaginatedResult). */
 export type MarketplaceListingsPage = {
@@ -204,6 +205,9 @@ export function useSyncNowMutation(connectionId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
+      // Refresh the in-flight poll so the "sinkronisasi berjalan" indicator + waiting state
+      // pick up the just-queued job immediately.
+      void queryClient.invalidateQueries({ queryKey: marketplaceKeys.syncStatus(connectionId) });
     },
   });
 }
