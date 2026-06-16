@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // Runtime: the pooled connection (Neon -pooler / PgBouncer) — safe for serverless.
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // Migrations + introspection: a DIRECT (non-pooled) connection. PgBouncer can't hold the
   // session advisory lock `migrate deploy` needs (P1002 timeout), so point migrations at the
   // direct endpoint. Locally set DIRECT_URL to the same value as DATABASE_URL.
@@ -252,20 +252,20 @@ model Recording {
 }
 
 model RecordingShareLink {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
   recordingId    String
-  recording      Recording     @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  recording      Recording    @relation(fields: [recordingId], references: [id], onDelete: Cascade)
   // Opaque share token, stored hashed (sha256) — the raw token lives only in the URL.
-  tokenHash      String        @unique
+  tokenHash      String       @unique
   expiresAt      DateTime
   revokedAt      DateTime?
-  viewCount      Int           @default(0)
+  viewCount      Int          @default(0)
   lastViewedAt   DateTime?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([recordingId])
   @@index([organizationId])
@@ -285,6 +285,13 @@ model MarketplaceConnection {
   encryptedRefreshToken String?
   tokenExpiresAt        DateTime?
   isActive              Boolean             @default(true)
+  // Lazada multi-warehouse: the ONE warehouse Falka owns. Stock push writes `available` to
+  // ONLY this warehouseCode and leaves every other warehouse untouched (non-destructive).
+  // null = legacy single-warehouse bare path (behavior unchanged).
+  syncWarehouseCode     String?
+  // Distinct warehouseCodes seen across this shop's listings at import — populates the
+  // sync-warehouse picker. Empty until the first import of a multi-warehouse shop.
+  knownWarehouseCodes   String[]            @default([])
   lastImportedAt        DateTime?
   lastOrdersPulledAt    DateTime? // last time orders were pulled from this store (display + pull cooldown)
   createdAt             DateTime            @default(now())
@@ -352,17 +359,17 @@ enum StockLedgerSource {
 }
 
 model Product {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
   description    String?
   category       String?
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
 
   variants ProductVariant[]
@@ -372,19 +379,19 @@ model Product {
 }
 
 model ProductVariant {
-  id                String        @id @default(cuid())
+  id                String       @id @default(cuid())
   userId            String
-  user              User          @relation(fields: [userId], references: [id])
+  user              User         @relation(fields: [userId], references: [id])
   organizationId    String
-  organization      Organization  @relation(fields: [organizationId], references: [id])
+  organization      Organization @relation(fields: [organizationId], references: [id])
   productId         String
-  product           Product       @relation(fields: [productId], references: [id])
+  product           Product      @relation(fields: [productId], references: [id])
   sku               String
   name              String
   barcode           String?
-  price             Decimal       @db.Decimal(12, 2)
-  cost              Decimal?      @db.Decimal(12, 2)
-  weight            Decimal?      @db.Decimal(10, 3) // kilograms
+  price             Decimal      @db.Decimal(12, 2)
+  cost              Decimal?     @db.Decimal(12, 2)
+  weight            Decimal?     @db.Decimal(10, 3) // kilograms
   dimensions        Json?
   // Parent variant name (e.g. "iPhone 16") when this row is a subvariant under a
   // grouped variant; null when the variant stands alone. The variant stays the SKU.
@@ -392,14 +399,14 @@ model ProductVariant {
   // Per-variant photo: R2 object key + its public URL. null = none.
   imageKey          String?
   imageUrl          String?
-  isActive          Boolean       @default(true)
-  lowStockThreshold Int           @default(0)
-  alertEnabled      Boolean       @default(true)
+  isActive          Boolean      @default(true)
+  lowStockThreshold Int          @default(0)
+  alertEnabled      Boolean      @default(true)
   leadTimeDays      Int? // supplier lead time (days) for reorder planning; null = use global default
   minOrderQty       Int? // minimum reorder quantity (MOQ); null = no minimum
   labelPrintedAt    DateTime? // when a QR/barcode label was last printed for this variant; null = never
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
   deletedAt         DateTime?
 
   inventory           Inventory?
@@ -427,21 +434,21 @@ model ProductVariant {
  * is the scannable label code.
  */
 model Bundle {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
   sku            String
   barcode        String?
   name           String
-  price          Decimal       @db.Decimal(12, 2)
-  isActive       Boolean       @default(true) // inactive bundles can't be sold/bought (hidden from POS/PO pickers + scan)
+  price          Decimal      @db.Decimal(12, 2)
+  isActive       Boolean      @default(true) // inactive bundles can't be sold/bought (hidden from POS/PO pickers + scan)
   imageKey       String?
   imageUrl       String?
   labelPrintedAt DateTime? // when a QR/barcode label was last printed; null = never
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   // Soft-delete (archive). The @@unique([organizationId, sku]) spans archived rows, so the
   // SKU is mangled on archive (see archivedSku) to free the original for reuse.
   deletedAt      DateTime?
@@ -727,26 +734,26 @@ enum ReturnDisposition {
 }
 
 model Return {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
   orderId        String
-  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status         ReturnStatus  @default(PENDING)
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status         ReturnStatus @default(PENDING)
   reason         String?
   /**
    * True when opened automatically from a detected post-ship cancellation.
    */
-  autoDetected   Boolean       @default(false)
+  autoDetected   Boolean      @default(false)
   /**
    * Copied from the order for packing-video evidence lookup (matched by noResi).
    */
   noResi         String?
   processedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   items ReturnItem[]
 
@@ -839,8 +846,8 @@ model Sale {
   items   SaleItem[]
   refunds SaleRefund[]
 
-  @@index([organizationId])
   @@unique([organizationId, code])
+  @@index([organizationId])
   @@map("sales")
 }
 
@@ -881,13 +888,13 @@ model SaleItem {
  * A partial/per-item refund against a counter sale (the sale itself stands).
  */
 model SaleRefund {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
   saleId         String
-  sale           Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  sale           Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
   /**
    * Readable reference (e.g. RF00001), generated per-user at create.
    */
@@ -895,14 +902,14 @@ model SaleRefund {
   /**
    * Cash returned to the buyer (sum of line amounts, incl. their PPN share).
    */
-  totalAmount    Decimal       @db.Decimal(14, 2)
+  totalAmount    Decimal      @db.Decimal(14, 2)
   note           String?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime     @default(now())
 
   items SaleRefundItem[]
 
-  @@index([organizationId])
   @@unique([organizationId, code])
+  @@index([organizationId])
   @@index([saleId])
   @@map("sale_refunds")
 }
@@ -959,8 +966,8 @@ model PurchaseOrder {
 
   items PurchaseOrderItem[]
 
-  @@index([organizationId])
   @@unique([organizationId, code])
+  @@index([organizationId])
   @@index([status])
   @@map("purchase_orders")
 }
@@ -1020,8 +1027,8 @@ model StockOpname {
 
   items StockOpnameItem[]
 
-  @@index([organizationId])
   @@unique([organizationId, code])
+  @@index([organizationId])
   @@index([status])
   @@map("stock_opnames")
 }
