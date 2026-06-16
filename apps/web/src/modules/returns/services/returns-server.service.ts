@@ -321,13 +321,16 @@ export class ReturnsServerService {
           where: { variantId },
           select: { availableStock: true },
         });
-        await enqueuePropagateInventoryStock({
-          organizationId,
-          actorUserId,
-          variantId,
-          availableStock: inventory?.availableStock ?? 0,
-          eventId: `return-${variantId}-${Date.now()}`,
-        });
+        await enqueuePropagateInventoryStock(
+          {
+            organizationId,
+            actorUserId,
+            variantId,
+            availableStock: inventory?.availableStock ?? 0,
+            eventId: `return-${variantId}-${Date.now()}`,
+          },
+          { coalesce: true },
+        );
       } catch (error) {
         appLogger.warn('returns.propagate.enqueue_failed', {
           organizationId,

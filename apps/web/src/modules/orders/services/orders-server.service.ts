@@ -703,15 +703,18 @@ export class OrdersServerService {
           where: { variantId },
           select: { availableStock: true },
         });
-        await enqueuePropagateInventoryStock({
-          organizationId,
-          actorUserId,
-          variantId,
-          availableStock: inventory?.availableStock ?? 0,
-          eventId: `order-${connectionId}-${variantId}-${Date.now()}`,
-          // Don't re-sync the channel the order came from against its own change.
-          excludeConnectionId: connectionId,
-        });
+        await enqueuePropagateInventoryStock(
+          {
+            organizationId,
+            actorUserId,
+            variantId,
+            availableStock: inventory?.availableStock ?? 0,
+            eventId: `order-${connectionId}-${variantId}-${Date.now()}`,
+            // Don't re-sync the channel the order came from against its own change.
+            excludeConnectionId: connectionId,
+          },
+          { coalesce: true },
+        );
       } catch (error) {
         appLogger.warn('orders.propagate.enqueue_failed', {
           organizationId,

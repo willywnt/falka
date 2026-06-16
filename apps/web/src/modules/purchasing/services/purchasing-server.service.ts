@@ -460,13 +460,16 @@ export class PurchasingServerService {
           where: { variantId },
           select: { availableStock: true },
         });
-        await enqueuePropagateInventoryStock({
-          organizationId,
-          actorUserId,
-          variantId,
-          availableStock: inventory?.availableStock ?? 0,
-          eventId: `purchase-${variantId}-${Date.now()}`,
-        });
+        await enqueuePropagateInventoryStock(
+          {
+            organizationId,
+            actorUserId,
+            variantId,
+            availableStock: inventory?.availableStock ?? 0,
+            eventId: `purchase-${variantId}-${Date.now()}`,
+          },
+          { coalesce: true },
+        );
       } catch (error) {
         appLogger.warn('purchasing.propagate.enqueue_failed', {
           organizationId,

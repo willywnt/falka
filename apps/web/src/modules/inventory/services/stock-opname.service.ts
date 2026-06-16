@@ -473,13 +473,16 @@ export class StockOpnameService {
         });
         if (syncEnabledCount === 0) continue;
 
-        await enqueuePropagateInventoryStock({
-          organizationId,
-          actorUserId,
-          variantId: entry.variantId,
-          availableStock: entry.availableStock,
-          eventId: entry.eventId,
-        });
+        await enqueuePropagateInventoryStock(
+          {
+            organizationId,
+            actorUserId,
+            variantId: entry.variantId,
+            availableStock: entry.availableStock,
+            eventId: entry.eventId,
+          },
+          { coalesce: true },
+        );
       } catch (error) {
         appLogger.warn('inventory.opname.propagate.enqueue_failed', {
           organizationId,

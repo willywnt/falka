@@ -345,13 +345,17 @@ export class InventoryServerService {
       });
       if (syncEnabledCount === 0) return;
 
-      await enqueuePropagateInventoryStock({
-        organizationId,
-        actorUserId,
-        variantId,
-        availableStock,
-        eventId,
-      });
+      // Auto change → coalesce: a burst on this variant collapses into one delayed push.
+      await enqueuePropagateInventoryStock(
+        {
+          organizationId,
+          actorUserId,
+          variantId,
+          availableStock,
+          eventId,
+        },
+        { coalesce: true },
+      );
     } catch (error) {
       appLogger.warn('inventory.propagate.enqueue_failed', {
         organizationId,
