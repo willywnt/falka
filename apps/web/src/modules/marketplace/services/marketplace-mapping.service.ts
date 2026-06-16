@@ -473,7 +473,12 @@ export class MarketplaceMappingService {
       where: {
         marketplaceConnectionId: connectionId,
         organizationId,
-        syncStatus: { in: ['PENDING', 'PROCESSING'] },
+        OR: [
+          { syncStatus: { in: ['PENDING', 'PROCESSING'] } },
+          // A retryable failure (e.g. Lazada 1002 sentinel) sits FAILED with no completedAt while
+          // it waits to retry — still in-flight, so the watcher/indicator wait it out, not flash.
+          { syncStatus: 'FAILED', completedAt: null },
+        ],
       },
     });
   }

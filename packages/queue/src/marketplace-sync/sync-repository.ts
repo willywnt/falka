@@ -211,10 +211,15 @@ export async function failSyncJob(params: {
       },
     });
 
-    await tx.marketplaceProductMapping.update({
-      where: { id: params.mappingId },
-      data: { lastSyncStatus: 'FAILED', lastSyncError: params.errorMessage },
-    });
+    // Only surface FAILED on the user-facing mapping once retries are exhausted — a RETRYABLE
+    // hiccup (e.g. Lazada code 1002 sentinel/flow-control) succeeds on the next attempt, so it
+    // must not flash "sinkronisasi gagal" mid-retry. The job row above still records each attempt.
+    if (params.finalFailure) {
+      await tx.marketplaceProductMapping.update({
+        where: { id: params.mappingId },
+        data: { lastSyncStatus: 'FAILED', lastSyncError: params.errorMessage },
+      });
+    }
   });
 }
 
