@@ -354,7 +354,21 @@ export class MarketplaceServerService {
     connectionId: string,
     syncWarehouseCode: string | null,
   ): Promise<MarketplaceConnectionDetail> {
-    await this.getOwnedConnection(connectionId, organizationId);
+    const connection = await this.getOwnedConnection(connectionId, organizationId);
+
+    // Only allow a warehouseCode the shop actually exposes (seen at import) — or the currently
+    // saved one (so a re-save survives an import that surfaced fewer codes). A bogus/typo'd code
+    // would be silently ignored by Lazada (code:0) yet make stock sync a no-op and drift read 0
+    // as false "under". null clears it back to the single-warehouse path.
+    if (
+      syncWarehouseCode !== null &&
+      !connection.knownWarehouseCodes.includes(syncWarehouseCode) &&
+      syncWarehouseCode !== connection.syncWarehouseCode
+    ) {
+      throw MarketplaceError.validation(
+        'Kode gudang tidak dikenali untuk channel ini. Impor listing dulu agar gudangnya terdeteksi.',
+      );
+    }
 
     const updated = await prisma.marketplaceConnection.update({
       where: { id: connectionId },

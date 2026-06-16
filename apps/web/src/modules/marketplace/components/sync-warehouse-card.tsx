@@ -67,6 +67,10 @@ export function SyncWarehouseCard({
             kelola — stok hanya dikirim ke situ, gudang lain dibiarkan apa adanya (tidak
             di-nol-kan).
           </p>
+          <p className="text-muted-foreground text-xs">
+            Catatan: kalau gudang lain masih berisi stok, total yang tampil di Lazada bisa lebih
+            besar dari stok internalmu (risiko oversell) — pantau lewat cek drift.
+          </p>
         </div>
       </div>
 
