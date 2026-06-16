@@ -101,7 +101,8 @@ export function useSyncStatusQuery(connectionId: string, enabled = true) {
   return useQuery({
     queryKey: marketplaceKeys.syncStatus(connectionId),
     queryFn: async () => {
-      const result = await apiFetch<{ inFlight: number }>(
+      // `inFlight` = the listing ids currently syncing (per-listing gating), not just a count.
+      const result = await apiFetch<{ inFlight: string[] }>(
         `${apiRoutes.marketplace}/${connectionId}/sync-status`,
       );
 
@@ -112,6 +113,6 @@ export function useSyncStatusQuery(connectionId: string, enabled = true) {
       return result.data;
     },
     enabled: Boolean(connectionId) && enabled,
-    refetchInterval: (query) => ((query.state.data?.inFlight ?? 0) > 0 ? 2000 : false),
+    refetchInterval: (query) => ((query.state.data?.inFlight?.length ?? 0) > 0 ? 2000 : false),
   });
 }

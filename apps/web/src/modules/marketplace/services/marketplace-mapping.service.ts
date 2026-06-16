@@ -464,23 +464,26 @@ export class MarketplaceMappingService {
   }
 
   /**
-   * In-flight stock-sync jobs (PENDING/PROCESSING) for a connection — drives the
-   * "sinkronisasi berjalan" indicator and disables re-clicks while work is queued.
-   * Scoped by org + connection (so a foreign connection reads 0); polled by the UI.
+   * The DISTINCT listing ids (marketplaceProductId) with an in-flight stock-sync for a
+   * connection — drives the "sinkronisasi berjalan" indicator AND per-listing button gating
+   * (only the listing actually syncing is disabled; others stay clickable). In-flight =
+   * PENDING/PROCESSING or a retry-pending failure (FAILED + no completedAt, e.g. Lazada 1002).
+   * Scoped by org + connection (a foreign connection reads empty); polled by the UI.
    */
-  async getInFlightSyncCount(organizationId: string, connectionId: string): Promise<number> {
-    return prisma.marketplaceSyncJob.count({
+  async getInFlightSyncProductIds(organizationId: string, connectionId: string): Promise<string[]> {
+    const jobs = await prisma.marketplaceSyncJob.findMany({
       where: {
         marketplaceConnectionId: connectionId,
         organizationId,
         OR: [
           { syncStatus: { in: ['PENDING', 'PROCESSING'] } },
-          // A retryable failure (e.g. Lazada 1002 sentinel) sits FAILED with no completedAt while
-          // it waits to retry — still in-flight, so the watcher/indicator wait it out, not flash.
           { syncStatus: 'FAILED', completedAt: null },
         ],
       },
+      select: { mapping: { select: { marketplaceProductId: true } } },
     });
+
+    return [...new Set(jobs.map((job) => job.mapping.marketplaceProductId))];
   }
 
   private async getListing(

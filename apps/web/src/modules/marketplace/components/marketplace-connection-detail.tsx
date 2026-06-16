@@ -105,7 +105,7 @@ function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
 
 export function MarketplaceConnectionDetail({ connectionId }: { connectionId: string }) {
   const [mapTarget, setMapTarget] = useState<string | null>(null);
-  const [pendingSyncId, setPendingSyncId] = useState<string | null>(null);
+  const [recentlyClicked, setRecentlyClicked] = useState<ReadonlySet<string>>(new Set());
   const { allowed: canManage } = useHasPermission('marketplace.manage');
 
   const { page, setPage, pageSize, setPageSize } = usePagination(20);
@@ -128,10 +128,24 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   const syncNowMutation = useSyncNowMutation(connectionId);
   const refreshMutation = useRefreshConnectionMutation(connectionId);
   const testMutation = useTestConnectionMutation(connectionId);
-  // Shared in-flight signal (the drift panel polls the same query): a queued/processing sync
-  // disables every "kirim stok" button until it drains, and the listing's status refreshes.
+  // Shared in-flight signal (the drift panel polls the same query): the listing ids currently
+  // syncing. Each "kirim stok" button is disabled ONLY for its own listing — a sync on one
+  // listing never blocks syncing a different one. Listing statuses refresh as jobs drain.
   const syncStatusQuery = useSyncStatusQuery(connectionId, canManage);
-  const syncing = (syncStatusQuery.data?.inFlight ?? 0) > 0 || syncNowMutation.isPending;
+  const inFlightIds = syncStatusQuery.data?.inFlight ?? [];
+  const isListingSyncing = (id: string) => inFlightIds.includes(id) || recentlyClicked.has(id);
+
+  /** Optimistically mark a listing busy on click until the in-flight poll reflects it. */
+  function markClicked(id: string) {
+    setRecentlyClicked((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setRecentlyClicked((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2500);
+  }
 
   async function handleImport() {
     try {
@@ -322,13 +336,13 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                 <Button
                   variant="ghost"
                   size="icon"
-                  disabled={syncing}
+                  disabled={isListingSyncing(listing.marketplaceProductId)}
                   onClick={() => {
-                    setPendingSyncId(listing.marketplaceProductId);
+                    markClicked(listing.marketplaceProductId);
                     void handleSyncNow(listing.marketplaceProductId);
                   }}
                 >
-                  {syncing && pendingSyncId === listing.marketplaceProductId ? (
+                  {isListingSyncing(listing.marketplaceProductId) ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <RefreshCw className="size-4" />

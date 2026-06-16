@@ -12,7 +12,10 @@ export const GET = withApiRoute<RouteParams>(
     const parsed = marketplaceConnectionIdSchema.safeParse(await params);
     if (!parsed.success) return apiNotFound('Marketplace connection not found');
 
-    const inFlight = await marketplaceMappingService.getInFlightSyncCount(org.id, parsed.data.id);
+    const inFlight = await marketplaceMappingService.getInFlightSyncProductIds(
+      org.id,
+      parsed.data.id,
+    );
     return apiSuccess({ inFlight });
   },
   { requireAuth: true, requirePermission: 'marketplace.view' },

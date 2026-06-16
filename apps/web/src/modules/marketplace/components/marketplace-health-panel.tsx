@@ -102,11 +102,32 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
   // Surface the actionable rows (over/under/missing); in-sync listings stay collapsed.
   const problems = report?.summary.lines.filter((line) => line.status !== 'in_sync') ?? [];
 
-  const [pendingSyncId, setPendingSyncId] = useState<string | null>(null);
+  const [recentlyClicked, setRecentlyClicked] = useState<ReadonlySet<string>>(new Set());
   const [watching, setWatching] = useState(false);
-  const inFlight = syncStatusQuery.data?.inFlight ?? 0;
+  // `inFlight` = the listing ids currently syncing (per-listing gating, not just a count).
+  const inFlightIds = syncStatusQuery.data?.inFlight ?? [];
+  const inFlightCount = inFlightIds.length;
+  // Global "is anything syncing" — gates the bulk + drift-check buttons + the watcher.
   const syncing =
-    watching || inFlight > 0 || syncAllMutation.isPending || syncNowMutation.isPending;
+    watching ||
+    inFlightCount > 0 ||
+    recentlyClicked.size > 0 ||
+    syncAllMutation.isPending ||
+    syncNowMutation.isPending;
+  // Per-listing: ONLY the listing actually syncing is busy, so other listings stay clickable.
+  const isListingSyncing = (id: string) => inFlightIds.includes(id) || recentlyClicked.has(id);
+
+  /** Optimistically mark a listing busy on click until the in-flight poll reflects it. */
+  function markClicked(id: string) {
+    setRecentlyClicked((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setRecentlyClicked((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2500);
+  }
 
   // Refs so the watch loop (deps: [watching]) doesn't churn every render.
   const driftMutationRef = useRef(driftMutation);
@@ -135,7 +156,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     const finish = () => {
       if (cancelled) return;
       setWatching(false);
-      setPendingSyncId(null);
+      setRecentlyClicked(new Set());
       void queryClient.invalidateQueries({ queryKey: marketplaceKeys.healthDetail(connectionId) });
       void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
       const drift = driftMutationRef.current;
@@ -155,7 +176,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     const tick = async () => {
       const res = await refetchSyncStatusRef.current();
       if (cancelled) return;
-      if ((res.data?.inFlight ?? 0) > 0) {
+      if ((res.data?.inFlight?.length ?? 0) > 0) {
         sawActive.current = true;
         return;
       }
@@ -214,20 +235,20 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     if (!line.syncEnabled) {
       return <span className="text-muted-foreground text-xs">Sinkron mati</span>;
     }
-    const rowPending = syncing && pendingSyncId === line.marketplaceProductId;
+    const rowSyncing = isListingSyncing(line.marketplaceProductId);
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            disabled={syncing}
+            disabled={rowSyncing}
             onClick={() => {
-              setPendingSyncId(line.marketplaceProductId);
+              markClicked(line.marketplaceProductId);
               void handleSyncNow(line.marketplaceProductId);
             }}
           >
-            {rowPending ? (
+            {rowSyncing ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <RefreshCw className="size-4" />
@@ -300,7 +321,9 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
               syncing ? (
                 <span className="text-muted-foreground ml-auto inline-flex items-center gap-1.5 text-xs">
                   <Loader2 className="size-3.5 animate-spin" />
-                  {inFlight > 0 ? `${inFlight} sinkronisasi berjalan` : 'Mengantre sinkronisasi…'}
+                  {inFlightCount > 0
+                    ? `${inFlightCount} sinkronisasi berjalan`
+                    : 'Mengantre sinkronisasi…'}
                 </span>
               ) : (
                 <button
