@@ -103,36 +103,72 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
   const problems = report?.summary.lines.filter((line) => line.status !== 'in_sync') ?? [];
 
   const [pendingSyncId, setPendingSyncId] = useState<string | null>(null);
+  const [watching, setWatching] = useState(false);
   const inFlight = syncStatusQuery.data?.inFlight ?? 0;
-  const syncing = inFlight > 0 || syncAllMutation.isPending || syncNowMutation.isPending;
+  const syncing =
+    watching || inFlight > 0 || syncAllMutation.isPending || syncNowMutation.isPending;
 
-  // When the queued syncs drain to 0: refresh the statuses they changed, re-run the drift
-  // check so the table reflects the push, and auto-close it once everything is back in sync.
+  // Refs so the watch loop (deps: [watching]) doesn't churn every render.
   const driftMutationRef = useRef(driftMutation);
   driftMutationRef.current = driftMutation;
-  const prevInFlight = useRef(0);
+  const refetchSyncStatusRef = useRef(syncStatusQuery.refetch);
+  refetchSyncStatusRef.current = syncStatusQuery.refetch;
+  const watchStartedAt = useRef(0);
+  const sawActive = useRef(false);
+
+  /** Arm the watcher after triggering a manual sync. */
+  function watchSync() {
+    watchStartedAt.current = Date.now();
+    sawActive.current = false;
+    setWatching(true);
+  }
+
+  // Bulletproof completion: actively poll the in-flight count and finish when the queued jobs
+  // drain — deterministic even for a fast job the periodic poll skips (a short grace timeout
+  // catches a sync that finished before we ever saw it active). On finish: revalidate the
+  // health + listing statuses, re-run drift so the table reflects the push, and auto-close it
+  // once everything is back in sync.
   useEffect(() => {
-    const drained = prevInFlight.current > 0 && inFlight === 0;
-    prevInFlight.current = inFlight;
-    if (!drained) return;
+    if (!watching) return;
+    let cancelled = false;
 
-    setPendingSyncId(null);
-    void queryClient.invalidateQueries({ queryKey: marketplaceKeys.healthDetail(connectionId) });
-    void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
+    const finish = () => {
+      if (cancelled) return;
+      setWatching(false);
+      setPendingSyncId(null);
+      void queryClient.invalidateQueries({ queryKey: marketplaceKeys.healthDetail(connectionId) });
+      void queryClient.invalidateQueries({ queryKey: marketplaceListingKeys.all(connectionId) });
+      const drift = driftMutationRef.current;
+      if (!drift.data) return; // No drift table open → nothing to re-check.
+      drift.mutate(undefined, {
+        onSuccess: (fresh) => {
+          if (fresh.summary.lines.every((line) => line.status === 'in_sync')) {
+            drift.reset();
+            toast.success('Semua listing sudah sinkron', {
+              description: 'Tidak ada lagi selisih stok — panel drift ditutup.',
+            });
+          }
+        },
+      });
+    };
 
-    const drift = driftMutationRef.current;
-    if (!drift.data) return; // No drift table open → nothing to re-check.
-    drift.mutate(undefined, {
-      onSuccess: (fresh) => {
-        if (fresh.summary.lines.every((line) => line.status === 'in_sync')) {
-          drift.reset();
-          toast.success('Semua listing sudah sinkron', {
-            description: 'Tidak ada lagi selisih stok — panel drift ditutup.',
-          });
-        }
-      },
-    });
-  }, [inFlight, connectionId, queryClient]);
+    const tick = async () => {
+      const res = await refetchSyncStatusRef.current();
+      if (cancelled) return;
+      if ((res.data?.inFlight ?? 0) > 0) {
+        sawActive.current = true;
+        return;
+      }
+      if (sawActive.current || Date.now() - watchStartedAt.current > 6000) finish();
+    };
+
+    void tick();
+    const id = setInterval(() => void tick(), 1500);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [watching, connectionId, queryClient]);
 
   async function handleDriftCheck() {
     try {
@@ -147,6 +183,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
   async function handleSyncAll() {
     try {
       const result = await syncAllMutation.mutateAsync();
+      if (result.queued > 0) watchSync();
       toast.success('Sinkronisasi diantrekan', {
         description:
           result.queued > 0
@@ -163,6 +200,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
   async function handleSyncNow(marketplaceProductId: string) {
     try {
       await syncNowMutation.mutateAsync(marketplaceProductId);
+      watchSync();
       toast.success('Sinkronisasi diantrekan', { description: 'Stok akan dikirim sebentar lagi.' });
     } catch (error) {
       toast.error('Gagal sinkronisasi', {
