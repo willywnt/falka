@@ -296,7 +296,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
               onCheckedChange={(checked) =>
                 void handleToggleSync(listing.marketplaceProductId, checked)
               }
-              aria-label="Hidupkan/matikan sinkronisasi stok ke listing ini"
+              aria-label="Aktifkan/matikan sinkronisasi stok ke listing ini"
             />
           </span>
         </TooltipTrigger>
@@ -304,8 +304,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
           {mapping.mappingStatus === 'NEEDS_REVIEW'
             ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
             : mapping.syncEnabled
-              ? 'Stok dikirim ke listing ini. Klik untuk matikan.'
-              : 'Aktifkan untuk kirim stok ke listing ini.'}
+              ? 'Matikan sinkronisasi'
+              : 'Aktifkan sinkronisasi'}
         </TooltipContent>
       </Tooltip>
     );
@@ -355,10 +355,10 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                   ) : (
                     <RefreshCw className="size-4" />
                   )}
-                  <span className="sr-only">Kirim stok sekarang</span>
+                  <span className="sr-only">Sinkronisasi sekarang</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Kirim stok sekarang</TooltipContent>
+              <TooltipContent>Sinkronisasi sekarang</TooltipContent>
             </Tooltip>
           ) : null}
           <Tooltip>
@@ -370,10 +370,10 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                 onClick={() => void handleUnmap(listing.marketplaceProductId)}
               >
                 <Link2Off className="size-4" />
-                <span className="sr-only">Lepas listing ini</span>
+                <span className="sr-only">Lepas kaitan dari listing ini</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Lepas listing ini</TooltipContent>
+            <TooltipContent>Lepas kaitan dari listing ini</TooltipContent>
           </Tooltip>
         </div>
       );
@@ -582,8 +582,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                   <TableHead>Listing</TableHead>
                   <TableHead className="text-right">Stok</TableHead>
                   <TableHead>Dikaitkan ke</TableHead>
-                  <TableHead>Sinkronisasi</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Sinkronisasi</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -606,8 +606,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                     </TableCell>
                     <TableCell className="num text-right">{listing.stock}</TableCell>
                     <TableCell>{renderLinkedTo(listing.mapping)}</TableCell>
-                    <TableCell>{renderSyncToggle(listing)}</TableCell>
                     <TableCell>{renderSyncStatus(listing.mapping)}</TableCell>
+                    <TableCell>{renderSyncToggle(listing)}</TableCell>
                     <TableCell className="text-right">{renderListingActions(listing)}</TableCell>
                   </TableRow>
                 ))}
