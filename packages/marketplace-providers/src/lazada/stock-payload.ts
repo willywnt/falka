@@ -15,7 +15,54 @@ export type LazadaStockPayloadInput = {
   /** Lazada SkuId — used with externalProductId when there is no SellerSku. */
   externalVariantId?: string | null;
   quantity: number;
+  /**
+   * Per-connection designated "sync warehouse" (Policy A). When set, the SKU's full
+   * `quantity` goes to this warehouseCode and every OTHER captured warehouse is zeroed,
+   * so the buyer-facing Σ sellableQuantity equals internal `available`. null/undefined =>
+   * legacy single-warehouse path (bare `<SellableQuantity>`, byte-for-byte unchanged).
+   */
+  syncWarehouseCode?: string | null;
+  /**
+   * Every warehouseCode Lazada reports for this SKU (captured at import). Used only to
+   * know which OTHER warehouses to zero. Without it (or with only the sync warehouse),
+   * the bare path is used.
+   */
+  warehouseCodes?: readonly string[] | null;
 };
+
+function warehouseInventoryXml(code: string, quantity: number): string {
+  // Inner element is <Quantity> (NOT <SellableQuantity>) and absolute — live-verified
+  // 2026-06-16. Lazada silently ignores an unknown child element (still returns code:0),
+  // so this was confirmed by a changing set + read-back, not by the envelope.
+  return (
+    `<MultiWarehouseInventory><WarehouseCode>${escapeXml(code)}</WarehouseCode>` +
+    `<Quantity>${quantity}</Quantity></MultiWarehouseInventory>`
+  );
+}
+
+/**
+ * Builds the `<…>` stock element for one SKU. Policy A (multi-warehouse) when a sync
+ * warehouse is configured AND the SKU has at least one OTHER warehouse to zero; otherwise
+ * the legacy bare `<SellableQuantity>` (preserves the live-validated single-warehouse path).
+ */
+function buildStockElement(input: LazadaStockPayloadInput): string {
+  const syncCode = input.syncWarehouseCode?.trim();
+  const others = syncCode
+    ? [...new Set((input.warehouseCodes ?? []).map((code) => code.trim()).filter(Boolean))].filter(
+        (code) => code !== syncCode,
+      )
+    : [];
+
+  if (!syncCode || others.length === 0) {
+    return `<SellableQuantity>${input.quantity}</SellableQuantity>`;
+  }
+
+  const entries = [
+    warehouseInventoryXml(syncCode, input.quantity),
+    ...others.map((code) => warehouseInventoryXml(code, 0)),
+  ].join('');
+  return `<MultiWarehouseInventories>${entries}</MultiWarehouseInventories>`;
+}
 
 /**
  * LazOP `/product/stock/sellable/update` payload — sets a SKU's ABSOLUTE sellable
@@ -26,6 +73,12 @@ export type LazadaStockPayloadInput = {
  * XML payload (simple skuId/sellableQuantity params return E006). NOTE: the sibling
  * `/product/stock/sellable/adjust` takes the SAME payload but applies it as a DELTA, so
  * the path matters — `update` = absolute set, `adjust` = increment.
+ *
+ * **Multi-warehouse (Policy A):** a Lazada SKU can split stock across warehouses
+ * (`multiWarehouseInventories[]`); a bare `<SellableQuantity>` only sets ONE, so the
+ * buyer-facing total (Σ across warehouses) drifts from internal `available`. With a
+ * `syncWarehouseCode` configured, push the full quantity to it and zero the other
+ * captured warehouses via `<MultiWarehouseInventories>` so the sum equals `available`.
  *
  * Identify by ItemId + SkuId (Lazada deprecated SellerSku for stock writes); SellerSku
  * is still included when known (Lazada's own demo carries all three) but never relied on.
@@ -43,7 +96,7 @@ export function buildLazadaSellableStockPayload(input: LazadaStockPayloadInput):
   if (input.externalSku) {
     parts.push(`<SellerSku>${escapeXml(input.externalSku)}</SellerSku>`);
   }
-  parts.push(`<SellableQuantity>${input.quantity}</SellableQuantity>`);
+  parts.push(buildStockElement(input));
 
   return `<Request><Product><Skus><Sku>${parts.join('')}</Sku></Skus></Product></Request>`;
 }
