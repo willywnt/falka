@@ -54,27 +54,24 @@ describe('buildLazadaSellableStockPayload', () => {
     );
   });
 
-  // ── Multi-warehouse (Policy A) ──────────────────────────────────────────────────────
-  // A Lazada SKU can split stock across warehouses; a bare <SellableQuantity> sets only
-  // ONE, so the buyer-facing Σ drifts from internal `available`. With a syncWarehouseCode,
-  // push the full quantity there and zero the OTHER captured warehouses. Inner element is
-  // <Quantity> (live-verified 2026-06-16 — NOT <SellableQuantity>).
-  it('emits a MultiWarehouseInventories block: sync warehouse at full qty, others zeroed', () => {
+  // ── Multi-warehouse (non-destructive sync warehouse) ────────────────────────────────
+  // A Lazada SKU can split stock across warehouses. Falka owns exactly ONE designated
+  // warehouse: with a syncWarehouseCode set, write ONLY that warehouse and OMIT the rest —
+  // Lazada leaves omitted warehouses untouched (partial update, live-verified 2026-06-16).
+  // We never zero a warehouse we don't own. Inner element is <Quantity> (NOT <SellableQuantity>).
+  it('writes ONLY the sync warehouse (single-entry block) and omits all others', () => {
     expect(
       buildLazadaSellableStockPayload({
         externalProductId: '8800780845',
         externalVariantId: '16243014036',
         quantity: 1781,
         syncWarehouseCode: 'dropshipping',
-        warehouseCodes: ['dropshipping', 'ID67YE4SPX-WH-10010', 'ID67YE4SPX-WH-10013'],
       }),
     ).toBe(
       '<Request><Product><Skus><Sku>' +
         '<ItemId>8800780845</ItemId><SkuId>16243014036</SkuId>' +
         '<MultiWarehouseInventories>' +
         '<MultiWarehouseInventory><WarehouseCode>dropshipping</WarehouseCode><Quantity>1781</Quantity></MultiWarehouseInventory>' +
-        '<MultiWarehouseInventory><WarehouseCode>ID67YE4SPX-WH-10010</WarehouseCode><Quantity>0</Quantity></MultiWarehouseInventory>' +
-        '<MultiWarehouseInventory><WarehouseCode>ID67YE4SPX-WH-10013</WarehouseCode><Quantity>0</Quantity></MultiWarehouseInventory>' +
         '</MultiWarehouseInventories>' +
         '</Sku></Skus></Product></Request>',
     );
@@ -86,7 +83,6 @@ describe('buildLazadaSellableStockPayload', () => {
         externalProductId: '8800780845',
         externalVariantId: '16243014036',
         quantity: 5,
-        warehouseCodes: ['dropshipping', 'ID67YE4SPX-WH-10010'],
       }),
     ).toBe(
       '<Request><Product><Skus><Sku>' +
@@ -96,39 +92,30 @@ describe('buildLazadaSellableStockPayload', () => {
     );
   });
 
-  it('keeps the bare path when the sync warehouse is the SKU’s only warehouse (nothing to zero)', () => {
+  it('treats a blank/whitespace syncWarehouseCode as unset (bare path)', () => {
     expect(
       buildLazadaSellableStockPayload({
-        externalProductId: '8800780845',
-        externalVariantId: '16243014036',
-        quantity: 9,
-        syncWarehouseCode: 'dropshipping',
-        warehouseCodes: ['dropshipping'],
+        externalProductId: '1',
+        externalVariantId: '2',
+        quantity: 7,
+        syncWarehouseCode: '   ',
       }),
     ).toBe(
       '<Request><Product><Skus><Sku>' +
-        '<ItemId>8800780845</ItemId><SkuId>16243014036</SkuId>' +
-        '<SellableQuantity>9</SellableQuantity>' +
+        '<ItemId>1</ItemId><SkuId>2</SkuId>' +
+        '<SellableQuantity>7</SellableQuantity>' +
         '</Sku></Skus></Product></Request>',
     );
   });
 
-  it('dedupes warehouseCodes and excludes the sync warehouse from the zeroed set', () => {
-    const payload = buildLazadaSellableStockPayload({
-      externalProductId: '1',
-      externalVariantId: '2',
-      quantity: 3,
-      syncWarehouseCode: 'wh-main',
-      warehouseCodes: ['wh-main', 'wh-a', 'wh-a', 'wh-main'],
-    });
-    expect(payload).toBe(
-      '<Request><Product><Skus><Sku>' +
-        '<ItemId>1</ItemId><SkuId>2</SkuId>' +
-        '<MultiWarehouseInventories>' +
-        '<MultiWarehouseInventory><WarehouseCode>wh-main</WarehouseCode><Quantity>3</Quantity></MultiWarehouseInventory>' +
-        '<MultiWarehouseInventory><WarehouseCode>wh-a</WarehouseCode><Quantity>0</Quantity></MultiWarehouseInventory>' +
-        '</MultiWarehouseInventories>' +
-        '</Sku></Skus></Product></Request>',
-    );
+  it('escapes XML metacharacters in the sync warehouse code', () => {
+    expect(
+      buildLazadaSellableStockPayload({
+        externalProductId: '1',
+        externalVariantId: '2',
+        quantity: 3,
+        syncWarehouseCode: 'A&B',
+      }),
+    ).toContain('<WarehouseCode>A&amp;B</WarehouseCode>');
   });
 });

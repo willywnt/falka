@@ -16,18 +16,17 @@ export type LazadaStockPayloadInput = {
   externalVariantId?: string | null;
   quantity: number;
   /**
-   * Per-connection designated "sync warehouse" (Policy A). When set, the SKU's full
-   * `quantity` goes to this warehouseCode and every OTHER captured warehouse is zeroed,
-   * so the buyer-facing Σ sellableQuantity equals internal `available`. null/undefined =>
-   * legacy single-warehouse path (bare `<SellableQuantity>`, byte-for-byte unchanged).
+   * Per-connection designated "sync warehouse" (the ONE Lazada warehouse Falka owns). When
+   * set, `quantity` is written to ONLY this warehouseCode via a single-entry
+   * `<MultiWarehouseInventories>` block; every other warehouse of the SKU is OMITTED and left
+   * untouched (Lazada partial-update, live-verified 2026-06-16). null/undefined => legacy
+   * single-warehouse path (bare `<SellableQuantity>`, byte-for-byte unchanged).
+   *
+   * Falka never zeroes a warehouse it doesn't own (that would erase stock another writer
+   * manages); we own exactly one warehouse, so the buyer-facing SKU total may legitimately
+   * exceed our `available` when other warehouses hold their own stock.
    */
   syncWarehouseCode?: string | null;
-  /**
-   * Every warehouseCode Lazada reports for this SKU (captured at import). Used only to
-   * know which OTHER warehouses to zero. Without it (or with only the sync warehouse),
-   * the bare path is used.
-   */
-  warehouseCodes?: readonly string[] | null;
 };
 
 function warehouseInventoryXml(code: string, quantity: number): string {
@@ -41,27 +40,17 @@ function warehouseInventoryXml(code: string, quantity: number): string {
 }
 
 /**
- * Builds the `<…>` stock element for one SKU. Policy A (multi-warehouse) when a sync
- * warehouse is configured AND the SKU has at least one OTHER warehouse to zero; otherwise
- * the legacy bare `<SellableQuantity>` (preserves the live-validated single-warehouse path).
+ * Builds the `<…>` stock element for one SKU. With a sync warehouse configured, write ONLY
+ * that warehouse (single-entry `<MultiWarehouseInventories>`, others omitted = untouched);
+ * otherwise the legacy bare `<SellableQuantity>` (preserves the live-validated single-warehouse
+ * path byte-for-byte).
  */
 function buildStockElement(input: LazadaStockPayloadInput): string {
   const syncCode = input.syncWarehouseCode?.trim();
-  const others = syncCode
-    ? [...new Set((input.warehouseCodes ?? []).map((code) => code.trim()).filter(Boolean))].filter(
-        (code) => code !== syncCode,
-      )
-    : [];
-
-  if (!syncCode || others.length === 0) {
+  if (!syncCode) {
     return `<SellableQuantity>${input.quantity}</SellableQuantity>`;
   }
-
-  const entries = [
-    warehouseInventoryXml(syncCode, input.quantity),
-    ...others.map((code) => warehouseInventoryXml(code, 0)),
-  ].join('');
-  return `<MultiWarehouseInventories>${entries}</MultiWarehouseInventories>`;
+  return `<MultiWarehouseInventories>${warehouseInventoryXml(syncCode, input.quantity)}</MultiWarehouseInventories>`;
 }
 
 /**
@@ -74,11 +63,11 @@ function buildStockElement(input: LazadaStockPayloadInput): string {
  * `/product/stock/sellable/adjust` takes the SAME payload but applies it as a DELTA, so
  * the path matters — `update` = absolute set, `adjust` = increment.
  *
- * **Multi-warehouse (Policy A):** a Lazada SKU can split stock across warehouses
- * (`multiWarehouseInventories[]`); a bare `<SellableQuantity>` only sets ONE, so the
- * buyer-facing total (Σ across warehouses) drifts from internal `available`. With a
- * `syncWarehouseCode` configured, push the full quantity to it and zero the other
- * captured warehouses via `<MultiWarehouseInventories>` so the sum equals `available`.
+ * **Multi-warehouse:** a Lazada SKU can split stock across warehouses
+ * (`multiWarehouseInventories[]`); a bare `<SellableQuantity>` only sets ONE (the default).
+ * With a `syncWarehouseCode` configured, push the full quantity to ONLY that warehouse via a
+ * single-entry `<MultiWarehouseInventories>` block and OMIT the rest — Lazada leaves omitted
+ * warehouses untouched (non-destructive). Falka owns one warehouse and never zeroes the others.
  *
  * Identify by ItemId + SkuId (Lazada deprecated SellerSku for stock writes); SellerSku
  * is still included when known (Lazada's own demo carries all three) but never relied on.
