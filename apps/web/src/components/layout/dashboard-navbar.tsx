@@ -24,6 +24,7 @@ import { CommandPaletteTrigger, useCommandPalette } from '@/components/command-p
 import { resolveNavTitle } from '@/components/layout/nav-config';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { useSidebar } from '@/components/layout/sidebar-provider';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ export function DashboardNavbar() {
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
-        {/* Reserved slot: <NotificationBell/> (count badge → tray) — backlog item A. */}
+        <NotificationBell />
         <Button variant="ghost" size="icon" className="md:hidden" onClick={openPalette}>
           <Search className="size-4" />
           <span className="sr-only">Cari menu, kode, resi, atau SKU</span>
