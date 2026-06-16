@@ -160,4 +160,8 @@ describe('resolveSyncWarehouseStock', () => {
   it('falls back to the total when the listing carries no per-warehouse data', () => {
     expect(resolveSyncWarehouseStock({ stock: 7 }, 'dropshipping')).toBe(7);
   });
+
+  it('falls back to the total for a non-multi-warehouse SKU (empty warehouses array)', () => {
+    expect(resolveSyncWarehouseStock({ stock: 7, warehouses: [] }, 'dropshipping')).toBe(7);
+  });
 });

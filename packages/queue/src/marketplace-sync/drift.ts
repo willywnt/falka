@@ -33,7 +33,11 @@ export function resolveSyncWarehouseStock(
   syncWarehouseCode: string | null | undefined,
 ): number {
   const code = syncWarehouseCode?.trim();
-  if (code && listing.warehouses) {
+  // Only narrow to the sync warehouse for SKUs that actually expose a warehouse breakdown. A
+  // non-multi-warehouse SKU (empty array) has its whole stock in `stock`, so fall back to that
+  // rather than reading 0 and flagging false drift. A multi-warehouse SKU that simply lacks the
+  // sync warehouse legitimately reads 0 there (nothing pushed yet → drift "under" until synced).
+  if (code && listing.warehouses && listing.warehouses.length > 0) {
     return listing.warehouses.find((warehouse) => warehouse.code === code)?.sellable ?? 0;
   }
   return listing.stock;
