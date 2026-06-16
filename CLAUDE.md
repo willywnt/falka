@@ -243,6 +243,15 @@ REAL, OAuth-onboarded, live-validated adapter** — Shopee/Tokopedia stay STUBS)
   `R2_PRODUCTS_BUCKET_NAME`+`R2_PRODUCTS_PUBLIC_URL`.
 - **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change enqueues
   `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub simulates).
+  **AUTO changes are COALESCED** per `(org, variant)` — a stable BullMQ jobId + 60s delay
+  (`MARKETPLACE_SYNC_COALESCE_WINDOW_MS`) collapse a burst into one push of the LATEST available;
+  **manual syncs stay immediate**. Stock-write is an **absolute set**. Next lever (multi-SKU-per-call
+  batching) = `docs/roadmap/sync-batching.md` (Approach B, not started). **Lazada multi-warehouse is
+  NON-DESTRUCTIVE** — per-connection `syncWarehouseCode` writes ONLY that warehouse and OMITS the rest
+  (Lazada leaves them untouched); never zeroes a warehouse we don't own; drift compares the sync
+  warehouse's own sellable. The internal multi-location/WMS generalization is scoped (not built) in
+  `docs/roadmap/wms-scoping.md`. A CONFIRMED mapping auto-enables `syncEnabled` (NEEDS_REVIEW stays off).
+  Full detail: `.cursor/rules/40-inventory-marketplace.mdc`.
 - **Phase 6 — provider-health + drift reconciliation + token auto-refresh** (shipped 2026-06-15,
   zero-migration, **observe-only**): per-connection health computed on-read (`marketplaceHealthService` →
   ok/warn/danger) drives a "Kesehatan & drift" panel + dashboard badges + a `marketplaceUnhealthy` nav

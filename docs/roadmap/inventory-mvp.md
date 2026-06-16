@@ -217,7 +217,8 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 - ✅ **Bundles / kits** — done. A `Bundle` is a buy/sell shortcut (its own SKU/QR) that explodes into
   per-component sale/PO rows with proportional price/cost allocation; it is NOT a stock variant. Marketplace-order
   bundle decrement still parked.
-- Multi-warehouse / location stock.
+- Multi-warehouse / location stock — **channel-side (Lazada) shipped** (non-destructive per-connection
+  sync warehouse, 2026-06-16); **internal multi-location/WMS scoped, not built** (`docs/roadmap/wms-scoping.md`).
 - Analytics / reporting (profit/channel-performance — partly Phase 6).
 - Recording thumbnail generation (`thumbnailGeneration` placeholder reserved).
 

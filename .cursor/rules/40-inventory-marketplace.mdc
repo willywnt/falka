@@ -157,7 +157,11 @@ exist) → `propagate-inventory-stock` job (fan-out, idempotent per ledger event
 `sync-marketplace-stock` job → `executeStockSync` (per-provider rate-limit, push LATEST
 available via the provider adapter; `Dev` stub simulates success, `Unwired` stub rejects) →
 marks `MarketplaceSyncJob` + mapping `lastSyncStatus` + listing snapshot. Retryable failures
-throw so BullMQ retries.
+throw so BullMQ retries. **Retry UX (2026-06-16):** a retryable hiccup (e.g. Lazada **code 1002**
+sentinel/flow-control, "E501: Update product failed") succeeds on the next attempt, so `failSyncJob`
+only sets the user-facing `mapping.lastSyncStatus = FAILED` on **finalFailure** (not each attempt) —
+no "sinkronisasi gagal" flash mid-retry; `getInFlightSyncProductIds` counts a retry-pending job
+(`FAILED` + `completedAt: null`) as in-flight so the indicator/watcher wait it out.
 **Coalescing (shipped 2026-06-16):** AUTO changes pass `{ coalesce: true }` to
 `enqueuePropagateInventoryStock` → a STABLE per-(org, variant) jobId (`buildCoalescedPropagateJobId`)
 + a 60s delay (`MARKETPLACE_SYNC_COALESCE_WINDOW_MS`); BullMQ dedups a burst into one delayed propagate
@@ -165,10 +169,13 @@ that re-reads LATEST available → one push per variant per window instead of on
 (`removeOnComplete/Fail: true` frees the jobId). **Manual syncs (`syncNow`, `syncAllListings`) stay
 immediate** (no coalesce). Next lever (multi-SKU-per-call batching) = Approach B in
 `docs/roadmap/sync-batching.md`, build only when many DISTINCT SKUs change at once.
-**Bulk + indicator UI:** "Sinkron semua" on the drift panel (`POST /[id]/sync-all`) re-pushes all
-sync-enabled listings; a `GET /[id]/sync-status` in-flight (PENDING/PROCESSING) poll drives a
-"sinkronisasi berjalan" indicator + disables sync buttons until it drains. A CONFIRMED mapping
-(manual map / order-resolve / EXACT auto-map) auto-enables `syncEnabled` (NEEDS_REVIEW stays off).
+**Bulk + indicator UI:** "Sinkron semua" on the drift panel (`POST /[id]/sync-all`, shown only when the
+drift report has drift) re-pushes all sync-enabled listings. `GET /[id]/sync-status` returns the LISTING
+IDS currently in-flight (`getInFlightSyncProductIds`) → per-listing button gating (only the listing being
+synced is disabled; OTHER listings stay clickable) + a "sinkronisasi berjalan" indicator. An active watcher
+(poll every 1.5s + 6s grace, armed on a manual sync) makes the drift re-check + auto-close + status
+revalidation deterministic even for fast jobs. A CONFIRMED mapping (manual map / order-resolve / EXACT
+auto-map) auto-enables `syncEnabled` (NEEDS_REVIEW stays off).
 
 ## Lazada (REAL adapter + OAuth onboarding) — live-validated 2026-06-14
 LAZADA is the one **real** provider (others are stubs). Signer (HMAC-SHA256, prepend apiPath, UPPER
