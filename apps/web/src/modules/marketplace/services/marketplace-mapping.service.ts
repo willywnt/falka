@@ -159,8 +159,16 @@ export class MarketplaceMappingService {
         provider: product.provider,
         mappingStatus: 'MAPPED',
         autoMapped: false,
+        // A confirmed (manual) mapping is sync-ready by default, so drift can be pushed
+        // right away — the user can still toggle it off per listing.
+        syncEnabled: true,
       },
-      update: { productVariantId: variantId, mappingStatus: 'MAPPED', autoMapped: false },
+      update: {
+        productVariantId: variantId,
+        mappingStatus: 'MAPPED',
+        autoMapped: false,
+        syncEnabled: true,
+      },
     });
 
     appLogger.info('marketplace.listing.mapped', {
@@ -236,6 +244,8 @@ export class MarketplaceMappingService {
         provider: listing.provider,
         mappingStatus: 'MAPPED',
         autoMapped: false,
+        // Resolving an order item is a confirmed mapping → sync-ready by default.
+        syncEnabled: true,
       },
       update: { productVariantId: variantId, mappingStatus: 'MAPPED', autoMapped: false },
     });
@@ -381,6 +391,91 @@ export class MarketplaceMappingService {
     });
 
     return this.getListing(organizationId, connectionId, marketplaceProductId);
+  }
+
+  /**
+   * Bulk re-push: enqueue a stock sync for EVERY sync-enabled listing of a connection (one
+   * propagate per distinct variant — it fans out to all the variant's sync-ready listings).
+   * The one-click fix when a drift check surfaces many drifted listings. Best-effort per
+   * variant; never throws on a single enqueue failure.
+   */
+  async syncAllListings(
+    organizationId: string,
+    actorUserId: string,
+    connectionId: string,
+  ): Promise<{ queued: number }> {
+    await this.assertConnectionOwned(organizationId, connectionId);
+
+    const mappings = await prisma.marketplaceProductMapping.findMany({
+      where: {
+        marketplaceConnectionId: connectionId,
+        organizationId,
+        syncEnabled: true,
+        marketplaceProduct: { deletedAt: null },
+      },
+      select: {
+        id: true,
+        productVariantId: true,
+        productVariant: { select: { inventory: { select: { availableStock: true } } } },
+      },
+    });
+
+    // One propagate per DISTINCT variant (a variant may back several listings; propagate
+    // already fans out to all of them).
+    const byVariant = new Map<string, { mappingId: string; availableStock: number }>();
+    for (const mapping of mappings) {
+      if (byVariant.has(mapping.productVariantId)) continue;
+      byVariant.set(mapping.productVariantId, {
+        mappingId: mapping.id,
+        availableStock: mapping.productVariant.inventory?.availableStock ?? 0,
+      });
+    }
+
+    const now = Date.now();
+    let queued = 0;
+    for (const [variantId, info] of byVariant) {
+      try {
+        await enqueuePropagateInventoryStock({
+          organizationId,
+          actorUserId,
+          variantId,
+          availableStock: info.availableStock,
+          eventId: buildManualRetryEventId(info.mappingId, now),
+        });
+        queued += 1;
+      } catch (error) {
+        appLogger.warn('marketplace.sync_all.enqueue_failed', {
+          organizationId,
+          connectionId,
+          variantId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (queued === 0 && byVariant.size > 0) {
+      throw MarketplaceError.validation(
+        'Tidak bisa mengantre sinkronisasi — apakah worker (Redis) berjalan?',
+      );
+    }
+
+    appLogger.info('marketplace.sync_all', { organizationId, connectionId, queued });
+    return { queued };
+  }
+
+  /**
+   * In-flight stock-sync jobs (PENDING/PROCESSING) for a connection — drives the
+   * "sinkronisasi berjalan" indicator and disables re-clicks while work is queued.
+   * Scoped by org + connection (so a foreign connection reads 0); polled by the UI.
+   */
+  async getInFlightSyncCount(organizationId: string, connectionId: string): Promise<number> {
+    return prisma.marketplaceSyncJob.count({
+      where: {
+        marketplaceConnectionId: connectionId,
+        organizationId,
+        syncStatus: { in: ['PENDING', 'PROCESSING'] },
+      },
+    });
   }
 
   private async getListing(

@@ -198,6 +198,9 @@ export class MarketplaceImportService {
           mappingStatus: exact ? 'MAPPED' : 'NEEDS_REVIEW',
           autoMapped: true,
           mappingConfidence: exact ? 1 : 0.9,
+          // Exact auto-maps are sync-ready so drift can be pushed immediately; a fuzzy
+          // (NEEDS_REVIEW) match stays sync-off until a human confirms it.
+          syncEnabled: exact,
         },
       });
       mapped += 1;

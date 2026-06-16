@@ -15,6 +15,7 @@ export const marketplaceKeys = {
   detail: (id: string) => ['marketplace-connections', 'detail', id] as const,
   health: () => ['marketplace-connections', 'health'] as const,
   healthDetail: (id: string) => ['marketplace-connections', 'health', id] as const,
+  syncStatus: (id: string) => ['marketplace-connections', 'sync-status', id] as const,
 };
 
 export function useMarketplaceConnectionsQuery() {
