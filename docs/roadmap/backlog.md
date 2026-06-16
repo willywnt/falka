@@ -111,7 +111,15 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 
 ## ⚡ Quick wins (sub-hour)
 
-- _(No open quick wins — all of the below shipped to `main`.)_
+- **Bulletproof per-listing sync completion feedback** (marketplace) — today a manual sync
+  (syncNow / "Sinkron semua") shows a "sinkronisasi berjalan" state by polling the connection's
+  in-flight sync-job count every 2s; for a real Lazada push (≥300ms) this reliably reflects
+  completion, but an ultra-fast (dev-stub) job can finish before the first poll, so the drift
+  table's auto-recheck may be skipped. Make it deterministic per listing: after a click, watch
+  the SPECIFIC job/mapping to a terminal state (poll `lastSyncStatus`/`lastSyncedAt`, or push a
+  job-done event over the socket) and show definite success/fail per row. Deferred 2026-06-16
+  (works well enough for real Lazada; the gap is dev-stub-only).
+- _(No other open quick wins — all of the below shipped to `main`.)_
 - _(shipped 2026-06-11: marketplace sync-health badge · below-cost alert at sale-create ·
   `grup · subvarian` picker label.)_
 - _(shipped 2026-06-12: `@@index([userId, createdAt])` on `StockLedger` — serves the userId-scoped
