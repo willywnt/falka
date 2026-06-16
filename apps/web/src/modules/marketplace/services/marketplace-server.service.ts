@@ -39,6 +39,7 @@ function mapConnection(connection: MarketplaceConnection): MarketplaceConnection
     connectionStatus: resolveConnectionStatus(connection.isActive, connection.tokenExpiresAt),
     createdAt: connection.createdAt.toISOString(),
     updatedAt: connection.updatedAt.toISOString(),
+    lastImportedAt: connection.lastImportedAt?.toISOString() ?? null,
     syncWarehouseCode: connection.syncWarehouseCode,
     knownWarehouseCodes: connection.knownWarehouseCodes,
   };

@@ -455,7 +455,7 @@ export class MarketplaceMappingService {
 
     if (queued === 0 && byVariant.size > 0) {
       throw MarketplaceError.validation(
-        'Tidak bisa mengantre sinkronisasi — apakah worker (Redis) berjalan?',
+        'Tidak bisa memulai sinkronisasi — apakah worker (Redis) berjalan?',
       );
     }
 

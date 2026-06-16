@@ -213,8 +213,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleSyncNow(marketplaceProductId: string) {
     try {
       await syncNowMutation.mutateAsync(marketplaceProductId);
-      toast.success('Sinkronisasi diantrekan', {
-        description: 'Stok akan dikirim sebentar lagi.',
+      toast.success('Sinkronisasi dimulai', {
+        description: 'Stok sedang dikirim ke marketplace.',
       });
     } catch (error) {
       toast.error('Gagal sinkronisasi', {
@@ -255,17 +255,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   const totalListings = listingsMeta?.total ?? 0;
   const hasFilter = search.trim().length > 0 || statusFilter !== ALL_STATUS;
 
-  // "Dikaitkan ke": the internal variant (product · variant on top, SKU below) — same
-  // format as the listing name. Unmapped rows show nothing (no badge), per design.
+  // "Dikaitkan ke": product on top, "variant · sku" below — same shape as the variant picker.
+  // Unmapped rows show nothing (no badge), per design.
   function renderLinkedTo(mapping: MarketplaceListingMapping | null) {
     if (!mapping) return <span className="text-muted-foreground">—</span>;
 
-    const label = [mapping.productName, mapping.variantName].filter(Boolean).join(' · ');
+    const variantLine = [mapping.variantName, mapping.variantSku].filter(Boolean).join(' · ');
     return (
-      <div className="max-w-[18rem] space-y-0.5">
+      <div className="max-w-[300px] space-y-0.5">
         <div className="flex items-center gap-2">
           <EllipsisTooltip
-            text={label}
+            text={mapping.productName}
             className="text-sm font-medium"
             contentClassName="max-w-xs"
           />
@@ -273,26 +273,58 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             <StatusBadge tone="warn">Tinjau</StatusBadge>
           ) : null}
         </div>
-        <p className="text-muted-foreground num truncate text-xs">{mapping.variantSku}</p>
+        <EllipsisTooltip
+          text={variantLine}
+          className="text-muted-foreground text-xs"
+          contentClassName="max-w-xs"
+        />
       </div>
     );
   }
 
-  // "Status": the sync badge (Sudah sinkron / gagal / menunggu), or off/— when not syncing.
+  // "Sinkronisasi" column: just the on/off switch (— when unmapped).
+  function renderSyncToggle(listing: MarketplaceListingItem) {
+    const mapping = listing.mapping;
+    if (!canManage || !mapping) return <span className="text-muted-foreground">—</span>;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex">
+            <Switch
+              checked={mapping.syncEnabled}
+              disabled={syncToggleMutation.isPending || mapping.mappingStatus === 'NEEDS_REVIEW'}
+              onCheckedChange={(checked) =>
+                void handleToggleSync(listing.marketplaceProductId, checked)
+              }
+              aria-label="Hidupkan/matikan sinkronisasi stok ke listing ini"
+            />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {mapping.mappingStatus === 'NEEDS_REVIEW'
+            ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
+            : mapping.syncEnabled
+              ? 'Stok dikirim ke listing ini. Klik untuk matikan.'
+              : 'Aktifkan untuk kirim stok ke listing ini.'}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // "Status": the sync badge + when the last push landed (below it, so it needs no own column).
   function renderSyncStatus(mapping: MarketplaceListingMapping | null) {
     if (!mapping) return <span className="text-muted-foreground">—</span>;
     if (!mapping.syncEnabled)
       return <span className="text-muted-foreground text-xs">Sinkron mati</span>;
-    return <SyncStatusBadge mapping={mapping} />;
-  }
-
-  // "Terakhir sinkron": when the last stock push landed.
-  function renderLastSync(mapping: MarketplaceListingMapping | null) {
-    if (!mapping?.lastSyncedAt) return <span className="text-muted-foreground">—</span>;
     return (
-      <span className="text-muted-foreground num text-xs" suppressHydrationWarning>
-        {formatDateTime(mapping.lastSyncedAt)}
-      </span>
+      <div className="space-y-0.5">
+        <SyncStatusBadge mapping={mapping} />
+        {mapping.lastSyncedAt ? (
+          <p className="text-muted-foreground num text-xs" suppressHydrationWarning>
+            Terakhir {formatDateTime(mapping.lastSyncedAt)}
+          </p>
+        ) : null}
+      </div>
     );
   }
 
@@ -306,30 +338,6 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     if (mapping) {
       return (
         <div className="flex items-center justify-end gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="flex items-center gap-2">
-                <Switch
-                  checked={mapping.syncEnabled}
-                  disabled={
-                    syncToggleMutation.isPending || mapping.mappingStatus === 'NEEDS_REVIEW'
-                  }
-                  onCheckedChange={(checked) =>
-                    void handleToggleSync(listing.marketplaceProductId, checked)
-                  }
-                  aria-label="Sinkronisasi stok ke listing ini"
-                />
-                <span className="text-muted-foreground text-xs">Sinkronisasi</span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              {mapping.mappingStatus === 'NEEDS_REVIEW'
-                ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
-                : mapping.syncEnabled
-                  ? 'Stok dikirim ke listing ini.'
-                  : 'Aktifkan untuk kirim stok ke listing ini.'}
-            </TooltipContent>
-          </Tooltip>
           {mapping.syncEnabled ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -392,7 +400,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
           className="h-9 sm:h-8"
           onClick={() => setMapTarget(listing.marketplaceProductId)}
         >
-          Pilih…
+          <Link2 className="size-4" />
+          Kaitkan
         </Button>
       </div>
     );
@@ -554,10 +563,17 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         )
       ) : (
         <div className="space-y-3">
-          <p className="text-muted-foreground text-sm">
-            <span className="num text-foreground font-medium">{totalListings}</span> listing
-            {hasFilter ? ' cocok dengan filter' : ''}
-          </p>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
+            <span>
+              <span className="num text-foreground font-medium">{totalListings}</span> listing
+              {hasFilter ? ' cocok dengan filter' : ''}
+            </span>
+            {connection?.lastImportedAt ? (
+              <span className="text-xs" suppressHydrationWarning>
+                · Terakhir impor {formatDateTime(connection.lastImportedAt)}
+              </span>
+            ) : null}
+          </div>
 
           <div className="hidden overflow-x-auto rounded-xl border sm:block">
             <Table>
@@ -566,8 +582,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                   <TableHead>Listing</TableHead>
                   <TableHead className="text-right">Stok</TableHead>
                   <TableHead>Dikaitkan ke</TableHead>
+                  <TableHead>Sinkronisasi</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Terakhir sinkron</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -575,7 +591,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                 {listings.map((listing) => (
                   <TableRow key={listing.marketplaceProductId}>
                     <TableCell>
-                      <div className="max-w-[450px]">
+                      <div className="max-w-[300px]">
                         <EllipsisTooltip
                           text={listing.externalProductName}
                           className="font-medium"
@@ -590,10 +606,8 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                     </TableCell>
                     <TableCell className="num text-right">{listing.stock}</TableCell>
                     <TableCell>{renderLinkedTo(listing.mapping)}</TableCell>
+                    <TableCell>{renderSyncToggle(listing)}</TableCell>
                     <TableCell>{renderSyncStatus(listing.mapping)}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {renderLastSync(listing.mapping)}
-                    </TableCell>
                     <TableCell className="text-right">{renderListingActions(listing)}</TableCell>
                   </TableRow>
                 ))}
@@ -621,11 +635,12 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
                       <dt className="text-muted-foreground text-xs">Dikaitkan ke</dt>
                       <dd className="mt-0.5">{renderLinkedTo(listing.mapping)}</dd>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center justify-between gap-2">
                       {renderSyncStatus(listing.mapping)}
-                      {listing.mapping.lastSyncedAt ? (
-                        <span className="text-muted-foreground text-xs">
-                          · Sinkron {renderLastSync(listing.mapping)}
+                      {canManage ? (
+                        <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                          Sinkron
+                          {renderSyncToggle(listing)}
                         </span>
                       ) : null}
                     </div>

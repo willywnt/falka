@@ -205,10 +205,10 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     try {
       const result = await syncAllMutation.mutateAsync();
       if (result.queued > 0) watchSync();
-      toast.success('Sinkronisasi diantrekan', {
+      toast.success('Sinkronisasi dimulai', {
         description:
           result.queued > 0
-            ? `${result.queued} produk dikirim ulang ke marketplace, berjalan di latar.`
+            ? `${result.queued} produk sedang dikirim ke marketplace.`
             : 'Tidak ada listing dengan sinkron aktif untuk dikirim.',
       });
     } catch (error) {
@@ -222,7 +222,9 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
     try {
       await syncNowMutation.mutateAsync(marketplaceProductId);
       watchSync();
-      toast.success('Sinkronisasi diantrekan', { description: 'Stok akan dikirim sebentar lagi.' });
+      toast.success('Sinkronisasi dimulai', {
+        description: 'Stok sedang dikirim ke marketplace.',
+      });
     } catch (error) {
       toast.error('Gagal sinkronisasi', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
@@ -323,9 +325,9 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
                   <Loader2 className="size-3.5 animate-spin" />
                   {inFlightCount > 0
                     ? `${inFlightCount} sinkronisasi berjalan`
-                    : 'Mengantre sinkronisasi…'}
+                    : 'Memproses sinkronisasi…'}
                 </span>
-              ) : (
+              ) : problems.length > 0 ? (
                 <button
                   type="button"
                   onClick={() => void handleSyncAll()}
@@ -334,7 +336,7 @@ export function MarketplaceHealthPanel({ connectionId }: { connectionId: string 
                   <RefreshCw className="size-3.5" />
                   Sinkronkan semua
                 </button>
-              )
+              ) : null
             ) : null}
           </div>
 
