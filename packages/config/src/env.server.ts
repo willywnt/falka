@@ -32,6 +32,11 @@ const serverEnvSchema = z
 
     SHOPEE_PARTNER_ID: z.preprocess(emptyToUndefined, z.string().optional()),
     SHOPEE_PARTNER_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+    // Shopee Open Platform REST host — sandbox `https://partner.test-stable.shopeemobile.com`
+    // vs live `https://partner.shopeemobile.com`. Switching environments is an env change only.
+    SHOPEE_API_BASE_URL: optionalUrl,
+    // OAuth redirect/callback URL registered in the Shopee app (must match exactly).
+    SHOPEE_OAUTH_REDIRECT_URI: optionalUrl,
     TOKOPEDIA_CLIENT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
     TOKOPEDIA_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
     LAZADA_APP_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
