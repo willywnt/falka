@@ -2,6 +2,7 @@ import { getServerEnv } from '@falka/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { LazadaImportAdapter } from './lazada-import-adapter';
+import { ShopeeImportAdapter } from './shopee-import-adapter';
 
 /** A marketplace listing normalized to our shape, regardless of provider. */
 export type NormalizedListing = {
@@ -31,6 +32,7 @@ export interface MarketplaceImportAdapter {
    * {@link fetchListings} (fine for the stub's tiny catalog).
    */
   fetchListingsForItems?(params: {
+    shopId: string;
     accessToken: string;
     externalProductIds: string[];
   }): Promise<NormalizedListing[]>;
@@ -96,6 +98,10 @@ function createImportAdapter(provider: MarketplaceProvider): MarketplaceImportAd
 
   if (provider === 'LAZADA' && env.LAZADA_APP_KEY && env.LAZADA_APP_SECRET) {
     return new LazadaImportAdapter();
+  }
+
+  if (provider === 'SHOPEE' && env.SHOPEE_PARTNER_ID && env.SHOPEE_PARTNER_KEY) {
+    return new ShopeeImportAdapter();
   }
 
   return new StubMarketplaceImportAdapter(provider);

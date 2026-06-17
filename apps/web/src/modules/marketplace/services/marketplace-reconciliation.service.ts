@@ -97,7 +97,11 @@ export class MarketplaceReconciliationService {
 
     const listings =
       adapter.fetchListingsForItems && externalProductIds.length > 0
-        ? await adapter.fetchListingsForItems({ accessToken, externalProductIds })
+        ? await adapter.fetchListingsForItems({
+            shopId: connection.shopId,
+            accessToken,
+            externalProductIds,
+          })
         : await adapter.fetchListings({ shopId: connection.shopId, accessToken });
 
     return listings.map((listing) => ({

@@ -76,6 +76,7 @@ export class LazadaImportAdapter implements MarketplaceImportAdapter {
   }
 
   async fetchListingsForItems(params: {
+    shopId: string;
     accessToken: string;
     externalProductIds: string[];
   }): Promise<NormalizedListing[]> {
