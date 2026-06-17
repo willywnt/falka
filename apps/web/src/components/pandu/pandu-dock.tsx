@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowRight, ChevronLeft, ChevronsRight, Info, TriangleAlert, X } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronsRight,
+  Clock,
+  Info,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
 
 import { BrandMark } from '@/components/brand-mark';
 import { isShellSuppressedRoute } from '@/components/layout/nav-config';
@@ -80,6 +88,9 @@ export function PanduDock() {
   const setDockCollapsed = usePanduStore((state) => state.setDockCollapsed);
   const dockBottomOffset = usePanduStore((state) => state.dockBottomOffset);
   const setDockBottomOffset = usePanduStore((state) => state.setDockBottomOffset);
+  const askHistory = usePanduStore((state) => state.askHistory);
+  const recordAsk = usePanduStore((state) => state.recordAsk);
+  const clearAskHistory = usePanduStore((state) => state.clearAskHistory);
 
   // Live offset while a drag is in flight (committed to the store on release).
   const [dragOffset, setDragOffset] = useState<number | null>(null);
@@ -164,6 +175,7 @@ export function PanduDock() {
     const destination = routePanduQuery(query);
     if (destination) {
       setNoMatch(false);
+      recordAsk({ query: query.trim(), label: destination.label, href: destination.href });
       router.push(destination.href);
       return;
     }
@@ -237,6 +249,42 @@ export function PanduDock() {
               ))}
             </ul>
           )}
+
+          {mounted && askHistory.length > 0 ? (
+            <div className="space-y-2 border-t pt-3">
+              <div className="flex items-center justify-between">
+                <p className="eyebrow text-muted-foreground">Riwayat tanya</p>
+                <button
+                  type="button"
+                  onClick={clearAskHistory}
+                  className="text-muted-foreground hover:text-foreground text-[11px] transition-colors"
+                >
+                  Bersihkan
+                </button>
+              </div>
+              <ul className="space-y-1">
+                {askHistory.map((ask) => (
+                  <li key={ask.id}>
+                    <button
+                      type="button"
+                      onClick={() => router.push(ask.href)}
+                      className="hover:bg-card hover:border-border flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 text-left text-sm transition-colors"
+                    >
+                      <Clock aria-hidden className="text-muted-foreground size-3.5 shrink-0" />
+                      <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                        {ask.query}
+                      </span>
+                      <ArrowRight
+                        aria-hidden
+                        className="text-muted-foreground/50 size-3 shrink-0"
+                      />
+                      <span className="max-w-[42%] shrink-0 truncate font-medium">{ask.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {noMatch ? (
             <div className="space-y-2">
