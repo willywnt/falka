@@ -53,3 +53,29 @@ export type PurchaseOrderDetail = PurchaseOrderListItem & {
   receivedAt: string | null;
   items: PurchaseOrderItemDetail[];
 };
+
+/** A supplier/vendor row (reorder fallbacks + usage counts). */
+export type SupplierListItem = {
+  id: string;
+  name: string;
+  phone: string | null;
+  note: string | null;
+  defaultLeadTimeDays: number | null;
+  defaultMinOrderQty: number | null;
+  isActive: boolean;
+  /** POs that reference this supplier (history; survives soft-delete). */
+  purchaseOrderCount: number;
+  /** Variants that name this their preferred supplier. */
+  variantCount: number;
+  createdAt: string;
+};
+
+export type SupplierDetail = SupplierListItem;
+
+/** Lightweight option for pickers (PO form, variant edit). */
+export type SupplierOption = {
+  id: string;
+  name: string;
+  defaultLeadTimeDays: number | null;
+  defaultMinOrderQty: number | null;
+};
