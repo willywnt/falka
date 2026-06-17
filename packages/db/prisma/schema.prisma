@@ -285,6 +285,10 @@ model MarketplaceConnection {
   provider              MarketplaceProvider
   shopId                String
   shopName              String
+  // TikTok Shop (the Tokopedia channel's API) returns an opaque shop_cipher at authorization
+  // that must accompany shop_id on EVERY shop-scoped call. null for providers that don't use it
+  // (Lazada/Shopee). Server-only — never exposed through API responses.
+  externalShopCipher    String?
   encryptedAccessToken  String
   encryptedRefreshToken String?
   tokenExpiresAt        DateTime?
