@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { mergeNotificationFeeds } from '@/components/notifications/merge-notifications';
 import type { AppNotification } from '@/components/notifications/types';
 import { NOTIFICATION_TYPE_META, severityToTone } from '@/modules/notifications/notification-meta';
+import { hiddenNotificationCategories } from '@/modules/notifications/notification-visibility';
 
 function note(partial: Partial<AppNotification> & { id: string }): AppNotification {
   return {
@@ -61,5 +62,23 @@ describe('NOTIFICATION_TYPE_META', () => {
     expect(NOTIFICATION_TYPE_META.RETURN_PROCESSED.category).toBe('RETURNS');
     expect(NOTIFICATION_TYPE_META.OPNAME_POSTED.category).toBe('INVENTORY');
     expect(NOTIFICATION_TYPE_META.ORDER_PLACED.category).toBe('ORDERS');
+  });
+});
+
+describe('hiddenNotificationCategories', () => {
+  const perms = (allowed: readonly string[]) => ({ has: (key: string) => allowed.includes(key) });
+
+  it('hides PURCHASING + MARKETPLACE when both view permissions are absent (e.g. STAFF)', () => {
+    expect(hiddenNotificationCategories(perms([]))).toEqual(['PURCHASING', 'MARKETPLACE']);
+  });
+
+  it('hides only PURCHASING when marketplace.view is present', () => {
+    expect(hiddenNotificationCategories(perms(['marketplace.view']))).toEqual(['PURCHASING']);
+  });
+
+  it('hides nothing when both view permissions are present (e.g. OWNER)', () => {
+    expect(hiddenNotificationCategories(perms(['purchasing.view', 'marketplace.view']))).toEqual(
+      [],
+    );
   });
 });

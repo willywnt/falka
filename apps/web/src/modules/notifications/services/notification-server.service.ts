@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { buildPaginatedResult, prisma, type PaginatedResult } from '@falka/db';
-import type { Prisma } from '@prisma/client';
+import type { NotificationCategory, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 
@@ -14,11 +14,20 @@ export type NotificationsListResult = PaginatedResult<NotificationListItem> & {
   unreadCount: number;
 };
 
-/** A notification is visible to a member if it's org-wide OR targeted to them. */
-function visibleWhere(organizationId: string, userId: string): Prisma.NotificationWhereInput {
+/**
+ * A notification is visible to a member if it's org-wide OR targeted to them, and
+ * its category isn't hidden by the member's permissions (e.g. STAFF without
+ * `purchasing.view` doesn't see PURCHASING rows — see hiddenNotificationCategories).
+ */
+function visibleWhere(
+  organizationId: string,
+  userId: string,
+  hiddenCategories: NotificationCategory[] = [],
+): Prisma.NotificationWhereInput {
   return {
     organizationId,
     OR: [{ recipientUserId: null }, { recipientUserId: userId }],
+    ...(hiddenCategories.length > 0 ? { category: { notIn: hiddenCategories } } : {}),
   };
 }
 
@@ -77,8 +86,9 @@ export class NotificationServerService {
     organizationId: string,
     userId: string,
     query: ListNotificationsQuery,
+    hiddenCategories: NotificationCategory[] = [],
   ): Promise<NotificationsListResult> {
-    const where = visibleWhere(organizationId, userId);
+    const where = visibleWhere(organizationId, userId, hiddenCategories);
 
     const [rows, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
@@ -124,10 +134,17 @@ export class NotificationServerService {
     });
   }
 
-  /** Mark every currently-unread notification read for this member. */
-  async markAllRead(organizationId: string, userId: string): Promise<{ updated: number }> {
+  /** Mark every currently-unread (visible) notification read for this member. */
+  async markAllRead(
+    organizationId: string,
+    userId: string,
+    hiddenCategories: NotificationCategory[] = [],
+  ): Promise<{ updated: number }> {
     const unread = await prisma.notification.findMany({
-      where: { ...visibleWhere(organizationId, userId), reads: { none: { userId } } },
+      where: {
+        ...visibleWhere(organizationId, userId, hiddenCategories),
+        reads: { none: { userId } },
+      },
       select: { id: true },
     });
     if (unread.length === 0) return { updated: 0 };
