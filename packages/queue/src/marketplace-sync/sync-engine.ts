@@ -1,5 +1,5 @@
 import { getServerEnv } from '@falka/config/env.server';
-import { decrypt } from '@falka/utils/crypto';
+import { decrypt, encrypt } from '@falka/utils/crypto';
 import { logger } from '@falka/utils/logger';
 
 import { getProviderRateLimiter } from './rate-limit.js';
@@ -11,8 +11,17 @@ import {
   failSyncJob,
   loadSyncJobContext,
   markSyncJobProcessing,
+  type SyncJobContext,
 } from './sync-repository.js';
 import { MarketplaceSyncError } from './sync-errors.js';
+import { applyRefreshedConnectionTokens } from './token-repository.js';
+import { canRefreshProvider, refreshProviderToken } from './token-refresh.js';
+
+/**
+ * Refresh the access token if it expires within this window. Short-TTL providers (Shopee
+ * ~4h) would otherwise be expired most of the day, since the refresh cron runs only daily.
+ */
+const TOKEN_REFRESH_SAFETY_MS = 10 * 60 * 1000;
 
 export type ExecuteStockSyncResult = {
   success: boolean;
@@ -28,6 +37,87 @@ export type ExecuteStockSyncResult = {
  */
 export function isAccessTokenExpired(expiresAt: Date | null, now: Date = new Date()): boolean {
   return expiresAt !== null && expiresAt.getTime() <= now.getTime();
+}
+
+function isTokenExpiringSoon(expiresAt: Date | null, now: Date = new Date()): boolean {
+  return expiresAt !== null && expiresAt.getTime() <= now.getTime() + TOKEN_REFRESH_SAFETY_MS;
+}
+
+/**
+ * Returns a usable access token for the connection, refreshing it first when it's expired or
+ * about to expire AND the provider can be refreshed. A successful refresh persists the new
+ * tokens so the next job reuses them. Best-effort: if the refresh fails we return the existing
+ * (decrypted) token and let the expiry gate in {@link executeStockSync} fail the job cleanly.
+ * Lazada tokens last ~30 days, so this is a no-op for them on the hot path (the daily cron
+ * handles those); it exists for short-TTL providers like Shopee (~4h).
+ */
+async function ensureFreshAccessToken(
+  context: SyncJobContext,
+): Promise<{ accessToken: string; tokenExpiresAt: Date | null }> {
+  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
+
+  let accessToken = '';
+  try {
+    accessToken = decrypt(context.encryptedAccessToken, secret);
+  } catch {
+    // Seeded/stub connections store a non-cipher placeholder — the Dev stub ignores the token,
+    // and a real adapter surfaces its own auth error rather than failing every job here.
+    logger.warn('marketplace.stock.token_decrypt_failed', {
+      connectionId: context.connectionId,
+      provider: context.provider,
+    });
+  }
+
+  if (
+    !isTokenExpiringSoon(context.tokenExpiresAt) ||
+    !context.encryptedRefreshToken ||
+    !canRefreshProvider(context.provider)
+  ) {
+    return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+  }
+
+  let refreshToken = '';
+  try {
+    refreshToken = decrypt(context.encryptedRefreshToken, secret);
+  } catch {
+    return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+  }
+  if (!refreshToken) return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+
+  try {
+    const refreshed = await refreshProviderToken({
+      provider: context.provider,
+      refreshToken,
+      shopId: context.shopId,
+    });
+    const tokenExpiresAt =
+      refreshed.expiresInSeconds > 0
+        ? new Date(Date.now() + refreshed.expiresInSeconds * 1000)
+        : null;
+
+    await applyRefreshedConnectionTokens(context.connectionId, {
+      encryptedAccessToken: encrypt(refreshed.accessToken, secret),
+      // Keep the existing refresh token when the provider doesn't rotate it.
+      encryptedRefreshToken: refreshed.refreshToken
+        ? encrypt(refreshed.refreshToken, secret)
+        : context.encryptedRefreshToken,
+      tokenExpiresAt,
+    });
+
+    logger.info('marketplace.stock.token_lazy_refreshed', {
+      connectionId: context.connectionId,
+      provider: context.provider,
+    });
+
+    return { accessToken: refreshed.accessToken, tokenExpiresAt };
+  } catch (error) {
+    logger.warn('marketplace.stock.token_lazy_refresh_failed', {
+      connectionId: context.connectionId,
+      provider: context.provider,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+  }
 }
 
 /**
@@ -54,11 +144,16 @@ export async function executeStockSync(
     return { success: false, skipped: true };
   }
 
+  // Refresh-before-use: short-TTL providers (Shopee ~4h) would otherwise be expired most of
+  // the day since the cron runs daily. Best-effort — refreshes + persists when expiring soon,
+  // else returns the current token. Lazada (~30d) is untouched on the hot path.
+  const fresh = await ensureFreshAccessToken(context);
+
   // Reject an expired token BEFORE touching the provider: a real adapter would
   // otherwise burn a network call and a non-retryable failure on every mapping.
   // Unlike the eligibility gate above we FAIL (not DISABLE) the job — once the
   // token is refreshed the mapping is sync-eligible again and a fresh event syncs.
-  if (isAccessTokenExpired(context.tokenExpiresAt)) {
+  if (isAccessTokenExpired(fresh.tokenExpiresAt)) {
     const error = MarketplaceSyncError.tokenExpired();
     await failSyncJob({
       syncJobId,
@@ -87,26 +182,13 @@ export async function executeStockSync(
       syncWarehouseCode: context.syncWarehouseCode,
     });
 
-    // Real provider adapters need the DECRYPTED token; stub adapters ignore it.
-    // Token-crypto is shared via @falka/utils so the worker can open it here.
-    // Fall back to an empty token when decryption fails (e.g. seeded/stub
-    // connections whose stored value isn't real ciphertext) — the Dev stub
-    // ignores it, and a real adapter surfaces its own auth error instead of
-    // failing every job at this step.
-    let accessToken = '';
-    try {
-      accessToken = decrypt(
-        context.encryptedAccessToken,
-        getServerEnv().MARKETPLACE_ENCRYPTION_SECRET,
-      );
-    } catch {
-      logger.warn('marketplace.stock.token_decrypt_failed', {
-        syncJobId,
-        provider: context.provider,
-      });
-    }
-
-    const response = await adapter.updateStock({ ...request, accessToken, shopId: context.shopId });
+    // The (possibly just-refreshed) token comes from ensureFreshAccessToken above; stub
+    // adapters ignore it. The shop id is required by shop-scoped providers (Shopee).
+    const response = await adapter.updateStock({
+      ...request,
+      accessToken: fresh.accessToken,
+      shopId: context.shopId,
+    });
 
     if (!response.success) {
       throw MarketplaceSyncError.syncFailed('Provider rejected the stock update.');

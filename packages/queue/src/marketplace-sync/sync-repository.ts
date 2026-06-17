@@ -79,12 +79,14 @@ export type SyncJobContext = {
   jobId: string;
   attempts: number;
   provider: MarketplaceProvider;
+  connectionId: string;
   mappingId: string;
   marketplaceProductId: string;
   syncEnabled: boolean;
   connectionActive: boolean;
   shopId: string;
   encryptedAccessToken: string;
+  encryptedRefreshToken: string | null;
   tokenExpiresAt: Date | null;
   syncWarehouseCode: string | null;
   externalProductId: string;
@@ -102,6 +104,7 @@ export async function loadSyncJobContext(syncJobId: string): Promise<SyncJobCont
       id: true,
       attempts: true,
       provider: true,
+      marketplaceConnectionId: true,
       marketplaceProductMappingId: true,
       connection: {
         select: {
@@ -109,6 +112,7 @@ export async function loadSyncJobContext(syncJobId: string): Promise<SyncJobCont
           deletedAt: true,
           shopId: true,
           encryptedAccessToken: true,
+          encryptedRefreshToken: true,
           tokenExpiresAt: true,
           syncWarehouseCode: true,
         },
@@ -139,12 +143,14 @@ export async function loadSyncJobContext(syncJobId: string): Promise<SyncJobCont
     jobId: job.id,
     attempts: job.attempts,
     provider: job.provider,
+    connectionId: job.marketplaceConnectionId,
     mappingId: job.marketplaceProductMappingId,
     marketplaceProductId: job.mapping.marketplaceProductId,
     syncEnabled: job.mapping.syncEnabled,
     connectionActive: job.connection.isActive && job.connection.deletedAt === null,
     shopId: job.connection.shopId,
     encryptedAccessToken: job.connection.encryptedAccessToken,
+    encryptedRefreshToken: job.connection.encryptedRefreshToken,
     tokenExpiresAt: job.connection.tokenExpiresAt,
     syncWarehouseCode: job.connection.syncWarehouseCode,
     externalProductId: job.mapping.marketplaceProduct.externalProductId,

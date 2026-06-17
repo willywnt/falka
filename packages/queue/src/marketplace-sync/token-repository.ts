@@ -4,12 +4,17 @@ import type { MarketplaceProvider } from '@prisma/client';
 export type RefreshableConnection = {
   id: string;
   provider: MarketplaceProvider;
+  shopId: string;
   encryptedRefreshToken: string | null;
 };
 
+/** Providers whose tokens the worker can refresh (have OAuth refresh + a worker refresher). */
+const REFRESHABLE_PROVIDERS: MarketplaceProvider[] = ['LAZADA', 'SHOPEE'];
+
 /**
- * Active Lazada connections whose access token expires at or before `cutoff`
- * (and that still carry a refresh token). Soonest-expiring first, capped.
+ * Active OAuth connections whose access token expires at or before `cutoff` (and that still
+ * carry a refresh token). Soonest-expiring first, capped. Limited to providers the worker can
+ * actually refresh; the job further gates each by configured credentials.
  */
 export async function findConnectionsForTokenRefresh(
   cutoff: Date,
@@ -19,13 +24,13 @@ export async function findConnectionsForTokenRefresh(
     where: {
       isActive: true,
       deletedAt: null,
-      provider: 'LAZADA',
+      provider: { in: REFRESHABLE_PROVIDERS },
       encryptedRefreshToken: { not: null },
       tokenExpiresAt: { not: null, lte: cutoff },
     },
     orderBy: { tokenExpiresAt: 'asc' },
     take: limit,
-    select: { id: true, provider: true, encryptedRefreshToken: true },
+    select: { id: true, provider: true, shopId: true, encryptedRefreshToken: true },
   });
 }
 
