@@ -226,7 +226,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
   async function handleRefreshToken() {
     try {
       await refreshMutation.mutateAsync();
-      toast.success('Token diperbarui', { description: 'Akses ke Lazada diperpanjang.' });
+      toast.success('Token diperbarui', { description: 'Akses ke marketplace diperpanjang.' });
     } catch (error) {
       toast.error('Gagal memperbarui token', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
@@ -238,7 +238,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     try {
       const result = await testMutation.mutateAsync();
       if (result.ready) {
-        toast.success('Koneksi sehat', { description: 'Token Lazada valid.' });
+        toast.success('Koneksi sehat', { description: 'Token koneksi valid.' });
       } else {
         toast.error('Koneksi bermasalah', { description: result.reason ?? 'Token tidak valid.' });
       }
@@ -454,7 +454,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         {/* Both header actions need marketplace.manage — drop the whole strip, not an empty box. */}
         {canManage ? (
           <div className="flex flex-wrap gap-2">
-            {connection?.provider === 'LAZADA' ? (
+            {connection?.provider === 'LAZADA' || connection?.provider === 'SHOPEE' ? (
               <>
                 <Button
                   variant="outline"
@@ -492,7 +492,7 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
 
       <MarketplaceHealthPanel connectionId={connectionId} />
 
-      {canManage && connection?.provider === 'LAZADA' ? (
+      {canManage && (connection?.provider === 'LAZADA' || connection?.provider === 'SHOPEE') ? (
         <SyncWarehouseCard
           connectionId={connectionId}
           syncWarehouseCode={connection.syncWarehouseCode}

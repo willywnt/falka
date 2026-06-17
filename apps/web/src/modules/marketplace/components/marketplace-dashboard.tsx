@@ -45,23 +45,29 @@ export function MarketplaceDashboard() {
     return counts;
   }, [healthQuery.data]);
 
-  // The Lazada OAuth callback redirects back here with ?lazada=connected|error — toast once,
-  // then strip the param so a refresh doesn't repeat it.
+  // A provider OAuth callback redirects back here with ?lazada|?shopee=connected|error — toast
+  // once, then strip the param so a refresh doesn't repeat it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const status = params.get('lazada');
-    if (!status) return;
+    const providers: { key: string; label: string }[] = [
+      { key: 'lazada', label: 'Lazada' },
+      { key: 'shopee', label: 'Shopee' },
+    ];
+    const hit = providers.find((provider) => params.get(provider.key));
+    if (!hit) return;
 
-    if (status === 'connected') {
-      toast.success('Lazada terhubung', { description: 'Toko berhasil dihubungkan via OAuth.' });
+    if (params.get(hit.key) === 'connected') {
+      toast.success(`${hit.label} terhubung`, {
+        description: 'Toko berhasil dihubungkan via OAuth.',
+      });
     } else {
       const reason = params.get('reason');
-      toast.error('Gagal menghubungkan Lazada', {
-        description: reason ? reason : 'Coba ulangi, atau cek izin & token di Lazada.',
+      toast.error(`Gagal menghubungkan ${hit.label}`, {
+        description: reason ? reason : `Coba ulangi, atau cek izin & token di ${hit.label}.`,
       });
     }
 
-    params.delete('lazada');
+    params.delete(hit.key);
     params.delete('reason');
     const query = params.toString();
     window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);

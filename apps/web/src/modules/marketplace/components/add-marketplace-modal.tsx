@@ -42,6 +42,12 @@ type AddMarketplaceModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+/** Providers that onboard via an OAuth redirect (the rest use the manual-token form). */
+const OAUTH_CONNECT: Partial<Record<MarketplaceProvider, { path: string }>> = {
+  [MarketplaceProvider.LAZADA]: { path: '/api/v1/marketplaces/lazada/oauth/authorize' },
+  [MarketplaceProvider.SHOPEE]: { path: '/api/v1/marketplaces/shopee/oauth/authorize' },
+};
+
 /**
  * `datetime-local` value from LOCAL date parts — `toISOString()` is UTC and
  * would show the time 7 hours off in WIB.
@@ -67,6 +73,7 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
   });
 
   const selectedProvider = form.watch('provider');
+  const oauthConnect = OAUTH_CONNECT[selectedProvider];
 
   async function onSubmit(values: CreateMarketplaceConnectionFormInput) {
     try {
@@ -99,8 +106,8 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         <DialogHeader>
           <DialogTitle>Hubungkan toko marketplace</DialogTitle>
           <DialogDescription>
-            Lazada pakai login OAuth — token diisi otomatis, tidak perlu paste manual. Provider lain
-            sementara isi token manual.
+            Shopee & Lazada pakai login OAuth — token diisi otomatis, tidak perlu paste manual.
+            Provider lain sementara isi token manual.
           </DialogDescription>
         </DialogHeader>
 
@@ -143,19 +150,20 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
               )}
             />
 
-            {selectedProvider === MarketplaceProvider.LAZADA && (
+            {oauthConnect && (
               <div className="bg-muted/40 space-y-3 rounded-lg border p-3">
                 <p className="text-muted-foreground text-sm">
-                  Login & izinkan akses sebagai seller Lazada — kodenya ditukar jadi token dan
+                  Login & izinkan akses sebagai seller{' '}
+                  {getMarketplaceProviderLabel(selectedProvider)} — kodenya ditukar jadi token dan
                   koneksinya dibuat otomatis. Tidak perlu isi token di bawah.
                 </p>
                 <Button
                   type="button"
                   onClick={() => {
-                    window.location.href = '/api/v1/marketplaces/lazada/oauth/authorize';
+                    window.location.href = oauthConnect.path;
                   }}
                 >
-                  Hubungkan dengan Lazada (OAuth)
+                  Hubungkan dengan {getMarketplaceProviderLabel(selectedProvider)} (OAuth)
                 </Button>
                 <p className="text-muted-foreground text-xs">
                   Atau isi token manual di bawah (untuk dev/fallback).

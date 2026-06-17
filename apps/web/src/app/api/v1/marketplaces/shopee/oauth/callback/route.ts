@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+
+import { appLogger } from '@/lib/logger';
+import { shopeeOAuthService } from '@/modules/marketplace/services/shopee-oauth.service';
+
+/**
+ * Shopee redirects the seller back here with ?code & ?shop_id & ?state. Public on purpose —
+ * the redirect may not carry the Falka session, so the encrypted state (minted by the gated
+ * authorize route) is the authority for which org gets the connection. We swap the code,
+ * create the connection, then bounce to /dashboard/marketplace (the real page — /marketplace
+ * is a legacy redirect that would DROP the ?shopee query the toast reads).
+ */
+function marketplaceRedirect(
+  request: Request,
+  status: 'connected' | 'error',
+  reason?: string,
+): Response {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const target = new URL('/dashboard/marketplace', appUrl);
+  target.searchParams.set('shopee', status);
+  if (reason) target.searchParams.set('reason', reason.slice(0, 140));
+  return NextResponse.redirect(target);
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const code = params.get('code');
+  const shopId = params.get('shop_id');
+  const state = params.get('state');
+
+  if (params.get('error') || !code || !shopId || !state) {
+    appLogger.warn('marketplace.shopee.oauth.callback_rejected', {
+      error: params.get('error') ?? undefined,
+      hasCode: Boolean(code),
+      hasShopId: Boolean(shopId),
+      hasState: Boolean(state),
+    });
+    return marketplaceRedirect(
+      request,
+      'error',
+      params.get('error') ?? 'missing code/shop_id/state',
+    );
+  }
+
+  try {
+    await shopeeOAuthService.handleCallback({ code, shopId, state });
+    return marketplaceRedirect(request, 'connected');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    appLogger.warn('marketplace.shopee.oauth.callback_failed', { error: reason });
+    return marketplaceRedirect(request, 'error', reason);
+  }
+}
