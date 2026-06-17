@@ -192,6 +192,18 @@ export class ReturnsServerService {
       orderId,
       autoDetected: opts.autoDetected ?? false,
     });
+    void notificationServerService.emit({
+      organizationId,
+      actorUserId: opts.autoDetected ? null : actorUserId,
+      type: 'RETURN_OPENED',
+      title: opts.autoDetected ? 'Retur otomatis dibuka' : 'Retur dibuka',
+      body: `Retur dibuka untuk pesanan ${order.externalOrderId}${opts.autoDetected ? ' (terdeteksi dari pembatalan setelah kirim)' : ''} — ${resolvedItems.length} item menunggu diproses.`,
+      href: `/dashboard/returns/${created.id}`,
+      dedupeKey: `return-opened:${created.id}`,
+      entityType: 'return',
+      entityId: created.id,
+      data: { orderId, autoDetected: opts.autoDetected ?? false, itemCount: resolvedItems.length },
+    });
     return this.getReturn(organizationId, created.id);
   }
 

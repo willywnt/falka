@@ -640,6 +640,23 @@ export class OrdersServerService {
           });
         });
         shipped += 1;
+
+        void notificationServerService.emit({
+          organizationId,
+          actorUserId,
+          type: 'ORDER_SHIPPED',
+          title: 'Pesanan dikirim',
+          body: `Pesanan ${order.externalOrderId} di ${connection.provider} sudah dikirim${order.noResi ? ` (resi ${order.noResi})` : ''}.`,
+          href: '/dashboard/orders',
+          dedupeKey: `order-shipped:${saved.id}`,
+          entityType: 'order',
+          entityId: saved.id,
+          data: {
+            provider: connection.provider,
+            externalOrderId: order.externalOrderId,
+            noResi: order.noResi,
+          },
+        });
       } else if (saved.status === 'CANCELLED' && reservedNow && !wasShipped && !wasReleased) {
         // RELEASE: cancelled before shipping → give the reserved units back.
         await prisma.$transaction(async (tx) => {

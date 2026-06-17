@@ -422,6 +422,18 @@ export class SalesServerService {
       resourceId: sale.id,
       metadata: { code: created.code, totalAmount },
     });
+    void notificationServerService.emit({
+      organizationId,
+      actorUserId,
+      type: 'SALE_REFUNDED',
+      title: 'Refund penjualan',
+      body: `Refund ${created.code} (${lines.length} item) untuk nota ${sale.code}.`,
+      href: `/dashboard/sales/${sale.id}`,
+      dedupeKey: `sale-refunded:${created.id}`,
+      entityType: 'sale',
+      entityId: sale.id,
+      data: { refundCode: created.code, saleCode: sale.code, items: lines.length, totalAmount },
+    });
 
     await this.propagateAffected(organizationId, actorUserId, [
       ...new Set(lines.map((line) => line.item.productVariantId)),
