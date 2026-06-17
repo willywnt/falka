@@ -259,6 +259,17 @@
   background-image: linear-gradient(to bottom, var(--sea-glass), var(--background) 320px);
 }
 
+/*
+ * Fuzzy-match highlight — the matched characters in a command-palette result.
+ * Token-only (suar amber tint + AA-safe strong text), so it stays legible on
+ * both the row's resting and active (accent) backgrounds and in dark mode.
+ */
+@utility search-mark {
+  background-color: color-mix(in oklab, var(--highlight) 22%, transparent);
+  color: var(--highlight-strong);
+  border-radius: 0.125rem;
+}
+
 @layer base {
   *,
   *::before,
