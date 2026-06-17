@@ -85,6 +85,8 @@ export function PanduDock() {
   const [mounted, setMounted] = useState(false);
   const { nudges, hasUrgent, isLoading, isError, dismissNudge } = usePanduNudges();
   const { sectionLabel, chips } = usePanduContext();
+  const urgentNudges = nudges.filter((nudge) => nudge.group === 'urgent');
+  const calmNudges = nudges.filter((nudge) => nudge.group !== 'urgent');
 
   const dockCollapsed = usePanduStore((state) => state.dockCollapsed);
   const setDockCollapsed = usePanduStore((state) => state.setDockCollapsed);
@@ -228,7 +230,11 @@ export function PanduDock() {
           </Button>
         </header>
 
-        <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        <div
+          className="flex-1 space-y-3 overflow-y-auto p-4"
+          aria-busy={isLoading}
+          aria-live="polite"
+        >
           {chips.length > 0 ? (
             <div className="space-y-2 border-b pb-3">
               <p className="eyebrow text-muted-foreground">
@@ -260,11 +266,32 @@ export function PanduDock() {
               Laut tenang — nggak ada yang perlu perhatian khusus sekarang.
             </p>
           ) : (
-            <ul className="space-y-2">
-              {nudges.map((nudge) => (
-                <NudgeRow key={nudge.id} nudge={nudge} onDismiss={dismissNudge} />
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {urgentNudges.length > 0 ? (
+                <div className="space-y-2">
+                  {calmNudges.length > 0 ? (
+                    <p className="eyebrow text-highlight-strong">Perlu segera</p>
+                  ) : null}
+                  <ul className="space-y-2">
+                    {urgentNudges.map((nudge) => (
+                      <NudgeRow key={nudge.id} nudge={nudge} onDismiss={dismissNudge} />
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {calmNudges.length > 0 ? (
+                <div className="space-y-2">
+                  {urgentNudges.length > 0 ? (
+                    <p className="eyebrow text-muted-foreground">Pantau</p>
+                  ) : null}
+                  <ul className="space-y-2">
+                    {calmNudges.map((nudge) => (
+                      <NudgeRow key={nudge.id} nudge={nudge} onDismiss={dismissNudge} />
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           )}
 
           {mounted && askHistory.length > 0 ? (
