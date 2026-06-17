@@ -82,8 +82,12 @@ export async function processReconcileMarketplaceDriftJob(
       const externalProductIds = [...new Set(mapped.map((item) => item.externalProductId))];
       // Pull ONLY the mapped items when the adapter supports it (no full-catalog scan).
       const external = adapter.fetchListingsForItems
-        ? await adapter.fetchListingsForItems({ accessToken, externalProductIds })
-        : await adapter.fetchListings({ accessToken });
+        ? await adapter.fetchListingsForItems({
+            accessToken,
+            shopId: connection.shopId,
+            externalProductIds,
+          })
+        : await adapter.fetchListings({ accessToken, shopId: connection.shopId });
 
       // Provider can't enumerate listings (stub) — nothing to reconcile.
       if (external === null) {

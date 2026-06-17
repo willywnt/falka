@@ -106,7 +106,7 @@ export async function executeStockSync(
       });
     }
 
-    const response = await adapter.updateStock({ ...request, accessToken });
+    const response = await adapter.updateStock({ ...request, accessToken, shopId: context.shopId });
 
     if (!response.success) {
       throw MarketplaceSyncError.syncFailed('Provider rejected the stock update.');

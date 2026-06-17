@@ -116,15 +116,26 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
     };
   }
 
-  async validateStockSync(accessToken: string): Promise<{ ready: boolean; reason?: string }> {
-    const response = await this.client.call(SELLER_GET_PATH, { method: 'GET', accessToken });
+  // Lazada embeds the shop in the access token, so `shopId` is accepted (interface contract)
+  // but unused — unlike Shopee/TikTok which must send it on every call.
+  async validateStockSync(params: {
+    accessToken: string;
+    shopId: string;
+  }): Promise<{ ready: boolean; reason?: string }> {
+    const response = await this.client.call(SELLER_GET_PATH, {
+      method: 'GET',
+      accessToken: params.accessToken,
+    });
 
     return isLazadaSuccess(response)
       ? { ready: true }
       : { ready: false, reason: response.message ?? `Lazada error ${response.code}` };
   }
 
-  async fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[]> {
+  async fetchListings(params: {
+    accessToken: string;
+    shopId: string;
+  }): Promise<ProviderListingSnapshot[]> {
     const items = await fetchLazadaListings(this.client, { accessToken: params.accessToken });
     return items.map((item) => ({
       externalProductId: item.itemId,
@@ -136,6 +147,7 @@ export class LazadaStockProvider implements MarketplaceStockProviderAdapter {
 
   async fetchListingsForItems(params: {
     accessToken: string;
+    shopId: string;
     externalProductIds: string[];
   }): Promise<ProviderListingSnapshot[]> {
     const items = await fetchLazadaItemsStock(this.client, {

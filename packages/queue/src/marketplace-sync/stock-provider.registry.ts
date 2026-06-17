@@ -6,7 +6,14 @@ import type {
   NormalizedStockUpdateResponse,
 } from './stock-normalizer.js';
 
-export type StockProviderUpdateParams = NormalizedStockUpdateRequest & { accessToken: string };
+/**
+ * Credentials a shop-scoped provider call needs. `shopId` is required because some
+ * providers (Shopee, TikTok/Tokopedia) must send the shop id on EVERY request — and it
+ * is part of their signature base. Lazada embeds the shop in the token and ignores it.
+ */
+export type ProviderShopCredentials = { accessToken: string; shopId: string };
+
+export type StockProviderUpdateParams = NormalizedStockUpdateRequest & ProviderShopCredentials;
 
 /** Current external stock for one listing SKU, as reported by the provider. */
 export type ProviderListingSnapshot = {
@@ -24,21 +31,20 @@ export type ProviderListingSnapshot = {
 export interface MarketplaceStockProviderAdapter {
   readonly provider: MarketplaceProvider;
   updateStock(params: StockProviderUpdateParams): Promise<NormalizedStockUpdateResponse>;
-  validateStockSync(accessToken: string): Promise<{ ready: boolean; reason?: string }>;
+  validateStockSync(params: ProviderShopCredentials): Promise<{ ready: boolean; reason?: string }>;
   /**
    * Pull current external stock per SKU for drift reconciliation (read-only).
    * Returns null when the provider can't enumerate listings (e.g. the Dev/Unwired
    * stub) so the reconciliation job skips it instead of flagging false drift.
    */
-  fetchListings(params: { accessToken: string }): Promise<ProviderListingSnapshot[] | null>;
+  fetchListings(params: ProviderShopCredentials): Promise<ProviderListingSnapshot[] | null>;
   /**
    * Pull current external stock for SPECIFIC items only (drift) — far cheaper than a
    * full-catalog scan. Optional; the job falls back to {@link fetchListings} when absent.
    */
-  fetchListingsForItems?(params: {
-    accessToken: string;
-    externalProductIds: string[];
-  }): Promise<ProviderListingSnapshot[] | null>;
+  fetchListingsForItems?(
+    params: ProviderShopCredentials & { externalProductIds: string[] },
+  ): Promise<ProviderListingSnapshot[] | null>;
 }
 
 /** Simulates a successful push so the whole pipeline is exercisable without real APIs. */
