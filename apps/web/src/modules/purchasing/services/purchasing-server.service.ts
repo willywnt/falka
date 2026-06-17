@@ -240,6 +240,20 @@ export class PurchasingServerService {
     const lines = this.buildPurchaseOrderLines(variantItems, bundleItems, variantById, bundles);
     const totalCost = lines.reduce((sum, line) => sum + Number(line.unitCost) * line.quantity, 0);
 
+    // A linked supplier must belong to this org; snapshot its name into supplierName so PO
+    // history survives a later rename/soft-delete. Free-text supplierName is the fallback.
+    let supplierId: string | null = null;
+    let supplierName = input.supplierName?.trim() || null;
+    if (input.supplierId) {
+      const supplier = await prisma.supplier.findFirst({
+        where: { id: input.supplierId, organizationId, deletedAt: null },
+        select: { id: true, name: true },
+      });
+      if (!supplier) throw PurchaseOrderError.validation('Pemasok tidak ditemukan.');
+      supplierId = supplier.id;
+      supplierName = supplier.name;
+    }
+
     const created = await retryOnCodeCollision(() =>
       prisma.$transaction(async (tx) => {
         const count = await tx.purchaseOrder.count({ where: { organizationId } });
@@ -250,7 +264,8 @@ export class PurchasingServerService {
             userId: actorUserId,
             organizationId,
             code,
-            supplierName: input.supplierName ?? null,
+            supplierId,
+            supplierName,
             note: input.note ?? null,
             totalCost,
             items: { create: lines },

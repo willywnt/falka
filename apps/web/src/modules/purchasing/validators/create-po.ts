@@ -18,6 +18,8 @@ const purchaseOrderLineSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const createPurchaseOrderSchema = z.object({
+  // Optional link to a saved Supplier; when set the server snapshots its name into supplierName.
+  supplierId: z.string().cuid().optional(),
   supplierName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(500).optional(),
   items: z.array(purchaseOrderLineSchema).min(1),

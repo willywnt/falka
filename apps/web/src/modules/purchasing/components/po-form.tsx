@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NumberInput } from '@/components/ui/number-input';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/empty-state';
@@ -50,6 +51,7 @@ import {
   useCreatePurchaseOrderMutation,
   usePurchaseVariantsQuery,
 } from '../hooks/use-purchase-orders';
+import { useSupplierOptionsQuery } from '../hooks/use-suppliers';
 import { usePurchaseScanner, type PoScannerStatus } from '../hooks/use-purchase-scanner';
 import type { PurchasableVariant, ScannedPurchaseItem } from '../types';
 
@@ -166,6 +168,9 @@ export function PoForm() {
 
   const [lines, setLines] = useState<PoLine[]>([]);
   const [supplierName, setSupplierName] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const supplierOptions = useSupplierOptionsQuery();
+  const hasSuppliers = (supplierOptions.data?.length ?? 0) > 0;
 
   const reorder = useReorderReportQuery({
     windowDays: REORDER_DEFAULTS.windowDays,
@@ -405,6 +410,7 @@ export function PoForm() {
     if (lines.length === 0) return;
     try {
       const po = await createPo.mutateAsync({
+        supplierId: supplierId || undefined,
         supplierName: supplierName.trim() || undefined,
         items: lines.map((line) =>
           line.kind === 'variant'
@@ -557,11 +563,31 @@ export function PoForm() {
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="supplier">Pemasok (opsional)</Label>
+            {hasSuppliers ? (
+              <Select
+                aria-label="Pilih pemasok tersimpan"
+                value={supplierId}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSupplierId(value);
+                  const picked = supplierOptions.data?.find((option) => option.id === value);
+                  if (picked) setSupplierName(picked.name);
+                }}
+              >
+                <option value="">— Ketik manual —</option>
+                {(supplierOptions.data ?? []).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
             <Input
               id="supplier"
               value={supplierName}
               onChange={(event) => setSupplierName(event.target.value)}
               placeholder="Nama pemasok"
+              disabled={Boolean(supplierId)}
             />
           </div>
 
