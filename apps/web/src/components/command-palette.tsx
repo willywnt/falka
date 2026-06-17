@@ -26,6 +26,15 @@ import {
 import { PANDU_SUGGESTIONS, routePanduQuery } from '@/components/pandu/pandu-router';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useEntityJump } from '@/components/use-entity-jump';
+import {
+  compareMatches,
+  scoreEntry,
+  toSearchable,
+  type MatchResult,
+  type SearchField,
+  type Searchable,
+} from '@/lib/search/fuzzy-search';
+import { highlightSpans } from '@/lib/search/highlight';
 import { cn } from '@/lib/utils';
 import { useOrg } from '@/modules/users/hooks/use-org';
 import type { PermissionKey } from '@/modules/users/permissions/catalog';
@@ -46,14 +55,23 @@ type PaletteEntry = {
   hint: string;
   icon: ComponentType<{ className?: string }>;
   href: Route;
-  haystack: string;
+  /** Precomputed match target (title + keyword/section fields). */
+  searchable: Searchable;
   /** Carried over from the NavItem — gated entries are filtered out at render time. */
   minRole?: NavItem['minRole'];
   permission?: NavItem['permission'];
 };
 
-function toHaystack(...parts: Array<string | readonly string[] | undefined>): string {
-  return parts.flat().filter(Boolean).join(' ').toLowerCase();
+/** A scored entry — `match` is present only for fuzzy-ranked (typed-query) hits. */
+type RankedEntry = PaletteEntry & { match?: MatchResult };
+
+const KEYWORD_WEIGHT = 1;
+const SECTION_WEIGHT = 0.5;
+/** Cap the ranked result list so the longest tail never buries the best hits. */
+const MAX_RANKED = 8;
+
+function keywordFields(keywords: readonly string[] | undefined): SearchField[] {
+  return (keywords ?? []).map((text) => ({ text, weight: KEYWORD_WEIGHT }));
 }
 
 const CREATE_ENTRIES: readonly PaletteEntry[] = CREATE_ACTIONS.map((action) => ({
@@ -62,7 +80,10 @@ const CREATE_ENTRIES: readonly PaletteEntry[] = CREATE_ACTIONS.map((action) => (
   hint: 'Buat',
   icon: action.icon,
   href: action.href,
-  haystack: toHaystack(action.title, 'buat', action.keywords),
+  searchable: toSearchable(action.title, [
+    { text: 'buat', weight: KEYWORD_WEIGHT },
+    ...keywordFields(action.keywords),
+  ]),
   minRole: action.minRole,
   permission: action.permission,
 }));
@@ -74,7 +95,10 @@ const NAV_ENTRIES: readonly PaletteEntry[] = sidebarNavSections.flatMap((section
     hint: section.label ?? 'Menu',
     icon: item.icon,
     href: item.href,
-    haystack: toHaystack(item.title, section.label, item.keywords),
+    searchable: toSearchable(item.title, [
+      ...keywordFields(item.keywords),
+      ...(section.label ? [{ text: section.label, weight: SECTION_WEIGHT }] : []),
+    ]),
     minRole: item.minRole,
     permission: item.permission,
   })),
@@ -86,33 +110,40 @@ const SUGGESTION_ENTRIES: readonly PaletteEntry[] = PANDU_SUGGESTIONS.map((sugge
   hint: 'Coba ini',
   icon: BrandMark,
   href: suggestion.href,
-  haystack: '',
+  searchable: toSearchable(suggestion.label, []),
 }));
-
-/** Every query token must appear somewhere in the entry's haystack. */
-function matches(entry: PaletteEntry, tokens: readonly string[]): boolean {
-  return tokens.every((token) => entry.haystack.includes(token));
-}
 
 function buildEntries(
   query: string,
   role: OrgRole | null,
   permissions: readonly PermissionKey[] | null,
-): readonly PaletteEntry[] {
+): readonly RankedEntry[] {
   // Role/permission-gated destinations drop out at render time (cosmetic — server still guards).
   const createEntries = CREATE_ENTRIES.filter((entry) => navItemAllowed(entry, role, permissions));
   const navEntries = NAV_ENTRIES.filter((entry) => navItemAllowed(entry, role, permissions));
-  const trimmed = query.trim().toLowerCase();
+  const trimmed = query.trim();
 
   if (!trimmed) {
     return [...createEntries, ...navEntries];
   }
 
-  const tokens = trimmed.split(/\s+/);
-  const hits = [
-    ...createEntries.filter((entry) => matches(entry, tokens)),
-    ...navEntries.filter((entry) => matches(entry, tokens)),
-  ];
+  // Fuzzy-score every visible destination, then order by match quality. Ties
+  // break to the shorter title, then to declaration order (create before nav),
+  // so high-frequency rows stay where muscle memory expects them.
+  const hits: RankedEntry[] = [...createEntries, ...navEntries]
+    .map((entry, index) => ({ entry, match: scoreEntry(trimmed, entry.searchable), index }))
+    .filter(
+      (scored): scored is { entry: PaletteEntry; match: MatchResult; index: number } =>
+        scored.match !== null,
+    )
+    .sort(
+      (a, b) =>
+        compareMatches(a.match, b.match) ||
+        a.entry.title.length - b.entry.title.length ||
+        a.index - b.index,
+    )
+    .slice(0, MAX_RANKED)
+    .map(({ entry, match }) => ({ ...entry, match }));
 
   // Free text falls through Pandu's honest keyword router (navigate-only).
   const destination = routePanduQuery(query);
@@ -123,7 +154,7 @@ function buildEntries(
       hint: 'Pandu · Pratinjau',
       icon: BrandMark,
       href: destination.href,
-      haystack: '',
+      searchable: toSearchable(destination.label, []),
     });
   }
 
@@ -139,10 +170,9 @@ function toCodeCandidate(query: string): string {
   const trimmed = query.trim();
   if (!/^\S{3,64}$/.test(trimmed)) return '';
 
-  const tokens = [trimmed.toLowerCase()];
   const matchesMenu =
-    CREATE_ENTRIES.some((entry) => matches(entry, tokens)) ||
-    NAV_ENTRIES.some((entry) => matches(entry, tokens));
+    CREATE_ENTRIES.some((entry) => scoreEntry(trimmed, entry.searchable) !== null) ||
+    NAV_ENTRIES.some((entry) => scoreEntry(trimmed, entry.searchable) !== null);
 
   return matchesMenu ? '' : trimmed;
 }
@@ -202,13 +232,13 @@ function PaletteDialog({
   const entries = useMemo(() => {
     if (jumpHits.length === 0) return baseEntries;
 
-    const jumpEntries: PaletteEntry[] = jumpHits.map((hit) => ({
+    const jumpEntries: RankedEntry[] = jumpHits.map((hit) => ({
       id: hit.id,
       title: hit.title,
       hint: 'Data',
       icon: hit.icon,
       href: hit.href,
-      haystack: '',
+      searchable: toSearchable(hit.title, []),
     }));
     // A real record beats the "Pandu belum paham" suggestions — keep only
     // genuine nav/create hits below the jump group.
@@ -346,7 +376,9 @@ function PaletteDialog({
                       <Icon className="size-3.5" />
                     )}
                   </span>
-                  <span className="min-w-0 flex-1 truncate">{entry.title}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {highlightSpans(entry.title, entry.match?.titleSpans ?? [])}
+                  </span>
                   <span className="text-muted-foreground shrink-0 text-xs">{entry.hint}</span>
                   {isActive ? (
                     <CornerDownLeft
