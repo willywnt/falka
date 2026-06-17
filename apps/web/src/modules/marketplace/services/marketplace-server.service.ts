@@ -177,7 +177,7 @@ export class MarketplaceServerService {
   async upsertOAuthConnection(
     organizationId: string,
     actorUserId: string,
-    input: CreateMarketplaceConnectionInput,
+    input: CreateMarketplaceConnectionInput & { shopCipher?: string | null },
   ): Promise<MarketplaceConnectionDetail> {
     if (!isSupportedMarketplaceProvider(input.provider)) {
       throw MarketplaceError.invalidProvider();
@@ -201,6 +201,9 @@ export class MarketplaceServerService {
             encryptedRefreshToken,
             tokenExpiresAt: input.expiresAt,
             isActive: true,
+            // Only overwrite the cipher when this grant carried one (TikTok re-resolves it);
+            // a Lazada/Shopee re-auth omits it and must not clobber the stored value.
+            ...(input.shopCipher !== undefined ? { externalShopCipher: input.shopCipher } : {}),
           },
         })
       : await prisma.marketplaceConnection.create({
@@ -210,6 +213,7 @@ export class MarketplaceServerService {
             provider: input.provider as MarketplaceProvider,
             shopId: input.shopId,
             shopName: input.shopName,
+            externalShopCipher: input.shopCipher ?? null,
             encryptedAccessToken,
             encryptedRefreshToken,
             tokenExpiresAt: input.expiresAt,

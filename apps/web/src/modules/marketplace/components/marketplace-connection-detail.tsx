@@ -454,7 +454,9 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
         {/* Both header actions need marketplace.manage — drop the whole strip, not an empty box. */}
         {canManage ? (
           <div className="flex flex-wrap gap-2">
-            {connection?.provider === 'LAZADA' || connection?.provider === 'SHOPEE' ? (
+            {connection?.provider === 'LAZADA' ||
+            connection?.provider === 'SHOPEE' ||
+            connection?.provider === 'TOKOPEDIA' ? (
               <>
                 <Button
                   variant="outline"
@@ -492,7 +494,10 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
 
       <MarketplaceHealthPanel connectionId={connectionId} />
 
-      {canManage && (connection?.provider === 'LAZADA' || connection?.provider === 'SHOPEE') ? (
+      {canManage &&
+      (connection?.provider === 'LAZADA' ||
+        connection?.provider === 'SHOPEE' ||
+        connection?.provider === 'TOKOPEDIA') ? (
         <SyncWarehouseCard
           connectionId={connectionId}
           syncWarehouseCode={connection.syncWarehouseCode}

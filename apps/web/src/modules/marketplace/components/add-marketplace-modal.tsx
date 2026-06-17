@@ -46,6 +46,7 @@ type AddMarketplaceModalProps = {
 const OAUTH_CONNECT: Partial<Record<MarketplaceProvider, { path: string }>> = {
   [MarketplaceProvider.LAZADA]: { path: '/api/v1/marketplaces/lazada/oauth/authorize' },
   [MarketplaceProvider.SHOPEE]: { path: '/api/v1/marketplaces/shopee/oauth/authorize' },
+  [MarketplaceProvider.TOKOPEDIA]: { path: '/api/v1/marketplaces/tokopedia/oauth/authorize' },
 };
 
 /**
@@ -106,8 +107,8 @@ export function AddMarketplaceModal({ open, onOpenChange }: AddMarketplaceModalP
         <DialogHeader>
           <DialogTitle>Hubungkan toko marketplace</DialogTitle>
           <DialogDescription>
-            Shopee & Lazada pakai login OAuth — token diisi otomatis, tidak perlu paste manual.
-            Provider lain sementara isi token manual.
+            Shopee, Lazada & Tokopedia pakai login OAuth — token diisi otomatis, tidak perlu paste
+            manual. Kolom token manual di bawah hanya untuk dev/fallback.
           </DialogDescription>
         </DialogHeader>
 

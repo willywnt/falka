@@ -9,7 +9,7 @@ export type RefreshableConnection = {
 };
 
 /** Providers whose tokens the worker can refresh (have OAuth refresh + a worker refresher). */
-const REFRESHABLE_PROVIDERS: MarketplaceProvider[] = ['LAZADA', 'SHOPEE'];
+const REFRESHABLE_PROVIDERS: MarketplaceProvider[] = ['LAZADA', 'SHOPEE', 'TOKOPEDIA'];
 
 /**
  * Active OAuth connections whose access token expires at or before `cutoff` (and that still

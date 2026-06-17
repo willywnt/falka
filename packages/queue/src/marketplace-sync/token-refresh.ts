@@ -1,5 +1,9 @@
 import { getServerEnv } from '@falka/config/env.server';
-import { refreshLazadaToken, refreshShopeeToken } from '@falka/marketplace-providers';
+import {
+  refreshLazadaToken,
+  refreshShopeeToken,
+  refreshTikTokToken,
+} from '@falka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 const LAZADA_DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';
@@ -21,6 +25,8 @@ export function canRefreshProvider(provider: MarketplaceProvider): boolean {
       return Boolean(env.LAZADA_APP_KEY && env.LAZADA_APP_SECRET);
     case 'SHOPEE':
       return Boolean(env.SHOPEE_PARTNER_ID && env.SHOPEE_PARTNER_KEY);
+    case 'TOKOPEDIA':
+      return Boolean(env.TOKOPEDIA_APP_KEY && env.TOKOPEDIA_APP_SECRET);
     default:
       return false;
   }
@@ -66,6 +72,23 @@ export async function refreshProviderToken(input: {
       baseUrl: env.SHOPEE_API_BASE_URL ?? SHOPEE_DEFAULT_BASE_URL,
       refreshToken: input.refreshToken,
       shopId: input.shopId,
+    });
+    return {
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken || null,
+      expiresInSeconds: refreshed.expiresIn,
+    };
+  }
+
+  if (input.provider === 'TOKOPEDIA') {
+    if (!env.TOKOPEDIA_APP_KEY || !env.TOKOPEDIA_APP_SECRET) {
+      throw new Error('Tokopedia (TikTok Shop) app credentials are not configured.');
+    }
+    // TikTok token refresh is app-scoped (no shop_id/shop_cipher needed).
+    const refreshed = await refreshTikTokToken({
+      appKey: env.TOKOPEDIA_APP_KEY,
+      appSecret: env.TOKOPEDIA_APP_SECRET,
+      refreshToken: input.refreshToken,
     });
     return {
       accessToken: refreshed.accessToken,

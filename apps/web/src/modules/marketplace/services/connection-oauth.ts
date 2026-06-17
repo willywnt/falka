@@ -4,6 +4,7 @@ import type { MarketplaceProvider } from '@prisma/client';
 
 import { lazadaOAuthService } from './lazada-oauth.service';
 import { shopeeOAuthService } from './shopee-oauth.service';
+import { tokopediaOAuthService } from './tokopedia-oauth.service';
 
 /**
  * The per-connection OAuth operations shared by every real provider (test + refresh).
@@ -31,6 +32,8 @@ export function getConnectionOAuthService(
       return lazadaOAuthService;
     case 'SHOPEE':
       return shopeeOAuthService;
+    case 'TOKOPEDIA':
+      return tokopediaOAuthService;
     default:
       return null;
   }

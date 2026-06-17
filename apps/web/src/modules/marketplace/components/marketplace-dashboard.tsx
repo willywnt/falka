@@ -52,6 +52,7 @@ export function MarketplaceDashboard() {
     const providers: { key: string; label: string }[] = [
       { key: 'lazada', label: 'Lazada' },
       { key: 'shopee', label: 'Shopee' },
+      { key: 'tokopedia', label: 'Tokopedia' },
     ];
     const hit = providers.find((provider) => params.get(provider.key));
     if (!hit) return;
