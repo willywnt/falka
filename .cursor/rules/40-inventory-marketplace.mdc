@@ -6,9 +6,10 @@ alwaysApply: false
 
 # Inventory / Marketplace MVP
 
-Internal inventory is the **source of truth**, integrated with marketplaces (Shopee/Tokopedia
-now). **Adapter-first with STUBS** so the whole pipeline runs without real provider APIs.
-Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions:
+Internal inventory is the **source of truth**, integrated with marketplaces. **Adapter-first**: LAZADA is
+the live-validated real adapter; SHOPEE and TOKOPEDIA (= TikTok Shop Open API v202309) have env-gated real
+adapter scaffolds (NOT live-verified) that fall back to the Dev/stub when their app creds are unset.
+Org-scoped (`organizationId`), internal-first. Roadmap + locked decisions:
 `docs/roadmap/inventory-mvp.md`.
 
 ## Modules & domains
@@ -61,7 +62,8 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   `adjustIncomingTx`/`applyPurchaseReceiveTx` (purchasing — the `incomingStock` bucket). Surfaces: `getDashboard` (KPIs incl. `totalReservedUnits`); `listStockOverview` (now also the
   last movement before→after + `lastAdjustedAt`, via a nested `take:1` ledger include); **reorder
   report** (`inventory-reorder.service` — recency-weighted/EWMA velocity → days-of-cover → suggested
-  qty, honours per-variant lead time/MOQ; bucketed ledger sums per sub-window); **stock activity
+  qty; effective lead time/MOQ resolve variant value → preferred-supplier default (`variant.supplier`,
+  soft-deleted ignored) → global; bucketed ledger sums per sub-window); **stock activity
   log** (`inventory-activity.service` — filter reason/source/direction/date + paginate + CSV export).
   Demand reasons for velocity are centralised in `SALES_LEDGER_REASONS` (ORDER_RESERVE + ORDER_RELEASE
   + RETURN + SALE, NOT delta-0 ORDER_SHIP — avoids double-count; nets returns + counts offline POS
@@ -143,7 +145,10 @@ Per-user scoped (internal-first, multi-tenant-ready). Roadmap + locked decisions
   `applyPurchaseReceiveTx`, recompute status (all received → RECEIVED + `receivedAt`, else
   PARTIALLY_RECEIVED), propagate received variants to **all** channels; **cancel** (not-yet-RECEIVED) →
   `adjustIncomingTx(−outstanding)` per line, status CANCELLED (already-received units stay in available).
-  `supplierName` is **free text** (no Supplier entity yet); variant `cost` stays manual. `searchVariants`
+  A PO can link a saved **`Supplier`** (`PurchaseOrder.supplierId`, FK SetNull) via a New-PO typeahead;
+  `supplierName` is kept as a denormalized snapshot (org-scoped, soft-delete `Supplier` model + CRUD + a
+  "Pemasok" page under Stok; `ProductVariant.supplierId` feeds the reorder fallback; variant `cost` stays
+  manual). `searchVariants`
   reads ProductVariant read-only (cost + available + incoming), now **paginated** (`?q=&page=&pageSize=`).
   The reorder report's **"Create PO"** prefills `/dashboard/purchasing/new` from URGENT/SOON suggestions.
   **Scan-to-order** (`usePurchaseScanner`, `scanner-pairing` purpose **PURCHASING**): a paired phone scans
@@ -178,7 +183,12 @@ revalidation deterministic even for fast jobs. A CONFIRMED mapping (manual map /
 auto-map) auto-enables `syncEnabled` (NEEDS_REVIEW stays off).
 
 ## Lazada (REAL adapter + OAuth onboarding) — live-validated 2026-06-14
-LAZADA is the one **real** provider (others are stubs). Signer (HMAC-SHA256, prepend apiPath, UPPER
+LAZADA is the only **live-validated** real provider; SHOPEE + TOKOPEDIA now have env-gated real adapter
+scaffolds that fall back to the stub when creds unset (**NOT live-verified** — paths/signatures flagged
+VERIFY; TOKOPEDIA = TikTok Shop Open API v202309 since the standalone Tokopedia API is terminated, needs
+`shop_cipher` via the new `MarketplaceConnection.externalShopCipher` column; both have
+`/api/v1/marketplaces/{shopee,tokopedia}/oauth/authorize+callback` + new `SHOPEE_*`/`TOKOPEDIA_APP_*` env;
+detail: `docs/roadmap/shopee-tokopedia-integration.md`). Lazada signer (HMAC-SHA256, prepend apiPath, UPPER
 hex), REST client, import (`/products/get`), stock-push (**`/product/stock/sellable/update`**, POST +
 XML, **absolute** `SellableQuantity`), token helpers (`exchangeLazadaCode`/`refreshLazadaToken`) and
 `buildLazadaSellableStockPayload` all live in **`@falka/marketplace-providers`** (shared web+worker). The import/stock adapters are **env-gated**:
@@ -191,7 +201,9 @@ authorize` (gated `marketplace.manage`) → encrypted `state` (org+actor sealed 
   **re-auth refreshes the token**) → redirect `/marketplace?lazada=connected|error` (toasted). Manual
   paste stays as a dev/fallback for providers without OAuth.
 - **Token refresh** `POST /marketplaces/:id/refresh` + **Test koneksi** `POST /marketplaces/:id/test`
-  (`/seller/get`); buttons on the connection detail (Lazada only). Env adds `LAZADA_OAUTH_REDIRECT_URI`.
+  (`/seller/get`); buttons on the connection detail (test = Lazada-specific). Env adds `LAZADA_OAUTH_REDIRECT_URI`.
+  **Token refresh is provider-agnostic**: the sync engine refreshes lazily before use
+  (`ensureFreshAccessToken`) + the daily cron covers LAZADA+SHOPEE+TOKOPEDIA (Shopee tokens last ~4h).
 - **Dev tooling:** `pnpm lazada:smoke|token|products|stock|seller` (read `.env`/`apps/web/.env.local`).
   `lazada:stock <token> <itemId> <skuId> <qty> [sellerSku]` posts the real sellable/update payload — set a
   SKU to its current value for a safe no-op probe (it's an absolute set).
@@ -243,14 +255,17 @@ Inventory><WarehouseCode/><Quantity/></…>` block and **OMITS the rest — Laza
 - **Worker (VPS/dev only — gated off on Vercel):** `MARKETPLACE_RECONCILE` queue runs two daily scheduled
   jobs via job-name routing — `reconcile-marketplace-drift` (per active connection: rate-limited
   `adapter.fetchListings` → `computeStockDrift` → **log** over/under/missing; stub providers return `null` →
-  skipped; best-effort per connection) and `refresh-marketplace-tokens` (renews Lazada tokens expiring within
-  the window via the stored refresh token, re-seals with `@falka/utils` crypto). Drift/token data-access
-  (`findActiveConnectionsForDrift`, `findDriftMappedListings`, `findConnectionsForTokenRefresh`,
-  `applyRefreshedConnectionTokens`) lives in `@falka/queue`; `findDriftMappedListings` is always called with the
-  connection's OWN `organizationId` (no cross-tenant read). The stock-provider adapter gained
-  `fetchListings(): ProviderListingSnapshot[] | null` (Lazada via the shared `fetchLazadaListings`).
-- **Deferred:** a persistent drift audit-log + configurable alert thresholds; OAuth callbacks for the other
-  providers.
+  skipped; best-effort per connection) and `refresh-marketplace-tokens` (renews tokens expiring within the
+  window for ALL OAuth providers — `REFRESHABLE_PROVIDERS` = LAZADA+SHOPEE+TOKOPEDIA — via the stored refresh
+  token, re-seals with `@falka/utils` crypto; complements the sync engine's lazy refresh-before-use
+  `ensureFreshAccessToken`). Drift/token data-access (`findActiveConnectionsForDrift`, `findDriftMappedListings`,
+  `findConnectionsForTokenRefresh`, `applyRefreshedConnectionTokens`) lives in `@falka/queue`;
+  `findDriftMappedListings` is always called with the connection's OWN `organizationId` (no cross-tenant read).
+  Adapter calls take **`ProviderShopCredentials = {accessToken, shopId, shopCipher}`** (worker
+  `stock-provider.registry.ts` + web import-adapter params): `shopId` is in Shopee/TikTok signatures,
+  `shopCipher` (from `MarketplaceConnection.externalShopCipher`) is TikTok-only, Lazada ignores both.
+- **Deferred:** a persistent drift audit-log + configurable alert thresholds. (Shopee + Tokopedia OAuth
+  callbacks + stock/import adapters scaffolded 2026-06-17 — env-gated, NOT live-verified.)
 
 ## Cross-module composition (respect boundary §3)
 - catalog→inventory ONLY via the inventory service (no cross-table writes). orders→inventory via
@@ -344,8 +359,8 @@ ProviderHealth + reconciliation/drift; marketplace-order bundle decrement; multi
 store-level only); PENDING-order reservation (needs expiry/auto-release); within returns: per-line
 split (part restock + part damaged), partial-quantity returns, refund/money tracking, marketplace
 return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed at scale (the
-`(userId, reason, createdAt)` index serves reorder); **purchasing**: Supplier entity (contacts,
-per-supplier lead time), auto **cost update** on receive (moving-average → profit reporting), PO
+`(userId, reason, createdAt)` index serves reorder); **purchasing**: auto **cost update** on receive
+(moving-average → profit reporting), PO
 edit/DRAFT, supplier invoice (faktur) printing, landed cost; reorder velocity is a simple EWMA (could add seasonality); real
 provider adapters need the decrypted token → lift token-crypto to `@falka/*`; queue package has no
 vitest (engine is gate-checked only).

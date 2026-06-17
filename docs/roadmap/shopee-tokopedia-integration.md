@@ -1,6 +1,11 @@
 # Shopee + Tokopedia integration — design & sandbox-first onboarding
 
-> Status: **Design / not started** (Lazada is the only live adapter; SHOPEE/TOKOPEDIA are stubs).
+> Status: **Scaffolded / env-gated — awaiting sandbox verification** (SHIPPED 2026-06-17 on branch
+> session/2026-06-17-shopee-integration). Both SHOPEE and TOKOPEDIA (= TikTok Shop Open API v202309)
+> adapters now exist behind env gates and fall back to the Dev/stub when creds are unset; **NOT
+> live-verified** (endpoint paths + signatures flagged ⚠ VERIFY until sandbox creds confirm them). The
+> `MarketplaceConnection.externalShopCipher` column + provider-agnostic lazy token refresh also landed;
+> the §9 decisions are resolved (see below). Lazada remains the only live-validated adapter.
 > Goal: design both real adapters to **drop into the existing two-adapter contract** with the
 > least possible change, and onboard on **sandbox first** so going to full production is mostly an
 > env + approval flip — not a rewrite.
@@ -22,8 +27,9 @@
 2. **Shopee stays standalone** — Shopee Open Platform (`partner.shopeemobile.com`), its own
    HMAC-SHA256 signature, its own sandbox host (`partner.test-stable.shopeemobile.com`).
 3. **The schema barely changes.** The data model is already provider-agnostic: tokens, warehouse
-   sync, mapping, drift, sync-jobs all reuse as-is. The only _required_ schema change is **nothing**
-   (the enum already has `SHOPEE` and `TOKOPEDIA`). The genuinely new code is **two adapter classes +
+   sync, mapping, drift, sync-jobs all reuse as-is. The only schema change that shipped is **one nullable
+   column** — `MarketplaceConnection.externalShopCipher` (migration `20260617000000_add_marketplace_shop_cipher`)
+   for the TikTok/Tokopedia shop_cipher; the enum already had `SHOPEE`/`TOKOPEDIA`. The genuinely new code is **two adapter classes +
    one shared low-level client per provider + one OAuth service + two routes per provider.**
 4. **One real architectural addition is forced by Shopee:** Shopee's `access_token` lives only
    **4 hours**. The current token-refresh cron runs **once daily** — fine for Lazada (30-day token),
@@ -346,7 +352,7 @@ Design (do this when wiring Shopee, not after):
    before calling the adapter: if `tokenExpiresAt` is within a safety window (e.g. ≤ 10 min) **and**
    a refresh token exists, call the provider's `refreshConnection`, persist the new token, and use
    it. This makes short-TTL providers self-heal regardless of cron cadence. Encapsulate as a shared
-   `ensureFreshToken(connection)` helper so all three providers use it.
+   `ensureFreshAccessToken(connection)` helper so all three providers use it.
 2. **Generalize the refresh cron.** Extend `findConnectionsForTokenRefresh` (drop the
    `provider: 'LAZADA'` filter) and branch the refresh call by provider in
    `refresh-marketplace-tokens.job.ts`. Keep daily as the _backstop_; lazy refresh handles the hot
@@ -391,7 +397,7 @@ Order matters; `<p>` = `shopee` | `tokopedia`, `<Name>` = `Shopee` | `Tokopedia`
 - EDIT `register-providers.ts` — env-gated `registerMarketplaceStockProvider(new <Name>StockProvider())`.
 - EDIT `rate-limit.ts` — add the provider bucket.
 - EDIT `token-repository.ts` + `refresh-marketplace-tokens.job.ts` — generalize beyond LAZADA (§7).
-- ADD the shared `ensureFreshToken` lazy-refresh in `sync-engine.ts` (§7).
+- ADD the shared `ensureFreshAccessToken` lazy-refresh in `sync-engine.ts` (§7).
 
 **Web import adapter:**
 
@@ -417,19 +423,20 @@ typecheck (typed routes); never `next build` while the dev server is up.
 
 ---
 
-## 9. Open decisions for the owner
+## 9. Decisions (RESOLVED this session, except #4)
 
-1. **`shop_cipher` storage (TikTok).** Reuse `shopId` to hold it, stash in `rawPayload`, or add one
-   nullable column? Recommendation: a small nullable `externalShopCipher String?` on
-   `MarketplaceConnection` (1 migration, clearer than overloading `shopId`). Confirm before schema
-   change (HARD CONSTRAINT #1).
-2. **Build order.** Recommendation: **Shopee first** (cleaner standalone API, biggest ID
-   marketplace, forces the lazy-refresh design once), then **Tokopedia/TikTok** (more onboarding
-   friction, but reuses the now-generic refresh + the same adapter skeleton).
-3. **Scope of phase 1.** Stock-sync outbound + listing import + drift only (mirror Lazada), defer
-   inbound orders + webhooks to a phase 2 — agreed?
-4. **TikTok Shop as its own channel later?** Since one Tokopedia authorization already covers the
-   TikTok storefront, decide whether to surface it as a separate `TIKTOK` connection or keep it
-   folded into `TOKOPEDIA`. (Folded is simplest for ID sellers.)
-5. **Env rename for Tokopedia** (`CLIENT_ID/SECRET` → `APP_KEY/SECRET`) — confirm (it touches
-   `env.server.ts` + `turbo.json`, both HARD-ish env constraints).
+1. **`shop_cipher` storage — RESOLVED.** Shipped as a nullable `externalShopCipher String?` column on
+   `MarketplaceConnection` (migration `20260617000000_add_marketplace_shop_cipher`), threaded through
+   `ProviderShopCredentials = {accessToken, shopId, shopCipher}` in the worker adapter + the web
+   import-adapter params (Lazada ignores it).
+2. **Build order — RESOLVED (Shopee first, then Tokopedia/TikTok).** Both scaffolds shipped in that
+   order; the lazy refresh-before-use was implemented while wiring Shopee.
+3. **Phase-1 scope — RESOLVED (stock-sync outbound + listing import + drift, mirroring Lazada).**
+   Shipped as scoped; inbound orders + webhooks (§3.4/§4.4) remain deferred to phase 2.
+4. **TikTok Shop as its own channel later? — STILL OPEN.** One Tokopedia authorization already covers
+   the TikTok storefront; decide whether to surface a separate `TIKTOK` connection or keep it folded
+   into `TOKOPEDIA` (folded is simplest for ID sellers).
+5. **Env for Tokopedia — RESOLVED (additive, NOT a rename).** Shipped by ADDING
+   `TOKOPEDIA_APP_KEY/APP_SECRET`, `TOKOPEDIA_SERVICE_ID`, `TOKOPEDIA_API_BASE_URL`,
+   `TOKOPEDIA_OAUTH_REDIRECT_URI` while KEEPING the existing `TOKOPEDIA_CLIENT_ID/CLIENT_SECRET`
+   placeholders; also added `SHOPEE_API_BASE_URL`/`SHOPEE_OAUTH_REDIRECT_URI`.

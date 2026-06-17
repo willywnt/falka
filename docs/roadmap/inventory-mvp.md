@@ -93,11 +93,15 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
   pure + unit-tested): on-demand "Periksa drift" pulls live external stock and compares to internal
   available (over/under/missing), **observe-only** — internal stays the SoT, fixes are a manual re-push;
   a **scheduled BullMQ job** (`reconcile-marketplace-drift`, daily) logs drift per active connection.
-  **Token auto-refresh worker** (`refresh-marketplace-tokens`, daily) renews Lazada tokens nearing expiry.
+  **Token auto-refresh worker** (`refresh-marketplace-tokens`, daily) renews tokens for **LAZADA + SHOPEE +
+  TOKOPEDIA** (`findConnectionsForTokenRefresh`), backed by lazy refresh-before-use (`ensureFreshAccessToken`)
+  in the sync engine — Shopee tokens last ~4h.
   Zero DB migration (drift computed on-read, health from existing fields). Channel-performance / dead-stock
   reports already shipped in `reporting`. (Reorder intelligence — velocity → days-of-cover → suggested qty,
-  dead-stock status — shipped in `inventory`.) Remaining: a persistent drift audit-log + alert thresholds,
-  and OAuth callbacks for the other providers (Lazada only today).
+  dead-stock status — shipped in `inventory`; effective lead time/MOQ resolve **variant → preferred-supplier
+  default → global**.) Remaining: a persistent drift audit-log + alert thresholds, and live-verifying the
+  other providers — **SHOPEE + TOKOPEDIA (= TikTok Shop Open API v202309) OAuth callbacks + adapters are now
+  scaffolded** (env-gated, Dev-stub fallback when creds unset), but only **LAZADA is live-verified** today.
 - **Counter & restock verticals** (beyond the marketplace-sync phases, same SoT) — ✅ **shipped**:
   - **Offline sales / POS** (`sales` module) — counter sale decrements the SoT immediately
     (`applyOfflineSaleTx`: available−, ledger `SALE`/source `POS`, oversell allowed) and propagates to
@@ -106,8 +110,9 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
   - **Purchasing / POs** (`purchasing` module) — **lights up `incomingStock`** (the last empty bucket):
     create PO → `adjustIncomingTx(+qty)` (no ledger row); **partial per-line receive** →
     `applyPurchaseReceiveTx` (incoming−, available+, ledger `RESTOCK`/source `PURCHASE`),
-    ORDERED→PARTIALLY_RECEIVED→RECEIVED; cancel → incoming−. Free-text `supplierName` (no Supplier
-    entity yet). The reorder report's **"Create PO"** prefills from URGENT/SOON suggestions.
+    ORDERED→PARTIALLY_RECEIVED→RECEIVED; cancel → incoming−. A PO can link a saved **`Supplier`**
+    (`PurchaseOrder.supplierId`, FK SetNull) via a New-PO typeahead; `supplierName` is kept as a
+    denormalized snapshot. The reorder report's **"Create PO"** prefills from URGENT/SOON suggestions.
   - **QR-scan (POS phase 2)** — printable QR labels (label studio + `labelPrintedAt`) and mobile
     scan-to-cart (POS) / scan-to-order (New PO) via `scanner-pairing`. Full detail in §10.
   - **Catalog variants / subvariants + photos** (`catalog`, branch `feat/variant-options`) — the
@@ -144,11 +149,12 @@ per change, all gates green (`typecheck`/`lint`/`build`/`test`).
 ## 5. Phase 1 schema draft — **APPLIED (+ evolved since)**
 
 Applied — `packages/db/prisma/schema.prisma` is the source of truth. Beyond this draft the live
-schema has grown: `ProductVariant.cost`/`weight`/`leadTimeDays`/`minOrderQty`/**`labelPrintedAt`**;
+schema has grown: `ProductVariant.cost`/`weight`/`leadTimeDays`/`minOrderQty`/`supplierId`/**`labelPrintedAt`**;
 `Order.inventoryAppliedAt`/`inventoryShippedAt`/`inventoryRevertedAt`/`fulfilledAt`; `StockLedgerReason`
 gained `ORDER_RELEASE` + `RETURN`; `Return`/`ReturnItem` (+ `ReturnStatus`/`ReturnDisposition`);
-the POS/purchasing models (`Sale`/`SaleItem`, `PurchaseOrder`/`PurchaseOrderItem`); and for QR-scan,
-**`PairingSession.purpose`** (enum `PairingPurpose` RECORDING/POS/PURCHASING). The original draft is
+the POS/purchasing models (`Sale`/`SaleItem`, `PurchaseOrder`/`PurchaseOrderItem`) + the **`Supplier`**
+entity; **`MarketplaceConnection.externalShopCipher`** (TikTok Shop `shop_cipher`); and for QR-scan,
+**`PairingSession.purpose`** (enum `PairingPurpose` RECORDING/POS/PURCHASING/OPNAME). The original draft is
 kept below for historical context.
 
 ```prisma
@@ -210,8 +216,9 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 - **AI mismatch detection** in packing video (vision/OCR) — `aiProcessing`/`ocrProcessing`
   placeholders already reserved in `packages/queue` types.
 - ✅ **Purchasing / restock** — done (`purchasing` module fills `incomingStock`: PO create→incoming+,
-  partial receive→available+ via `RESTOCK`/`PURCHASE`, cancel→incoming−). Suppliers (a real Supplier
-  entity + per-supplier lead time) + auto cost-update on receive remain parked.
+  partial receive→available+ via `RESTOCK`/`PURCHASE`, cancel→incoming−). ✅ **Suppliers shipped
+  (2026-06-17)**: a real `Supplier` entity + per-supplier lead-time/MOQ defaults (reorder resolves
+  variant → supplier → global). **Auto cost-update on receive** still parked.
 - ✅ **Offline sales / POS** — done (`sales` module: counter sale → `SALE`/`POS`, propagate to all
   channels). Printable receipt/nota, VOID/refund, discount/tax remain parked.
 - ✅ **Bundles / kits** — done. A `Bundle` is a buy/sell shortcut (its own SKU/QR) that explodes into

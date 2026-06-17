@@ -137,7 +137,9 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 
 1. **Prisma schema & migrations** — `packages/db/prisma/schema.prisma`.
 2. **Auth.js config** — `auth.config.ts`, `auth.ts`, `middleware.ts`, cookie options.
-3. **Env var names/values** — see `turbo.json` globalEnv + `.env`.
+3. **Env var names/values** — see `turbo.json` globalEnv + `.env`. Shopee/Tokopedia adapters are
+   env-gated (unset ⇒ Dev-stub fallback): `SHOPEE_PARTNER_ID`/`_PARTNER_KEY`/`_API_BASE_URL`/
+   `_OAUTH_REDIRECT_URI`, `TOKOPEDIA_APP_KEY`/`_APP_SECRET`/`_SERVICE_ID`/`_API_BASE_URL`/`_OAUTH_REDIRECT_URI`.
 4. **Socket.IO event contracts** — `scanner-pairing/socket/events.ts`:
    `pairing_connected`, `pairing_disconnected`, `barcode_scanned`, `barcode_ack`,
    `recording_triggered`, `station_recording_state`, `scanner_heartbeat`,
@@ -217,7 +219,10 @@ silently change) · when unsure between approaches, **ASK** — boundary beats d
 ## 12. Inventory / Marketplace MVP (catalog · inventory · marketplace · orders · returns · sales/POS · purchasing · order-aware recordings)
 
 Internal inventory = **source of truth**, integrated with marketplaces (adapter-first; **LAZADA is a
-REAL, OAuth-onboarded, live-validated adapter** — Shopee/Tokopedia stay STUBS). Detail:
+REAL, OAuth-onboarded, live-validated adapter**; **SHOPEE + TOKOPEDIA are env-gated real adapters —
+SCAFFOLDED 2026-06-17, NOT yet live-verified** (need sandbox creds; fall back to the Dev/stub when app
+creds are unset). **TOKOPEDIA runs on the TikTok Shop Open API v202309** — the standalone
+developer.tokopedia.com API is terminated. `docs/roadmap/shopee-tokopedia-integration.md`). Detail:
 `.cursor/rules/40-inventory-marketplace.mdc` (Lazada OAuth section) + `docs/roadmap/inventory-mvp.md`.
 
 - **`StockLedger` (append-only, available-centric) is the truth; `Inventory` is a fast-read cache**
@@ -258,8 +263,10 @@ REAL, OAuth-onboarded, live-validated adapter** — Shopee/Tokopedia stay STUBS)
   pulse; `computeStockDrift` (pure, in `@falka/queue`, shared by web + worker) compares a live external
   pull vs internal `available` (over/under/missing) for an on-demand `POST /[id]/drift-check`
   (marketplace.manage; health reads = marketplace.view) and a daily worker job — internal stays the SoT,
-  drift is only surfaced (fix = manual re-push). A daily `refresh-marketplace-tokens` worker renews Lazada
-  tokens nearing expiry. Detail: `.cursor/rules/40-inventory-marketplace.mdc` (Phase 6 section).
+  drift is only surfaced (fix = manual re-push). A daily `refresh-marketplace-tokens` worker + a lazy
+  refresh-before-use in the sync engine (`ensureFreshAccessToken`) renew tokens nearing expiry for
+  **LAZADA + SHOPEE + TOKOPEDIA** (`findConnectionsForTokenRefresh`; Shopee's ~4h token makes lazy refresh
+  load-bearing). Detail: `.cursor/rules/40-inventory-marketplace.mdc` (Phase 6 section).
 - **Inbound order stock lifecycle** (each stage once, idempotent via `Order.inventoryAppliedAt`/
   `inventoryShippedAt`/`inventoryRevertedAt`): RESERVE on PAID (`available−`, `reserved+`) → SHIP on
   SHIPPED/COMPLETED (consume reservation, `reserved−`, available unchanged) → RELEASE on
@@ -301,8 +308,10 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   bucket. Create a PO → `adjustIncomingTx(+qty)` per line (forecast bucket, **no ledger row**, available
   unchanged). **Receive** (partial per-line, clamped to outstanding) → `applyPurchaseReceiveTx`
   (`incoming−`, `available+`, ledger `RESTOCK` / source `PURCHASE`), recompute status, propagate to all
-  channels. **Cancel** (pre-receive) → `adjustIncomingTx(−outstanding)`. `supplierName` is **free text**
-  (no Supplier entity yet); variant `cost` stays manual. Code `PO00001` per-user. The reorder report's
+  channels. **Cancel** (pre-receive) → `adjustIncomingTx(−outstanding)`. A PO can link a saved
+  **`Supplier`** (`PurchaseOrder.supplierId`, FK SetNull) via a typeahead on New-PO; `supplierName` is
+  kept as a denormalized snapshot (free-text still allowed). Variant `cost` stays manual. Code
+  `PO00001` per-user. The reorder report's
   **"Create PO"** prefills the form from URGENT/SOON suggestions (its `suggestedReorderQty` already nets
   `incoming`, so a PO immediately corrects the suggestion).
 - **Bundles / kits (`catalog` — `Bundle`/`BundleItem`) = a SHORTCUT, NOT a stock variant.** A bundle groups
@@ -324,8 +333,10 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   from every LIVE bundle and **auto-archives any bundle left with 0 components** (archived bundles keep their
   items so a restore stays intact; a 0-component restored bundle is re-filled on the edit screen).
   Detail: `…/40-inventory-marketplace.mdc`.
-- **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty, honours per-variant
-  `leadTimeDays`/`minOrderQty`); stock activity log (filter + paginate + CSV); variant editing. Demand
+- **Reorder + activity**: reorder report (velocity → days-of-cover → suggested qty; effective lead
+  time/MOQ resolve **variant value → preferred-supplier default (`ProductVariant.supplierId`) →
+  global** — variant wins, soft-deleted suppliers ignored); stock activity log (filter + paginate +
+  CSV); variant editing. Demand
   velocity sums `ORDER_RESERVE`+`ORDER_RELEASE`+`RETURN` (net), excludes the delta-0 `ORDER_SHIP`.
   The inventory table surfaces a per-row **days-of-cover gauge** (reorder report joined client-side,
   enhancement-only) + a **"Buat PO"** row action → `/dashboard/purchasing/new?variant=<id>` (PoForm
@@ -348,10 +359,15 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
-  **Multi-store pull** `pullFromConnections` (default all active, 30s per-store cooldown).
+  **Multi-store pull** `pullFromConnections` (default all active, 30s per-store cooldown). Provider creds
+  thread as **`ProviderShopCredentials = {accessToken, shopId, shopCipher}`** through the worker
+  stock-adapter + web import-adapter (Lazada ignores shopId/shopCipher; Shopee uses shopId; Tokopedia/
+  TikTok needs the `MarketplaceConnection.externalShopCipher` column).
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
   layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/sales/stock to re-test
-  the loop (then restart the dev server to rewind the stub pull timeline).
+  the loop (then restart the dev server to rewind the stub pull timeline). `pnpm --filter @falka/db
+db:seed-demo` (flags `--fresh`/`SEED_FRESH=1`) seeds the full demo org "Toko Falka Demo" +
+  OWNER/ADMIN/STAFF logins (owner@/admin@/staff@falka.demo) with data across every feature.
 - **QR-scan (POS phase 2) — ✅ shipped.** Per-SKU **QR labels**: a label studio at `/dashboard/labels`
   (catalog) prints an A4 grid encoding `barcode ?? sku` (`listLabelVariants` paginated, already-printed
   sort last). **`ProductVariant.labelPrintedAt`** records the last print (`markLabelsPrinted`) — surfaced
