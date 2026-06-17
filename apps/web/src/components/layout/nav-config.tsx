@@ -2,6 +2,7 @@ import type { Route } from 'next';
 import type { OrgRole } from '@falka/types';
 import {
   Boxes,
+  Building2,
   ClipboardCheck,
   Coins,
   LayoutDashboard,
@@ -133,6 +134,13 @@ export const sidebarNavSections: readonly NavSection[] = [
         href: '/dashboard/purchasing',
         icon: Truck,
         keywords: ['pembelian', 'po', 'purchase', 'supplier', 'pemasok', 'terima barang'],
+        permission: 'purchasing.view',
+      },
+      {
+        title: 'Pemasok',
+        href: '/dashboard/suppliers',
+        icon: Building2,
+        keywords: ['pemasok', 'supplier', 'vendor', 'lead time', 'moq'],
         permission: 'purchasing.view',
       },
     ],
