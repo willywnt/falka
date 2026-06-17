@@ -355,3 +355,13 @@ export function resolveNavTitle(pathname: string): string | undefined {
 
   return ALL_NAV_ITEMS.find((item) => item.href === activeHref)?.title;
 }
+
+/** The label of the section that owns the active route — Pandu's contextual eyebrow. */
+export function resolveNavSectionLabel(pathname: string): string | undefined {
+  const activeHref = resolveActiveHref(pathname, ALL_NAV_ITEMS);
+  if (!activeHref) return undefined;
+
+  return sidebarNavSections.find((section) =>
+    section.items.some((item) => item.href === activeHref),
+  )?.label;
+}

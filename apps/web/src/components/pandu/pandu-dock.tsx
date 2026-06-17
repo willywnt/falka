@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 
 import { usePanduNudges, type PanduNudge } from './pandu-nudges';
 import { PANDU_SUGGESTIONS, routePanduQuery } from './pandu-router';
+import { usePanduContext } from './use-pandu-context';
 
 function NudgeRow({ nudge, onDismiss }: { nudge: PanduNudge; onDismiss: (id: string) => void }) {
   const Icon = nudge.tone === 'urgent' ? TriangleAlert : Info;
@@ -83,6 +84,7 @@ export function PanduDock() {
   const [noMatch, setNoMatch] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { nudges, hasUrgent, isLoading, isError, dismissNudge } = usePanduNudges();
+  const { sectionLabel, chips } = usePanduContext();
 
   const dockCollapsed = usePanduStore((state) => state.dockCollapsed);
   const setDockCollapsed = usePanduStore((state) => state.setDockCollapsed);
@@ -227,6 +229,21 @@ export function PanduDock() {
         </header>
 
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          {chips.length > 0 ? (
+            <div className="space-y-2 border-b pb-3">
+              <p className="eyebrow text-muted-foreground">
+                Pintasan{sectionLabel ? ` · ${sectionLabel}` : ''}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {chips.map((chip) => (
+                  <Button key={chip.id} size="sm" variant="secondary" className="h-8" asChild>
+                    <Link href={chip.href}>{chip.label}</Link>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <p className="eyebrow text-muted-foreground">Sorotan hari ini · otomatis</p>
 
           {isLoading ? (
