@@ -35,6 +35,7 @@
     "db:seed": "node scripts/with-env.mjs prisma db seed",
     "db:bootstrap-admin": "tsx prisma/bootstrap-admin.ts",
     "db:reset-demo": "node scripts/with-env.mjs tsx scripts/reset-demo.ts",
+    "db:seed-demo": "node scripts/with-env.mjs tsx scripts/seed-demo-full.ts",
     "db:studio": "node scripts/with-env.mjs prisma studio",
     "postinstall": "prisma generate --schema=./prisma/schema.prisma"
   },
