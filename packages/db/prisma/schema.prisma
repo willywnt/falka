@@ -66,6 +66,7 @@ model User {
   sales                      Sale[]
   saleRefunds                SaleRefund[]
   purchaseOrders             PurchaseOrder[]
+  suppliers                  Supplier[]
   recordingShareLinks        RecordingShareLink[]
   bundles                    Bundle[]
   stockOpnames               StockOpname[]
@@ -128,6 +129,7 @@ model Organization {
   sales                      Sale[]
   saleRefunds                SaleRefund[]
   purchaseOrders             PurchaseOrder[]
+  suppliers                  Supplier[]
   stockOpnames               StockOpname[]
   notifications              Notification[]
 
@@ -412,11 +414,15 @@ model ProductVariant {
   alertEnabled      Boolean      @default(true)
   leadTimeDays      Int? // supplier lead time (days) for reorder planning; null = use global default
   minOrderQty       Int? // minimum reorder quantity (MOQ); null = no minimum
+  // Preferred supplier (purchasing). The reorder report falls back to this supplier's
+  // defaultLeadTimeDays/defaultMinOrderQty when the variant's own values are null.
+  supplierId        String?
   labelPrintedAt    DateTime? // when a QR/barcode label was last printed for this variant; null = never
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
   deletedAt         DateTime?
 
+  supplier            Supplier?                   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   inventory           Inventory?
   ledgerEntries       StockLedger[]
   marketplaceMappings MarketplaceProductMapping[]
@@ -431,6 +437,7 @@ model ProductVariant {
   @@index([organizationId])
   @@index([productId])
   @@index([barcode])
+  @@index([supplierId])
   @@map("product_variants")
 }
 
@@ -953,6 +960,35 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
+/**
+ * A supplier/vendor (purchasing). Free-text supplierName on a PO still works; linking a
+ * Supplier lets the reorder report fall back to the supplier's default lead time / MOQ for
+ * variants that don't set their own. Org-scoped, soft-deleted (PO + variant FKs SetNull).
+ */
+model Supplier {
+  id             String       @id @default(cuid())
+  userId         String // actor/creator
+  user           User         @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  phone          String?
+  note           String?
+  // Reorder fallbacks — used ONLY when a variant's own leadTimeDays/minOrderQty is null.
+  defaultLeadTimeDays Int?
+  defaultMinOrderQty  Int?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  purchaseOrders  PurchaseOrder[]
+  productVariants ProductVariant[]
+
+  @@index([organizationId])
+  @@map("suppliers")
+}
+
 model PurchaseOrder {
   id             String              @id @default(cuid())
   userId         String
@@ -963,6 +999,10 @@ model PurchaseOrder {
    * Readable reference (e.g. PO00001), generated per-user at create.
    */
   code           String
+  // Linked supplier (optional). supplierName is kept as a denormalized snapshot of the
+  // chosen supplier's name (and supports free-text entry) so PO history survives a
+  // supplier rename/soft-delete. SetNull on supplier delete.
+  supplierId     String?
   supplierName   String?
   status         PurchaseOrderStatus @default(ORDERED)
   note           String?
@@ -972,11 +1012,13 @@ model PurchaseOrder {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  items PurchaseOrderItem[]
+  supplier Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items    PurchaseOrderItem[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
   @@index([status])
+  @@index([supplierId])
   @@map("purchase_orders")
 }
 
