@@ -147,9 +147,13 @@ export function NotificationBell() {
           )}
         </div>
 
-        <p className="text-muted-foreground border-t px-4 py-2 text-[11px]">
-          Diperbarui otomatis dari datamu.
-        </p>
+        <Link
+          href="/dashboard/notifications"
+          onClick={() => setOpen(false)}
+          className="text-muted-foreground hover:text-foreground block border-t px-4 py-2.5 text-center text-xs font-medium transition-colors"
+        >
+          Lihat semua notifikasi
+        </Link>
       </PopoverContent>
     </Popover>
   );

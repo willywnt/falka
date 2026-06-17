@@ -1,10 +1,11 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api/fetch-client';
 import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
+import type { PageMeta } from '@/hooks/use-pagination';
 
 import type { NotificationListItem } from '../types';
 import { notificationKeys } from './notification-keys';
@@ -16,7 +17,12 @@ export type NotificationsQueryData = {
   unreadCount: number;
 };
 
-/** The persisted notification feed (page 1) + the member's unread count. */
+export type NotificationsHistoryData = {
+  items: NotificationListItem[];
+  meta: (PageMeta & { unreadCount?: number }) | undefined;
+};
+
+/** The persisted notification feed (page 1) + the member's unread count — for the navbar tray. */
 export function useNotificationsQuery() {
   return useQuery({
     queryKey: notificationKeys.list(1, PAGE_SIZE),
@@ -29,6 +35,24 @@ export function useNotificationsQuery() {
       return { items: result.data, unreadCount: meta?.unreadCount ?? 0 };
     },
     refetchInterval: 60_000,
+  });
+}
+
+/** The full paginated history for the "Lihat semua" page. */
+export function useNotificationsHistoryQuery(page: number, pageSize = PAGE_SIZE) {
+  return useQuery({
+    queryKey: notificationKeys.history(page, pageSize),
+    queryFn: async (): Promise<NotificationsHistoryData> => {
+      const result = await apiFetch<NotificationListItem[]>(apiRoutes.notifications, {
+        params: { page, pageSize },
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return {
+        items: result.data,
+        meta: result.meta as (PageMeta & { unreadCount?: number }) | undefined,
+      };
+    },
+    placeholderData: keepPreviousData,
   });
 }
 
