@@ -32,6 +32,7 @@ const CONTEXT_CHIPS: ReadonlyArray<{ prefix: string; chips: readonly PanduContex
       { id: 'inv-low', label: 'Yang menipis', href: '/dashboard/inventory?low=1' as Route },
       { id: 'inv-reorder', label: 'Saran restok', href: '/dashboard/inventory/reorder' },
       { id: 'inv-dead', label: 'Stok mati', href: '/dashboard/reports/dead-stock' },
+      { id: 'inv-opname', label: 'Opname', href: '/dashboard/inventory/opname' },
     ],
   },
   {
@@ -39,6 +40,7 @@ const CONTEXT_CHIPS: ReadonlyArray<{ prefix: string; chips: readonly PanduContex
     chips: [
       { id: 'ord-paid', label: 'Perlu dikirim', href: '/dashboard/orders?status=PAID' as Route },
       { id: 'ord-board', label: 'Papan packing', href: '/dashboard/orders/board' },
+      { id: 'ord-returns', label: 'Retur', href: '/dashboard/returns' },
     ],
   },
   {
@@ -47,7 +49,18 @@ const CONTEXT_CHIPS: ReadonlyArray<{ prefix: string; chips: readonly PanduContex
   },
   {
     prefix: '/dashboard/purchasing',
-    chips: [{ id: 'po-new', label: 'PO baru', href: '/dashboard/purchasing/new' }],
+    chips: [
+      { id: 'po-new', label: 'PO baru', href: '/dashboard/purchasing/new' },
+      { id: 'po-suppliers', label: 'Pemasok', href: '/dashboard/suppliers' },
+      { id: 'po-reorder', label: 'Saran restok', href: '/dashboard/inventory/reorder' },
+    ],
+  },
+  {
+    prefix: '/dashboard/suppliers',
+    chips: [
+      { id: 'sup-new-po', label: 'PO baru', href: '/dashboard/purchasing/new' },
+      { id: 'sup-purchasing', label: 'Pembelian', href: '/dashboard/purchasing' },
+    ],
   },
   {
     prefix: '/dashboard/returns',
@@ -57,11 +70,51 @@ const CONTEXT_CHIPS: ReadonlyArray<{ prefix: string; chips: readonly PanduContex
         label: 'Retur pending',
         href: '/dashboard/returns?status=PENDING' as Route,
       },
+      { id: 'ret-orders', label: 'Pesanan', href: '/dashboard/orders' },
     ],
   },
   {
     prefix: '/dashboard/marketplace',
-    chips: [{ id: 'mkt-health', label: 'Kesehatan channel', href: '/dashboard/marketplace' }],
+    chips: [
+      { id: 'mkt-orders', label: 'Pesanan online', href: '/dashboard/orders' },
+      { id: 'mkt-inventory', label: 'Inventaris', href: '/dashboard/inventory' },
+    ],
+  },
+  {
+    prefix: '/dashboard/products',
+    chips: [
+      { id: 'prod-bundles', label: 'Bundel', href: '/dashboard/bundles' },
+      { id: 'prod-labels', label: 'Label QR', href: '/dashboard/labels' },
+    ],
+  },
+  {
+    prefix: '/dashboard/bundles',
+    chips: [
+      { id: 'bdl-products', label: 'Produk', href: '/dashboard/products' },
+      { id: 'bdl-labels', label: 'Label QR', href: '/dashboard/labels' },
+    ],
+  },
+  {
+    prefix: '/dashboard/labels',
+    chips: [
+      { id: 'lbl-products', label: 'Produk', href: '/dashboard/products' },
+      { id: 'lbl-bundles', label: 'Bundel', href: '/dashboard/bundles' },
+    ],
+  },
+  {
+    prefix: '/dashboard/reports',
+    chips: [
+      { id: 'rep-profit', label: 'Laba & channel', href: '/dashboard/reports/profit' },
+      { id: 'rep-value', label: 'Nilai stok', href: '/dashboard/reports/inventory-value' },
+      { id: 'rep-dead', label: 'Stok mati', href: '/dashboard/reports/dead-stock' },
+    ],
+  },
+  {
+    prefix: '/dashboard/recordings',
+    chips: [
+      { id: 'rec-record', label: 'Rekam packing', href: '/recordings' },
+      { id: 'rec-board', label: 'Papan packing', href: '/dashboard/orders/board' },
+    ],
   },
 ];
 

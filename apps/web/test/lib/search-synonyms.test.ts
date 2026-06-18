@@ -12,6 +12,13 @@ describe('expandQueryToken', () => {
   it('maps a common typo to the correct word', () => {
     expect(expandQueryToken('pesnan')).toEqual(['pesnan', 'pesanan']);
     expect(expandQueryToken('inventori')).toEqual(['inventori', 'inventaris']);
+    expect(expandQueryToken('marketplce')).toEqual(['marketplce', 'marketplace']);
+  });
+
+  it('maps newer vocabulary aliases', () => {
+    expect(expandQueryToken('omset')).toEqual(['omset', 'omzet', 'laba']);
+    expect(expandQueryToken('tiktok')).toEqual(['tiktok', 'marketplace', 'tokopedia']);
+    expect(expandQueryToken('pembayaran')).toEqual(['pembayaran', 'kasir', 'penjualan']);
   });
 
   it('returns just the token when it has no aliases', () => {

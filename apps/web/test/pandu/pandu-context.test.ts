@@ -24,6 +24,23 @@ describe('resolvePanduContextChips', () => {
     expect(resolvePanduContextChips('/dashboard/settings')).toEqual([]);
     expect(resolvePanduContextChips('/dashboard')).toEqual([]);
   });
+
+  it('offers cross-links on the marketplace page, not a dead self-link', () => {
+    const chips = resolvePanduContextChips('/dashboard/marketplace');
+    expect(chips.length).toBeGreaterThan(0);
+    expect(chips.map((chip) => chip.href)).not.toContain('/dashboard/marketplace');
+  });
+
+  it('cross-links the catalog pages', () => {
+    expect(resolvePanduContextChips('/dashboard/products').map((c) => c.label)).toContain('Bundel');
+    expect(resolvePanduContextChips('/dashboard/bundles').map((c) => c.label)).toContain('Produk');
+  });
+
+  it('offers the sibling reports and hides the current one', () => {
+    const hrefs = resolvePanduContextChips('/dashboard/reports/profit').map((chip) => chip.href);
+    expect(hrefs).toContain('/dashboard/reports/inventory-value');
+    expect(hrefs).not.toContain('/dashboard/reports/profit');
+  });
 });
 
 describe('resolveNavSectionLabel', () => {
