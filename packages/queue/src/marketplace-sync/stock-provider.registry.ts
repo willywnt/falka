@@ -1,3 +1,4 @@
+import { getServerEnv } from '@falka/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { MarketplaceSyncError } from './sync-errors.js';
@@ -99,14 +100,24 @@ export function registerMarketplaceStockProvider(adapter: MarketplaceStockProvid
   registry.set(adapter.provider, adapter);
 }
 
-/** Defaults to the Dev (simulated) adapter so stubbed end-to-end sync works today. */
+/**
+ * Returns the registered real adapter for a provider, or a fallback when none is
+ * wired. In development the fallback is the Dev simulator, so a stubbed end-to-end
+ * sync works without real creds. In PRODUCTION the fallback is the Unwired adapter,
+ * which REJECTS (retryable): a live connection whose provider env/creds are missing
+ * must fail loudly and stay visible as FAILED, never have the Dev stub fake a SYNCED
+ * push while the marketplace is never updated (silent oversell).
+ */
 export function getMarketplaceStockProvider(
   provider: MarketplaceProvider,
 ): MarketplaceStockProviderAdapter {
   const existing = registry.get(provider);
   if (existing) return existing;
 
-  const adapter = new DevMarketplaceStockProvider(provider);
+  const adapter =
+    getServerEnv().NODE_ENV === 'production'
+      ? new UnwiredMarketplaceStockProvider(provider)
+      : new DevMarketplaceStockProvider(provider);
   registry.set(provider, adapter);
   return adapter;
 }
