@@ -12,28 +12,42 @@ type TxClient = {
     count: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    findUnique: ReturnType<typeof vi.fn>;
   };
+  saleRefund: {
+    count: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+  };
+  // void/refund take a per-sale advisory lock (pg_advisory_xact_lock) via $queryRaw.
+  $queryRaw: ReturnType<typeof vi.fn>;
 };
 
-const { prismaMock, txMock, enqueueMock, inventoryMock, catalogMock } = vi.hoisted(() => {
-  const txMock: TxClient = { sale: { count: vi.fn(), create: vi.fn(), update: vi.fn() } };
-  return {
-    txMock,
-    enqueueMock: vi.fn(),
-    inventoryMock: {
-      applyOfflineSaleTx: vi.fn().mockResolvedValue(0),
-      applyOfflineSaleReversalTx: vi.fn().mockResolvedValue(0),
-    },
-    catalogMock: { resolveBundles: vi.fn().mockResolvedValue(new Map()) },
-    prismaMock: {
-      productVariant: { findMany: vi.fn(), count: vi.fn() },
-      sale: { findMany: vi.fn(), findFirst: vi.fn() },
-      inventory: { findUnique: vi.fn() },
-      marketplaceProductMapping: { count: vi.fn() },
-      $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
-    },
-  };
-});
+const { prismaMock, txMock, enqueueMock, inventoryMock, catalogMock, notificationMock } =
+  vi.hoisted(() => {
+    const txMock: TxClient = {
+      sale: { count: vi.fn(), create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+      saleRefund: { count: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+      $queryRaw: vi.fn(),
+    };
+    return {
+      txMock,
+      enqueueMock: vi.fn(),
+      inventoryMock: {
+        applyOfflineSaleTx: vi.fn().mockResolvedValue(0),
+        applyOfflineSaleReversalTx: vi.fn().mockResolvedValue(0),
+      },
+      catalogMock: { resolveBundles: vi.fn().mockResolvedValue(new Map()) },
+      notificationMock: { emit: vi.fn() },
+      prismaMock: {
+        productVariant: { findMany: vi.fn(), count: vi.fn() },
+        sale: { findMany: vi.fn(), findFirst: vi.fn() },
+        inventory: { findUnique: vi.fn() },
+        marketplaceProductMapping: { count: vi.fn() },
+        $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
+      },
+    };
+  });
 
 vi.mock('@falka/db', () => ({
   prisma: prismaMock,
@@ -59,6 +73,9 @@ vi.mock('@/modules/inventory/services/inventory-server.service', () => ({
 vi.mock('@/modules/catalog/services/catalog-server.service', () => ({
   catalogServerService: catalogMock,
 }));
+vi.mock('@/modules/notifications/services/notification-server.service', () => ({
+  notificationServerService: notificationMock,
+}));
 
 const { SalesServerService } = await import('@/modules/sales/services/sales-server.service');
 
@@ -75,6 +92,11 @@ beforeEach(() => {
   txMock.sale.count.mockResolvedValue(0);
   txMock.sale.create.mockResolvedValue({ id: 's1', code: 'S00001' });
   txMock.sale.update.mockResolvedValue({});
+  txMock.sale.findUnique.mockResolvedValue({ status: 'COMPLETED', _count: { refunds: 0 } });
+  txMock.saleRefund.count.mockResolvedValue(0);
+  txMock.saleRefund.create.mockResolvedValue({ id: 'rf1', code: 'RF00001' });
+  txMock.saleRefund.findMany.mockResolvedValue([]);
+  txMock.$queryRaw.mockResolvedValue([]);
   catalogMock.resolveBundles.mockResolvedValue(new Map());
 });
 
@@ -250,6 +272,84 @@ describe('voidSale', () => {
     await expect(service.voidSale(ORG, ACTOR, 'missing')).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('createSaleRefund', () => {
+  const sale = {
+    id: 's1',
+    code: 'S00001',
+    status: 'COMPLETED',
+    taxRate: 0,
+    taxInclusive: false,
+    items: [
+      {
+        id: 'si1',
+        productVariantId: 'v1',
+        sku: 'BLACK-S',
+        name: 'Black / S',
+        quantity: 5,
+        unitPrice: 100_000,
+        discountAmount: 0,
+      },
+    ],
+    refunds: [],
+  };
+
+  it('refunds part of a sale: restocks the qty and flips status to PARTIALLY_REFUNDED', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue(sale);
+
+    await service.createSaleRefund(ORG, ACTOR, 's1', {
+      items: [{ saleItemId: 'si1', quantity: 2 }],
+    });
+
+    const refundArgs = txMock.saleRefund.create.mock.calls[0]?.[0] as {
+      data: { code: string; items: { create: Array<{ saleItemId: string; quantity: number }> } };
+    };
+    expect(refundArgs.data.code).toBe('RF00001');
+    expect(refundArgs.data.items.create[0]).toMatchObject({ saleItemId: 'si1', quantity: 2 });
+    expect(inventoryMock.applyOfflineSaleReversalTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', quantity: 2, saleId: 's1' }),
+    );
+    expect(txMock.sale.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 's1' }, data: { status: 'PARTIALLY_REFUNDED' } }),
+    );
+  });
+
+  it('rejects an over-refund created by a concurrent refund (re-checks remaining in the tx)', async () => {
+    // Outside read sees no prior refund (remaining 5 — passes), but a concurrent
+    // refund of 4 committed before our tx, so the in-tx re-read leaves only 1.
+    prismaMock.sale.findFirst.mockResolvedValue(sale);
+    txMock.saleRefund.findMany.mockResolvedValue([{ items: [{ saleItemId: 'si1', quantity: 4 }] }]);
+
+    await expect(
+      service.createSaleRefund(ORG, ACTOR, 's1', { items: [{ saleItemId: 'si1', quantity: 2 }] }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
+    expect(txMock.sale.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a refund when the sale was voided concurrently (re-checks status in the tx)', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue(sale); // outside read: COMPLETED
+    txMock.sale.findUnique.mockResolvedValue({ status: 'VOID' }); // concurrent void committed
+
+    await expect(
+      service.createSaleRefund(ORG, ACTOR, 's1', { items: [{ saleItemId: 'si1', quantity: 2 }] }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
+  });
+
+  it('rejects a refund on an already-voided sale (outside guard)', async () => {
+    prismaMock.sale.findFirst.mockResolvedValue({ ...sale, status: 'VOID' });
+
+    await expect(
+      service.createSaleRefund(ORG, ACTOR, 's1', { items: [{ saleItemId: 'si1', quantity: 2 }] }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
     expect(inventoryMock.applyOfflineSaleReversalTx).not.toHaveBeenCalled();
   });
 });

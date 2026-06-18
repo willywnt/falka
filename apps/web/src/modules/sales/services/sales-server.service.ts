@@ -262,7 +262,23 @@ export class SalesServerService {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
+    const voided = await prisma.$transaction(async (tx) => {
+      // Serialize void/refund for this sale (mirrors the per-variant lock in the
+      // inventory service): the status + refund-count re-read below then sees any
+      // concurrently-committed void/refund, so two clicks can't both restock.
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${sale.id}))`;
+      const fresh = await tx.sale.findUnique({
+        where: { id: sale.id },
+        select: { status: true, _count: { select: { refunds: true } } },
+      });
+      // Already voided by a concurrent request — no-op (don't double-restock).
+      if (!fresh || fresh.status === 'VOID') return false;
+      if (fresh._count.refunds > 0) {
+        throw SaleError.validation(
+          'Penjualan ini sudah punya refund — refund sisa itemnya saja, jangan dibatalkan penuh.',
+        );
+      }
+
       for (const item of sale.items) {
         await inventoryServerService.applyOfflineSaleReversalTx(tx, {
           organizationId,
@@ -273,7 +289,10 @@ export class SalesServerService {
         });
       }
       await tx.sale.update({ where: { id: sale.id }, data: { status: 'VOID' } });
+      return true;
     });
+
+    if (!voided) return this.getSale(organizationId, saleId);
 
     appLogger.info('sales.voided', {
       organizationId,
@@ -365,6 +384,44 @@ export class SalesServerService {
 
     const created = await retryOnCodeCollision(() =>
       prisma.$transaction(async (tx) => {
+        // Serialize void/refund for this sale so the remaining-qty re-check sees
+        // any concurrently-committed refund — otherwise two refunds of the same
+        // line both read the same "remaining" (computed before the tx) and
+        // double-restock / over-refund.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${sale.id}))`;
+
+        const fresh = await tx.sale.findUnique({
+          where: { id: sale.id },
+          select: { status: true },
+        });
+        if (fresh?.status === 'VOID') {
+          throw SaleError.validation('Penjualan yang dibatalkan tidak bisa di-refund.');
+        }
+
+        // Re-derive what has already been refunded INSIDE the lock and re-assert
+        // each line's remaining, so a concurrent refund can't push a line over qty.
+        const committedRefunds = await tx.saleRefund.findMany({
+          where: { saleId: sale.id },
+          select: { items: { select: { saleItemId: true, quantity: true } } },
+        });
+        const alreadyRefunded = new Map<string, number>();
+        for (const committed of committedRefunds) {
+          for (const refundItem of committed.items) {
+            alreadyRefunded.set(
+              refundItem.saleItemId,
+              (alreadyRefunded.get(refundItem.saleItemId) ?? 0) + refundItem.quantity,
+            );
+          }
+        }
+        for (const line of lines) {
+          const remaining = line.item.quantity - (alreadyRefunded.get(line.item.id) ?? 0);
+          if (line.quantity > remaining) {
+            throw SaleError.validation(
+              `Qty refund "${line.item.name}" melebihi sisa yang bisa di-refund (${remaining}).`,
+            );
+          }
+        }
+
         const count = await tx.saleRefund.count({ where: { organizationId } });
         const code = `RF${(count + 1).toString().padStart(5, '0')}`;
 
