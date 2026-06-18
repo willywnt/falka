@@ -69,8 +69,6 @@ const serverEnvSchema = z
     WORKER_HEALTH_PORT: z.coerce.number().int().positive().optional(),
     WORKER_HEALTH_URL: optionalUrl,
     WORKER_ENABLE_SCHEDULERS: z.enum(['true', 'false']).optional(),
-
-    ADMIN_API_TOKEN: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.REDIS_URL) {
