@@ -468,7 +468,10 @@ export function PosTerminal() {
   }
 
   async function handleCheckout() {
-    if (cart.length === 0) return;
+    // The disabled button is only a UI hint, not a lock: the F8 shortcut focuses
+    // the pay button and a fast Enter/double-tap can re-enter before isPending
+    // flips, creating two sales that BOTH decrement stock. Guard in the handler.
+    if (cart.length === 0 || createSale.isPending) return;
     try {
       const sale = await createSale.mutateAsync({
         items: cart.map((line) =>
