@@ -708,6 +708,10 @@ model Order {
   @@unique([marketplaceConnectionId, externalOrderId])
   @@index([organizationId])
   @@index([status])
+  // Reporting filters by org+status+placedAt range; the board polls org+status; the
+  // list orders by placedAt. These composites turn org-wide scans into index seeks.
+  @@index([organizationId, status])
+  @@index([organizationId, placedAt])
   @@map("orders")
 }
 
@@ -863,6 +867,9 @@ model Sale {
 
   @@unique([organizationId, code])
   @@index([organizationId])
+  // Reporting + the sales list filter/sort by org and createdAt range; this composite
+  // (mirrors StockLedger's [organizationId, createdAt]) keeps them index-bound.
+  @@index([organizationId, createdAt])
   @@map("sales")
 }
 
