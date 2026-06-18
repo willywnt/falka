@@ -1,3 +1,4 @@
+import { requestJson } from '../http.js';
 import { signLazadaRequest } from './sign.js';
 import type {
   LazadaCallOptions,
@@ -67,8 +68,7 @@ export function createLazadaClient(config: LazadaClientConfig): LazadaClient {
       }
 
       const url = `${config.baseUrl}${apiPath}?${query.toString()}`;
-      const response = await fetchImpl(url, init);
-      const raw = (await response.json()) as Record<string, unknown>;
+      const raw = await requestJson(fetchImpl, url, init, config.timeoutMs);
 
       return {
         code: readString(raw.code) ?? String(raw.code ?? ''),

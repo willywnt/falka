@@ -47,4 +47,6 @@ export type TikTokClientConfig = {
   fetchImpl?: typeof fetch;
   /** Injectable clock returning UNIX SECONDS; defaults to Date.now()/1000. */
   now?: () => number;
+  /** Per-request timeout in ms; defaults to {@link DEFAULT_REQUEST_TIMEOUT_MS}. */
+  timeoutMs?: number;
 };
