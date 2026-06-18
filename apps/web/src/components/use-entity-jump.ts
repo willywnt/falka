@@ -14,13 +14,18 @@ import { useOrderByResiQuery } from '@/modules/orders/hooks/use-orders';
 import { purchaseOrderKeys } from '@/modules/purchasing/hooks/purchase-order-keys';
 import type { PurchaseOrderListItem } from '@/modules/purchasing/types';
 import { saleKeys } from '@/modules/sales/hooks/sale-keys';
+import { useSellableVariantsQuery } from '@/modules/sales/hooks/use-sales';
 import type { SaleListItem, ScannedSaleItem } from '@/modules/sales/types';
 
+import { codeCandidateFlags, matchCodeHits, MAX_CODE_HITS } from './entity-jump-match';
+
 /*
- * Entity lookups for the command palette: a typed/scanned code (sale, PO,
- * opname, resi, SKU/barcode) resolves to a real record and becomes a
- * "Lompat ke" jump entry. Every lookup is enabled-gated on the code's shape so
- * nothing fetches until the query actually looks like that kind of code.
+ * Entity lookups for the command palette: a typed/scanned code or fragment
+ * (sale, PO, opname, resi, SKU/product name) resolves to real records and
+ * becomes "Lompat ke" jump entries. Matching is SQL-LIKE `contains`, so "001"
+ * surfaces S00001/PO00012/…; products match by partial SKU OR name. Every
+ * lookup is enabled-gated on the query's shape so nothing fetches until the
+ * query actually looks like that kind of code.
  */
 
 /** One palette "Lompat ke" hit — a real record the typed/scanned code points at. */
@@ -61,15 +66,17 @@ export function useEntityJump(code: string): {
   const debounced = useDebouncedCode(code.trim());
   const lower = debounced.toLowerCase();
 
-  const isSaleCode = /^s\d{3,}$/i.test(debounced);
-  const isPurchaseCode = /^po\d{3,}$/i.test(debounced);
-  const isOpnameCode = /^op\d{3,}$/i.test(debounced);
+  const {
+    sale: saleEnabled,
+    purchase: purchaseEnabled,
+    opname: opnameEnabled,
+  } = codeCandidateFlags(debounced);
   const isResiCandidate = debounced.length >= 6;
   const isVariantCandidate = debounced.length >= 3 && debounced.length <= 64;
 
   // The sales/PO dashboards already fetch these full lists under the same query
   // keys — we share their cache and only fetch lazily when the code shape says
-  // it could be one, then match the code client-side.
+  // it could be one, then LIKE-match the code client-side.
   const salesQuery = useQuery({
     queryKey: saleKeys.list,
     queryFn: async () => {
@@ -77,7 +84,7 @@ export function useEntityJump(code: string): {
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
-    enabled: isSaleCode,
+    enabled: saleEnabled,
     staleTime: LOOKUP_STALE_TIME,
     retry: false,
   });
@@ -89,7 +96,7 @@ export function useEntityJump(code: string): {
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
-    enabled: isPurchaseCode,
+    enabled: purchaseEnabled,
     staleTime: LOOKUP_STALE_TIME,
     retry: false,
   });
@@ -97,15 +104,15 @@ export function useEntityJump(code: string): {
   const opnameQuery = useQuery({
     queryKey: [...stockOpnameKeys.all, 'lookup', lower] as const,
     queryFn: async () => {
-      // `search` is forward-compatible (the API ignores it until it learns the
-      // param); the hit is verified client-side either way.
+      // The opname list searches code/note server-side; we still LIKE-match the
+      // code client-side so only code hits become jump entries.
       const result = await apiFetch<StockOpnamesPage>(`${apiRoutes.inventory}/opname`, {
-        params: { page: 1, pageSize: 5, search: debounced },
+        params: { page: 1, pageSize: 20, search: debounced },
       });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
-    enabled: isOpnameCode,
+    enabled: opnameEnabled,
     staleTime: LOOKUP_STALE_TIME,
     retry: false,
   });
@@ -114,8 +121,16 @@ export function useEntityJump(code: string): {
   // null (not an error) when nothing matches.
   const orderQuery = useOrderByResiQuery(isResiCandidate ? debounced : null, isResiCandidate);
 
-  // Any code might be a SKU/barcode — the POS resolver answers a variant OR a
-  // bundle, or null.
+  // Products match by partial SKU OR name (the POS search endpoint, LIKE).
+  const variantsQuery = useSellableVariantsQuery(
+    isVariantCandidate ? debounced : '',
+    1,
+    MAX_CODE_HITS,
+    isVariantCandidate,
+  );
+
+  // A scan additionally resolves an EXACT barcode/SKU to a variant OR a bundle —
+  // the search endpoint can't see barcodes or bundles, so this stays.
   const scanQuery = useQuery({
     queryKey: [...saleKeys.all, 'palette-resolve', lower] as const,
     queryFn: async () => {
@@ -130,43 +145,47 @@ export function useEntityJump(code: string): {
     retry: false,
   });
 
-  const saleHit = isSaleCode
-    ? salesQuery.data?.find((sale) => sale.code.toLowerCase() === lower)
-    : undefined;
-  const purchaseHit = isPurchaseCode
-    ? purchaseQuery.data?.find((po) => po.code.toLowerCase() === lower)
-    : undefined;
-  const opnameHit = isOpnameCode
-    ? opnameQuery.data?.items.find((opname) => opname.code.toLowerCase() === lower)
-    : undefined;
-  const orderHit = isResiCandidate ? (orderQuery.data ?? null) : null;
-  const scanHit = isVariantCandidate ? (scanQuery.data ?? null) : null;
+  // Match inside the memo so the (freshly-built) hit arrays don't re-trigger it
+  // every render — it tracks the stable React-Query `.data` refs + shape flags.
+  const salesData = salesQuery.data;
+  const purchaseData = purchaseQuery.data;
+  const opnameData = opnameQuery.data;
+  const orderData = orderQuery.data;
+  const variantData = variantsQuery.data;
+  const scanData = scanQuery.data;
 
   const entries = useMemo<readonly EntityJumpEntry[]>(() => {
     const hits: EntityJumpEntry[] = [];
 
-    if (saleHit) {
+    const saleHits = saleEnabled ? matchCodeHits(salesData, debounced) : [];
+    const purchaseHits = purchaseEnabled ? matchCodeHits(purchaseData, debounced) : [];
+    const opnameHits = opnameEnabled ? matchCodeHits(opnameData?.items, debounced) : [];
+    const orderHit = isResiCandidate ? (orderData ?? null) : null;
+    const variantHits = isVariantCandidate ? (variantData?.items ?? []) : [];
+    const scanHit = isVariantCandidate ? (scanData ?? null) : null;
+
+    for (const sale of saleHits) {
       hits.push({
-        id: `jump:sale:${saleHit.id}`,
-        title: `Buka penjualan ${saleHit.code}`,
+        id: `jump:sale:${sale.id}`,
+        title: `Buka penjualan ${sale.code}`,
         icon: Store,
-        href: `/dashboard/sales/${saleHit.id}` as Route,
+        href: `/dashboard/sales/${sale.id}` as Route,
       });
     }
-    if (purchaseHit) {
+    for (const po of purchaseHits) {
       hits.push({
-        id: `jump:purchase:${purchaseHit.id}`,
-        title: `Buka pembelian ${purchaseHit.code}`,
+        id: `jump:purchase:${po.id}`,
+        title: `Buka pembelian ${po.code}`,
         icon: Truck,
-        href: `/dashboard/purchasing/${purchaseHit.id}` as Route,
+        href: `/dashboard/purchasing/${po.id}` as Route,
       });
     }
-    if (opnameHit) {
+    for (const opname of opnameHits) {
       hits.push({
-        id: `jump:opname:${opnameHit.id}`,
-        title: `Buka opname ${opnameHit.code}`,
+        id: `jump:opname:${opname.id}`,
+        title: `Buka opname ${opname.code}`,
         icon: ClipboardCheck,
-        href: `/dashboard/inventory/opname/${opnameHit.id}` as Route,
+        href: `/dashboard/inventory/opname/${opname.id}` as Route,
       });
     }
     if (orderHit) {
@@ -177,37 +196,63 @@ export function useEntityJump(code: string): {
         href: `/dashboard/orders/${orderHit.id}` as Route,
       });
     }
+
+    // Variants from the LIKE search; the inventory list pre-filters to the SKU
+    // (the POS shapes don't expose the productId for a direct product link).
+    const variantIds = new Set<string>();
+    for (const variant of variantHits) {
+      variantIds.add(variant.variantId);
+      hits.push({
+        id: `jump:variant:${variant.variantId}`,
+        title: `Buka produk ${variant.name} · ${variant.sku}`,
+        icon: Boxes,
+        href: `/dashboard/inventory?search=${encodeURIComponent(variant.sku)}` as Route,
+      });
+    }
+
     if (scanHit) {
-      if (scanHit.kind === 'variant') {
-        // The POS resolver doesn't expose the productId, so jump to the
-        // inventory list pre-filtered to the resolved SKU.
-        hits.push({
-          id: `jump:variant:${scanHit.variant.variantId}`,
-          title: `Buka produk ${scanHit.variant.name} · ${scanHit.variant.sku}`,
-          icon: Boxes,
-          href: `/dashboard/inventory?search=${encodeURIComponent(scanHit.variant.sku)}` as Route,
-        });
-      } else {
+      if (scanHit.kind === 'bundle') {
         hits.push({
           id: `jump:bundle:${scanHit.bundle.id}`,
           title: `Buka bundel ${scanHit.bundle.name} · ${scanHit.bundle.sku}`,
           icon: Layers,
           href: `/dashboard/bundles?search=${encodeURIComponent(scanHit.bundle.sku)}` as Route,
         });
+      } else if (!variantIds.has(scanHit.variant.variantId)) {
+        // An exact barcode hit the search (SKU/name only) wouldn't have found.
+        hits.push({
+          id: `jump:variant:${scanHit.variant.variantId}`,
+          title: `Buka produk ${scanHit.variant.name} · ${scanHit.variant.sku}`,
+          icon: Boxes,
+          href: `/dashboard/inventory?search=${encodeURIComponent(scanHit.variant.sku)}` as Route,
+        });
       }
     }
 
     return hits;
-  }, [saleHit, purchaseHit, opnameHit, orderHit, scanHit, debounced]);
+  }, [
+    saleEnabled,
+    purchaseEnabled,
+    opnameEnabled,
+    isResiCandidate,
+    isVariantCandidate,
+    salesData,
+    purchaseData,
+    opnameData,
+    orderData,
+    variantData,
+    scanData,
+    debounced,
+  ]);
 
   // isLoading = actually fetching with nothing cached yet (a disabled query is
   // "pending" too, so gate each one on its own shape check).
   const isLooking =
-    (isSaleCode && salesQuery.isLoading) ||
-    (isPurchaseCode && purchaseQuery.isLoading) ||
-    (isOpnameCode && opnameQuery.isLoading) ||
+    (saleEnabled && salesQuery.isLoading) ||
+    (purchaseEnabled && purchaseQuery.isLoading) ||
+    (opnameEnabled && opnameQuery.isLoading) ||
     (isResiCandidate && orderQuery.isLoading) ||
-    (isVariantCandidate && scanQuery.isLoading);
+    (isVariantCandidate && (variantsQuery.isLoading || scanQuery.isLoading));
 
   return { entries, isLooking };
 }
