@@ -11,12 +11,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type TxClient = {
   inventory: { findUnique: ReturnType<typeof vi.fn>; upsert: ReturnType<typeof vi.fn> };
   stockLedger: { create: ReturnType<typeof vi.fn> };
+  $queryRaw: ReturnType<typeof vi.fn>;
 };
 
 const { txMock, warnMock } = vi.hoisted(() => ({
   txMock: {
     inventory: { findUnique: vi.fn(), upsert: vi.fn() },
     stockLedger: { create: vi.fn() },
+    // Each mutation takes a per-variant advisory lock (pg_advisory_xact_lock) via
+    // $queryRaw before the read-compute-write to serialize concurrent writers.
+    $queryRaw: vi.fn(),
   } satisfies TxClient,
   warnMock: vi.fn(),
 }));
@@ -59,6 +63,21 @@ function ledgerArg() {
 beforeEach(() => {
   txMock.inventory.upsert.mockResolvedValue({});
   txMock.stockLedger.create.mockResolvedValue({});
+  txMock.$queryRaw.mockResolvedValue([]);
+});
+
+describe('per-variant advisory lock', () => {
+  it('takes an advisory lock before reading the inventory row', async () => {
+    txMock.inventory.findUnique.mockResolvedValue({ availableStock: 5, reservedStock: 1 });
+
+    await service.applyOrderReserveTx(txMock as never, PARAMS);
+
+    // The lock query runs (regression guard for the lost-update fix). $queryRaw is
+    // a tagged template, so the first arg is the SQL strings array.
+    expect(txMock.$queryRaw).toHaveBeenCalledTimes(1);
+    const sqlParts = txMock.$queryRaw.mock.calls[0]?.[0] as readonly string[];
+    expect(sqlParts.join('')).toContain('pg_advisory_xact_lock');
+  });
 });
 
 describe('applyOrderReserveTx', () => {
