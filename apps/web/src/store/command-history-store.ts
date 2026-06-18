@@ -4,16 +4,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 /**
- * Command-palette history (client-only — rule §6): the last few searches the
- * user typed AND the destinations they opened, surfaced as a "Terakhir" group
- * when the palette opens empty. Serializable only — a destination stores its
- * label + href + an icon NAME (resolved to a component at render), never a live
- * record or a component reference. Per-browser, capped, most-recent-first.
+ * Command-palette history (client-only — rule §6): the destinations the user
+ * recently OPENED (pages + records), surfaced as a "Terakhir" group when the
+ * palette opens empty. Only the opened destination is kept — never the raw
+ * query that led there, so picking "Buka penjualan S00001" leaves one entry,
+ * not a duplicate "S00001" search beside it. Serializable only (title + href +
+ * an icon NAME string, never a live record or component); per-browser, capped.
  */
 
 /** Stable icon key for a recalled destination (resolved to a component in the palette). */
 export type HistoryIconName =
-  | 'query'
   | 'sale'
   | 'purchase'
   | 'opname'
@@ -24,65 +24,37 @@ export type HistoryIconName =
   | 'pandu'
   | 'nav';
 
-export interface QueryHistoryEntry {
-  readonly kind: 'query';
-  /** `q:<lowercased text>` — dedupe key. */
-  readonly id: string;
-  readonly text: string;
-}
-
-export interface DestinationHistoryEntry {
-  readonly kind: 'destination';
-  /** The href — also the dedupe key (re-opening a page refreshes its recency). */
+export interface CommandHistoryEntry {
+  /** The href — also the dedupe key (re-opening a destination refreshes its recency). */
   readonly id: string;
   readonly title: string;
   readonly href: string;
   readonly iconName: HistoryIconName;
 }
 
-export type CommandHistoryEntry = QueryHistoryEntry | DestinationHistoryEntry;
-
 type CommandHistoryState = {
   recents: CommandHistoryEntry[];
-  recordQuery: (text: string) => void;
-  recordDestination: (entry: Omit<DestinationHistoryEntry, 'kind' | 'id'>) => void;
-  removeRecent: (id: string) => void;
+  recordDestination: (entry: Omit<CommandHistoryEntry, 'id'>) => void;
   clearHistory: () => void;
 };
 
-const MAX_RECENTS = 8;
-const MIN_QUERY_LENGTH = 2;
-
-/** Move-to-front by id, then cap — the classic MRU list. */
-function prependUnique(
-  recents: readonly CommandHistoryEntry[],
-  entry: CommandHistoryEntry,
-): CommandHistoryEntry[] {
-  return [entry, ...recents.filter((existing) => existing.id !== entry.id)].slice(0, MAX_RECENTS);
-}
+const MAX_RECENTS = 5;
 
 export const useCommandHistoryStore = create<CommandHistoryState>()(
   persist(
     (set) => ({
       recents: [],
-      recordQuery: (text) =>
-        set((state) => {
-          const trimmed = text.trim();
-          if (trimmed.length < MIN_QUERY_LENGTH) return state;
-          const entry: QueryHistoryEntry = {
-            kind: 'query',
-            id: `q:${trimmed.toLowerCase()}`,
-            text: trimmed,
-          };
-          return { recents: prependUnique(state.recents, entry) };
-        }),
       recordDestination: (input) =>
         set((state) => {
-          const entry: DestinationHistoryEntry = { kind: 'destination', id: input.href, ...input };
-          return { recents: prependUnique(state.recents, entry) };
+          const entry: CommandHistoryEntry = { id: input.href, ...input };
+          // Move-to-front by href, then cap — the classic MRU list.
+          return {
+            recents: [entry, ...state.recents.filter((existing) => existing.id !== entry.id)].slice(
+              0,
+              MAX_RECENTS,
+            ),
+          };
         }),
-      removeRecent: (id) =>
-        set((state) => ({ recents: state.recents.filter((entry) => entry.id !== id) })),
       clearHistory: () => set({ recents: [] }),
     }),
     { name: 'falka-command-history' },

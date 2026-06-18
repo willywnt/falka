@@ -81,8 +81,6 @@ type PaletteEntry = {
 /** A scored entry — `match` is present only for fuzzy-ranked (typed-query) hits. */
 type RankedEntry = PaletteEntry & {
   match?: MatchResult;
-  /** A recalled search string — selecting the row re-runs it in place (no nav). */
-  recentText?: string;
   /** Preserved icon name for a recalled destination, so re-recording keeps it. */
   iconName?: HistoryIconName;
 };
@@ -93,12 +91,9 @@ const SECTION_WEIGHT = 0.5;
 const MAX_RANKED = 8;
 /** Group heading + right-label for the recents group (drives the eyebrow grouping). */
 const RECENTS_HINT = 'Terakhir';
-/** Mirrors the store — too-short queries aren't worth recording or recalling. */
-const MIN_RECORDED_QUERY = 2;
 
 /** Resolve a stored icon name to a component (the store keeps only the name). */
 const HISTORY_ICONS: Record<HistoryIconName, ComponentType<{ className?: string }>> = {
-  query: Search,
   sale: Store,
   purchase: Truck,
   opname: ClipboardCheck,
@@ -124,19 +119,8 @@ function paletteIconName(entry: RankedEntry): HistoryIconName {
   return 'nav';
 }
 
-/** Map a stored recent to a palette row (a recent query re-runs; a destination opens). */
+/** Map a stored recent destination to a palette row that re-opens it. */
 function toRecentEntry(recent: CommandHistoryEntry): RankedEntry {
-  if (recent.kind === 'query') {
-    return {
-      id: recent.id,
-      title: recent.text,
-      hint: RECENTS_HINT,
-      icon: HISTORY_ICONS.query,
-      href: '#' as Route,
-      searchable: toSearchable(recent.text, []),
-      recentText: recent.text,
-    };
-  }
   return {
     id: recent.id,
     title: recent.title,
@@ -300,7 +284,6 @@ function PaletteDialog({
   const permissions = org?.permissions ?? null;
 
   const recents = useCommandHistoryStore((state) => state.recents);
-  const recordQuery = useCommandHistoryStore((state) => state.recordQuery);
   const recordDestination = useCommandHistoryStore((state) => state.recordDestination);
   const clearHistory = useCommandHistoryStore((state) => state.clearHistory);
 
@@ -324,7 +307,10 @@ function PaletteDialog({
   // memory), with the full Buat/menu list directly below.
   const recentEntries = useMemo<readonly RankedEntry[]>(() => {
     if (query.trim() || !mounted) return [];
-    return recents.map(toRecentEntry);
+    // Tolerate stale persisted shapes — only render entries with a real href.
+    return recents
+      .filter((recent) => typeof recent.href === 'string' && recent.href.length > 0)
+      .map(toRecentEntry);
   }, [query, mounted, recents]);
 
   const entries = useMemo<readonly RankedEntry[]>(() => {
@@ -366,23 +352,15 @@ function PaletteDialog({
   }, [activeIndex, entries]);
 
   function run(entry: RankedEntry) {
-    // A recalled search re-runs in place — no navigation, nothing to record.
-    if (entry.recentText !== undefined) {
-      setQuery(entry.recentText);
-      setActiveIndex(0);
-      return;
-    }
-
-    // Remember what worked: the destination, plus the query that surfaced it
-    // (skip the suggestion fallbacks — they're guesses, not intent).
+    // Remember only the destination opened — never the raw query that led here,
+    // so picking "Buka penjualan S00001" leaves one recent, not a duplicate.
+    // (Skip the suggestion fallbacks — they're guesses, not intent.)
     if (!entry.id.startsWith('suggestion:')) {
       recordDestination({
         title: entry.title,
         href: entry.href,
         iconName: paletteIconName(entry),
       });
-      const typed = query.trim();
-      if (typed.length >= MIN_RECORDED_QUERY) recordQuery(typed);
     }
 
     onOpenChange(false);
