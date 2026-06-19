@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@falka/logger": "workspace:*",
-    "pino": "^9.14.0"
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "@falka/eslint-config": "workspace:*",
