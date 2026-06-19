@@ -462,3 +462,180 @@
     animation: none;
   }
 }
+
+/*
+ * Landing motion + background utilities (maritime landing page). Class names are
+ * deliberately namespaced to avoid clashing with the existing `.scan-line` /
+ * `pandu-breath` / `shimmer-water` rules above. Every animation here is frozen by
+ * the global `prefers-reduced-motion` guard already present above.
+ */
+
+/* Scroll reveal — JS toggles `.is-in` when the element enters the viewport. */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.8s var(--ease-tide),
+    transform 0.8s var(--ease-tide);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Drifting parallax wave bands (hero / CTA / footer / bento hero). */
+@keyframes riak-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Travelling sync pulse along a connector path (channel-sync diagram). */
+@keyframes mk-flow {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+.mk-flow {
+  animation: mk-flow 2.6s linear infinite;
+}
+
+/* Soft float for the hero card. */
+@keyframes float-card {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.float-card {
+  animation: float-card 7s ease-in-out infinite;
+}
+
+/* Phone scan beam (scanner-kit). */
+@keyframes scan-beam {
+  0% {
+    top: 8%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    top: 90%;
+    opacity: 0;
+  }
+}
+.scan-beam {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 8%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  box-shadow: 0 0 12px 2px color-mix(in oklab, var(--primary) 60%, transparent);
+  animation: scan-beam 2.6s ease-in-out infinite;
+}
+
+/* Lighthouse beam sweep (pandu / footer). */
+@keyframes beam-sweep {
+  0%,
+  100% {
+    transform: rotate(-26deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: rotate(26deg);
+    opacity: 0.85;
+  }
+}
+.beam-sweep {
+  transform-origin: 50% 100%;
+  animation: beam-sweep 7s ease-in-out infinite;
+}
+
+/* Gentle boat bob (scanner phone + sailboat). */
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(2deg);
+  }
+}
+.bob {
+  animation: bob 5s ease-in-out infinite;
+}
+
+/* Sailboat travelling the dashed voyage route. */
+@keyframes sail-x {
+  0% {
+    left: 0%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.sailing {
+  animation: sail-x 11s ease-in-out infinite;
+}
+
+/* Drifting gulls. */
+@keyframes cross {
+  from {
+    left: -10%;
+  }
+  to {
+    left: 110%;
+  }
+}
+.crossing {
+  animation: cross 18s linear infinite;
+}
+
+/* Expanding suar pulse ring (suar dot). */
+@keyframes suar-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.suar-pulse {
+  animation: suar-pulse 2.8s var(--ease-tide) infinite;
+}
+
+/* Masked dot-grid texture for the hero. */
+@utility hero-dotgrid {
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--primary) 30%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 25%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 25%, transparent 72%);
+}

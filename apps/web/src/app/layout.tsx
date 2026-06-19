@@ -8,22 +8,22 @@ import { cn } from '@/lib/utils';
 import '@/styles/globals.css';
 
 const APP_DESCRIPTION =
-  'Stok akurat di semua channel, kasir, dan bukti packing untuk pedagang online.';
+  'Stok akurat di semua channel, kasir, dan bukti packing untuk seller Indonesia.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: {
-    default: 'Falka',
-    template: '%s | Falka',
+    default: 'Palka',
+    template: '%s | Palka',
   },
   description: APP_DESCRIPTION,
-  applicationName: 'Falka',
-  appleWebApp: { title: 'Falka' },
+  applicationName: 'Palka',
+  appleWebApp: { title: 'Palka' },
   openGraph: {
     type: 'website',
-    siteName: 'Falka',
+    siteName: 'Palka',
     locale: 'id_ID',
-    title: 'Falka',
+    title: 'Palka',
     description: APP_DESCRIPTION,
   },
 };

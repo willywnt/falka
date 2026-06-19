@@ -3,8 +3,7 @@ import { ImageResponse } from 'next/og';
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
 
-// iOS ignores transparency, so the chip ships its own solid teal ground;
-// the OS applies the squircle mask itself.
+/** Apple touch icon — the Palka cargo-box mark on the teal brand chip. */
 export default function AppleIcon() {
   return new ImageResponse(
     <div
@@ -14,18 +13,39 @@ export default function AppleIcon() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#1f8ba0',
+        background: '#1f8ba0',
+        borderRadius: 40,
       }}
     >
-      <svg width="124" height="124" viewBox="0 0 64 64" fill="none">
-        <g stroke="#f7fcfd" strokeWidth="4.8" fill="none" strokeLinecap="round">
-          <circle cx="32" cy="23" r="12.5" />
-          <path d="M5 43c4.5-5.2 9-5.2 13.5 0s9 5.2 13.5 0 9-5.2 13.5 0 9 5.2 13.5 0" />
-          <path d="M13.6 53c4.1-4.6 8.2-4.6 12.3 0s8.2 4.6 12.3 0 8.2-4.6 12.3 0" />
-        </g>
-        <circle cx="32" cy="23" r="4.8" fill="#f7fcfd" />
+      <svg width="118" height="118" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3.2 23.4 7.4 16 11.6 8.6 7.4Z" fill="#f7fcfd" fillOpacity="0.25" />
+        <path
+          d="M16 3.2 23.4 7.4 23.4 13 16 17.2 8.6 13 8.6 7.4Z"
+          stroke="#f7fcfd"
+          strokeWidth="2.3"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8.6 7.4 16 11.6 23.4 7.4M16 11.6V17.2"
+          stroke="#f7fcfd"
+          strokeWidth="2.3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path
+          d="M2.5 21.6c2.25-2.6 4.5-2.6 6.75 0s4.5 2.6 6.75 0 4.5-2.6 6.75 0 4.5 2.6 6.75 0"
+          stroke="#f7fcfd"
+          strokeWidth="2.3"
+          strokeLinecap="round"
+        />
+        <path
+          d="M6.8 26.6c2.05-2.3 4.1-2.3 6.15 0s4.1 2.3 6.15 0 4.1-2.3 6.15 0"
+          stroke="#f7fcfd"
+          strokeWidth="2.3"
+          strokeLinecap="round"
+        />
       </svg>
     </div>,
-    size,
+    { ...size },
   );
 }

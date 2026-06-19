@@ -2,8 +2,8 @@ import { cn } from '@/lib/utils';
 
 /*
  * Capped maritime line-art set (Suar Dermaga): single-stroke, currentColor,
- * ≤96px, used ONLY at low-stakes moments — error/404 routes, empty states,
- * long-job loading. Never inside tables, badges, or forms.
+ * ≤128px. Used at brand/landing/empty/error moments — never inside tables,
+ * badges, or forms.
  */
 
 /**
@@ -28,7 +28,7 @@ export function WaveHairline({ className }: { className?: string }) {
   );
 }
 
-/** Pelampung (buoy) — calm "belum ada apa-apa" empty states. */
+/** Pelampung (buoy) — calm "belum ada apa-apa" empty states + FAQ aside. */
 export function BuoyArt({ className }: { className?: string }) {
   return (
     <svg
@@ -41,23 +41,19 @@ export function BuoyArt({ className }: { className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* mast + light */}
       <path d="M48 18v12" />
       <circle cx="48" cy="14" r="3.5" />
-      {/* body */}
       <path d="M38 30h20l4 18H34l4-18Z" />
       <path d="M36 39h24" />
-      {/* waterline through the base */}
       <path d="M30 56c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0" opacity="0.9" />
       <path d="M10 56c4.5-4.8 9-4.8 13.5 0" opacity="0.9" />
-      {/* riak below */}
       <path d="M18 70c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0 9 4.8 13.5 0" />
       <path d="M30 82c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0" />
     </svg>
   );
 }
 
-/** Camar (gull) — light, positive "semua beres / laut tenang" moments. */
+/** Camar (gull) — light, positive moments; drifts on the landing. */
 export function GullArt({ className }: { className?: string }) {
   return (
     <svg
@@ -70,21 +66,13 @@ export function GullArt({ className }: { className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* two gulls */}
-      <path d="M28 34c5-6 11-6 15 0 4-6 10-6 15 0" />
-      <path d="M56 22c3.5-4 7.5-4 10.5 0 3-4 7-4 10.5 0" opacity="0.7" />
-      {/* horizon + sun */}
-      <circle cx="26" cy="48" r="6" opacity="0.7" />
-      <path d="M8 62h80" opacity="0.5" strokeDasharray="2.5 5" />
-      {/* riak */}
-      <path d="M18 72c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0 9-4.8 13.5 0 9 4.8 13.5 0" />
-      <path d="M32 84c4.5-4.8 9-4.8 13.5 0s9 4.8 13.5 0" />
+      <path d="M28 40c6-8 13-8 18 0 5-8 12-8 18 0" />
     </svg>
   );
 }
 
-/** Mercusuar — the "suar" beacon for branded error/404 screens. */
-export function LighthouseArt({ className }: { className?: string }) {
+/** Mercusuar — the "suar" beacon. Pass `beam` to sweep a light cone (landing). */
+export function LighthouseArt({ className, beam = false }: { className?: string; beam?: boolean }) {
   return (
     <svg
       viewBox="0 0 96 96"
@@ -96,18 +84,84 @@ export function LighthouseArt({ className }: { className?: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* beam */}
-      <path d="M40 21 16 12m40 9 24-9" strokeDasharray="2.5 5" opacity="0.55" />
-      {/* lantern */}
+      {beam ? (
+        <g className="beam-sweep" style={{ transformOrigin: '48px 22px' }}>
+          <path d="M48 22 14 8M48 22 82 8" strokeDasharray="2.5 5" opacity="0.5" />
+          <path d="M48 22 18 2 78 2Z" fill="currentColor" fillOpacity="0.08" stroke="none" />
+        </g>
+      ) : (
+        <path d="M40 21 16 12m40 9 24-9" strokeDasharray="2.5 5" opacity="0.55" />
+      )}
       <rect x="42" y="16" width="12" height="10" rx="2" />
-      {/* tapered tower + stripes */}
       <path d="m43.5 26-6 38h21l-6-38" />
       <path d="M41.8 38h12.4M40 50h16" />
-      {/* base */}
       <path d="M31 64h34" />
-      {/* riak */}
       <path d="M8 77c4-4.4 8-4.4 12 0s8 4.4 12 0 8-4.4 12 0 8 4.4 12 0 8-4.4 12 0 8 4.4 12 0" />
       <path d="M26 87c4-4.4 8-4.4 12 0s8 4.4 12 0 8-4.4 12 0" />
+    </svg>
+  );
+}
+
+/** Sauh — anchor (Voyage "Dermaga" station). */
+export function AnchorArt({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+      className={cn('size-20', className)}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="48" cy="18" r="6" />
+      <path d="M48 24v48" />
+      <path d="M34 36h28" />
+      <path d="M22 56c0 16 12 24 26 24s26-8 26-24" />
+      <path d="m22 56-7 5 9 1M74 56l7 5-9 1" />
+    </svg>
+  );
+}
+
+/** Perahu — little sailboat (Voyage route marker). */
+export function BoatArt({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+      className={cn('size-12', className)}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 62h52l-9 13H31z" />
+      <path d="M48 20v38" />
+      <path d="M50 24c16 5 16 24 2 30" />
+      <path d="M44 58V30c-12 4-16 16-12 28Z" />
+    </svg>
+  );
+}
+
+/** Kompas — compass rose (optional accent). */
+export function CompassArt({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 96 96"
+      fill="none"
+      aria-hidden="true"
+      className={cn('size-20', className)}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="48" cy="48" r="30" />
+      <path d="M48 24 55 48 48 72 41 48Z" />
+      <path d="M24 48h6M66 48h6M48 24v6M48 66v6" />
+      <circle cx="48" cy="48" r="2.4" fill="currentColor" />
     </svg>
   );
 }
