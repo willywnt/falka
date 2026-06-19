@@ -135,9 +135,6 @@ export default async function HomePage() {
           </div>
         </div>
         <RiakWaves />
-        <div className="mx-auto max-w-6xl px-6 pb-2">
-          <WaveHairline />
-        </div>
       </section>
 
       <MarketplaceStrip />
