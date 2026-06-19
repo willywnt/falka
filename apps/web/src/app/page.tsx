@@ -4,7 +4,6 @@ import { APP_NAME } from '@falka/config/constants';
 
 import { auth } from '@/auth';
 import { BrandBadge } from '@/components/brand-mark';
-import { WaveHairline } from '@/components/maritime-art';
 import { AnjunganMock, DisputeEvidenceMock } from '@/components/marketing/product-mocks';
 import { ChannelSync } from '@/components/marketing/channel-sync';
 import { OmzetChart, SellThrough } from '@/components/marketing/charts';
