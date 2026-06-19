@@ -19,7 +19,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(order);
   },
-  { requireAuth: true, requirePermission: 'purchasing.cancel' },
+  { requireAuth: true, rateLimit: 'write', requirePermission: 'purchasing.cancel' },
 );
 
 export function OPTIONS() {

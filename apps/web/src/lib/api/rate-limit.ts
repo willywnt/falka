@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  API_RATE_LIMIT_PER_MINUTE,
   AUTH_RATE_LIMIT_PER_MINUTE,
   LOGIN_RATE_LIMIT_PER_WINDOW,
   LOGIN_RATE_LIMIT_WINDOW_SECONDS,
@@ -16,7 +17,7 @@ import {
 
 import { AppError } from '@/lib/errors';
 
-export type RateLimitScope = 'login' | 'auth' | 'upload' | 'recording';
+export type RateLimitScope = 'login' | 'auth' | 'upload' | 'recording' | 'write';
 
 export async function enforceRateLimit(
   scope: RateLimitScope,
@@ -61,6 +62,24 @@ export async function enforceRateLimit(
       return checkRateLimit({
         key: buildUserRateLimitKey('recording', identifiers.userId),
         limit: RECORDING_RATE_LIMIT_PER_MINUTE,
+        windowSeconds: 60,
+      });
+    case 'write':
+      // Generic abuse/runaway ceiling for authenticated write mutations
+      // (POS sale/refund, PO receive/cancel, opname post, marketplace sync).
+      // Per-user; correctness (double-submit) is owned by the per-entity
+      // advisory locks, this is only a safety net.
+      if (!identifiers.userId) {
+        return {
+          allowed: true,
+          limit: API_RATE_LIMIT_PER_MINUTE,
+          remaining: API_RATE_LIMIT_PER_MINUTE,
+          retryAfterSeconds: 0,
+        };
+      }
+      return checkRateLimit({
+        key: buildUserRateLimitKey('write', identifiers.userId),
+        limit: API_RATE_LIMIT_PER_MINUTE,
         windowSeconds: 60,
       });
     default:

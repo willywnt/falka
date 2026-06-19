@@ -24,7 +24,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(sale);
   },
-  { requireAuth: true, requirePermission: 'sales.refund' },
+  { requireAuth: true, rateLimit: 'write', requirePermission: 'sales.refund' },
 );
 
 export function OPTIONS() {

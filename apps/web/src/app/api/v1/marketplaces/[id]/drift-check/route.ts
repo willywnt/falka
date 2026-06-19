@@ -15,7 +15,7 @@ export const POST = withApiRoute<RouteParams>(
     const report = await marketplaceReconciliationService.checkDrift(org.id, parsed.data.id);
     return apiSuccess(report);
   },
-  { requireAuth: true, requirePermission: 'marketplace.manage' },
+  { requireAuth: true, rateLimit: 'write', requirePermission: 'marketplace.manage' },
 );
 
 export function OPTIONS() {

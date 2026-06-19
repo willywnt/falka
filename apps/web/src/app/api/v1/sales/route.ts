@@ -22,7 +22,7 @@ export const POST = withApiRoute(
     const sale = await salesServerService.createSale(org.id, user.id, parsed.data);
     return apiSuccess(sale, 201);
   },
-  { requireAuth: true },
+  { requireAuth: true, rateLimit: 'write' },
 );
 
 export function OPTIONS() {

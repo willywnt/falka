@@ -15,7 +15,7 @@ export const POST = withApiRoute<RouteParams>(
     const result = await marketplaceMappingService.syncAllListings(org.id, user.id, parsed.data.id);
     return apiSuccess(result);
   },
-  { requireAuth: true, requirePermission: 'marketplace.manage' },
+  { requireAuth: true, rateLimit: 'write', requirePermission: 'marketplace.manage' },
 );
 
 export function OPTIONS() {

@@ -43,7 +43,7 @@ export const POST = withApiRoute<RouteParams>(
     );
     return apiSuccess(listing);
   },
-  { requireAuth: true, requirePermission: 'marketplace.manage' },
+  { requireAuth: true, rateLimit: 'write', requirePermission: 'marketplace.manage' },
 );
 
 export function OPTIONS() {

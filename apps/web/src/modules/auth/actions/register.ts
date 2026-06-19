@@ -1,6 +1,7 @@
 'use server';
 
 import { AuthError as NextAuthError } from 'next-auth';
+import { headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 
 import { signIn } from '@/auth';
@@ -12,6 +13,8 @@ import {
 import { authService } from '@/modules/auth/services/auth.service';
 import { registerSchema } from '@/modules/auth/validators/register';
 import type { AuthActionResult } from '@/modules/auth/types';
+import { assertRateLimitAllowed, enforceRateLimit } from '@/lib/api/rate-limit';
+import { getRequestIp } from '@/lib/api/request-context';
 
 export async function registerAction(formData: FormData): Promise<AuthActionResult> {
   const parsed = registerSchema.safeParse({
@@ -31,7 +34,14 @@ export async function registerAction(formData: FormData): Promise<AuthActionResu
     };
   }
 
+  const headerStore = await headers();
+  const ip = getRequestIp(new Request('http://local', { headers: headerStore }));
+
   try {
+    // Unauthenticated endpoint — an IP ceiling blocks scripted invite-code /
+    // email-enumeration probing (mirrors the login action).
+    assertRateLimitAllowed(await enforceRateLimit('auth', { ip }));
+
     await authService.registerUser({
       email: parsed.data.email,
       password: parsed.data.password,
