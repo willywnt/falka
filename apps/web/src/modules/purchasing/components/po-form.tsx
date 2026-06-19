@@ -406,7 +406,9 @@ export function PoForm() {
   }
 
   async function handleCreate() {
-    if (lines.length === 0) return;
+    // Guard re-entry in the handler, not just via the disabled button: a fast
+    // double-submit during the pending window would create two purchase orders.
+    if (lines.length === 0 || createPo.isPending) return;
     try {
       const po = await createPo.mutateAsync({
         supplierId: supplierId || undefined,

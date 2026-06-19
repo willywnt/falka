@@ -72,6 +72,33 @@ function mapLedgerEntry(entry: StockLedger): StockLedgerEntryItem {
  * as the ACTOR who triggered the movement.
  */
 export class InventoryServerService {
+  /**
+   * Lock this variant's stock row for the rest of the caller's transaction, then
+   * read the current `Inventory` snapshot. Every mutation below is a
+   * read-compute-write (read the row → compute the new balance in JS → write the
+   * absolute value + a ledger row). Under Postgres' default Read Committed
+   * isolation with no row lock, two transactions touching the SAME variant both
+   * read the same balance and the later commit clobbers the earlier one — a lost
+   * update that silently desyncs the `Inventory` cache from the append-only
+   * `StockLedger` and pushes a wrong absolute quantity to every marketplace. A
+   * transaction-scoped advisory lock keyed by the variant id makes the
+   * read-compute-write atomic per variant, is released automatically on
+   * commit/rollback, and works even before the inventory row exists (so it also
+   * serializes first-time row creation). Keyed by `hashtext(variantId)` — a hash
+   * collision only causes harmless extra serialization between two unrelated
+   * variants, never incorrect stock.
+   */
+  private async lockAndReadInventory(
+    tx: TransactionClient,
+    variantId: string,
+  ): Promise<Inventory | null> {
+    // $executeRaw (not $queryRaw): pg_advisory_xact_lock returns `void`, which
+    // $queryRaw cannot deserialize. $executeRaw runs the statement for its lock
+    // side effect and returns a row count we ignore.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${variantId}))`;
+    return tx.inventory.findUnique({ where: { variantId } });
+  }
+
   /** Idempotently create the 1:1 inventory row for a newly created variant. */
   async ensureInventory(variantId: string): Promise<InventorySnapshot> {
     const inventory = await prisma.inventory.upsert({
@@ -191,7 +218,7 @@ export class InventoryServerService {
       });
       if (!variant) throw InventoryError.variantNotFound();
 
-      const existing = await tx.inventory.findUnique({ where: { variantId } });
+      const existing = await this.lockAndReadInventory(tx, variantId);
       const currentAvailable = existing?.availableStock ?? 0;
 
       const balance = computeBalanceAfter(currentAvailable, input.delta);
@@ -286,7 +313,7 @@ export class InventoryServerService {
       });
       if (!variant) throw InventoryError.variantNotFound();
 
-      const existing = await tx.inventory.findUnique({ where: { variantId } });
+      const existing = await this.lockAndReadInventory(tx, variantId);
       const disposed = clampWriteOffQuantity(existing?.damagedStock ?? 0, quantity);
       if (disposed <= 0) {
         throw InventoryError.validation('No damaged stock to write off.');
@@ -383,7 +410,7 @@ export class InventoryServerService {
       note?: string;
     },
   ): Promise<{ availableStock: number; ledgerId: string }> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) + params.delta;
     const now = new Date();
 
@@ -428,7 +455,7 @@ export class InventoryServerService {
       orderId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) - params.quantity;
     const now = new Date();
 
@@ -482,7 +509,7 @@ export class InventoryServerService {
       orderId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const available = existing?.availableStock ?? 0;
     const reservedStock = this.decrementReserved(existing?.reservedStock ?? 0, params);
     const now = new Date();
@@ -528,7 +555,7 @@ export class InventoryServerService {
       orderId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
     const reservedStock = this.decrementReserved(existing?.reservedStock ?? 0, params);
     const now = new Date();
@@ -573,7 +600,7 @@ export class InventoryServerService {
       returnId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
     const now = new Date();
 
@@ -617,7 +644,7 @@ export class InventoryServerService {
       returnId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const available = existing?.availableStock ?? 0;
     const now = new Date();
 
@@ -666,7 +693,7 @@ export class InventoryServerService {
       saleId: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) - params.quantity;
     const now = new Date();
 
@@ -711,7 +738,7 @@ export class InventoryServerService {
       note?: string;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const balanceAfter = (existing?.availableStock ?? 0) + params.quantity;
     const now = new Date();
 
@@ -749,7 +776,7 @@ export class InventoryServerService {
     tx: TransactionClient,
     params: { organizationId: string; actorUserId: string; variantId: string; delta: number },
   ): Promise<void> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const current = existing?.incomingStock ?? 0;
     if (current + params.delta < 0) {
       appLogger.warn('inventory.incoming.underflow_clamped', {
@@ -790,7 +817,7 @@ export class InventoryServerService {
       unitCost?: number;
     },
   ): Promise<number> {
-    const existing = await tx.inventory.findUnique({ where: { variantId: params.variantId } });
+    const existing = await this.lockAndReadInventory(tx, params.variantId);
     const onHandQty = existing?.availableStock ?? 0;
     const balanceAfter = onHandQty + params.quantity;
     const incomingStock = Math.max(0, (existing?.incomingStock ?? 0) - params.quantity);

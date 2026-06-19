@@ -51,7 +51,7 @@ const {
     },
     prismaMock: {
       marketplaceConnection: { findMany: vi.fn(), update: vi.fn() },
-      marketplaceProduct: { findUnique: vi.fn() },
+      marketplaceProduct: { findMany: vi.fn() },
       inventory: { findUnique: vi.fn() },
       order: { findFirst: vi.fn(), updateMany: vi.fn() },
       $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
@@ -132,8 +132,25 @@ beforeEach(() => {
     },
   ]);
   prismaMock.marketplaceConnection.update.mockResolvedValue({});
-  prismaMock.marketplaceProduct.findUnique.mockImplementation(() =>
-    Promise.resolve(state.variantId ? { mapping: { productVariantId: state.variantId } } : null),
+  // The pull resolves all order-line listings in one findMany. Return a listing
+  // (mapped to state.variantId) for every item across the staged orders, or none
+  // when the variant is unmapped — mirroring the per-item resolution it replaced.
+  prismaMock.marketplaceProduct.findMany.mockImplementation(() =>
+    Promise.resolve(
+      state.variantId
+        ? (
+            state.orders as Array<{
+              items: Array<{ externalProductId: string; externalVariantId: string }>;
+            }>
+          )
+            .flatMap((order) => order.items)
+            .map((item) => ({
+              externalProductId: item.externalProductId,
+              externalVariantId: item.externalVariantId,
+              mapping: { productVariantId: state.variantId },
+            }))
+        : [],
+    ),
   );
   prismaMock.inventory.findUnique.mockResolvedValue({ availableStock: 10 });
   txMock.order.upsert.mockImplementation(() => Promise.resolve(state.saved));

@@ -1,3 +1,4 @@
+import { requestJson } from '../http.js';
 import { signShopeeRequest } from './sign.js';
 import type {
   ShopeeCallOptions,
@@ -58,8 +59,7 @@ export function createShopeeClient(config: ShopeeClientConfig): ShopeeClient {
       }
 
       const url = `${config.baseUrl}${apiPath}?${query.toString()}`;
-      const response = await fetchImpl(url, init);
-      const raw = (await response.json()) as Record<string, unknown>;
+      const raw = await requestJson(fetchImpl, url, init, config.timeoutMs);
 
       return {
         error: readString(raw.error) ?? '',

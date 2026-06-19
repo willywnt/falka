@@ -35,4 +35,6 @@ export type LazadaClientConfig = {
   fetchImpl?: typeof fetch;
   /** Injectable clock in ms; defaults to `Date.now`. */
   now?: () => number;
+  /** Per-request timeout in ms; defaults to {@link DEFAULT_REQUEST_TIMEOUT_MS}. */
+  timeoutMs?: number;
 };

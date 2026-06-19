@@ -41,10 +41,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Default seed accounts (after `pnpm db:seed`):
 
-| Email               | Password    |
-| ------------------- | ----------- |
-| `admin@falka.local` | `Admin123!` |
-| `demo@falka.local`  | `Demo123!`  |
+| Email               | Password    | Role                    |
+| ------------------- | ----------- | ----------------------- |
+| `admin@falka.local` | `Admin123!` | Platform admin          |
+| `demo@falka.local`  | `Demo123!`  | Shop owner (demo org)   |
+| `staff@falka.local` | `Staff123!` | STAFF member (demo org) |
 
 ## Daily workflow
 
@@ -73,6 +74,30 @@ pnpm infra:down    # Stop containers when done
 | `pnpm db:seed`           | Seed sample data                   |
 | `pnpm db:studio`         | Open Prisma Studio                 |
 | `pnpm db:generate`       | Regenerate Prisma client           |
+
+## Testing
+
+```bash
+pnpm typecheck && pnpm lint && pnpm build && pnpm test   # the four gates (CI re-runs these on PR)
+```
+
+| Command                                | What it runs                                            |
+| -------------------------------------- | ------------------------------------------------------- |
+| `pnpm test`                            | Unit/integration (Vitest) — Prisma mocked, no DB needed |
+| `pnpm --filter @falka/web test:e2e`    | End-to-end (Playwright) against the running app         |
+| `pnpm --filter @falka/web test:e2e:ui` | E2E in the Playwright inspector                         |
+
+Unit tests mock Prisma, so a DB/runtime regression (e.g. a bad raw query) won't show
+there — that's what the E2E suite is for. End-to-end tests drive a real browser, so:
+
+1. **Run the app** — `pnpm dev` (Playwright reuses it if already up).
+2. **Seed the demo org** — `pnpm --filter @falka/db db:seed-demo` (the E2E logs in as `owner@falka.demo`
+   / `Demo123!`; override with `E2E_EMAIL` / `E2E_PASSWORD`).
+3. **Install the browser once** — `pnpm --filter @falka/web exec playwright install chromium`.
+
+```bash
+pnpm --filter @falka/web test:e2e
+```
 
 ## Cloudflare R2 (local uploads)
 

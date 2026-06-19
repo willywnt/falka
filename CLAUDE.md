@@ -7,14 +7,18 @@ style. These rules are derived from the actual refactored code — keep them tru
 
 - **apps/web** — Next.js 15 App Router + React 19. Custom Node server
   `apps/web/server.ts` (run via `tsx watch server.ts`) attaches Socket.IO.
-  Prod build = `next build` (Vercel) — **the custom server is NOT run on Vercel**.
+  Prod build = `next build` (Vercel today) — **the custom server is NOT run on Vercel**, so
+  marketplace sync / scheduled jobs / scanner socket are dormant in prod until the **VPS cutover**
+  (committed direction: self-hosted Docker runs the custom server + worker; `docs/deployment`).
 - **apps/worker** — BullMQ background jobs.
 - **packages/** = shared `@falka/*`: `db` (Prisma+schema), `config` (env+limits),
   `logger`, `types`, `utils`, `metrics`, `health`, `queue`, `storage`, `rate-limit`,
   `redis`, `ui`, `eslint-config`, `typescript-config`.
 - Server state → **TanStack Query v5**. UI state → **Zustand v5**.
   Auth → Auth.js (next-auth 5 beta, JWT). DB → Prisma+Postgres.
-  Files → Cloudflare R2 (S3 SDK, presigned). Tests → Vitest.
+  Files → Cloudflare R2 (S3 SDK, presigned). Tests → Vitest (unit/integration, Prisma mocked)
+  - Playwright (E2E, `apps/web/e2e`, Phase-1 local). Because unit tests mock Prisma, DB/runtime
+    regressions (e.g. a bad `$queryRaw`) need the E2E or a real-DB probe, not just `pnpm test`.
 
 ## 2. TypeScript (packages/typescript-config/base.json → nextjs.json)
 
@@ -30,7 +34,7 @@ web: `noEmit`, `jsx: preserve`, `allowJs`, next plugin. Alias **`@/*` → `apps/
 
 ## 3. Module boundaries (apps/web/src/modules/<feature>/)
 
-Modules: `admin audit auth catalog inventory marketplace orders purchasing recordings returns sales scanner-pairing storage users`.
+Modules: `admin audit auth catalog inventory marketplace notifications orders purchasing recordings reporting returns sales scanner-pairing storage users`.
 
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
@@ -198,7 +202,10 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 `pnpm typecheck` · `pnpm lint` (`eslint . --max-warnings 0`) · `pnpm build` ·
 `pnpm test` (vitest). **No `any`. No unused. No duplication. No oversized
 multi-responsibility files.** pre-commit (husky+lint-staged) runs eslint --fix +
-prettier. Repo line-endings = **LF**.
+prettier. Repo line-endings = **LF**. CI (`.github/workflows/ci.yml`) re-runs the
+four gates (build→typecheck→lint→test, build first so typedRoutes types exist) on
+push/PR to main. **E2E** (`pnpm --filter @falka/web test:e2e`, Playwright) is NOT
+in the gate — run it locally against `pnpm dev` + the demo seed (`pnpm db:seed-demo`).
 
 ## 10. Anti-patterns (reject these)
 
@@ -227,8 +234,12 @@ developer.tokopedia.com API is terminated. `docs/roadmap/shopee-tokopedia-integr
 
 - **`StockLedger` (append-only, available-centric) is the truth; `Inventory` is a fast-read cache**
   (available/reserved/damaged/incoming) — every stock change = 1 ledger row + 1 Inventory update in
-  one tx. The `inventory` module owns ALL stock writes; `catalog` (Product/Variant) reaches stock
-  ONLY via the inventory service.
+  one tx, **serialized per variant by a transaction advisory lock** (`lockAndReadInventory` →
+  `pg_advisory_xact_lock(hashtext(variantId))`, taken via **`$executeRaw`** — NOT `$queryRaw`: the
+  lock returns `void`, which `$queryRaw` can't deserialize). This closes the read-compute-write
+  lost-update race on the absolute `availableStock`/`balanceAfter` write. The `inventory` module owns
+  ALL stock writes; `catalog` (Product/Variant) reaches stock ONLY via the inventory service. POS
+  void/refund serialize the same way with a **per-sale** advisory lock + in-tx re-validation.
 - **Catalog variants / subvariants** (`catalog`): the **variant is the SKU/stock leaf** (unchanged);
   **`ProductVariant.variantGroup String?`** is an optional grouping **label** — a variant is either a
   **standalone SKU** or a **named group of subvariant SKUs** (siblings share one `variantGroup`). A product
@@ -323,8 +334,11 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   `available` = `computeBuildableQty` (min over components). POS + New-PO have a Products/**Bundling** tab; POS
   oversell warnings **accumulate per variant**; scan resolves variant-OR-bundle (`resolveBundleByCode`); SKU is
   unique across bundles **and** variants; **inactive** bundles are hidden from POS/PO/scan. Bundle QR labels =
-  labels-studio "Bundles" tab. Catalog owns it (`resolveBundles`/CRUD/image/labels); sales/purchasing call its
-  service, never the tables. Marketplace orders NOT bundle-aware (deferred). **Bundles soft-delete**
+  labels-studio "Bundles" tab. Bundle logic lives in the catalog module's **`bundle-server.service.ts`**
+  (`bundleServerService`: `resolveBundles`/CRUD/image/labels + `cascadeBundleComponentRemoval(tx,…)`);
+  sales/purchasing import `bundleServerService`, never the tables. Shared SKU/storage/Prisma-error
+  helpers live in `catalog/utils` (`sku.ts`/`storage.ts`/`prisma-errors.ts`) so neither catalog- nor
+  bundle-service reaches into the other. Marketplace orders NOT bundle-aware (deferred). **Bundles soft-delete**
   (`Bundle.deletedAt`): manual delete **archives** (frees the SKU like a variant, keeps composition+image,
   restorable) and every bundle read filters `deletedAt: null`; a **"Bundel terarsip"** view on the bundles
   dashboard restores (`listArchivedBundles`/`restoreBundle`, same SKU-reclaim + block-on-clash rule as

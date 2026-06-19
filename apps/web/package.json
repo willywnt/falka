@@ -12,13 +12,13 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",
     "@aws-sdk/s3-request-presigner": "^3.1054.0",
-    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
-    "@hookform/resolvers": "^5.4.0",
     "@falka/config": "workspace:*",
     "@falka/db": "workspace:*",
     "@falka/health": "workspace:*",
@@ -31,6 +31,8 @@
     "@falka/storage": "workspace:*",
     "@falka/types": "workspace:*",
     "@falka/utils": "workspace:*",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
+    "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -71,6 +73,7 @@
   "devDependencies": {
     "@falka/eslint-config": "workspace:*",
     "@falka/typescript-config": "workspace:*",
+    "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "^22.14.1",
     "@types/qrcode": "^1.5.5",

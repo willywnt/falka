@@ -1,3 +1,4 @@
+import { requestJson } from '../http.js';
 import { signTikTokRequest } from './sign.js';
 import type {
   TikTokCallOptions,
@@ -52,8 +53,7 @@ export function createTikTokClient(config: TikTokClientConfig): TikTokClient {
       if (options.body !== undefined) init.body = bodyString;
 
       const url = `${config.baseUrl}${path}?${search.toString()}`;
-      const response = await fetchImpl(url, init);
-      const raw = (await response.json()) as Record<string, unknown>;
+      const raw = await requestJson(fetchImpl, url, init, config.timeoutMs);
 
       return {
         code: typeof raw.code === 'number' ? raw.code : Number(raw.code ?? -1),

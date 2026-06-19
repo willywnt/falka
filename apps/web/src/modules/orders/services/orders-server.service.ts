@@ -27,6 +27,11 @@ function isCoolingDown(lastPulledAt: Date | null): boolean {
   return lastPulledAt !== null && Date.now() - lastPulledAt.getTime() < PULL_COOLDOWN_MS;
 }
 
+/** Stable map key for a marketplace listing (external product + variant). */
+function listingKey(externalProductId: string, externalVariantId: string): string {
+  return JSON.stringify([externalProductId, externalVariantId]);
+}
+
 export class OrdersServerService {
   async listOrders(
     organizationId: string,
@@ -475,6 +480,44 @@ export class OrdersServerService {
     return { storesPulled, storesSkipped, pulled, applied, shipped, reverted };
   }
 
+  /**
+   * Resolve the mapped internal variant id for every order line in ONE query,
+   * keyed by listingKey(externalProductId, externalVariantId). Unmapped or unknown
+   * listings are simply absent from the map (callers default to null). Replaces an
+   * N×M per-item findUnique across the whole pull.
+   */
+  private async resolveOrderItemVariantIds(
+    connectionId: string,
+    orders: ReadonlyArray<{
+      items: ReadonlyArray<{ externalProductId: string; externalVariantId: string }>;
+    }>,
+  ): Promise<Map<string, string>> {
+    const pairs = orders.flatMap((order) =>
+      order.items.map((item) => ({
+        externalProductId: item.externalProductId,
+        externalVariantId: item.externalVariantId,
+      })),
+    );
+    const byListing = new Map<string, string>();
+    if (pairs.length === 0) return byListing;
+
+    const listings = await prisma.marketplaceProduct.findMany({
+      where: { marketplaceConnectionId: connectionId, OR: pairs },
+      select: {
+        externalProductId: true,
+        externalVariantId: true,
+        mapping: { select: { productVariantId: true } },
+      },
+    });
+    for (const listing of listings) {
+      const variantId = listing.mapping?.productVariantId;
+      if (variantId) {
+        byListing.set(listingKey(listing.externalProductId, listing.externalVariantId), variantId);
+      }
+    }
+    return byListing;
+  }
+
   private async pullOneConnection(
     organizationId: string,
     actorUserId: string,
@@ -495,22 +538,17 @@ export class OrdersServerService {
     let reverted = 0;
     const affectedVariantIds = new Set<string>();
 
+    // Resolve every line's mapped variant in ONE query for the whole pull, then
+    // look each up below — was an N×M per-item findUnique (N orders × M items).
+    const variantIdByListing = await this.resolveOrderItemVariantIds(connection.id, orders);
+
     for (const order of orders) {
-      const resolvedItems = await Promise.all(
-        order.items.map(async (item) => {
-          const listing = await prisma.marketplaceProduct.findUnique({
-            where: {
-              marketplaceConnectionId_externalProductId_externalVariantId: {
-                marketplaceConnectionId: connection.id,
-                externalProductId: item.externalProductId,
-                externalVariantId: item.externalVariantId,
-              },
-            },
-            select: { mapping: { select: { productVariantId: true } } },
-          });
-          return { ...item, productVariantId: listing?.mapping?.productVariantId ?? null };
-        }),
-      );
+      const resolvedItems = order.items.map((item) => ({
+        ...item,
+        productVariantId:
+          variantIdByListing.get(listingKey(item.externalProductId, item.externalVariantId)) ??
+          null,
+      }));
 
       const saved = await prisma.$transaction(async (tx) => {
         const upserted = await tx.order.upsert({
