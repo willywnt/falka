@@ -3,6 +3,9 @@ import 'server-only';
 import { prisma } from '@falka/db';
 import { StockLedgerReason } from '@prisma/client';
 
+import { appLogger } from '@/lib/logger';
+
+import { REPORT_EXPORT_CAP } from '../config';
 import type {
   AbcReport,
   ChannelPerformanceReport,
@@ -42,6 +45,20 @@ const SOLD_LEDGER_REASONS = [StockLedgerReason.SALE, StockLedgerReason.ORDER_RES
 /** Whole days between two instants, floored and never negative. */
 function daysBetween(earlier: Date, later: Date): number {
   return Math.max(0, Math.floor((later.getTime() - earlier.getTime()) / DAY_MS));
+}
+
+/**
+ * Truncate a CSV-export row set to {@link REPORT_EXPORT_CAP}, warning (with the
+ * given event) when it overflows — mirrors the stock-activity export cap. The
+ * row arrays are already revenue-sorted, so the dropped tail is the lowest-value
+ * SKUs and the report-level totals (computed before this) stay accurate.
+ */
+function capExportRows<T>(rows: T[], event: string, organizationId: string): T[] {
+  if (rows.length > REPORT_EXPORT_CAP) {
+    appLogger.warn(event, { organizationId, cap: REPORT_EXPORT_CAP, total: rows.length });
+    return rows.slice(0, REPORT_EXPORT_CAP);
+  }
+  return rows;
 }
 
 function startOfDay(date: Date): Date {
@@ -271,7 +288,8 @@ export class ReportingServerService {
   /** Full per-SKU profit rows for the CSV export (no top/bottom slicing). */
   async getProfitSkuRows(organizationId: string, query: ProfitReportQuery): Promise<ProfitBySku[]> {
     const { lines } = await this.loadSoldLines(organizationId, query);
-    return aggregateProfitBySku(lines);
+    const rows = aggregateProfitBySku(lines);
+    return capExportRows(rows, 'reporting.profit.export.truncated', organizationId);
   }
 
   /**
@@ -482,7 +500,11 @@ export class ReportingServerService {
    */
   async getAbcAnalysis(organizationId: string, query: ProfitReportQuery): Promise<AbcReport> {
     const { lines, from, to } = await this.loadSoldLines(organizationId, query);
-    return aggregateAbc(lines, { from, to });
+    const report = aggregateAbc(lines, { from, to });
+    return {
+      ...report,
+      rows: capExportRows(report.rows, 'reporting.abc.export.truncated', organizationId),
+    };
   }
 }
 
