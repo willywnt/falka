@@ -14,8 +14,8 @@ import { useOrderByResiQuery } from '@/modules/orders/hooks/use-orders';
 import { purchaseOrderKeys } from '@/modules/purchasing/hooks/purchase-order-keys';
 import type { PurchaseOrderListItem } from '@/modules/purchasing/types';
 import { saleKeys } from '@/modules/sales/hooks/sale-keys';
-import { useSellableVariantsQuery } from '@/modules/sales/hooks/use-sales';
-import type { SaleListItem, ScannedSaleItem } from '@/modules/sales/types';
+import { useSellableVariantsQuery, type SalesPage } from '@/modules/sales/hooks/use-sales';
+import type { ScannedSaleItem } from '@/modules/sales/types';
 
 import { codeCandidateFlags, matchCodeHits, MAX_CODE_HITS } from './entity-jump-match';
 
@@ -74,13 +74,16 @@ export function useEntityJump(code: string): {
   const isResiCandidate = debounced.length >= 6;
   const isVariantCandidate = debounced.length >= 3 && debounced.length <= 64;
 
-  // The sales/PO dashboards already fetch these full lists under the same query
-  // keys — we share their cache and only fetch lazily when the code shape says
-  // it could be one, then LIKE-match the code client-side.
+  // Lazily look these up only when the code shape says it could be one. Sales
+  // search server-side by code/customer (then we LIKE-match the code so only
+  // code hits become jump entries); the PO dashboard list is small enough to
+  // share its cache and match client-side.
   const salesQuery = useQuery({
-    queryKey: saleKeys.list,
+    queryKey: [...saleKeys.all, 'lookup', lower] as const,
     queryFn: async () => {
-      const result = await apiFetch<SaleListItem[]>(apiRoutes.sales);
+      const result = await apiFetch<SalesPage>(apiRoutes.sales, {
+        params: { page: 1, pageSize: MAX_CODE_HITS, search: debounced },
+      });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
@@ -157,7 +160,7 @@ export function useEntityJump(code: string): {
   const entries = useMemo<readonly EntityJumpEntry[]>(() => {
     const hits: EntityJumpEntry[] = [];
 
-    const saleHits = saleEnabled ? matchCodeHits(salesData, debounced) : [];
+    const saleHits = saleEnabled ? matchCodeHits(salesData?.items, debounced) : [];
     const purchaseHits = purchaseEnabled ? matchCodeHits(purchaseData, debounced) : [];
     const opnameHits = opnameEnabled ? matchCodeHits(opnameData?.items, debounced) : [];
     const orderHit = isResiCandidate ? (orderData ?? null) : null;

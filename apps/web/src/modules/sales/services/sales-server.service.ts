@@ -17,6 +17,7 @@ import type { BundleResolution } from '@/modules/catalog/types';
 import { SaleError } from '../errors/sale-errors';
 import { allocateProportionally, computeSaleTotals, refundLineAmount } from '../utils/sale-totals';
 import type { CreateSaleInput } from '../validators/create-sale';
+import type { ListSalesQuery } from '../validators/list-sales';
 import type { RefundSaleInput } from '../validators/refund-sale';
 import type { SearchVariantsQuery } from '../validators/search-variants';
 import type {
@@ -26,8 +27,6 @@ import type {
   ScannedSaleItem,
   SellableVariant,
 } from '../types';
-
-const LIST_LIMIT = 100;
 
 const DETAIL_INCLUDE = {
   items: {
@@ -209,15 +208,34 @@ export class SalesServerService {
     return null;
   }
 
-  async listSales(organizationId: string): Promise<SaleListItem[]> {
-    const rows = await prisma.sale.findMany({
-      where: { organizationId },
-      include: { _count: { select: { items: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: LIST_LIMIT,
-    });
+  async listSales(
+    organizationId: string,
+    query: ListSalesQuery,
+  ): Promise<PaginatedResult<SaleListItem>> {
+    const where: Prisma.SaleWhereInput = {
+      organizationId,
+      ...(query.search
+        ? {
+            OR: [
+              { code: { contains: query.search, mode: 'insensitive' } },
+              { customerName: { contains: query.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
 
-    return rows.map((row) => ({
+    const [rows, total] = await Promise.all([
+      prisma.sale.findMany({
+        where,
+        include: { _count: { select: { items: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      prisma.sale.count({ where }),
+    ]);
+
+    const items = rows.map((row) => ({
       id: row.id,
       code: row.code,
       customerName: row.customerName,
@@ -227,6 +245,8 @@ export class SalesServerService {
       itemCount: row._count.items,
       createdAt: row.createdAt.toISOString(),
     }));
+
+    return buildPaginatedResult(items, total, query.page, query.pageSize);
   }
 
   async getSale(organizationId: string, saleId: string): Promise<SaleDetail> {

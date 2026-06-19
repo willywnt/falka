@@ -19,14 +19,30 @@ export type SellableVariantsPage = {
   meta: PageMeta;
 };
 
-export function useSalesQuery() {
+/** A page of sales (mirror of the server's PaginatedResult). */
+export type SalesPage = {
+  items: SaleListItem[];
+  meta: PageMeta;
+};
+
+export type SalesListFilters = {
+  /** Matches sale code / customer name, case-insensitive. Empty = off. */
+  search?: string;
+};
+
+export function useSalesQuery(page: number, pageSize: number, filters: SalesListFilters = {}) {
+  const search = filters.search?.trim() ?? '';
+
   return useQuery({
-    queryKey: saleKeys.list,
+    queryKey: saleKeys.list(page, pageSize, search),
     queryFn: async () => {
-      const result = await apiFetch<SaleListItem[]>(apiRoutes.sales);
+      const result = await apiFetch<SalesPage>(apiRoutes.sales, {
+        params: { page, pageSize, ...(search ? { search } : {}) },
+      });
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;
     },
+    placeholderData: keepPreviousData,
   });
 }
 
