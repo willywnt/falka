@@ -258,6 +258,6 @@ anyway. So:
 _**Phase 1 + 2 (hybrid) shipped 2026-06-16** (branch `session/2026-06-16-notification-tray`): persistent
 event-log + per-user server read-state + read API + UNION selector + **8 best-effort producers** + RBAC
 tray-filtering + "Lihat semua" history page. The local dev DB apply was deferred (this checkout's `.env` lacks
-`DATABASE_URL`); the migration applies on the next Vercel deploy. **Next:** Phase 3 (preferences) is the clean
+`DATABASE_URL`); the migration is applied by the VPS `migrate` service / `pnpm db:migrate:deploy`. **Next:** Phase 3 (preferences) is the clean
 Vercel-native next step; the rolled-up persistence + retention + WhatsApp wait for the VPS worker (see Decision
 above)._

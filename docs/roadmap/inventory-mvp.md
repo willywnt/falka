@@ -18,11 +18,11 @@
 
 ## 1. Locked decisions
 
-| #   | Decision                | Choice                                     | Implication                                                                                                                                                                             |
-| --- | ----------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Tenancy                 | **Internal-first, but per-user-scoped**    | Every new model carries `userId` (like today's schema). No org/tenant/billing yet, but scoping is correct so a multi-seller SaaS later is additive (add `Organization`), not a rewrite. |
-| 2   | Marketplace integration | **Adapter-first + stubs**                  | Build & test the whole pipeline with `Dev`/`Unwired` provider adapters. Wire real Shopee/Tokopedia/TikTok APIs only when partner approval lands (TikTok approval is slow).              |
-| 3   | UI/UX                   | **Light IA reshell first, redesign later** | Phase 0 reorganizes the sidebar/shell into product sections without touching existing pages. Full visual redesign happens only once the domain is stable.                               |
+| #   | Decision                | Choice                                     | Implication                                                                                                                                                                                                                                                                                              |
+| --- | ----------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Tenancy                 | **Internal-first, but per-user-scoped**    | Every new model carries `userId` (like today's schema). No org/tenant/billing yet, but scoping is correct so a multi-seller SaaS later is additive (add `Organization`), not a rewrite. **(UPDATE 2026-06-14: org-scoping SHIPPED — domain data is scoped by `organizationId`; `userId` is the actor.)** |
+| 2   | Marketplace integration | **Adapter-first + stubs**                  | Build & test the whole pipeline with `Dev`/`Unwired` provider adapters. Wire real Shopee/Tokopedia/TikTok APIs only when partner approval lands (TikTok approval is slow).                                                                                                                               |
+| 3   | UI/UX                   | **Light IA reshell first, redesign later** | Phase 0 reorganizes the sidebar/shell into product sections without touching existing pages. Full visual redesign happens only once the domain is stable.                                                                                                                                                |
 
 ## 2. Product vision
 
@@ -283,7 +283,8 @@ adding a deeper stock level. The full detail lives in `.cursor/rules/40-inventor
   snapshot the sku). It is gated by a **cross-module preflight** `getDeletionBlockers`
   (`GET /products/:id/deletion-blockers?variantIds=`): **BLOCKED** when any active variant is
   marketplace-mapped, has reserved or incoming stock, or has an open (PENDING) return; **WARNS** (still
-  allowed) on available on-hand + damaged stock. No restore UI yet.
+  allowed) on available on-hand + damaged stock. **(UPDATE: restore SHIPPED — "Varian terarsip" /
+  "Bundel terarsip" views restore and reclaim the SKU.)**
 - **Per-variant photo.** `ProductVariant.imageKey?`/`imageUrl?`, stored in a **separate PUBLIC R2 bucket**
   (the recordings bucket stays private — its public URL 403'd). The browser **compresses to WebP** (≤1600px,
   `utils/compress-image.ts`) → `POST /uploads/presign-image` → PUT to R2 →
@@ -293,5 +294,5 @@ adding a deeper stock level. The full detail lives in `.cursor/rules/40-inventor
   the root). Env: `R2_RECORDINGS_BUCKET_NAME` + `R2_PUBLIC_URL`, `R2_PRODUCTS_BUCKET_NAME` +
   `R2_PRODUCTS_PUBLIC_URL`. `scripts/apply-r2-cors.mjs` applies PUT-upload CORS to both buckets.
 - **Deferred (still open):** cross-module display of the "group · subvariant" label in POS / PO / inventory
-  pickers; an Archived view + restore; an inline "Unmap" action in the Connections column (currently links
+  pickers; an inline "Unmap" action in the Connections column (currently links
   to the marketplace connection page).

@@ -58,8 +58,6 @@ under [Marketplace OAuth](#marketplace-oauth) below.
 
 | Variable                                | Required | Description                                               |
 | --------------------------------------- | -------- | --------------------------------------------------------- |
-| Variable                                | Required | Description                                               |
-| -----------------------------------     | -------- | --------------------------------------------------------- |
 | `NEXT_PUBLIC_APP_URL`                   | Yes      | Public app URL (desktop in dev: `http://localhost:3000`)  |
 | `NEXT_PUBLIC_APP_NAME`                  | No       | Display name (defaults to `Falka`)                        |
 | `NEXT_PUBLIC_SENTRY_DSN`                | Prod     | Client Sentry DSN                                         |
