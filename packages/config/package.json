@@ -36,12 +36,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.24.3"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@falka/eslint-config": "workspace:*",
     "@falka/typescript-config": "workspace:*",
-    "eslint": "^9.24.0",
-    "typescript": "^5.8.3"
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3"
   }
 }

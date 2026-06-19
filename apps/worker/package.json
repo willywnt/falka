@@ -17,15 +17,15 @@
     "@falka/logger": "workspace:*",
     "@falka/queue": "workspace:*",
     "@falka/utils": "workspace:*",
-    "@sentry/node": "^9.30.0",
-    "dotenv": "^16.5.0"
+    "@sentry/node": "^9.47.1",
+    "dotenv": "^16.6.1"
   },
   "devDependencies": {
     "@falka/eslint-config": "workspace:*",
     "@falka/typescript-config": "workspace:*",
-    "@types/node": "^22.14.1",
-    "eslint": "^9.24.0",
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "@types/node": "^22.19.21",
+    "eslint": "^9.39.4",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3"
   }
 }

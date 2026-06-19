@@ -18,12 +18,12 @@
   "dependencies": {
     "@falka/db": "workspace:*",
     "@falka/storage": "workspace:*",
-    "ioredis": "^5.6.1"
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
     "@falka/eslint-config": "workspace:*",
     "@falka/typescript-config": "workspace:*",
-    "eslint": "^9.24.0",
-    "typescript": "^5.8.3"
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3"
   }
 }
