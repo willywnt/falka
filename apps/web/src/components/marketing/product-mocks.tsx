@@ -112,7 +112,7 @@ export function PosTotalMock() {
         <p className="eyebrow text-muted-foreground">Total</p>
         <p className="num-display mt-1">Rp185.000</p>
         <p className="text-muted-foreground mt-2 border-t pt-2 text-xs">
-          stok Shopee &amp; Tokopedia ikut turun
+          stok di semua channel ikut turun
         </p>
       </div>
     </div>
