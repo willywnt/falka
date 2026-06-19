@@ -83,6 +83,37 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   `inventory-mvp.md` Phase 6 + `.cursor/rules/40-inventory-marketplace.mdc`. **Deferred:** a persistent
   drift audit-log + configurable alert thresholds, OAuth callbacks for the other providers.
 
+## ✅ Shipped (2026-06-19)
+
+- **Local dev-perf fix + dependency refresh** (branch `session/2026-06-19-dev-perf-and-deps`, 5 commits,
+  all four gates green per commit) — diagnosed (26-agent workflow) that laggy page navigation came from
+  the custom dev server compiling routes with **webpack, not Turbopack**. Fixes: `next({ …, turbopack: dev })`
+  in `apps/web/server.ts` (Turbopack dev; gated on `dev`, Socket.IO untouched), `optimizePackageImports:
+['lucide-react']`, and per-query Prisma logging gated behind `PRISMA_LOG_QUERY=1` (off by default).
+  Plus an in-range `pnpm update -r` refresh + six low-risk **tooling-major** bumps (selfsigned 2→5
+  [`generate()` now async, dropped `days`], dotenv 16→17 [`quiet: true`], lint-staged 15→17,
+  prettier-plugin-tailwindcss 0.6→0.8, @zxing/browser 0.1→0.2, @types/node 22→26), then library majors
+  **pino 9→10** (runtime smoke-verified) and **Sentry 9→10** (DSN-gated, type-validated). Detail: memory
+  `olshop-dev-perf-and-deps`. **Manual QA still owed:** confirm the @zxing 0.2 scanner reader on a phone.
+
+  **Framework-major upgrades — attempted then DEFERRED** (kept the gate green / behavior unchanged
+  rather than force them; revisit each as its own session):
+  - **ESLint 9→10** — 🔴 BLOCKED by ecosystem: `eslint-plugin-react` (latest 7.37.5) peers only `≤ eslint 9.7`
+    and _crashes_ under ESLint 10 (used in the Next lint config). Wait for the plugin's ESLint 10 release.
+  - **Zod 3→4** — L: `z.coerce`/`.default()` make input≠output, breaking RHF `useForm`/`zodResolver`
+    typing across ~8 form components (+ `invalid_type_error`→`error`, `.errors`→`.issues`,
+    `.flatten()`→`z.flattenError`). Mechanical-ish but behaviour-sensitive → needs form-by-form rework
+    - **manual QA of every form**.
+  - **TypeScript 5→6** — L: TS 6.0 changed `@types/node` auto-discovery → ~10 backend packages lose Node
+    globals (need `@types/node` added + a shared node-types tsconfig) and `baseUrl` is now deprecated
+    (TS5101). Low benefit over 5.9.3 (TS 6 is a transitional release toward the TS 7 native port).
+  - **Prisma 6→7** — 🟡 HC#1: needs `package.json#prisma` → `prisma.config.ts`, the
+    `prisma-client-js`→`prisma-client` generator migration, and **advisory-lock raw-query verification on
+    a real DB** (unit tests mock Prisma). Owner deferred to a dedicated session.
+  - **Next 15→16** — 🔴 HC#2: highest risk — next-auth 5 **beta** × Next 16 compatibility, custom-server
+    interaction, new caching defaults (`cacheComponents`/`dynamicIO`), typedRoutes. Needs browser QA of
+    both happy flows + auth + scanner. Owner deferred to a dedicated session.
+
 ## 🎯 Mid-size features (1 session each)
 
 | #   | Item                                                                 | Module            | Effort | Gate | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

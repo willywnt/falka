@@ -22,34 +22,35 @@ Falka separates **public** (client) and **server-only** environment variables wi
 
 ### Server-only (never expose to browser)
 
-| Variable                        | Required | Description                                                            |
-| ------------------------------- | -------- | ---------------------------------------------------------------------- |
-| `DATABASE_URL`                  | Yes      | PostgreSQL connection string (pooled)                                  |
-| `DIRECT_URL`                    | Migrate  | Direct (non-pooled) URL for `prisma migrate`; locally = `DATABASE_URL` |
-| `AUTH_SECRET`                   | Yes      | Auth.js signing secret (min 32 chars)                                  |
-| `AUTH_URL`                      | Prod     | Canonical app URL for Auth.js                                          |
-| `NEXTAUTH_URL`                  | Prod     | Same as `AUTH_URL` for NextAuth compat                                 |
-| `AUTH_COOKIE_DOMAIN`            | No       | Cookie domain override (e.g. shared subdomain on the VPS)              |
-| `R2_ACCOUNT_ID`                 | Yes      | Cloudflare account ID                                                  |
-| `R2_ACCESS_KEY_ID`              | Yes      | R2 API token access key                                                |
-| `R2_SECRET_ACCESS_KEY`          | Yes      | R2 API token secret                                                    |
-| `R2_RECORDINGS_BUCKET_NAME`     | Yes      | R2 bucket for recordings (private)                                     |
-| `R2_PUBLIC_URL`                 | No       | Recordings bucket public base (own r2.dev/custom domain)               |
-| `R2_PRODUCTS_BUCKET_NAME`       | No       | R2 bucket for product/variant images (public)                          |
-| `R2_PRODUCTS_PUBLIC_URL`        | No       | Products bucket public base (own r2.dev/custom domain)                 |
-| `REDIS_URL`                     | Prod     | Redis URL for BullMQ, rate limits, metrics                             |
-| `MARKETPLACE_ENCRYPTION_SECRET` | Yes      | AES-256-GCM key for marketplace tokens (min 32 chars)                  |
-| `SENTRY_DSN`                    | Prod     | Server/worker Sentry DSN                                               |
-| `SENTRY_ENVIRONMENT`            | No       | Sentry environment tag (server)                                        |
-| `SENTRY_TRACES_SAMPLE_RATE`     | No       | Sentry traces sample rate 0–1 (server)                                 |
-| `WORKER_HEALTH_PORT`            | No       | Port the worker's health server listens on (default 3001)              |
-| `WORKER_HEALTH_URL`             | No       | Worker health URL for the web healthcheck                              |
-| `WORKER_ENABLE_SCHEDULERS`      | No       | `true`/`false` — register repeatable jobs (default true)               |
-| `WORKER_SHUTDOWN_TIMEOUT_MS`    | No       | Graceful-shutdown drain timeout (default 30000)                        |
-| `LOG_LEVEL`                     | No       | `debug` \| `info` \| `warn` \| `error`                                 |
-| `LOG_PRETTY`                    | No       | Pretty logs in dev (`true` / `false`)                                  |
-| `APP_VERSION`                   | No       | Version shown in health responses                                      |
-| `NODE_ENV`                      | Auto     | Set by runtime (`development`/`test`/`production`)                     |
+| Variable                        | Required | Description                                                             |
+| ------------------------------- | -------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes      | PostgreSQL connection string (pooled)                                   |
+| `DIRECT_URL`                    | Migrate  | Direct (non-pooled) URL for `prisma migrate`; locally = `DATABASE_URL`  |
+| `AUTH_SECRET`                   | Yes      | Auth.js signing secret (min 32 chars)                                   |
+| `AUTH_URL`                      | Prod     | Canonical app URL for Auth.js                                           |
+| `NEXTAUTH_URL`                  | Prod     | Same as `AUTH_URL` for NextAuth compat                                  |
+| `AUTH_COOKIE_DOMAIN`            | No       | Cookie domain override (e.g. shared subdomain on the VPS)               |
+| `R2_ACCOUNT_ID`                 | Yes      | Cloudflare account ID                                                   |
+| `R2_ACCESS_KEY_ID`              | Yes      | R2 API token access key                                                 |
+| `R2_SECRET_ACCESS_KEY`          | Yes      | R2 API token secret                                                     |
+| `R2_RECORDINGS_BUCKET_NAME`     | Yes      | R2 bucket for recordings (private)                                      |
+| `R2_PUBLIC_URL`                 | No       | Recordings bucket public base (own r2.dev/custom domain)                |
+| `R2_PRODUCTS_BUCKET_NAME`       | No       | R2 bucket for product/variant images (public)                           |
+| `R2_PRODUCTS_PUBLIC_URL`        | No       | Products bucket public base (own r2.dev/custom domain)                  |
+| `REDIS_URL`                     | Prod     | Redis URL for BullMQ, rate limits, metrics                              |
+| `MARKETPLACE_ENCRYPTION_SECRET` | Yes      | AES-256-GCM key for marketplace tokens (min 32 chars)                   |
+| `SENTRY_DSN`                    | Prod     | Server/worker Sentry DSN                                                |
+| `SENTRY_ENVIRONMENT`            | No       | Sentry environment tag (server)                                         |
+| `SENTRY_TRACES_SAMPLE_RATE`     | No       | Sentry traces sample rate 0–1 (server)                                  |
+| `WORKER_HEALTH_PORT`            | No       | Port the worker's health server listens on (default 3001)               |
+| `WORKER_HEALTH_URL`             | No       | Worker health URL for the web healthcheck                               |
+| `WORKER_ENABLE_SCHEDULERS`      | No       | `true`/`false` — register repeatable jobs (default true)                |
+| `WORKER_SHUTDOWN_TIMEOUT_MS`    | No       | Graceful-shutdown drain timeout (default 30000)                         |
+| `LOG_LEVEL`                     | No       | `debug` \| `info` \| `warn` \| `error`                                  |
+| `LOG_PRETTY`                    | No       | Pretty logs in dev (`true` / `false`)                                   |
+| `PRISMA_LOG_QUERY`              | No       | Set to `1` to log every Prisma SQL query in dev (noisy; off by default) |
+| `APP_VERSION`                   | No       | Version shown in health responses                                       |
+| `NODE_ENV`                      | Auto     | Set by runtime (`development`/`test`/`production`)                      |
 
 Marketplace adapter creds (all optional — unset ⇒ the Dev/stub fallback) are listed
 under [Marketplace OAuth](#marketplace-oauth) below.

@@ -6,7 +6,10 @@ style. These rules are derived from the actual refactored code — keep them tru
 ## 1. Stack
 
 - **apps/web** — Next.js 15 App Router + React 19. Custom Node server
-  `apps/web/server.ts` (run via `tsx watch server.ts`) attaches Socket.IO.
+  `apps/web/server.ts` (run via `tsx watch server.ts`) attaches Socket.IO; dev compilation
+  uses **Turbopack** (`next({ dev, …, turbopack: dev })` — gated on `dev`, so prod `tsx server.ts`
+  stays webpack) to avoid laggy first-navigation route compiles. `dev:next` (`next dev --turbopack`)
+  is a Turbopack-without-socket fallback for pure-UI work.
   Prod build = `next build` (Vercel today) — **the custom server is NOT run on Vercel**, so
   marketplace sync / scheduled jobs / scanner socket are dormant in prod until the **VPS cutover**
   (committed direction: self-hosted Docker runs the custom server + worker; `docs/deployment`).
