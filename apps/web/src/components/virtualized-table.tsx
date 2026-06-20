@@ -1,9 +1,9 @@
 'use client';
 
-import { Fragment, useRef, type ReactNode, type RefObject } from 'react';
+import { Fragment, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
-import { Table, TableBody } from '@/components/ui/table';
+import { TableBody } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 /** Props a virtualized row must spread onto its `<TableRow>` so heights can be measured. */
@@ -17,7 +17,7 @@ type VirtualizedTableProps<T> = {
   getKey: (item: T, index: number) => string | number;
   /** Render one `<TableRow>`; spread `rowProps` onto it (no-op when not virtualized). */
   renderRow: (item: T, rowProps: VirtualRowProps) => ReactNode;
-  /** The `<TableHeader>…</TableHeader>` block. */
+  /** The `<TableHeader>…</TableHeader>` block (may also include a `<colgroup>`). */
   header: ReactNode;
   /** Total column count — used to size the virtualization spacer rows. */
   colSpan: number;
@@ -27,15 +27,19 @@ type VirtualizedTableProps<T> = {
   virtualized?: boolean;
   /** Classes for the scroll container (e.g. `max-h-[55vh]`). */
   containerClassName?: string;
+  /** Classes for the `<table>` (e.g. `table-fixed`). */
   className?: string;
+  /** Inline style for the `<table>` (e.g. a computed `minWidth`). */
+  style?: CSSProperties;
 };
 
 /**
  * A bordered, scrollable table that OPTIONALLY virtualizes its rows (via
- * @tanstack/react-virtual) so it can render thousands of rows cheaply. Keeps the
- * semantic `<table>` (column alignment intact) using top/bottom spacer rows; use a
- * fixed table layout + column widths for stable columns while scrolling. Set
- * `virtualized={false}` (or gate on row count) to render normally for small lists.
+ * @tanstack/react-virtual) so it can render thousands of rows cheaply. Owns a single
+ * scroll container (both axes), keeps the semantic `<table>` (column alignment via
+ * top/bottom spacer rows), and lets the caller control width via `style.minWidth` +
+ * column widths (so it follows the container and scrolls horizontally when it
+ * overflows). Set `virtualized={false}` (or gate on row count) for small lists.
  */
 export function VirtualizedTable<T>({
   items,
@@ -48,12 +52,16 @@ export function VirtualizedTable<T>({
   virtualized = true,
   containerClassName,
   className,
+  style,
 }: VirtualizedTableProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={scrollRef} className={cn('overflow-auto rounded-xl border', containerClassName)}>
-      <Table className={className}>
+    <div
+      ref={scrollRef}
+      className={cn('relative overflow-auto rounded-xl border', containerClassName)}
+    >
+      <table className={cn('w-full caption-bottom text-sm', className)} style={style}>
         {header}
         {virtualized ? (
           <VirtualBody
@@ -72,7 +80,7 @@ export function VirtualizedTable<T>({
             ))}
           </TableBody>
         )}
-      </Table>
+      </table>
     </div>
   );
 }

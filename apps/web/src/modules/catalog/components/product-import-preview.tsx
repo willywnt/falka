@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +31,7 @@ import { TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/tab
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StatusBadge, type StatusTone } from '@/components/status-badge';
 import { VirtualizedTable, type VirtualRowProps } from '@/components/virtualized-table';
+import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
@@ -63,23 +74,31 @@ const STATUS_META: Record<ProductImportStatus, { tone: StatusTone; label: string
 
 // Preview columns mirror the template, minus Barcode (kept in data, not shown/edited here).
 const PREVIEW_COLUMNS = PRODUCT_CSV_COLUMNS.filter((column) => column.field !== 'barcode');
-const COLUMN_WIDTH: Record<string, number> = {
-  productName: 180,
-  category: 120,
-  description: 220,
-  variantGroup: 130,
-  variantName: 160,
-  sku: 160,
-  price: 110,
-  cost: 110,
-  stock: 90,
+// Defined per-column widths (px). Columns without an entry fall back to a flexible default.
+const COLUMN_WIDTH: Partial<Record<ProductImportField, number>> = {
+  productName: 350,
+  category: 200,
+  description: 200,
+  variantGroup: 150,
+  variantName: 200,
+  sku: 150,
+  price: 150,
+  cost: 150,
+  stock: 80,
 };
-const NUMERIC_FIELDS = new Set<ProductImportField>(['price', 'cost', 'stock']);
+const DEFAULT_COLUMN_WIDTH = 160;
+const STATUS_WIDTH = 96;
+const ACTIONS_WIDTH = 88;
+const CURRENCY_FIELDS = new Set<ProductImportField>(['price', 'cost']);
 
 /** Above this many rows, virtualize the preview table so it stays smooth (up to ~2000). */
 const VIRTUALIZE_THRESHOLD = 100;
 /** Commit the import in sequential chunks — bounds each request + drives the progress bar. */
 const COMMIT_BATCH_SIZE = 100;
+
+function columnWidth(field: ProductImportField): number {
+  return COLUMN_WIDTH[field] ?? DEFAULT_COLUMN_WIDTH;
+}
 
 function summarize(rows: ProductImportRowResult[]): ProductImportSummary {
   return {
@@ -117,6 +136,7 @@ export function ProductImportPreview({
   const [showErrorsOnly, setShowErrorsOnly] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [pendingDiscard, setPendingDiscard] = useState<'close' | 'reupload' | null>(null);
 
   // Any change to the source rows (an edit, a delete, a reupload) invalidates a prior commit result.
   useEffect(() => {
@@ -125,8 +145,6 @@ export function ProductImportPreview({
     setDraft(null);
   }, [rows]);
 
-  // Resolve which SKUs / product names already exist — re-fetched whenever the
-  // effective SKU set or names change (so an edited or generated SKU is re-checked).
   const resolveInput = useMemo(() => {
     const skus = rows.map((row) => effectiveImportSku(row)).filter(Boolean);
     const names = rows.map((row) => row.productName.trim()).filter(Boolean);
@@ -158,11 +176,24 @@ export function ProductImportPreview({
   const readOnly = committed !== null;
   const actionable = summary.create + summary.update;
 
+  // Unsaved work that a close / reupload / refresh would discard.
+  const dirty = open && rows.length > 0 && committed === null;
+
   useEffect(() => {
     if (summary.error === 0) setShowErrorsOnly(false);
   }, [summary.error]);
 
-  // Error rows float to the top; the switch filters to just them.
+  // Warn on a browser refresh / tab close while there is unsaved import work.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
   const sortedRows = useMemo(
     () =>
       [...displayRows].sort(
@@ -172,6 +203,27 @@ export function ProductImportPreview({
   );
   const visibleRows = showErrorsOnly ? sortedRows.filter((r) => r.status === 'error') : sortedRows;
   const colSpan = 1 + PREVIEW_COLUMNS.length + (readOnly ? 0 : 1);
+  const tableMinWidth =
+    STATUS_WIDTH +
+    PREVIEW_COLUMNS.reduce((sum, column) => sum + columnWidth(column.field), 0) +
+    (readOnly ? 0 : ACTIONS_WIDTH);
+
+  function requestClose() {
+    if (dirty) setPendingDiscard('close');
+    else onOpenChange(false);
+  }
+
+  function requestReupload() {
+    if (dirty) setPendingDiscard('reupload');
+    else onReupload();
+  }
+
+  function confirmDiscard() {
+    const action = pendingDiscard;
+    setPendingDiscard(null);
+    if (action === 'close') onOpenChange(false);
+    else if (action === 'reupload') onReupload();
+  }
 
   function startEdit(line: number) {
     const row = rawByLine.get(line);
@@ -286,31 +338,7 @@ export function ProductImportPreview({
 
           return (
             <TableCell key={column.field} className="align-top">
-              {column.field === 'sku' && res.skuGenerated ? (
-                <div className={cn('flex items-center gap-1', error && 'text-destructive')}>
-                  <span className="truncate">{res.resolvedSku}</span>
-                  <Badge variant="secondary" className="shrink-0 px-1 py-0 text-[10px]">
-                    auto
-                  </Badge>
-                </div>
-              ) : (
-                <CellText
-                  value={rawValue}
-                  numeric={NUMERIC_FIELDS.has(field)}
-                  className={cn(
-                    error && 'text-destructive',
-                    field === 'stock' &&
-                      res.status === 'update' &&
-                      rawValue.trim() &&
-                      'text-muted-foreground line-through',
-                  )}
-                  title={
-                    field === 'stock' && res.status === 'update' && rawValue.trim()
-                      ? 'Stok diabaikan untuk SKU yang sudah ada.'
-                      : undefined
-                  }
-                />
-              )}
+              <DisplayCell field={field} res={res} value={rawValue} error={Boolean(error)} />
               {error ? <div className="text-destructive mt-1 text-xs">{error}</div> : null}
             </TableCell>
           );
@@ -361,182 +389,250 @@ export function ProductImportPreview({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] !max-w-5xl overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Pratinjau impor</DialogTitle>
-          <DialogDescription>
-            Periksa, edit, atau hapus baris sebelum mengimpor. SKU bertanda “auto” dibuat otomatis
-            oleh sistem.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) requestClose();
+        }}
+      >
+        <DialogContent className="max-h-[92vh] !max-w-5xl overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Pratinjau impor</DialogTitle>
+            <DialogDescription>
+              Periksa, edit, atau hapus baris sebelum mengimpor. SKU bertanda “auto” dibuat otomatis
+              oleh sistem.
+            </DialogDescription>
+          </DialogHeader>
 
-        {resolving ? (
-          <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
-            <Loader2 className="size-4 animate-spin" />
-            Memvalidasi data…
-          </div>
-        ) : (
-          <TooltipProvider delayDuration={300}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap gap-1.5">
-                <SummaryBadge
-                  tone="info"
-                  count={summary.create}
-                  label="baru"
-                  help={STATUS_META.create.help}
-                />
-                <SummaryBadge
-                  tone="ok"
-                  count={summary.update}
-                  label="perbarui"
-                  help={STATUS_META.update.help}
-                />
-                <SummaryBadge
-                  tone="neutral"
-                  count={summary.skip}
-                  label="lewati"
-                  help={STATUS_META.skip.help}
-                />
-                <SummaryBadge
-                  tone="danger"
-                  count={summary.error}
-                  label="error"
-                  help={STATUS_META.error.help}
-                />
+          {resolving ? (
+            <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
+              <Loader2 className="size-4 animate-spin" />
+              Memvalidasi data…
+            </div>
+          ) : (
+            <TooltipProvider delayDuration={300}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <SummaryBadge
+                    tone="info"
+                    count={summary.create}
+                    label="baru"
+                    help={STATUS_META.create.help}
+                  />
+                  <SummaryBadge
+                    tone="ok"
+                    count={summary.update}
+                    label="perbarui"
+                    help={STATUS_META.update.help}
+                  />
+                  <SummaryBadge
+                    tone="neutral"
+                    count={summary.skip}
+                    label="lewati"
+                    help={STATUS_META.skip.help}
+                  />
+                  <SummaryBadge
+                    tone="danger"
+                    count={summary.error}
+                    label="error"
+                    help={STATUS_META.error.help}
+                  />
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {summary.error > 0 ? (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Switch checked={showErrorsOnly} onCheckedChange={setShowErrorsOnly} />
+                      Hanya error
+                    </label>
+                  ) : null}
+                  {!readOnly ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={requestReupload}
+                      disabled={committing}
+                    >
+                      <RefreshCw className="size-4" />
+                      Unggah ulang
+                    </Button>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {summary.error > 0 ? (
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <Switch checked={showErrorsOnly} onCheckedChange={setShowErrorsOnly} />
-                    Hanya error
-                  </label>
-                ) : null}
-                {!readOnly ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onReupload}
-                    disabled={committing}
-                  >
-                    <RefreshCw className="size-4" />
-                    Unggah ulang
-                  </Button>
-                ) : null}
+              {committed ? (
+                <div className="border-status-ok/30 bg-status-ok/10 text-status-ok mt-2 rounded-lg border px-3 py-2 text-sm">
+                  Impor selesai. {summary.create} produk dibuat, {summary.update} diperbarui
+                  {summary.error > 0 ? `, ${summary.error} gagal` : ''}.
+                </div>
+              ) : null}
+
+              <div className="mt-2">
+                <VirtualizedTable
+                  items={visibleRows}
+                  getKey={(res) => res.line}
+                  renderRow={renderRow}
+                  colSpan={colSpan}
+                  estimateRowHeight={56}
+                  virtualized={visibleRows.length > VIRTUALIZE_THRESHOLD}
+                  containerClassName="max-h-[55vh]"
+                  className="table-fixed"
+                  style={{ minWidth: tableMinWidth }}
+                  header={
+                    <TableHeader className="bg-muted sticky top-0 z-10">
+                      <TableRow>
+                        <TableHead style={{ width: STATUS_WIDTH }}>Status</TableHead>
+                        {PREVIEW_COLUMNS.map((column) => (
+                          <TableHead
+                            key={column.field}
+                            style={{ width: columnWidth(column.field) }}
+                            className="whitespace-nowrap"
+                          >
+                            {column.header}
+                            {column.required ? <span className="text-destructive">*</span> : null}
+                          </TableHead>
+                        ))}
+                        {!readOnly ? (
+                          <TableHead style={{ width: ACTIONS_WIDTH }} className="text-right">
+                            Aksi
+                          </TableHead>
+                        ) : null}
+                      </TableRow>
+                    </TableHeader>
+                  }
+                />
+              </div>
+            </TooltipProvider>
+          )}
+
+          {committing && progress ? (
+            <div className="space-y-1">
+              <div className="text-muted-foreground text-xs">
+                Mengimpor… {progress.done}/{progress.total}
+              </div>
+              <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-primary h-full rounded-full transition-all"
+                  style={{
+                    width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`,
+                  }}
+                />
               </div>
             </div>
-
-            {committed ? (
-              <div className="border-status-ok/30 bg-status-ok/10 text-status-ok mt-2 rounded-lg border px-3 py-2 text-sm">
-                Impor selesai. {summary.create} produk dibuat, {summary.update} diperbarui
-                {summary.error > 0 ? `, ${summary.error} gagal` : ''}.
-              </div>
-            ) : null}
-
-            <div className="mt-2">
-              <VirtualizedTable
-                items={visibleRows}
-                getKey={(res) => res.line}
-                renderRow={renderRow}
-                colSpan={colSpan}
-                estimateRowHeight={56}
-                virtualized={visibleRows.length > VIRTUALIZE_THRESHOLD}
-                containerClassName="max-h-[55vh]"
-                className="min-w-[1180px] table-fixed"
-                header={
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead style={{ width: 92 }}>Status</TableHead>
-                      {PREVIEW_COLUMNS.map((column) => (
-                        <TableHead
-                          key={column.field}
-                          style={{ width: COLUMN_WIDTH[column.field] }}
-                          className="whitespace-nowrap"
-                        >
-                          {column.header}
-                          {column.required ? <span className="text-destructive">*</span> : null}
-                        </TableHead>
-                      ))}
-                      {!readOnly ? (
-                        <TableHead style={{ width: 84 }} className="text-right">
-                          Aksi
-                        </TableHead>
-                      ) : null}
-                    </TableRow>
-                  </TableHeader>
-                }
-              />
-            </div>
-          </TooltipProvider>
-        )}
-
-        {committing && progress ? (
-          <div className="space-y-1">
-            <div className="text-muted-foreground text-xs">
-              Mengimpor… {progress.done}/{progress.total}
-            </div>
-            <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-              <div
-                className="bg-primary h-full rounded-full transition-all"
-                style={{
-                  width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-                }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={committing}
-          >
-            {readOnly ? 'Tutup' : 'Batal'}
-          </Button>
-          {!readOnly ? (
-            <Button
-              type="button"
-              onClick={handleCommit}
-              disabled={committing || resolving || actionable === 0 || editingLine !== null}
-            >
-              {committing ? 'Mengimpor…' : `Impor ${actionable} item`}
-            </Button>
           ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={requestClose} disabled={committing}>
+              {readOnly ? 'Tutup' : 'Batal'}
+            </Button>
+            {!readOnly ? (
+              <Button
+                type="button"
+                onClick={handleCommit}
+                disabled={committing || resolving || actionable === 0 || editingLine !== null}
+              >
+                {committing ? 'Mengimpor…' : `Impor ${actionable} item`}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={pendingDiscard !== null}
+        onOpenChange={(next) => {
+          if (!next) setPendingDiscard(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Buang data impor?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Data yang sudah diunggah dan diedit di pratinjau ini akan hilang dan tidak bisa
+              dikembalikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tetap di sini</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDiscard}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Ya, buang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
-function CellText({
+function DisplayCell({
+  field,
+  res,
   value,
-  numeric,
-  className,
-  title,
+  error,
 }: {
+  field: ProductImportField;
+  res: ProductImportRowResult;
   value: string;
-  numeric?: boolean;
-  className?: string;
-  title?: string;
-}) {
-  if (!value) return <span className="text-muted-foreground">—</span>;
-  if (numeric) {
+  error: boolean;
+}): ReactNode {
+  if (field === 'sku' && res.skuGenerated) {
     return (
-      <div className={cn('num truncate', className)} title={title}>
-        {value}
+      <div className={cn('flex items-center gap-1', error && 'text-destructive')}>
+        <span className="truncate">{res.resolvedSku}</span>
+        <Badge variant="secondary" className="shrink-0 px-1 py-0 text-[10px]">
+          auto
+        </Badge>
       </div>
     );
   }
+
+  if (CURRENCY_FIELDS.has(field)) {
+    const trimmed = value.trim();
+    if (!trimmed) return <span className="text-muted-foreground">—</span>;
+    const amount = Number(trimmed);
+    return (
+      <div className={cn('num truncate', error && 'text-destructive')}>
+        {Number.isFinite(amount) ? formatCurrency(amount) : trimmed}
+      </div>
+    );
+  }
+
+  if (field === 'stock') {
+    const ignored = res.status === 'update' && value.trim() !== '';
+    const content = (
+      <div
+        className={cn(
+          'num truncate',
+          error && 'text-destructive',
+          ignored && 'text-muted-foreground line-through',
+        )}
+      >
+        {value.trim() || '—'}
+      </div>
+    );
+    if (!ignored) return content;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent>Stok diabaikan untuk SKU yang sudah ada.</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <CellText value={value} className={cn(error && 'text-destructive')} />;
+}
+
+function CellText({ value, className }: { value: string; className?: string }) {
+  if (!value) return <span className="text-muted-foreground">—</span>;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className={cn('truncate', className)} title={title}>
-          {value}
-        </div>
+        <div className={cn('truncate', className)}>{value}</div>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs break-words">{value}</TooltipContent>
     </Tooltip>
