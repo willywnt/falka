@@ -121,6 +121,21 @@ export function ProductImportPreview({
   const actionable = summary.create + summary.update;
   const pending = importMutation.isPending;
 
+  // Surface problems: error rows float to the top, with an optional errors-only filter.
+  const [showErrorsOnly, setShowErrorsOnly] = useState(false);
+  useEffect(() => {
+    if (summary.error === 0) setShowErrorsOnly(false);
+  }, [summary.error]);
+
+  const sortedRows = useMemo(
+    () =>
+      [...displayRows].sort(
+        (a, b) => (a.status === 'error' ? 0 : 1) - (b.status === 'error' ? 0 : 1),
+      ),
+    [displayRows],
+  );
+  const visibleRows = showErrorsOnly ? sortedRows.filter((r) => r.status === 'error') : sortedRows;
+
   function startEdit(line: number) {
     const row = rawByLine.get(line);
     if (!row) return;
@@ -208,18 +223,30 @@ export function ProductImportPreview({
                 </div>
               </TooltipProvider>
 
-              {!readOnly ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onReupload}
-                  disabled={pending}
-                >
-                  <RefreshCw className="size-4" />
-                  Unggah ulang
-                </Button>
-              ) : null}
+              <div className="flex items-center gap-2">
+                {summary.error > 0 ? (
+                  <Button
+                    type="button"
+                    variant={showErrorsOnly ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowErrorsOnly((value) => !value)}
+                  >
+                    {showErrorsOnly ? 'Tampilkan semua' : `Hanya error (${summary.error})`}
+                  </Button>
+                ) : null}
+                {!readOnly ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onReupload}
+                    disabled={pending}
+                  >
+                    <RefreshCw className="size-4" />
+                    Unggah ulang
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             {committed ? (
@@ -244,7 +271,7 @@ export function ProductImportPreview({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayRows.map((res) => {
+                  {visibleRows.map((res) => {
                     const rawRow = rawByLine.get(res.line);
                     const editing = !readOnly && editingLine === res.line;
                     const meta = STATUS_META[res.status];

@@ -158,7 +158,7 @@ describe('planProductImport', () => {
     expect(plan.rows[0]?.resolvedSku).toBeTruthy();
   });
 
-  it('flags a duplicate SKU within the file', () => {
+  it('flags every row sharing a duplicate SKU in the file', () => {
     const plan = planProductImport(
       [
         row({ line: 2, productName: 'A', variantName: 'x', sku: 'DUP', price: '1' }),
@@ -167,7 +167,8 @@ describe('planProductImport', () => {
       ctx(),
     );
 
-    expect(plan.summary).toMatchObject({ create: 1, error: 1 });
+    expect(plan.summary).toMatchObject({ create: 0, error: 2 });
+    expect(plan.rows[0]?.fieldErrors.sku).toMatch(/duplikat/i);
     expect(plan.rows[1]?.fieldErrors.sku).toMatch(/duplikat/i);
   });
 
