@@ -1,28 +1,31 @@
-import type { ProductExportRow } from '../types';
-
 /**
- * The canonical bulk product CSV columns, in order. Shared by the export
- * serializer and the import parser so the format round-trips: export → edit in a
- * spreadsheet → re-import. `field` is the internal key; `header` is the id-ID
- * column name written/expected in the file (import matches headers leniently —
- * case-insensitive, order-independent — so users can drop extra columns).
+ * The canonical bulk-product spreadsheet columns, in order. Shared by the XLSX
+ * export + template builders and the import parser so the format round-trips:
+ * export → edit in Excel → re-import. `field` is the internal key; `header` is the
+ * id-ID column name; `required` marks a column that must be present in an uploaded
+ * file (template validation) and whose value is required to CREATE a new variant.
+ * Header matching on import is lenient — case-insensitive, order-independent, and
+ * extra columns are ignored.
  */
 export const PRODUCT_CSV_COLUMNS = [
-  { field: 'productName', header: 'Nama Produk' },
-  { field: 'category', header: 'Kategori' },
-  { field: 'description', header: 'Deskripsi' },
-  { field: 'variantGroup', header: 'Grup Varian' },
-  { field: 'variantName', header: 'Nama Varian' },
-  { field: 'sku', header: 'SKU' },
-  { field: 'barcode', header: 'Barcode' },
-  { field: 'price', header: 'Harga' },
-  { field: 'cost', header: 'Modal' },
-  { field: 'stock', header: 'Stok' },
+  { field: 'productName', header: 'Nama Produk', required: true },
+  { field: 'category', header: 'Kategori', required: false },
+  { field: 'description', header: 'Deskripsi', required: false },
+  { field: 'variantGroup', header: 'Grup Varian', required: false },
+  { field: 'variantName', header: 'Nama Varian', required: true },
+  { field: 'sku', header: 'SKU', required: false },
+  { field: 'barcode', header: 'Barcode', required: false },
+  { field: 'price', header: 'Harga', required: true },
+  { field: 'cost', header: 'Modal', required: false },
+  { field: 'stock', header: 'Stok', required: false },
 ] as const;
 
 export type ProductCsvField = (typeof PRODUCT_CSV_COLUMNS)[number]['field'];
 
 export const PRODUCT_CSV_HEADERS = PRODUCT_CSV_COLUMNS.map((column) => column.header);
+
+/** Columns that must be present in an uploaded file (and whose cell is required on create). */
+export const REQUIRED_PRODUCT_CSV_COLUMNS = PRODUCT_CSV_COLUMNS.filter((column) => column.required);
 
 /** Safety cap so a huge catalog can't pull the whole table into one response. */
 export const PRODUCT_EXPORT_CAP = 50_000;
@@ -32,33 +35,3 @@ export const MAX_IMPORT_ROWS = 2_000;
 
 /** Max raw CSV payload size (bytes/chars) accepted by the import endpoint (~2MB). */
 export const MAX_IMPORT_CSV_LENGTH = 2_000_000;
-
-/** Quote a field only when it contains a comma, quote, or newline (RFC 4180). */
-function escapeCsv(value: string): string {
-  if (/["\n\r,]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-/** Serialize export rows to CSV (header first, CRLF line endings, for spreadsheets). */
-export function productsToCsv(rows: ProductExportRow[]): string {
-  const lines = rows.map((row) =>
-    [
-      row.productName,
-      row.category ?? '',
-      row.description ?? '',
-      row.variantGroup ?? '',
-      row.variantName,
-      row.sku,
-      row.barcode ?? '',
-      row.price,
-      row.cost ?? '',
-      String(row.stock),
-    ]
-      .map(escapeCsv)
-      .join(','),
-  );
-
-  return [PRODUCT_CSV_HEADERS.join(','), ...lines].join('\r\n');
-}

@@ -36,19 +36,23 @@ describe('tableToRawRows', () => {
     expect(rows[1]?.sku).toBe('SEP-1');
   });
 
-  it('matches headers case-insensitively, ignores order + extra columns', () => {
-    const { rows, error } = tableToRawRows(parseCsv('sku,HARGA,Catatan Lain\nA1,1000,abaikan'));
+  it('matches required headers case-insensitively, ignores order + extra columns', () => {
+    const { rows, error } = tableToRawRows(
+      parseCsv('nama varian,NAMA PRODUK,harga,Catatan Lain\nMerah,Kaos,1000,abaikan'),
+    );
 
     expect(error).toBeUndefined();
-    expect(rows[0]?.sku).toBe('A1');
+    expect(rows[0]?.productName).toBe('Kaos');
+    expect(rows[0]?.variantName).toBe('Merah');
     expect(rows[0]?.price).toBe('1000');
-    expect(rows[0]?.productName).toBe(''); // column absent → empty
+    expect(rows[0]?.sku).toBe(''); // optional column absent → empty
   });
 
-  it('errors when neither SKU nor the name pair is present', () => {
+  it('rejects a mismatched template (a required column is missing)', () => {
     const { rows, error } = tableToRawRows(parseCsv('Kategori,Harga\nApparel,1000'));
 
-    expect(error).toBeTruthy();
+    expect(error).toMatch(/Template tidak sesuai/);
+    expect(error).toMatch(/Nama Produk/);
     expect(rows).toHaveLength(0);
   });
 });

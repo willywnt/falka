@@ -1,4 +1,8 @@
-import { PRODUCT_CSV_COLUMNS, type ProductCsvField } from './product-csv';
+import {
+  PRODUCT_CSV_COLUMNS,
+  REQUIRED_PRODUCT_CSV_COLUMNS,
+  type ProductCsvField,
+} from './product-csv';
 
 /**
  * Parse CSV text into a table of string rows (RFC 4180). Handles quoted fields,
@@ -86,9 +90,9 @@ function isBlankRow(cells: string[]): boolean {
 /**
  * Map a parsed CSV table to canonical product rows. The header (line 1) is matched
  * leniently — case-insensitive, order-independent, extra columns ignored — against
- * {@link PRODUCT_CSV_COLUMNS}. A usable file needs either a `SKU` column or both
- * `Nama Produk` and `Nama Varian`; otherwise a header error is returned. Blank
- * lines are skipped but still consume a line number so reports point at the file.
+ * {@link PRODUCT_CSV_COLUMNS}. The file is rejected ("template tidak sesuai") unless
+ * every REQUIRED column is present. Blank lines are skipped but still consume a line
+ * number so reports point at the right row in the file.
  */
 export function tableToRawRows(table: string[][]): RawProductTable {
   const header = table[0] ?? [];
@@ -100,13 +104,16 @@ export function tableToRawRows(table: string[][]): RawProductTable {
   }
 
   const recognized = [...indexByField.keys()];
-  const hasSku = indexByField.has('sku');
-  const hasNamePair = indexByField.has('productName') && indexByField.has('variantName');
-  if (!hasSku && !hasNamePair) {
+  const missingRequired = REQUIRED_PRODUCT_CSV_COLUMNS.filter(
+    (column) => !indexByField.has(column.field),
+  );
+  if (missingRequired.length > 0) {
     return {
       rows: [],
       recognized,
-      error: 'Header CSV tidak dikenali. Pakai file hasil "Ekspor CSV" sebagai template.',
+      error: `Template tidak sesuai — kolom wajib tidak ada: ${missingRequired
+        .map((column) => column.header)
+        .join(', ')}. Unduh template lalu coba lagi.`,
     };
   }
 
