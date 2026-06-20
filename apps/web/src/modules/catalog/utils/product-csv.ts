@@ -27,6 +27,12 @@ export const PRODUCT_CSV_HEADERS = PRODUCT_CSV_COLUMNS.map((column) => column.he
 /** Safety cap so a huge catalog can't pull the whole table into one response. */
 export const PRODUCT_EXPORT_CAP = 50_000;
 
+/** Max data rows accepted in one import (bounds memory + keeps the request sync). */
+export const MAX_IMPORT_ROWS = 2_000;
+
+/** Max raw CSV payload size (bytes/chars) accepted by the import endpoint (~2MB). */
+export const MAX_IMPORT_CSV_LENGTH = 2_000_000;
+
 /** Quote a field only when it contains a comma, quote, or newline (RFC 4180). */
 function escapeCsv(value: string): string {
   if (/["\n\r,]/.test(value)) {

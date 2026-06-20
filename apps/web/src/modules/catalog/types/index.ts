@@ -90,6 +90,36 @@ export type ProductExportRow = {
   stock: number;
 };
 
+/** What the importer will do with one CSV row. */
+export type ProductImportStatus = 'create' | 'update' | 'skip' | 'error';
+
+/** Per-row outcome of a bulk import (dry-run preview or committed result). */
+export type ProductImportRowResult = {
+  /** 1-based source line in the CSV (header = line 1). */
+  line: number;
+  status: ProductImportStatus;
+  sku: string | null;
+  productName: string;
+  variantName: string;
+  /** Why it errored / was skipped, or a heads-up note; null when uneventful. */
+  message: string | null;
+};
+
+export type ProductImportSummary = {
+  create: number;
+  update: number;
+  skip: number;
+  error: number;
+  total: number;
+};
+
+/** Result of a bulk product import. `committed=false` is a dry-run preview (no writes). */
+export type ProductImportReport = {
+  committed: boolean;
+  summary: ProductImportSummary;
+  rows: ProductImportRowResult[];
+};
+
 /** Why a product/variant/group can't (or can, with warnings) be deleted. */
 export type DeletionBlockers = {
   /** True when at least one hard reason blocks deletion. */
