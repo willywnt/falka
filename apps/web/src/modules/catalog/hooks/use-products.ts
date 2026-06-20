@@ -49,33 +49,22 @@ export function productsTemplateUrl(): string {
 }
 
 /**
- * Bulk product CSV import. Called twice by the wizard: `commit:false` for a
- * dry-run preview (no writes), then `commit:true` to apply. Refreshes catalog +
- * inventory views only once the import is actually committed.
+ * Commit one batch of an import (the wizard sends the CSV in sequential chunks for
+ * progress + to avoid one huge request). The server re-plans + applies the batch
+ * authoritatively and returns the per-row outcome. Caller invalidates catalog +
+ * inventory once after the whole import (see catalogKeys/inventoryKeys).
  */
-export function useImportProductsMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ csv, commit }: { csv: string; commit: boolean }) => {
-      const result = await apiFetch<ProductImportReport>(`${apiRoutes.products}/import`, {
-        method: 'POST',
-        body: { csv, commit },
-      });
-
-      if (!result.success) {
-        throw new Error(formatApiErrorMessage(result.error));
-      }
-
-      return result.data;
-    },
-    onSuccess: (report) => {
-      if (report.committed) {
-        void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
-        void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
-      }
-    },
+export async function commitProductImport(csv: string): Promise<ProductImportReport> {
+  const result = await apiFetch<ProductImportReport>(`${apiRoutes.products}/import`, {
+    method: 'POST',
+    body: { csv, commit: true },
   });
+
+  if (!result.success) {
+    throw new Error(formatApiErrorMessage(result.error));
+  }
+
+  return result.data;
 }
 
 /** Resolve which SKUs / product names already exist, so the wizard can plan on the client. */

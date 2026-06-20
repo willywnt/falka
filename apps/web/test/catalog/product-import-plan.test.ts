@@ -146,7 +146,7 @@ describe('planProductImport', () => {
     const plan = planProductImport(
       [
         row({ line: 2, productName: 'iPhone 16', variantName: 'Hitam', price: '1000' }),
-        row({ line: 3, productName: 'iPhone 16', variantName: 'Hitam', price: '1000' }),
+        row({ line: 3, productName: 'iPhone 16', variantName: 'Putih', price: '1000' }),
       ],
       ctx(),
     );
@@ -156,6 +156,20 @@ describe('planProductImport', () => {
     expect(new Set(skus).size).toBe(2);
     expect(plan.rows[0]?.skuGenerated).toBe(true);
     expect(plan.rows[0]?.resolvedSku).toBeTruthy();
+  });
+
+  it('flags two blank rows that generate the same SKU as duplicates', () => {
+    const plan = planProductImport(
+      [
+        row({ line: 2, productName: 'Kaos Polos', variantName: 'Cream', price: '50000' }),
+        row({ line: 3, productName: 'Kaos Polos', variantName: 'Cream', price: '60000' }),
+      ],
+      ctx(),
+    );
+
+    expect(plan.summary).toMatchObject({ create: 0, error: 2 });
+    expect(plan.rows[0]?.fieldErrors.sku).toMatch(/duplikat/i);
+    expect(plan.rows[1]?.fieldErrors.sku).toMatch(/duplikat/i);
   });
 
   it('flags every row sharing a duplicate SKU in the file', () => {

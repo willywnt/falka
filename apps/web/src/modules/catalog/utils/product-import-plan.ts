@@ -102,13 +102,15 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
   const updates: UpdateOp[] = [];
   const usedSkus = new Set(context.existingVariantsBySku.keys());
 
-  // Count typed SKUs across the file so a SKU that appears in more than one row is
-  // flagged as a duplicate on EVERY offending row (blank SKUs auto-generate, so
-  // they are exempt). Re-runs on every edit, so a manual edit into a clash is caught.
+  // Count EFFECTIVE SKUs (the typed SKU, or the generated base for a blank one) so a
+  // SKU that resolves to the same value in more than one row is flagged as a duplicate
+  // on EVERY offending row — including two blank rows that generate the same SKU, and
+  // two rows that would otherwise both update the same existing variant (last-write
+  // would silently win). Recomputed each plan, so a manual edit into a clash is caught.
   const skuOccurrences = new Map<string, number>();
   for (const row of rows) {
-    const sku = row.sku.trim();
-    if (sku) skuOccurrences.set(sku, (skuOccurrences.get(sku) ?? 0) + 1);
+    const eff = effectiveImportSku(row);
+    if (eff) skuOccurrences.set(eff, (skuOccurrences.get(eff) ?? 0) + 1);
   }
 
   type CreateCandidate = {
@@ -129,26 +131,28 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
     const fieldErrors: Partial<Record<ProductImportField, string>> = {};
     let message: string | null = null;
 
-    // A SKU typed in more than one row is a duplicate — flag every occurrence.
-    if (sku && (skuOccurrences.get(sku) ?? 0) > 1) {
-      resultByLine.set(row.line, {
-        line: row.line,
-        status: 'error',
-        resolvedSku: sku,
-        skuGenerated: false,
-        productName,
-        variantName,
-        fieldErrors: { sku: 'SKU duplikat dalam file' },
-        message: null,
-      });
-      continue;
-    }
-
     // A blank SKU resolves to its deterministic generated base; if THAT base already
     // exists we UPDATE that variant rather than create a near-duplicate (which would
     // clash on the unique index at commit).
     const generated = sku === '';
     const baseSku = sku || suggestVariantSku(productName, variantName);
+
+    // A SKU (typed OR generated) that appears in more than one row is a duplicate —
+    // flag every occurrence so the user disambiguates instead of one silently winning.
+    if (baseSku && (skuOccurrences.get(baseSku) ?? 0) > 1) {
+      resultByLine.set(row.line, {
+        line: row.line,
+        status: 'error',
+        resolvedSku: baseSku,
+        skuGenerated: generated,
+        productName,
+        variantName,
+        fieldErrors: { sku: 'SKU duplikat' },
+        message: null,
+      });
+      continue;
+    }
+
     const matched = baseSku ? context.existingVariantsBySku.get(baseSku) : undefined;
 
     if (matched) {
