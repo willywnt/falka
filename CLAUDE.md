@@ -270,9 +270,13 @@ developer.tokopedia.com API is terminated. `docs/roadmap/shopee-tokopedia-integr
   for name/group/barcode/price/cost — SKU never changes). **Stock seeds NEW variants only** (via
   `initialStock` → inventory service); a stock cell on an existing SKU is ignored. The wizard plans/re-plans
   edits **on the client** (`planProductImport` is pure; existing data via `POST /products/import/resolve`);
-  the client parses .xlsx (lazy `import('xlsx')`) and only the final commit (`{ csv, commit }`, server
-  re-validates) is authoritative. `planProductImport` returns per-field errors + `skuGenerated` +
-  `resolvedSku`. Detail: `docs/roadmap/backlog.md` (2026-06-20).
+  the client parses .xlsx (lazy `import('xlsx')`) and only the final commit is authoritative.
+  `planProductImport` returns per-field errors + `skuGenerated` + `resolvedSku`, and flags **duplicate
+  effective SKUs** (typed or generated) as errors. The preview virtualizes
+  (`components/virtualized-table.tsx`, `@tanstack/react-virtual`, opt-in) and **commits in sequential
+  100-row chunks with a progress bar**; partial failures are safe to re-run because the import is
+  **idempotent** (created→update by SKU on retry). Large-file/BullMQ path (VPS era) is prepared in
+  `docs/roadmap/product-import-scaling.md`. Detail: `docs/roadmap/backlog.md` (2026-06-20).
 - **Outbound sync** lives in `packages/queue/src/marketplace-sync` (worker): a SoT change enqueues
   `propagate-inventory-stock` → `sync-marketplace-stock` → provider adapter (Dev stub simulates).
   **AUTO changes are COALESCED** per `(org, variant)` — a stable BullMQ jobId + 60s delay

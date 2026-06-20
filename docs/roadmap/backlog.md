@@ -152,6 +152,18 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   **per-field errors + `skuGenerated` + `resolvedSku`**; the wizard plans/re-plans edits **on the client**
   via a new `POST /products/import/resolve` (existing SKUs + product names) and only the final commit hits
   the server (authoritative). 4 gates green; 50 catalog vitest. Same owner QA owed.
+- **Import scale + robustness pass** (same branch, owner feedback) — (1) **duplicate-SKU detection on the
+  EFFECTIVE SKU** (typed OR generated base): any SKU resolving to the same value in >1 row is flagged
+  "SKU duplikat" on every offending row (incl. two blank rows that generate the same SKU, and two rows that
+  would both update the same variant — chosen ERROR over a silent last-write-wins). (2) Preview: error rows
+  **sort to the top** + a **Switch** "Hanya error" filter; columns have **fixed widths + truncate + tooltip**;
+  rows **virtualize** above ~100 (new reusable `components/virtualized-table.tsx` on `@tanstack/react-virtual`,
+  `virtualized` on/off prop) so ~2000 rows stay smooth. (3) **Commit is chunked** into sequential 100-row
+  batches with a **progress bar**; a failed batch is retryable because the import is **idempotent** (a
+  re-run of an already-created row becomes an update — no duplicate, stock not double-counted). **Decision:**
+  NOT using BullMQ yet (worker is dormant on Vercel; idempotent chunked commit covers ≤2000 everywhere) —
+  the background-job design for very large files (VPS era) is prepared in
+  `docs/roadmap/product-import-scaling.md`. 4 gates green; 52 catalog vitest.
 
 ## 🎯 Mid-size features (1 session each)
 
