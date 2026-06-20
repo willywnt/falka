@@ -124,13 +124,13 @@ export function ProductsDashboard() {
           <Button variant="outline" asChild>
             <a href={productsExportUrl()} download>
               <Download className="size-4" />
-              Ekspor CSV
+              Ekspor
             </a>
           </Button>
           {canImport ? (
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="size-4" />
-              Impor CSV
+              Impor
             </Button>
           ) : null}
           <Button onClick={() => setCreateOpen(true)}>

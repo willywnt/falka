@@ -37,9 +37,14 @@ export type ProductsPage = {
   meta: { page?: number; pageSize?: number; total?: number } | undefined;
 };
 
-/** URL for the bulk product CSV export (a plain browser download, not apiFetch). */
+/** URL for the bulk product export (.xlsx, a plain browser download — not apiFetch). */
 export function productsExportUrl(): string {
   return `${apiRoutes.products}/export`;
+}
+
+/** URL for the header-only import template (.xlsx). */
+export function productsTemplateUrl(): string {
+  return `${apiRoutes.products}/import/template`;
 }
 
 /**

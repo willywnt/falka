@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, FileSpreadsheet, Loader2, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, Loader2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { StatusBadge, type StatusTone } from '@/components/status-badge';
+import { cn } from '@/lib/utils';
 
-import { productsExportUrl, useImportProductsMutation } from '../hooks/use-products';
+import { productsTemplateUrl, useImportProductsMutation } from '../hooks/use-products';
 import type { ProductImportReport, ProductImportStatus } from '../types';
+import { PRODUCT_CSV_COLUMNS } from '../utils/product-csv';
 
 const STATUS_META: Record<ProductImportStatus, { tone: StatusTone; label: string }> = {
   create: { tone: 'info', label: 'Buat' },
@@ -32,6 +34,20 @@ const STATUS_META: Record<ProductImportStatus, { tone: StatusTone; label: string
   skip: { tone: 'neutral', label: 'Lewati' },
   error: { tone: 'danger', label: 'Error' },
 };
+
+/** Read a dropped/picked file into CSV text — parses .xlsx/.xls client-side. */
+async function fileToCsv(file: File): Promise<string> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const firstSheet = workbook.SheetNames[0];
+    const sheet = firstSheet ? workbook.Sheets[firstSheet] : undefined;
+    if (!sheet) throw new Error('File Excel tidak punya sheet.');
+    return XLSX.utils.sheet_to_csv(sheet);
+  }
+  return file.text();
+}
 
 export function ProductImportDialog({
   open,
@@ -44,12 +60,14 @@ export function ProductImportDialog({
   const [csv, setCsv] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [report, setReport] = useState<ProductImportReport | null>(null);
+  const [dragging, setDragging] = useState(false);
   const importMutation = useImportProductsMutation();
 
   function reset() {
     setCsv(null);
     setFileName(null);
     setReport(null);
+    setDragging(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -58,9 +76,12 @@ export function ProductImportDialog({
     setReport(null);
     let text: string;
     try {
-      text = await file.text();
-    } catch {
-      toast.error('Gagal membaca file', { description: 'Pastikan file CSV valid.' });
+      text = await fileToCsv(file);
+    } catch (error) {
+      toast.error('Gagal membaca file', {
+        description:
+          error instanceof Error ? error.message : 'Pastikan file .xlsx atau .csv valid.',
+      });
       return;
     }
     setCsv(text);
@@ -69,7 +90,7 @@ export function ProductImportDialog({
       setReport(preview);
     } catch (error) {
       setCsv(null);
-      toast.error('Gagal memeriksa CSV', {
+      toast.error('Gagal memeriksa file', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
@@ -104,49 +125,87 @@ export function ProductImportDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[90vh] !max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] !max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Impor produk (CSV)</DialogTitle>
+          <DialogTitle>Impor produk</DialogTitle>
           <DialogDescription>
-            Unggah CSV untuk membuat produk baru atau memperbarui harga/modal/nama varian
-            berdasarkan SKU. Pakai file hasil “Ekspor CSV” sebagai template. Stok hanya diisi untuk
-            varian baru.
+            Unggah file Excel (.xlsx) atau CSV untuk membuat produk baru, atau memperbarui
+            harga/modal/nama varian berdasarkan SKU. Stok hanya diisi untuk varian baru.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void handleFile(file);
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="size-4" />
-              {fileName ? 'Ganti file' : 'Pilih file CSV'}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" asChild>
-              <a href={productsExportUrl()} download>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void handleFile(file);
+            }}
+          />
+
+          {/* Compact, draggable dropzone. */}
+          <div
+            role="button"
+            tabIndex={0}
+            aria-disabled={pending}
+            onClick={() => {
+              if (!pending) fileInputRef.current?.click();
+            }}
+            onKeyDown={(event) => {
+              if ((event.key === 'Enter' || event.key === ' ') && !pending) {
+                event.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!pending) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              const file = event.dataTransfer.files?.[0];
+              if (file && !pending) void handleFile(file);
+            }}
+            className={cn(
+              'mx-auto flex max-w-md cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center transition-colors',
+              dragging ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/40',
+              pending && 'pointer-events-none opacity-60',
+            )}
+          >
+            <UploadCloud className="text-muted-foreground size-7" />
+            <div className="text-sm font-medium">Tarik file ke sini atau klik untuk pilih</div>
+            <div className="text-muted-foreground text-xs">Format .xlsx (disarankan) atau .csv</div>
+            {fileName ? (
+              <div className="text-foreground mt-1 inline-flex items-center gap-1.5 text-xs">
+                <FileSpreadsheet className="size-3.5" />
+                {fileName}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button type="button" variant="outline" size="sm" asChild>
+              <a href={productsTemplateUrl()} download>
                 <Download className="size-4" />
                 Unduh template
               </a>
             </Button>
-            {fileName ? (
-              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
-                <FileSpreadsheet className="size-4" />
-                {fileName}
-              </span>
-            ) : null}
+            <p className="text-muted-foreground text-xs">
+              Kolom wajib:{' '}
+              {PRODUCT_CSV_COLUMNS.filter((column) => column.required).map((column, index) => (
+                <span key={column.field}>
+                  {index > 0 ? ', ' : ''}
+                  {column.header}
+                  <span className="text-destructive">*</span>
+                </span>
+              ))}
+              . Kosongkan SKU untuk produk baru.
+            </p>
           </div>
 
           {pending && !report ? (
