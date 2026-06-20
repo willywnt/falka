@@ -25,6 +25,7 @@ export const PERMISSION_KEYS = [
   'sales.refund',
   'purchasing.cancel',
   'catalog.delete',
+  'catalog.import',
   'inventory.adjust',
   'opname.post',
   'marketplace.manage',
@@ -65,6 +66,10 @@ export const PERMISSION_META: Record<PermissionKey, { label: string; description
   'catalog.delete': {
     label: 'Hapus produk, varian, bundel',
     description: 'Mengarsipkan/menghapus item katalog.',
+  },
+  'catalog.import': {
+    label: 'Impor produk massal',
+    description: 'Buat/perbarui banyak produk sekaligus dari file CSV.',
   },
   'inventory.adjust': {
     label: 'Sesuaikan & write-off stok',

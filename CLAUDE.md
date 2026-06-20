@@ -168,12 +168,12 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 - **Auth**: sign-in (credentials + pairing QR) resolves membership; no active membership ⇒ login
   refused (`AuthError.accessRevoked`). JWT carries `organizationId`/`orgRole` as a HINT; the DB is
   authoritative (re-resolved per request).
-- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 10
+- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 11
   permission keys (`modules/users/permissions/catalog.ts`) in two tiers: **VIEW keys**
   (`reports.view`, `purchasing.view`, `marketplace.view`) hide a whole section — nav menu + pages
   - create entries + deep-link buttons — when off; **ACTION keys** (`sales.refund`,
-    `purchasing.cancel`, `catalog.delete`, `inventory.adjust`, `opname.post`, `marketplace.manage`,
-    `team.manage`) hide a single button. The OWNER edits an ADMIN/STAFF allow-matrix in Settings →
+    `purchasing.cancel`, `catalog.delete`, `catalog.import`, `inventory.adjust`, `opname.post`,
+    `marketplace.manage`, `team.manage`) hide a single button. The OWNER edits an ADMIN/STAFF allow-matrix in Settings →
     "Peran & akses". OWNER always has all keys; **defaults = ADMIN all on, STAFF all off** (STAFF is
     pure daily-ops: Kasir/Pesanan/Inventaris/Opname-count/Katalog/Rekam/Retur — no reports,
     purchasing, marketplace, or money/config). Stored in `Organization.permissions` (Json, null =
