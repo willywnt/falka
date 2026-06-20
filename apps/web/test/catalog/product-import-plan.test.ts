@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RawProductRow } from '@/modules/catalog/utils/parse-products-csv';
 import {
+  effectiveImportSku,
   planProductImport,
   type ImportPlanContext,
 } from '@/modules/catalog/utils/product-import-plan';
@@ -106,6 +107,19 @@ describe('planProductImport', () => {
       input: { name: 'Merah', price: 60000 },
     });
     expect(plan.updates[0]?.input).not.toHaveProperty('cost'); // blank → unchanged
+  });
+
+  it('treats a blank-SKU row whose generated SKU already exists as an update', () => {
+    const r = row({ line: 2, productName: 'Kaos Polos', variantName: 'Cream', price: '50000' });
+    const base = effectiveImportSku(r);
+    const plan = planProductImport(
+      [r],
+      ctx({ existingVariantsBySku: new Map([[base, { variantId: 'v9', productId: 'p9' }]]) }),
+    );
+
+    expect(plan.summary).toMatchObject({ create: 0, update: 1, error: 0 });
+    expect(plan.rows[0]).toMatchObject({ status: 'update', resolvedSku: base, skuGenerated: true });
+    expect(plan.updates[0]).toMatchObject({ variantId: 'v9' });
   });
 
   it('skips an existing SKU row that has nothing to update', () => {

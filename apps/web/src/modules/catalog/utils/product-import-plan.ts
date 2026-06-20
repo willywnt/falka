@@ -57,6 +57,21 @@ function parseNumber(raw: string, max: number, integer: boolean): ParsedNumber {
   return { value };
 }
 
+/**
+ * The SKU a row resolves to for matching/creation: the typed SKU, or — when blank —
+ * the deterministic auto-generated base from the product + variant name. Shared by
+ * the planner and the wizard's existing-data lookup so a generated SKU that already
+ * exists is matched (→ update), not blindly created (which would clash at commit).
+ */
+export function effectiveImportSku(row: {
+  sku: string;
+  productName: string;
+  variantName: string;
+}): string {
+  const sku = row.sku.trim();
+  return sku || suggestVariantSku(row.productName.trim(), row.variantName.trim());
+}
+
 /** Make `base` unique against `used` by appending -2, -3, … ; reserves the result. */
 function uniqueSku(base: string, used: Set<string>): string {
   const root = base || 'SKU';
@@ -105,7 +120,12 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
     const fieldErrors: Partial<Record<ProductImportField, string>> = {};
     let message: string | null = null;
 
-    const matched = sku ? context.existingVariantsBySku.get(sku) : undefined;
+    // A blank SKU resolves to its deterministic generated base; if THAT base already
+    // exists we UPDATE that variant rather than create a near-duplicate (which would
+    // clash on the unique index at commit).
+    const generated = sku === '';
+    const baseSku = sku || suggestVariantSku(productName, variantName);
+    const matched = baseSku ? context.existingVariantsBySku.get(baseSku) : undefined;
 
     if (matched) {
       // UPDATE — patch only the non-blank editable cells.
@@ -119,8 +139,8 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
 
       const base = {
         line: row.line,
-        resolvedSku: sku,
-        skuGenerated: false,
+        resolvedSku: baseSku,
+        skuGenerated: generated,
         productName,
         variantName,
       };
@@ -183,13 +203,12 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
       continue;
     }
 
-    const skuGenerated = sku === '';
     let finalSku: string;
     if (sku) {
       usedSkus.add(sku);
       finalSku = sku;
     } else {
-      finalSku = uniqueSku(suggestVariantSku(productName, variantName), usedSkus);
+      finalSku = uniqueSku(baseSku, usedSkus);
     }
 
     const variant: CreateVariantInput = {
@@ -215,7 +234,7 @@ export function planProductImport(rows: RawProductRow[], context: ImportPlanCont
       line: row.line,
       status: 'create',
       resolvedSku: finalSku,
-      skuGenerated,
+      skuGenerated: generated,
       productName,
       variantName,
       fieldErrors: {},

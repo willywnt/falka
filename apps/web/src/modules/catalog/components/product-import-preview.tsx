@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { Check, Loader2, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -27,16 +28,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { StatusBadge, type StatusTone } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
 
-import { useImportProductsMutation } from '../hooks/use-products';
-import type {
-  ProductImportContextData,
-  ProductImportField,
-  ProductImportReport,
-  ProductImportStatus,
-} from '../types';
+import { fetchImportContext, useImportProductsMutation } from '../hooks/use-products';
+import type { ProductImportField, ProductImportReport, ProductImportStatus } from '../types';
 import { PRODUCT_CSV_COLUMNS, rowsToImportCsv } from '../utils/product-csv';
 import type { RawProductRow } from '../utils/parse-products-csv';
-import { planProductImport, type ImportPlanContext } from '../utils/product-import-plan';
+import {
+  effectiveImportSku,
+  planProductImport,
+  type ImportPlanContext,
+} from '../utils/product-import-plan';
 
 const STATUS_META: Record<ProductImportStatus, { tone: StatusTone; label: string; help: string }> =
   {
@@ -66,14 +66,12 @@ export function ProductImportPreview({
   onOpenChange,
   rows,
   setRows,
-  context,
   onReupload,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rows: RawProductRow[];
   setRows: (rows: RawProductRow[]) => void;
-  context: ProductImportContextData | null;
   onReupload: () => void;
 }) {
   const importMutation = useImportProductsMutation();
@@ -87,6 +85,24 @@ export function ProductImportPreview({
     setEditingLine(null);
     setDraft(null);
   }, [rows]);
+
+  // Resolve which SKUs / product names already exist — re-fetched whenever the
+  // effective SKU set or names change (so an edited or generated SKU is re-checked
+  // against the DB). Uses the EFFECTIVE SKU (typed or generated) for matching.
+  const resolveInput = useMemo(() => {
+    const skus = rows.map((row) => effectiveImportSku(row)).filter(Boolean);
+    const names = rows.map((row) => row.productName.trim()).filter(Boolean);
+    return { skus, names };
+  }, [rows]);
+
+  const contextQuery = useQuery({
+    queryKey: ['catalog', 'import-resolve', resolveInput],
+    queryFn: () => fetchImportContext(resolveInput.skus, resolveInput.names),
+    enabled: open,
+    placeholderData: keepPreviousData,
+  });
+  const context = contextQuery.data ?? null;
+  const resolving = !context && contextQuery.isLoading;
 
   const planContext = useMemo<ImportPlanContext>(
     () => ({
@@ -155,199 +171,225 @@ export function ProductImportPreview({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TooltipProvider>
-            <div className="flex flex-wrap gap-1.5">
-              <SummaryBadge
-                tone="info"
-                count={summary.create}
-                label="baru"
-                help={STATUS_META.create.help}
-              />
-              <SummaryBadge
-                tone="ok"
-                count={summary.update}
-                label="perbarui"
-                help={STATUS_META.update.help}
-              />
-              <SummaryBadge
-                tone="neutral"
-                count={summary.skip}
-                label="lewati"
-                help={STATUS_META.skip.help}
-              />
-              <SummaryBadge
-                tone="danger"
-                count={summary.error}
-                label="error"
-                help={STATUS_META.error.help}
-              />
-            </div>
-          </TooltipProvider>
-
-          {!readOnly ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onReupload}
-              disabled={pending}
-            >
-              <RefreshCw className="size-4" />
-              Unggah ulang
-            </Button>
-          ) : null}
-        </div>
-
-        {committed ? (
-          <div className="border-status-ok/30 bg-status-ok/10 text-status-ok rounded-lg border px-3 py-2 text-sm">
-            Impor selesai. {summary.create} produk dibuat, {summary.update} diperbarui
-            {summary.error > 0 ? `, ${summary.error} gagal` : ''}.
+        {resolving ? (
+          <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
+            <Loader2 className="size-4 animate-spin" />
+            Memvalidasi data…
           </div>
-        ) : null}
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <TooltipProvider>
+                <div className="flex flex-wrap gap-1.5">
+                  <SummaryBadge
+                    tone="info"
+                    count={summary.create}
+                    label="baru"
+                    help={STATUS_META.create.help}
+                  />
+                  <SummaryBadge
+                    tone="ok"
+                    count={summary.update}
+                    label="perbarui"
+                    help={STATUS_META.update.help}
+                  />
+                  <SummaryBadge
+                    tone="neutral"
+                    count={summary.skip}
+                    label="lewati"
+                    help={STATUS_META.skip.help}
+                  />
+                  <SummaryBadge
+                    tone="danger"
+                    count={summary.error}
+                    label="error"
+                    help={STATUS_META.error.help}
+                  />
+                </div>
+              </TooltipProvider>
 
-        <div className="max-h-[55vh] overflow-auto rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-28">Status</TableHead>
-                {PREVIEW_COLUMNS.map((column) => (
-                  <TableHead key={column.field} className="whitespace-nowrap">
-                    {column.header}
-                    {column.required ? <span className="text-destructive">*</span> : null}
-                  </TableHead>
-                ))}
-                {!readOnly ? <TableHead className="w-20 text-right">Aksi</TableHead> : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayRows.map((res) => {
-                const rawRow = rawByLine.get(res.line);
-                const editing = !readOnly && editingLine === res.line;
-                const meta = STATUS_META[res.status];
+              {!readOnly ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onReupload}
+                  disabled={pending}
+                >
+                  <RefreshCw className="size-4" />
+                  Unggah ulang
+                </Button>
+              ) : null}
+            </div>
 
-                return (
-                  <TableRow key={res.line}>
-                    <TableCell className="align-top">
-                      <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
-                      {res.message ? (
-                        <div
-                          className={cn(
-                            'mt-1 text-xs',
-                            res.status === 'error' ? 'text-destructive' : 'text-muted-foreground',
-                          )}
-                        >
-                          {res.message}
-                        </div>
-                      ) : null}
-                    </TableCell>
+            {committed ? (
+              <div className="border-status-ok/30 bg-status-ok/10 text-status-ok rounded-lg border px-3 py-2 text-sm">
+                Impor selesai. {summary.create} produk dibuat, {summary.update} diperbarui
+                {summary.error > 0 ? `, ${summary.error} gagal` : ''}.
+              </div>
+            ) : null}
 
-                    {PREVIEW_COLUMNS.map((column) => {
-                      const field = column.field as ProductImportField;
-                      const error = res.fieldErrors[field];
-                      const rawValue = rawRow?.[column.field] ?? '';
+            <div className="max-h-[55vh] overflow-auto rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-28">Status</TableHead>
+                    {PREVIEW_COLUMNS.map((column) => (
+                      <TableHead key={column.field} className="whitespace-nowrap">
+                        {column.header}
+                        {column.required ? <span className="text-destructive">*</span> : null}
+                      </TableHead>
+                    ))}
+                    {!readOnly ? <TableHead className="w-20 text-right">Aksi</TableHead> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayRows.map((res) => {
+                    const rawRow = rawByLine.get(res.line);
+                    const editing = !readOnly && editingLine === res.line;
+                    const meta = STATUS_META[res.status];
 
-                      if (editing && draft) {
-                        return (
-                          <TableCell key={column.field} className="align-top">
-                            <Input
-                              value={draft[column.field]}
-                              placeholder={
-                                column.field === 'sku' && !draft.sku ? '(otomatis)' : undefined
-                              }
-                              onChange={(event) =>
-                                setDraft({ ...draft, [column.field]: event.target.value })
-                              }
-                              className={cn('h-8 min-w-28', error && 'border-destructive')}
-                            />
-                            {error ? (
-                              <div className="text-destructive mt-1 text-xs">{error}</div>
-                            ) : null}
-                          </TableCell>
-                        );
-                      }
-
-                      return (
-                        <TableCell key={column.field} className="align-top">
-                          <div
-                            className={cn(
-                              'whitespace-nowrap',
-                              error && 'text-destructive',
-                              column.field === 'stock' &&
-                                res.status === 'update' &&
-                                rawValue.trim() &&
-                                'text-muted-foreground line-through',
-                            )}
-                            title={
-                              column.field === 'stock' && res.status === 'update' && rawValue.trim()
-                                ? 'Stok diabaikan untuk SKU yang sudah ada.'
-                                : undefined
-                            }
-                          >
-                            {column.field === 'sku' && res.skuGenerated ? (
-                              <>
-                                {res.resolvedSku}
-                                <Badge variant="secondary" className="ml-1 px-1 py-0 text-[10px]">
-                                  auto
-                                </Badge>
-                              </>
-                            ) : (
-                              rawValue || '—'
-                            )}
-                          </div>
-                          {error ? (
-                            <div className="text-destructive mt-1 text-xs">{error}</div>
+                    return (
+                      <TableRow key={res.line}>
+                        <TableCell className="align-top">
+                          <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
+                          {res.message ? (
+                            <div
+                              className={cn(
+                                'mt-1 text-xs',
+                                res.status === 'error'
+                                  ? 'text-destructive'
+                                  : 'text-muted-foreground',
+                              )}
+                            >
+                              {res.message}
+                            </div>
                           ) : null}
                         </TableCell>
-                      );
-                    })}
 
-                    {!readOnly ? (
-                      <TableCell className="text-right align-top">
-                        {editing ? (
-                          <div className="flex justify-end gap-1">
-                            <Button type="button" variant="ghost" size="icon" onClick={saveEdit}>
-                              <Check className="size-4" />
-                              <span className="sr-only">Simpan</span>
-                            </Button>
-                            <Button type="button" variant="ghost" size="icon" onClick={cancelEdit}>
-                              <X className="size-4" />
-                              <span className="sr-only">Batal</span>
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              disabled={editingLine !== null}
-                              onClick={() => startEdit(res.line)}
-                            >
-                              <Pencil className="size-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              disabled={editingLine !== null}
-                              className="text-destructive focus-visible:text-destructive"
-                              onClick={() => deleteRow(res.line)}
-                            >
-                              <Trash2 className="size-4" />
-                              <span className="sr-only">Hapus</span>
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                        {PREVIEW_COLUMNS.map((column) => {
+                          const field = column.field as ProductImportField;
+                          const error = res.fieldErrors[field];
+                          const rawValue = rawRow?.[column.field] ?? '';
+
+                          if (editing && draft) {
+                            return (
+                              <TableCell key={column.field} className="align-top">
+                                <Input
+                                  value={draft[column.field]}
+                                  placeholder={
+                                    column.field === 'sku' && !draft.sku ? '(otomatis)' : undefined
+                                  }
+                                  onChange={(event) =>
+                                    setDraft({ ...draft, [column.field]: event.target.value })
+                                  }
+                                  className={cn('h-8 min-w-28', error && 'border-destructive')}
+                                />
+                                {error ? (
+                                  <div className="text-destructive mt-1 text-xs">{error}</div>
+                                ) : null}
+                              </TableCell>
+                            );
+                          }
+
+                          return (
+                            <TableCell key={column.field} className="align-top">
+                              <div
+                                className={cn(
+                                  'whitespace-nowrap',
+                                  error && 'text-destructive',
+                                  column.field === 'stock' &&
+                                    res.status === 'update' &&
+                                    rawValue.trim() &&
+                                    'text-muted-foreground line-through',
+                                )}
+                                title={
+                                  column.field === 'stock' &&
+                                  res.status === 'update' &&
+                                  rawValue.trim()
+                                    ? 'Stok diabaikan untuk SKU yang sudah ada.'
+                                    : undefined
+                                }
+                              >
+                                {column.field === 'sku' && res.skuGenerated ? (
+                                  <>
+                                    {res.resolvedSku}
+                                    <Badge
+                                      variant="secondary"
+                                      className="ml-1 px-1 py-0 text-[10px]"
+                                    >
+                                      auto
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  rawValue || '—'
+                                )}
+                              </div>
+                              {error ? (
+                                <div className="text-destructive mt-1 text-xs">{error}</div>
+                              ) : null}
+                            </TableCell>
+                          );
+                        })}
+
+                        {!readOnly ? (
+                          <TableCell className="text-right align-top">
+                            {editing ? (
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={saveEdit}
+                                >
+                                  <Check className="size-4" />
+                                  <span className="sr-only">Simpan</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={cancelEdit}
+                                >
+                                  <X className="size-4" />
+                                  <span className="sr-only">Batal</span>
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={editingLine !== null}
+                                  onClick={() => startEdit(res.line)}
+                                >
+                                  <Pencil className="size-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={editingLine !== null}
+                                  className="text-destructive focus-visible:text-destructive"
+                                  onClick={() => deleteRow(res.line)}
+                                >
+                                  <Trash2 className="size-4" />
+                                  <span className="sr-only">Hapus</span>
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -357,7 +399,7 @@ export function ProductImportPreview({
             <Button
               type="button"
               onClick={handleCommit}
-              disabled={pending || actionable === 0 || editingLine !== null}
+              disabled={pending || resolving || actionable === 0 || editingLine !== null}
             >
               {pending ? 'Mengimpor…' : `Impor ${actionable} item`}
             </Button>

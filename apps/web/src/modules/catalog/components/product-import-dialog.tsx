@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Loader2, UploadCloud } from 'lucide-react';
-import { toast } from 'sonner';
 
 import {
   Dialog,
@@ -13,8 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-import { fetchImportContext, productsTemplateUrl } from '../hooks/use-products';
-import type { ProductImportContextData } from '../types';
+import { productsTemplateUrl } from '../hooks/use-products';
 import { tableToRawRows, type RawProductRow } from '../utils/parse-products-csv';
 import { ProductImportPreview } from './product-import-preview';
 
@@ -47,7 +45,6 @@ export function ProductImportDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<'upload' | 'preview'>('upload');
   const [rows, setRows] = useState<RawProductRow[]>([]);
-  const [context, setContext] = useState<ProductImportContextData | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -56,7 +53,6 @@ export function ProductImportDialog({
     if (!next) {
       setPhase('upload');
       setRows([]);
-      setContext(null);
       setBusy(false);
       setError(null);
       setDragging(false);
@@ -71,25 +67,13 @@ export function ProductImportDialog({
     const parsed: { rows?: RawProductRow[]; error?: string } = await parseXlsx(file).catch(() => ({
       error: 'Gagal membaca file. Pastikan formatnya .xlsx.',
     }));
+    setBusy(false);
     if (parsed.error || !parsed.rows) {
-      setBusy(false);
       setError(parsed.error ?? 'Gagal membaca file.');
       return;
     }
-    try {
-      const skus = parsed.rows.map((row) => row.sku.trim()).filter(Boolean);
-      const names = parsed.rows.map((row) => row.productName.trim()).filter(Boolean);
-      const resolved = await fetchImportContext(skus, names);
-      setRows(parsed.rows);
-      setContext(resolved);
-      setPhase('preview');
-    } catch (resolveError) {
-      toast.error('Gagal memuat data produk', {
-        description: resolveError instanceof Error ? resolveError.message : 'Terjadi kesalahan',
-      });
-    } finally {
-      setBusy(false);
-    }
+    setRows(parsed.rows);
+    setPhase('preview');
   }
 
   return (
@@ -173,7 +157,6 @@ export function ProductImportDialog({
         onOpenChange={handleClose}
         rows={rows}
         setRows={setRows}
-        context={context}
         onReupload={() => setPhase('upload')}
       />
     </>

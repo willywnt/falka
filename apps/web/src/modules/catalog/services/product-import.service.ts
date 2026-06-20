@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { MAX_IMPORT_ROWS } from '../utils/product-csv';
 import { parseCsv, tableToRawRows } from '../utils/parse-products-csv';
-import { planProductImport } from '../utils/product-import-plan';
+import { effectiveImportSku, planProductImport } from '../utils/product-import-plan';
 
 function summarize(rows: ProductImportRowResult[]): ProductImportSummary {
   return {
@@ -51,7 +51,9 @@ class ProductImportService {
       );
     }
 
-    const skus = parsed.rows.map((row) => row.sku.trim()).filter(Boolean);
+    // Include the generated base SKU for blank rows so a generated SKU that already
+    // exists is matched (→ update), not created (→ unique-index clash at commit).
+    const skus = parsed.rows.map((row) => effectiveImportSku(row)).filter(Boolean);
     const names = parsed.rows.map((row) => row.productName.trim()).filter(Boolean);
     const [existingVariantsBySku, existingProductIdsByName] = await Promise.all([
       catalogServerService.findVariantsBySkus(organizationId, skus),
