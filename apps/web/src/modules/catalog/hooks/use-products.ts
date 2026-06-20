@@ -15,6 +15,7 @@ import type {
   DeletionBlockers,
   LabelVariant,
   ProductDetail,
+  ProductImportContextData,
   ProductImportReport,
   ProductListItem,
   ProductVariantItem,
@@ -75,6 +76,23 @@ export function useImportProductsMutation() {
       }
     },
   });
+}
+
+/** Resolve which SKUs / product names already exist, so the wizard can plan on the client. */
+export async function fetchImportContext(
+  skus: string[],
+  names: string[],
+): Promise<ProductImportContextData> {
+  const result = await apiFetch<ProductImportContextData>(`${apiRoutes.products}/import/resolve`, {
+    method: 'POST',
+    body: { skus, names },
+  });
+
+  if (!result.success) {
+    throw new Error(formatApiErrorMessage(result.error));
+  }
+
+  return result.data;
 }
 
 export function useProductsQuery(search: string | undefined, page: number, pageSize: number) {
