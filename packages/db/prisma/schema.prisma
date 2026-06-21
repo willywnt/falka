@@ -50,6 +50,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
+  // Last successful credential login (best-effort stamp) — for the Settings security view.
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
 
   recordings                 Recording[]
   pairingSessions            PairingSession[]
