@@ -23,6 +23,8 @@ import type {
 import type { CreateProductInput } from '../validators/create-product';
 import type { CreateVariantInput } from '../validators/variant';
 import type { ListProductsQuery } from '../validators/list-products';
+import type { UpdateProductInput } from '../validators/update-product';
+import type { UpdateVariantDetailsInput } from '../validators/update-variant-details';
 import type { UpdateVariantInput } from '../validators/update-variant';
 
 /** A page of label-studio variants (mirror of the server's PaginatedResult). */
@@ -231,6 +233,60 @@ export function useUpdateVariantMutation(productId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
       // Planning fields feed the reorder report — refresh it too.
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+/** Patch a product's core fields (name/category/description/isActive). */
+export function useUpdateProductMutation(productId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateProductInput) => {
+      const result = await apiFetch<ProductDetail>(`${apiRoutes.products}/${productId}`, {
+        method: 'PATCH',
+        body: input,
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+    },
+  });
+}
+
+/** Patch a variant's CORE fields (name/group/barcode/price/cost) — SKU stays immutable. */
+export function useUpdateVariantDetailsMutation(productId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      variantId,
+      input,
+    }: {
+      variantId: string;
+      input: UpdateVariantDetailsInput;
+    }) => {
+      const result = await apiFetch<ProductVariantItem>(
+        `${apiRoutes.products}/${productId}/variants/${variantId}/details`,
+        { method: 'PATCH', body: input },
+      );
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.all });
+      // Name/price changes show in inventory-backed lists too.
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },
   });
