@@ -137,8 +137,11 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   `services/product-import.service.ts`, `validators/{import-products,update-variant-details}.ts`,
   `app/api/v1/products/{export,import,import/template}/route.ts`, `components/product-import-dialog.tsx`.
   4 gates green; 46 catalog vitest. **Owner manual QA owed:** a real round-trip (Ekspor → edit in Excel →
-  Impor) against a live DB. **Note:** npm `xlsx@0.18.5` has known CVEs (fixed only on the SheetJS CDN
-  build, not npm); used client-side on the seller's own files + server-side for generation. **Deferred:**
+  Impor) against a live DB. **xlsx dep:** pinned to the **SheetJS CDN build `xlsx@0.20.3`**
+  (`https://cdn.sheetjs.com/...tgz`) — the npm `xlsx@0.18.5` was vulnerable to CVE-2023-30533 (prototype
+  pollution, ≤0.19.2) + CVE-2024-22363 (ReDoS, ≤0.20.1) and the fixes ship only on the CDN, not npm.
+  **Test fixtures:** sample .xlsx files are NOT committed (regenerate via
+  `node apps/web/test/fixtures/make-sample-import.mjs` and `…/make-sample-import-2000.mjs`). **Deferred:**
   bulk stock update on existing SKUs, product-level (category/description) bulk edit, recurring/streaming/
   very-large async import (worker job).
 - **Import-wizard UX rework** (same branch, owner feedback) — **xlsx-only** now (CSV upload dropped). Two
