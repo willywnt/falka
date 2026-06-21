@@ -14,9 +14,12 @@ import { cn } from '@/lib/utils';
 
 import { productsTemplateUrl } from '../hooks/use-products';
 import { tableToRawRows, type RawProductRow } from '../utils/parse-products-csv';
+import { MAX_IMPORT_ROWS } from '../utils/product-csv';
 import { ProductImportPreview } from './product-import-preview';
 
-/** Parse an uploaded .xlsx into canonical rows (header validation included). */
+const ACCEPTED_EXTENSIONS = ['.xlsx', '.xls'];
+
+/** Parse an uploaded .xlsx/.xls into canonical rows (header validation included). */
 async function parseXlsx(file: File): Promise<{ rows?: RawProductRow[]; error?: string }> {
   const XLSX = await import('xlsx');
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
@@ -62,14 +65,27 @@ export function ProductImportDialog({
   }
 
   async function handleFile(file: File) {
-    setBusy(true);
     setError(null);
+
+    const name = file.name.toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+      setError('Format tidak didukung. Hanya file .xlsx atau .xls.');
+      return;
+    }
+
+    setBusy(true);
     const parsed: { rows?: RawProductRow[]; error?: string } = await parseXlsx(file).catch(() => ({
-      error: 'Gagal membaca file. Pastikan formatnya .xlsx.',
+      error: 'Gagal membaca file. Pastikan formatnya .xlsx atau .xls.',
     }));
     setBusy(false);
     if (parsed.error || !parsed.rows) {
       setError(parsed.error ?? 'Gagal membaca file.');
+      return;
+    }
+    if (parsed.rows.length > MAX_IMPORT_ROWS) {
+      setError(
+        `Terlalu banyak baris (${parsed.rows.length}). Maksimum ${MAX_IMPORT_ROWS} baris per impor.`,
+      );
       return;
     }
     setRows(parsed.rows);
@@ -83,18 +99,19 @@ export function ProductImportDialog({
           <DialogHeader>
             <DialogTitle>Impor produk</DialogTitle>
             <DialogDescription>
-              Unggah file Excel (.xlsx) untuk membuat produk baru atau memperbarui harga/modal/nama
-              varian berdasarkan SKU.
+              Unggah file Excel (.xlsx/.xls, maks {MAX_IMPORT_ROWS} baris) untuk membuat produk baru
+              atau memperbarui harga/modal/nama varian berdasarkan SKU.
             </DialogDescription>
           </DialogHeader>
 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx"
+            accept=".xlsx,.xls"
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0];
+              event.target.value = ''; // allow re-selecting the same file after a fix
               if (file) void handleFile(file);
             }}
           />
@@ -137,7 +154,9 @@ export function ProductImportDialog({
             <div className="text-sm font-medium">
               {busy ? 'Memproses…' : 'Tarik file ke sini atau klik untuk pilih'}
             </div>
-            <div className="text-muted-foreground text-xs">Hanya file .xlsx</div>
+            <div className="text-muted-foreground text-xs">
+              File .xlsx atau .xls · maks {MAX_IMPORT_ROWS} baris
+            </div>
           </div>
 
           {error ? <p className="text-destructive text-center text-sm">{error}</p> : null}
