@@ -258,6 +258,12 @@ anyway. So:
 _**Phase 1 + 2 (hybrid) shipped 2026-06-16** (branch `session/2026-06-16-notification-tray`): persistent
 event-log + per-user server read-state + read API + UNION selector + **8 best-effort producers** + RBAC
 tray-filtering + "Lihat semua" history page. The local dev DB apply was deferred (this checkout's `.env` lacks
-`DATABASE_URL`); the migration is applied by the VPS `migrate` service / `pnpm db:migrate:deploy`. **Next:** Phase 3 (preferences) is the clean
-Vercel-native next step; the rolled-up persistence + retention + WhatsApp wait for the VPS worker (see Decision
-above)._
+`DATABASE_URL`); the migration is applied by the VPS `migrate` service / `pnpm db:migrate:deploy`._
+
+_**Phase 3 (preferences) shipped 2026-06-21** (branch `session/2026-06-21-notification-preferences`):
+`NotificationPreference` model (per `organizationId`/`userId`/`category`/`channel`, `userId` nullable for a
+future org-default tier; `DeliveryChannel` enum reserved for Phase 4 — only `IN_APP` written) + a
+`notificationPreferenceService` (missing row = ON, only opt-outs stored). The tray list + read-all routes
+union the member's muted categories with the existing RBAC hiding; a **Settings → Notifikasi** tab (all
+roles, self-scoped, RBAC-aware) toggles them. **Next:** the rolled-up persistence + retention + WhatsApp
+(Phase 4) wait for the VPS worker (see Decision above)._
