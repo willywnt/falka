@@ -294,8 +294,3 @@ export function PendingUploadProvider() {
     </>
   );
 }
-
-/** @deprecated Use PendingUploadTrigger + PendingUploadProvider */
-export function PendingUploadCenter() {
-  return <PendingUploadProvider />;
-}
