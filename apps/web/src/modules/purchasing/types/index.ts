@@ -55,6 +55,8 @@ export type PurchaseOrderListItem = {
 };
 
 export type PurchaseOrderDetail = PurchaseOrderListItem & {
+  /** Linked supplier id (null = free-text/none) — lets the edit form keep the link. */
+  supplierId: string | null;
   note: string | null;
   receivedAt: string | null;
   items: PurchaseOrderItemDetail[];

@@ -2,7 +2,16 @@
 
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Boxes, PackageCheck, XCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  Boxes,
+  FilePen,
+  PackageCheck,
+  PackagePlus,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -33,6 +42,8 @@ import { useHasPermission } from '@/modules/users/hooks/use-org';
 
 import {
   useCancelPurchaseOrderMutation,
+  useDiscardPurchaseOrderMutation,
+  usePlacePurchaseOrderMutation,
   usePurchaseOrderQuery,
   useReceivePurchaseOrderMutation,
 } from '../hooks/use-purchase-orders';
@@ -77,16 +88,25 @@ function BundleGroupLabel({ bundleName }: { bundleName: string }) {
 }
 
 export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: string }) {
+  const router = useRouter();
   const { data, isLoading, error } = usePurchaseOrderQuery(purchaseOrderId);
   const { allowed: canCancel } = useHasPermission('purchasing.cancel');
   const receiveMutation = useReceivePurchaseOrderMutation(purchaseOrderId);
   const cancelMutation = useCancelPurchaseOrderMutation(purchaseOrderId);
+  const placeMutation = usePlacePurchaseOrderMutation(purchaseOrderId);
+  const discardMutation = useDiscardPurchaseOrderMutation(purchaseOrderId);
   // itemId → qty to receive this round (defaults to each line's outstanding).
   const [receiveQty, setReceiveQty] = useState<Record<string, number>>({});
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
+  const isDraft = data?.status === 'DRAFT';
   const canReceive = data?.status === 'ORDERED' || data?.status === 'PARTIALLY_RECEIVED';
-  const busy = receiveMutation.isPending || cancelMutation.isPending;
+  const busy =
+    receiveMutation.isPending ||
+    cancelMutation.isPending ||
+    placeMutation.isPending ||
+    discardMutation.isPending;
 
   function setItemReceiveQty(item: PurchaseOrderItemDetail, value: number) {
     setReceiveQty((prev) => ({
@@ -220,6 +240,31 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
     }
   }
 
+  async function handlePlace() {
+    if (placeMutation.isPending) return;
+    try {
+      await placeMutation.mutateAsync();
+      toast.success('Pesanan dibuat', { description: 'Stok akan datang sudah dicatat.' });
+    } catch (err) {
+      toast.error('Gagal membuat pesanan', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
+      });
+    }
+  }
+
+  async function handleDiscard() {
+    try {
+      await discardMutation.mutateAsync();
+      setDiscardOpen(false);
+      toast.success('Draf dihapus');
+      router.push('/dashboard/purchasing');
+    } catch (err) {
+      toast.error('Gagal menghapus draf', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -345,6 +390,30 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
               ) : null}
             </div>
           ) : null}
+
+          {isDraft ? (
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => void handlePlace()} disabled={busy}>
+                <PackagePlus className="size-4" />
+                {placeMutation.isPending ? 'Memproses...' : 'Jadikan pesanan'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/dashboard/purchasing/${data.id}/edit`}>
+                  <FilePen className="size-4" />
+                  Edit
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDiscardOpen(true)}
+                disabled={busy}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+                Buang draf
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <aside className="space-y-4">
@@ -364,7 +433,7 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
                 <span className="truncate text-right font-medium">{data.supplierName ?? '—'}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Dipesan</span>
+                <span className="text-muted-foreground">{isDraft ? 'Dibuat' : 'Dipesan'}</span>
                 <span className="text-right font-medium" suppressHydrationWarning>
                   {formatDateTime(data.orderedAt)}
                 </span>
@@ -408,6 +477,31 @@ export function PurchaseOrderDetail({ purchaseOrderId }: { purchaseOrderId: stri
               }}
             >
               {cancelMutation.isPending ? 'Membatalkan...' : 'Batalkan pembelian'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Buang draf ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Draf <span className="num">{data.code}</span> bakal dihapus permanen. Draf belum
+              mengunci stok apa pun, jadi nggak ada yang terpengaruh.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={discardMutation.isPending}>Nggak jadi</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={discardMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDiscard();
+              }}
+            >
+              {discardMutation.isPending ? 'Menghapus...' : 'Buang draf'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

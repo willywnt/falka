@@ -70,6 +70,7 @@ function mapDetail(row: PurchaseOrderRow): PurchaseOrderDetail {
   return {
     id: row.id,
     code: row.code,
+    supplierId: row.supplierId,
     supplierName: row.supplierName,
     status: row.status,
     totalCost: row.totalCost.toString(),

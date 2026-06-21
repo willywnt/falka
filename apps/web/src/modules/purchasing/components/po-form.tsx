@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  ArrowLeft,
   Boxes,
   ClipboardList,
   Minus,
   PackagePlus,
   Plus,
+  Save,
   ScanLine,
   Trash2,
   Volume2,
@@ -48,7 +51,9 @@ import { useReorderReportQuery } from '@/modules/inventory/hooks/use-inventory';
 
 import {
   useCreatePurchaseOrderMutation,
+  usePurchaseOrderQuery,
   usePurchaseVariantsQuery,
+  useUpdatePurchaseOrderMutation,
 } from '../hooks/use-purchase-orders';
 import { useSupplierOptionsQuery } from '../hooks/use-suppliers';
 import { usePurchaseScanner, type PoScannerStatus } from '../hooks/use-purchase-scanner';
@@ -132,10 +137,12 @@ function useResolveBundleDetail() {
   });
 }
 
-export function PoForm() {
+export function PoForm({ editPoId }: { editPoId?: string } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefillVariantId = searchParams.get('variant');
+  const isEdit = Boolean(editPoId);
+  // The ?variant= one-click prefill only applies to a fresh New-PO, never editing.
+  const prefillVariantId = isEdit ? null : searchParams.get('variant');
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 300);
   const { page, setPage, pageSize, setPageSize } = usePagination(10);
@@ -177,6 +184,35 @@ export function PoForm() {
     targetCoverDays: REORDER_DEFAULTS.targetCoverDays,
   });
   const createPo = useCreatePurchaseOrderMutation();
+  const updatePo = useUpdatePurchaseOrderMutation(editPoId ?? '');
+  // Edit mode: load the existing PO and hydrate the form once it arrives.
+  const existing = usePurchaseOrderQuery(editPoId ?? null, isEdit);
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (!isEdit || hydrated.current) return;
+    const po = existing.data;
+    if (!po) return;
+    hydrated.current = true;
+    setSupplierId(po.supplierId ?? '');
+    setSupplierName(po.supplierName ?? '');
+    // PO lines are stored exploded, so every line rehydrates as a standalone variant
+    // row (bundle grouping is a create-time convenience and is intentionally dropped).
+    setLines(
+      po.items.map((item) => ({
+        kind: 'variant',
+        variantId: item.productVariantId,
+        sku: item.sku,
+        name: item.name,
+        productName: item.productName,
+        variantGroup: item.variantGroup,
+        quantity: item.quantity,
+        unitCost: Number(item.unitCost),
+        availableStock: item.availableStock,
+        incomingStock: item.incomingStock,
+        imageUrl: item.imageUrl,
+      })),
+    );
+  }, [isEdit, existing.data]);
 
   // One-click PO from the inventory table: ?variant=<id> appends that variant's
   // reorder suggestion as a line once the report is in. The ref keeps it a
@@ -405,40 +441,96 @@ export function PoForm() {
     );
   }
 
-  async function handleCreate() {
-    // Guard re-entry in the handler, not just via the disabled button: a fast
-    // double-submit during the pending window would create two purchase orders.
-    if (lines.length === 0 || createPo.isPending) return;
+  /** The cart lines as a create/update items payload (bundle lines stay grouped). */
+  function toItemsPayload() {
+    return lines.map((line) =>
+      line.kind === 'variant'
+        ? {
+            kind: 'variant' as const,
+            variantId: line.variantId,
+            quantity: line.quantity,
+            unitCost: line.unitCost,
+          }
+        : {
+            kind: 'bundle' as const,
+            bundleId: line.bundleId,
+            quantity: line.quantity,
+            unitCost: line.unitCost,
+          },
+    );
+  }
+
+  const busy = createPo.isPending || updatePo.isPending;
+
+  // Create a PO as a placed order or a draft. Re-entry is guarded in the handler,
+  // not just via the disabled button, so a fast double-submit can't create two POs.
+  async function handleCreate(status: 'ORDERED' | 'DRAFT') {
+    if (lines.length === 0 || busy) return;
     try {
       const po = await createPo.mutateAsync({
-        status: 'ORDERED',
+        status,
         supplierId: supplierId || undefined,
         supplierName: supplierName.trim() || undefined,
-        items: lines.map((line) =>
-          line.kind === 'variant'
-            ? {
-                kind: 'variant',
-                variantId: line.variantId,
-                quantity: line.quantity,
-                unitCost: line.unitCost,
-              }
-            : {
-                kind: 'bundle',
-                bundleId: line.bundleId,
-                quantity: line.quantity,
-                unitCost: line.unitCost,
-              },
-        ),
+        items: toItemsPayload(),
       });
-      toast.success(`Pembelian ${po.code} dibuat`, {
-        description: `${formatCurrency(po.totalCost)} · masuk stok akan datang`,
-      });
+      toast.success(
+        status === 'DRAFT' ? `Draf ${po.code} disimpan` : `Pembelian ${po.code} dibuat`,
+        {
+          description:
+            status === 'DRAFT'
+              ? 'Bisa diedit dulu, lalu dijadikan pesanan.'
+              : `${formatCurrency(po.totalCost)} · masuk stok akan datang`,
+        },
+      );
       router.push(`/dashboard/purchasing/${po.id}`);
     } catch (error) {
-      toast.error('Gagal membuat pembelian', {
+      toast.error('Gagal menyimpan pembelian', {
         description: error instanceof Error ? error.message : 'Terjadi kesalahan',
       });
     }
+  }
+
+  // Save edits to a draft (DRAFT-only on the server).
+  async function handleSaveEdit() {
+    if (!editPoId || lines.length === 0 || busy) return;
+    try {
+      const po = await updatePo.mutateAsync({
+        supplierId: supplierId || undefined,
+        supplierName: supplierName.trim() || undefined,
+        items: toItemsPayload(),
+      });
+      toast.success(`Draf ${po.code} disimpan`);
+      router.push(`/dashboard/purchasing/${po.id}`);
+    } catch (error) {
+      toast.error('Gagal menyimpan draf', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      });
+    }
+  }
+
+  // Edit guards: wait for the PO, then refuse anything already placed.
+  if (isEdit && existing.isLoading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Skeleton className="h-80 w-full rounded-xl" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    );
+  }
+  if (isEdit && existing.data && existing.data.status !== 'DRAFT') {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link href={`/dashboard/purchasing/${editPoId}`}>
+            <ArrowLeft className="size-4" />
+            Kembali ke pembelian
+          </Link>
+        </Button>
+        <div className="border-destructive/30 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
+          Pembelian ini sudah dipesan, jadi nggak bisa diedit lagi.
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -611,15 +703,39 @@ export function PoForm() {
               <span className="text-muted-foreground text-sm">Total modal</span>
               <span className="num text-lg font-semibold">{formatCurrency(totalCost)}</span>
             </div>
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => void handleCreate()}
-              disabled={lines.length === 0 || createPo.isPending}
-            >
-              <PackagePlus className="size-4" />
-              {createPo.isPending ? 'Membuat...' : 'Buat pembelian'}
-            </Button>
+            {isEdit ? (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => void handleSaveEdit()}
+                disabled={lines.length === 0 || busy}
+              >
+                <Save className="size-4" />
+                {updatePo.isPending ? 'Menyimpan...' : 'Simpan perubahan'}
+              </Button>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="sm:flex-1"
+                  onClick={() => void handleCreate('DRAFT')}
+                  disabled={lines.length === 0 || busy}
+                >
+                  <Save className="size-4" />
+                  Simpan draf
+                </Button>
+                <Button
+                  className="sm:flex-1"
+                  size="lg"
+                  onClick={() => void handleCreate('ORDERED')}
+                  disabled={lines.length === 0 || busy}
+                >
+                  <PackagePlus className="size-4" />
+                  {createPo.isPending ? 'Membuat...' : 'Buat pembelian'}
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
