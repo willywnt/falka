@@ -45,7 +45,7 @@ export function VariantPickerDialog({
   const debounced = useDebouncedValue(search, 300);
   const { data, isLoading, error, refetch } = useStockOverviewQuery(
     debounced.trim() || undefined,
-    false,
+    undefined,
   );
   const variants = (data ?? []).slice(0, limit);
 

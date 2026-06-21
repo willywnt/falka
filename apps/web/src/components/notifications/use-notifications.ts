@@ -137,7 +137,7 @@ export function useNotifications() {
       tone: 'info',
       title: 'Stok menipis',
       description: `${invSummary.lowStockCount} varian menipis di bawah batas stoknya.`,
-      href: '/dashboard/inventory?low=1' as Route,
+      href: '/dashboard/inventory?status=low' as Route,
     });
   }
 

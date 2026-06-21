@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import type { AdjustStockInput } from '../validators/adjust-stock';
 import type { DisposeDamagedInput } from '../validators/dispose-damaged';
+import type { StockOverviewStatus } from '../validators/list-stock-overview';
 import type { ReorderReportQuery } from '../validators/reorder-report';
 
 /** Client-held filter state for the stock activity log. Empty string = unset. */
@@ -102,14 +103,17 @@ export function useStockActivityQuery(filters: StockActivityFilters) {
   });
 }
 
-export function useStockOverviewQuery(search: string | undefined, lowStockOnly: boolean) {
+export function useStockOverviewQuery(
+  search: string | undefined,
+  status: StockOverviewStatus | undefined,
+) {
   return useQuery({
-    queryKey: inventoryKeys.overview(search, lowStockOnly),
+    queryKey: inventoryKeys.overview(search, status),
     queryFn: async () => {
       const result = await apiFetch<StockOverviewItem[]>(`${apiRoutes.inventory}/variants`, {
         params: {
           ...(search ? { search } : {}),
-          ...(lowStockOnly ? { lowStockOnly: 'true' } : {}),
+          ...(status ? { status } : {}),
         },
       });
 

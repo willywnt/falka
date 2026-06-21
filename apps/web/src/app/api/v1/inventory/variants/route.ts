@@ -10,7 +10,7 @@ export const GET = withApiRoute(
     const url = new URL(request.url);
     const parsed = listStockOverviewQuerySchema.safeParse({
       search: url.searchParams.get('search') ?? undefined,
-      lowStockOnly: url.searchParams.get('lowStockOnly') ?? undefined,
+      status: url.searchParams.get('status') ?? undefined,
     });
 
     if (!parsed.success) return apiValidationError(parsed.error);

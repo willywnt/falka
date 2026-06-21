@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import type { Route } from 'next';
 import {
   AlertTriangle,
   Boxes,
@@ -67,6 +68,8 @@ export function InventoryDashboard() {
     tone: StatTone;
     hint?: string;
     accentClassName?: string;
+    /** When set, the card links to the matching drill-down filter on the stock list. */
+    href?: Route;
   }> = [
     {
       label: 'Nilai stok',
@@ -82,6 +85,7 @@ export function InventoryDashboard() {
       icon: AlertTriangle,
       tone: 'amber',
       accentClassName: summary.lowStockCount > 0 ? 'text-status-warn' : undefined,
+      href: '/dashboard/inventory?status=low' as Route,
     },
     {
       label: 'Stok habis',
@@ -89,31 +93,44 @@ export function InventoryDashboard() {
       icon: PackageX,
       tone: 'rose',
       accentClassName: summary.outOfStockCount > 0 ? 'text-destructive' : undefined,
+      href: '/dashboard/inventory?status=out' as Route,
     },
   ];
 
   return (
     <div className="space-y-6">
       {summary.oversoldCount > 0 ? (
-        <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
+        <Link
+          href={'/dashboard/inventory?status=oversold' as Route}
+          className="border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10 flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors"
+        >
           <AlertTriangle className="size-4 shrink-0" />
           {summary.oversoldCount} item oversell (stok di bawah nol) — segera restok atau perbaiki
           jumlahnya.
-        </div>
+        </Link>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <StatCard
-            key={kpi.label}
-            label={kpi.label}
-            value={kpi.value}
-            icon={kpi.icon}
-            tone={kpi.tone}
-            hint={kpi.hint}
-            accentClassName={kpi.accentClassName}
-          />
-        ))}
+        {kpis.map((kpi) => {
+          const card = (
+            <StatCard
+              label={kpi.label}
+              value={kpi.value}
+              icon={kpi.icon}
+              tone={kpi.tone}
+              hint={kpi.hint}
+              accentClassName={kpi.accentClassName}
+              className={kpi.href ? 'hover:bg-muted/40 h-full transition-colors' : undefined}
+            />
+          );
+          return kpi.href ? (
+            <Link key={kpi.label} href={kpi.href} className="block">
+              {card}
+            </Link>
+          ) : (
+            <div key={kpi.label}>{card}</div>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

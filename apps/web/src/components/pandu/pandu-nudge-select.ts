@@ -143,7 +143,7 @@ export function buildNudgeCandidates(inputs: NudgeInputs): PanduNudge[] {
       priority: 0,
       text: `${invSummary.lowStockCount} varian menipis di bawah batas stoknya.`,
       actionLabel: 'Lihat stok',
-      href: '/dashboard/inventory?low=1' as Route,
+      href: '/dashboard/inventory?status=low' as Route,
     });
   }
 
