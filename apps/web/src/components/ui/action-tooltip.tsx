@@ -45,7 +45,12 @@ export function EllipsisTooltip({
           {text}
         </span>
       </TooltipTrigger>
-      <TooltipContent className={cn('max-w-sm break-words', contentClassName)}>
+      <TooltipContent
+        className={cn(
+          'max-w-xs text-pretty [overflow-wrap:anywhere] break-words whitespace-normal',
+          contentClassName,
+        )}
+      >
         {text}
       </TooltipContent>
     </Tooltip>

@@ -23,7 +23,7 @@ export function LowStockBadge({ threshold, className }: { threshold: number; cla
           Menipis
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="w-auto max-w-64 p-2.5 text-xs">
+      <PopoverContent side="top" className="w-fit p-2.5 text-xs whitespace-nowrap">
         Stok sudah di batas menipis (<span className="num">{threshold}</span>) atau kurang.
       </PopoverContent>
     </Popover>
