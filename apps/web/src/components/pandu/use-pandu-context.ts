@@ -29,7 +29,7 @@ const CONTEXT_CHIPS: ReadonlyArray<{ prefix: string; chips: readonly PanduContex
   {
     prefix: '/dashboard/inventory',
     chips: [
-      { id: 'inv-low', label: 'Yang menipis', href: '/dashboard/inventory?low=1' as Route },
+      { id: 'inv-low', label: 'Yang menipis', href: '/dashboard/inventory?status=low' as Route },
       { id: 'inv-reorder', label: 'Saran restok', href: '/dashboard/inventory/reorder' },
       { id: 'inv-dead', label: 'Stok mati', href: '/dashboard/reports/dead-stock' },
       { id: 'inv-opname', label: 'Opname', href: '/dashboard/inventory/opname' },

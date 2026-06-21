@@ -16,7 +16,10 @@ import type {
   StockOverviewItem,
 } from '../types';
 import type { AdjustStockInput } from '../validators/adjust-stock';
-import type { ListStockOverviewQuery } from '../validators/list-stock-overview';
+import type {
+  ListStockOverviewQuery,
+  StockOverviewStatus,
+} from '../validators/list-stock-overview';
 import { computeMovingAverageCost } from '../utils/cost-math';
 import {
   clampWriteOffQuantity,
@@ -27,6 +30,27 @@ import {
 const LEDGER_PAGE_SIZE = 50;
 /** Upper bound on variants scanned for the stock overview; logged if exceeded. */
 const OVERVIEW_CAP = 500;
+
+/**
+ * Whether a stock row belongs to a drill-down bucket. `available <= threshold` is a
+ * field-to-field comparison Prisma can't express, so (like the existing low-stock
+ * filter) the buckets are matched in memory. Mirrors the dashboard KPI semantics:
+ * low excludes out/oversold (those have their own buckets).
+ */
+function matchesStockStatus(item: StockOverviewItem, status: StockOverviewStatus): boolean {
+  switch (status) {
+    case 'low':
+      return item.isLowStock && item.availableStock > 0;
+    case 'out':
+      return item.availableStock === 0;
+    case 'oversold':
+      return item.availableStock < 0;
+    case 'incoming':
+      return item.incomingStock > 0;
+    case 'damaged':
+      return item.damagedStock > 0;
+  }
+}
 
 function emptySnapshot(variantId: string): InventorySnapshot {
   return {
@@ -199,7 +223,9 @@ export class InventoryServerService {
       };
     });
 
-    const filtered = query.lowStockOnly ? items.filter((item) => item.isLowStock) : items;
+    const filtered = query.status
+      ? items.filter((item) => matchesStockStatus(item, query.status!))
+      : items;
 
     // Surface low-stock rows first; keep the DB name ordering as the tiebreaker.
     return filtered.sort((a, b) => Number(b.isLowStock) - Number(a.isLowStock));

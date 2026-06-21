@@ -20,9 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -49,6 +47,10 @@ import { useHasPermission } from '@/modules/users/hooks/use-org';
 
 import { REORDER_DEFAULTS } from '../config';
 import { useReorderReportQuery, useStockOverviewQuery } from '../hooks/use-inventory';
+import {
+  STOCK_OVERVIEW_STATUSES,
+  type StockOverviewStatus,
+} from '../validators/list-stock-overview';
 import type { ReorderItem, StockOverviewItem } from '../types';
 import { AdjustStockDialog } from './adjust-stock-dialog';
 import { DaysCoverGauge } from './days-cover-gauge';
@@ -161,8 +163,18 @@ function StockChip({
   );
 }
 
+/** Drill-down chips over the stock list — '' = Semua. Mirrors the dashboard KPI buckets. */
+const STATUS_CHIPS: { value: '' | StockOverviewStatus; label: string }[] = [
+  { value: '', label: 'Semua' },
+  { value: 'low', label: 'Menipis' },
+  { value: 'out', label: 'Habis' },
+  { value: 'oversold', label: 'Oversold' },
+  { value: 'incoming', label: 'Akan datang' },
+  { value: 'damaged', label: 'Rusak' },
+];
+
 export function InventoryOverview() {
-  const [filters, setFilters] = useUrlFilters({ search: '', low: '' });
+  const [filters, setFilters] = useUrlFilters({ search: '', status: '' });
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebouncedValue(searchInput, 300);
   const [adjustTarget, setAdjustTarget] = useState<StockOverviewItem | null>(null);
@@ -175,10 +187,13 @@ export function InventoryOverview() {
     if (debouncedSearch !== filters.search) setFilters({ search: debouncedSearch });
   }, [debouncedSearch, filters.search, setFilters]);
 
-  const lowStockOnly = filters.low === '1';
+  // The URL value is user-controllable; only pass a known bucket to the query.
+  const status = (STOCK_OVERVIEW_STATUSES as readonly string[]).includes(filters.status)
+    ? (filters.status as StockOverviewStatus)
+    : undefined;
   const { data, isLoading, error, refetch } = useStockOverviewQuery(
     filters.search.trim() || undefined,
-    lowStockOnly,
+    status,
   );
 
   // Reorder intelligence is an enhancement layered onto the stock table — the
@@ -201,7 +216,7 @@ export function InventoryOverview() {
   // A new filter resets to the first page.
   useEffect(() => {
     setPage(1);
-  }, [filters.search, lowStockOnly, setPage]);
+  }, [filters.search, status, setPage]);
 
   const items = data ?? [];
   const isEmpty = !isLoading && items.length === 0;
@@ -218,15 +233,17 @@ export function InventoryOverview() {
           placeholder="Cari SKU atau varian..."
           className="sm:max-w-xs"
         />
-        <div className="flex items-center gap-2">
-          <Switch
-            id="low-stock-only"
-            checked={lowStockOnly}
-            onCheckedChange={(checked) => setFilters({ low: checked ? '1' : '' })}
-          />
-          <Label htmlFor="low-stock-only" className="text-sm font-normal">
-            Hanya stok menipis
-          </Label>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_CHIPS.map((chip) => (
+            <Button
+              key={chip.value || 'all'}
+              size="sm"
+              variant={(filters.status || '') === chip.value ? 'default' : 'outline'}
+              onClick={() => setFilters({ status: chip.value })}
+            >
+              {chip.label}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -243,14 +260,14 @@ export function InventoryOverview() {
           icon={PackageSearch}
           title="Tidak ada yang ditampilkan"
           description={
-            lowStockOnly
-              ? 'Tidak ada varian yang di bawah batas stok menipis.'
+            status
+              ? 'Tidak ada varian di filter ini.'
               : filters.search
                 ? 'Tidak ada varian yang cocok dengan pencarian kamu.'
                 : 'Tambah produk untuk mulai melacak stok.'
           }
           action={
-            !lowStockOnly && !filters.search ? (
+            !status && !filters.search ? (
               <Button asChild>
                 <Link href="/dashboard/products">Tambah produk</Link>
               </Button>
