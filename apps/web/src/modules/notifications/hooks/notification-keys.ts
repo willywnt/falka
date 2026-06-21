@@ -5,4 +5,6 @@ export const notificationKeys = {
   /** The full paginated history page. Distinct branch so its shape never collides with the tray. */
   history: (page: number, pageSize: number) =>
     ['notifications', 'history', page, pageSize] as const,
+  /** The member's per-category tray preferences (Settings → Notifikasi). */
+  preferences: ['notifications', 'preferences'] as const,
 };

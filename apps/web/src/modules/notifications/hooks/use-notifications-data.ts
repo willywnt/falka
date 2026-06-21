@@ -7,7 +7,8 @@ import { formatApiErrorMessage } from '@/lib/api/format-api-error';
 import { apiRoutes } from '@/lib/api/routes';
 import type { PageMeta } from '@/hooks/use-pagination';
 
-import type { NotificationListItem } from '../types';
+import type { NotificationListItem, NotificationPreferenceItem } from '../types';
+import type { UpdateNotificationPreferenceInput } from '../validators/update-preference';
 import { notificationKeys } from './notification-keys';
 
 const PAGE_SIZE = 20;
@@ -67,6 +68,42 @@ export function useMarkNotificationReadMutation() {
       return result.data;
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}
+
+/** The member's per-category tray preferences (Settings → Notifikasi). */
+export function useNotificationPreferencesQuery() {
+  return useQuery({
+    queryKey: notificationKeys.preferences,
+    queryFn: async (): Promise<NotificationPreferenceItem[]> => {
+      const result = await apiFetch<NotificationPreferenceItem[]>(
+        `${apiRoutes.notifications}/preferences`,
+      );
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+  });
+}
+
+/** Toggle one category on/off; refreshes the tray since muting changes what it shows. */
+export function useSetNotificationPreferenceMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: UpdateNotificationPreferenceInput,
+    ): Promise<NotificationPreferenceItem[]> => {
+      const result = await apiFetch<NotificationPreferenceItem[]>(
+        `${apiRoutes.notifications}/preferences`,
+        { method: 'PATCH', body: input },
+      );
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: (data) => {
+      // Instant toggle feedback, then refresh the tray (muting changes its contents).
+      queryClient.setQueryData(notificationKeys.preferences, data);
       void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },
   });

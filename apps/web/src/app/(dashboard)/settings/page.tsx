@@ -10,13 +10,14 @@ import { StorageSettingsCard } from '@/modules/storage/components/storage-settin
 import { AccessSettings } from './access-settings';
 import { ActivitySettings } from './activity-settings';
 import { GeneralSettings } from './general-settings';
+import { NotificationSettings } from './notification-settings';
 import { TeamSettings } from './team-settings';
 
 export const metadata: Metadata = {
   title: 'Pengaturan',
 };
 
-type SettingsTab = 'general' | 'storage' | 'team' | 'activity' | 'access';
+type SettingsTab = 'general' | 'storage' | 'notifications' | 'team' | 'activity' | 'access';
 
 // Penyimpanan is visible to everyone (read-only quota view); Tim + Riwayat are ADMIN+.
 const ADMIN_TABS: ReadonlySet<SettingsTab> = new Set(['team', 'activity']);
@@ -28,7 +29,13 @@ function resolveTab(
 ): SettingsTab {
   const tab = Array.isArray(value) ? value[0] : value;
   const candidate: SettingsTab =
-    tab === 'storage' || tab === 'team' || tab === 'activity' || tab === 'access' ? tab : 'general';
+    tab === 'storage' ||
+    tab === 'notifications' ||
+    tab === 'team' ||
+    tab === 'activity' ||
+    tab === 'access'
+      ? tab
+      : 'general';
   // The configurable matrix is owner-only; a non-owner requesting it lands on "Umum".
   if (candidate === 'access' && !isOwner) return 'general';
   // A non-admin requesting an admin-only tab lands on "Umum" instead.
@@ -63,6 +70,7 @@ export default async function SettingsPage({
         <TabsList>
           <TabsTrigger value="general">Umum</TabsTrigger>
           <TabsTrigger value="storage">Penyimpanan</TabsTrigger>
+          <TabsTrigger value="notifications">Notifikasi</TabsTrigger>
           {isAdmin ? (
             <>
               <TabsTrigger value="team">Tim</TabsTrigger>
@@ -76,6 +84,9 @@ export default async function SettingsPage({
         </TabsContent>
         <TabsContent value="storage">
           <StorageSettingsCard />
+        </TabsContent>
+        <TabsContent value="notifications">
+          <NotificationSettings />
         </TabsContent>
         {isAdmin ? (
           <>
