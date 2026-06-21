@@ -13,13 +13,13 @@ type TxClient = {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
-  purchaseOrderItem: { update: ReturnType<typeof vi.fn> };
+  purchaseOrderItem: { update: ReturnType<typeof vi.fn>; deleteMany: ReturnType<typeof vi.fn> };
 };
 
 const { prismaMock, txMock, enqueueMock, inventoryMock, catalogMock } = vi.hoisted(() => {
   const txMock: TxClient = {
     purchaseOrder: { count: vi.fn(), create: vi.fn(), update: vi.fn() },
-    purchaseOrderItem: { update: vi.fn() },
+    purchaseOrderItem: { update: vi.fn(), deleteMany: vi.fn() },
   };
   return {
     txMock,
@@ -33,7 +33,7 @@ const { prismaMock, txMock, enqueueMock, inventoryMock, catalogMock } = vi.hoist
     },
     prismaMock: {
       productVariant: { findMany: vi.fn(), count: vi.fn() },
-      purchaseOrder: { findMany: vi.fn(), findFirst: vi.fn() },
+      purchaseOrder: { findMany: vi.fn(), findFirst: vi.fn(), delete: vi.fn() },
       inventory: { findUnique: vi.fn() },
       marketplaceProductMapping: { count: vi.fn() },
       $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
@@ -83,6 +83,8 @@ beforeEach(() => {
   txMock.purchaseOrder.create.mockResolvedValue({ id: 'po1', code: 'PO00001' });
   txMock.purchaseOrder.update.mockResolvedValue({});
   txMock.purchaseOrderItem.update.mockResolvedValue({});
+  txMock.purchaseOrderItem.deleteMany.mockResolvedValue({ count: 0 });
+  prismaMock.purchaseOrder.delete.mockResolvedValue({});
   catalogMock.resolveBundles.mockResolvedValue(new Map());
 });
 
@@ -93,6 +95,7 @@ describe('createPurchaseOrder', () => {
     ]);
 
     await service.createPurchaseOrder(ORG, USER, {
+      status: 'ORDERED',
       items: [{ kind: 'variant', variantId: 'v1', quantity: 20, unitCost: 50_000 }],
     });
 
@@ -138,6 +141,7 @@ describe('createPurchaseOrder', () => {
     );
 
     await service.createPurchaseOrder(ORG, USER, {
+      status: 'ORDERED',
       items: [{ kind: 'bundle', bundleId: 'b1', quantity: 3, unitCost: 30_000 }],
     });
 
@@ -156,6 +160,113 @@ describe('createPurchaseOrder', () => {
       txMock,
       expect.objectContaining({ variantId: 'c1', delta: 6 }),
     );
+  });
+
+  it('saves a DRAFT without reserving incoming stock', async () => {
+    prismaMock.productVariant.findMany.mockResolvedValue([
+      { id: 'v1', sku: 'BLACK-S', name: 'Black / S' },
+    ]);
+
+    await service.createPurchaseOrder(ORG, USER, {
+      status: 'DRAFT',
+      items: [{ kind: 'variant', variantId: 'v1', quantity: 20, unitCost: 50_000 }],
+    });
+
+    const args = txMock.purchaseOrder.create.mock.calls[0]?.[0] as { data: { status: string } };
+    expect(args.data.status).toBe('DRAFT');
+    expect(inventoryMock.adjustIncomingTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('updatePurchaseOrder', () => {
+  it("replaces a DRAFT's lines + total without touching stock", async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue({ id: 'po1', status: 'DRAFT' });
+    prismaMock.productVariant.findMany.mockResolvedValue([
+      { id: 'v1', sku: 'BLACK-S', name: 'Black / S' },
+    ]);
+
+    await service.updatePurchaseOrder(ORG, USER, 'po1', {
+      items: [{ kind: 'variant', variantId: 'v1', quantity: 5, unitCost: 10_000 }],
+    });
+
+    expect(txMock.purchaseOrderItem.deleteMany).toHaveBeenCalledWith({
+      where: { purchaseOrderId: 'po1' },
+    });
+    const args = txMock.purchaseOrder.update.mock.calls[0]?.[0] as { data: { totalCost: number } };
+    expect(args.data.totalCost).toBe(50_000);
+    expect(inventoryMock.adjustIncomingTx).not.toHaveBeenCalled();
+  });
+
+  it('refuses to edit a placed (non-DRAFT) PO', async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue({ id: 'po1', status: 'ORDERED' });
+
+    await expect(
+      service.updatePurchaseOrder(ORG, USER, 'po1', {
+        items: [{ kind: 'variant', variantId: 'v1', quantity: 5, unitCost: 10_000 }],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(txMock.purchaseOrderItem.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('placePurchaseOrder', () => {
+  const draftPo = {
+    id: 'po1',
+    status: 'DRAFT',
+    code: 'PO00001',
+    items: [{ id: 'poi1', productVariantId: 'v1', quantity: 20, receivedQuantity: 0 }],
+  };
+
+  it('places a DRAFT → ORDERED and reserves incoming per line', async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue(draftPo);
+
+    await service.placePurchaseOrder(ORG, USER, 'po1');
+
+    const args = txMock.purchaseOrder.update.mock.calls[0]?.[0] as {
+      data: { status: string; orderedAt: Date };
+    };
+    expect(args.data.status).toBe('ORDERED');
+    expect(args.data.orderedAt).toBeInstanceOf(Date);
+    expect(inventoryMock.adjustIncomingTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', delta: 20 }),
+    );
+  });
+
+  it('refuses to place a non-DRAFT', async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue({ ...draftPo, status: 'ORDERED' });
+
+    await expect(service.placePurchaseOrder(ORG, USER, 'po1')).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+    expect(inventoryMock.adjustIncomingTx).not.toHaveBeenCalled();
+  });
+});
+
+describe('discardDraftPurchaseOrder', () => {
+  it('deletes a DRAFT', async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue({
+      id: 'po1',
+      status: 'DRAFT',
+      code: 'PO00001',
+    });
+
+    await service.discardDraftPurchaseOrder(ORG, USER, 'po1');
+
+    expect(prismaMock.purchaseOrder.delete).toHaveBeenCalledWith({ where: { id: 'po1' } });
+  });
+
+  it('refuses to delete a placed (non-DRAFT) PO', async () => {
+    prismaMock.purchaseOrder.findFirst.mockResolvedValue({
+      id: 'po1',
+      status: 'ORDERED',
+      code: 'PO00001',
+    });
+
+    await expect(service.discardDraftPurchaseOrder(ORG, USER, 'po1')).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+    expect(prismaMock.purchaseOrder.delete).not.toHaveBeenCalled();
   });
 });
 

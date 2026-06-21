@@ -15,6 +15,7 @@ import type { BundleResolution } from '@/modules/catalog/types';
 
 import { PurchaseOrderError } from '../errors/purchase-order-errors';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
+import type { UpdatePurchaseOrderInput } from '../validators/update-po';
 import type { ReceivePurchaseOrderInput } from '../validators/receive-po';
 import type { SearchVariantsQuery } from '../validators/search-variants';
 import type {
@@ -28,7 +29,21 @@ import type {
 const LIST_LIMIT = 100;
 
 const DETAIL_INCLUDE = {
-  items: { orderBy: { id: 'asc' } },
+  // The live variant is joined so a draft can be rehydrated into the edit form with
+  // current product/group/stock context (the line itself only snapshots sku/name/cost).
+  items: {
+    orderBy: { id: 'asc' },
+    include: {
+      productVariant: {
+        select: {
+          variantGroup: true,
+          imageUrl: true,
+          product: { select: { name: true } },
+          inventory: { select: { availableStock: true, incomingStock: true } },
+        },
+      },
+    },
+  },
 } satisfies Prisma.PurchaseOrderInclude;
 
 type PurchaseOrderRow = Prisma.PurchaseOrderGetPayload<{ include: typeof DETAIL_INCLUDE }>;
@@ -45,6 +60,11 @@ function mapDetail(row: PurchaseOrderRow): PurchaseOrderDetail {
     unitCost: item.unitCost.toString(),
     lineTotal: (Number(item.unitCost) * item.quantity).toString(),
     bundleName: item.bundleName,
+    productName: item.productVariant.product.name,
+    variantGroup: item.productVariant.variantGroup,
+    availableStock: item.productVariant.inventory?.availableStock ?? 0,
+    incomingStock: item.productVariant.inventory?.incomingStock ?? 0,
+    imageUrl: item.productVariant.imageUrl,
   }));
 
   return {
@@ -203,13 +223,216 @@ export class PurchasingServerService {
     return null;
   }
 
+  /**
+   * Create a purchase order. With `status: 'ORDERED'` (default) it is placed and
+   * each line bumps incoming stock; with `status: 'DRAFT'` it is saved without
+   * reserving any stock, ready to edit and place later.
+   */
   async createPurchaseOrder(
     organizationId: string,
     actorUserId: string,
     input: CreatePurchaseOrderInput,
   ): Promise<PurchaseOrderDetail> {
-    const variantItems = input.items.filter((item) => item.kind === 'variant');
-    const bundleItems = input.items.filter((item) => item.kind === 'bundle');
+    const { lines, totalCost } = await this.resolveLines(organizationId, input.items);
+    const { supplierId, supplierName } = await this.resolveSupplier(organizationId, input);
+    const isDraft = input.status === 'DRAFT';
+
+    const created = await retryOnCodeCollision(() =>
+      prisma.$transaction(async (tx) => {
+        const count = await tx.purchaseOrder.count({ where: { organizationId } });
+        const code = `PO${(count + 1).toString().padStart(5, '0')}`;
+
+        const order = await tx.purchaseOrder.create({
+          data: {
+            userId: actorUserId,
+            organizationId,
+            code,
+            supplierId,
+            supplierName,
+            status: input.status,
+            note: input.note ?? null,
+            totalCost,
+            items: { create: lines },
+          },
+        });
+
+        // A draft reserves no stock — incoming is only bumped when it is placed.
+        if (!isDraft) {
+          for (const line of lines) {
+            await inventoryServerService.adjustIncomingTx(tx, {
+              organizationId,
+              actorUserId,
+              variantId: line.productVariantId,
+              delta: line.quantity,
+            });
+          }
+        }
+
+        return order;
+      }),
+    );
+
+    appLogger.info(isDraft ? 'purchasing.draft_created' : 'purchasing.created', {
+      organizationId,
+      actorUserId,
+      purchaseOrderId: created.id,
+      code: created.code,
+    });
+    return this.getPurchaseOrder(organizationId, created.id);
+  }
+
+  /**
+   * Edit a DRAFT: re-resolve supplier + lines and replace them wholesale. A draft
+   * reserves no stock, so there is nothing to reconcile; a placed PO is locked and
+   * this refuses. Bundle lines collapse into their component variant rows (PO lines
+   * are already exploded at storage), and any new bundle re-explodes here.
+   */
+  async updatePurchaseOrder(
+    organizationId: string,
+    actorUserId: string,
+    id: string,
+    input: UpdatePurchaseOrderInput,
+  ): Promise<PurchaseOrderDetail> {
+    const order = await prisma.purchaseOrder.findFirst({
+      where: { id, organizationId },
+      select: { id: true, status: true },
+    });
+    if (!order) throw PurchaseOrderError.notFound();
+    if (order.status !== 'DRAFT') {
+      throw PurchaseOrderError.validation('Hanya draf yang bisa diubah.');
+    }
+
+    const { lines, totalCost } = await this.resolveLines(organizationId, input.items);
+    const { supplierId, supplierName } = await this.resolveSupplier(organizationId, input);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
+      await tx.purchaseOrder.update({
+        where: { id },
+        data: {
+          supplierId,
+          supplierName,
+          note: input.note ?? null,
+          totalCost,
+          items: { create: lines },
+        },
+      });
+    });
+
+    appLogger.info('purchasing.draft_updated', {
+      organizationId,
+      actorUserId,
+      purchaseOrderId: id,
+    });
+    return this.getPurchaseOrder(organizationId, id);
+  }
+
+  /** Place a DRAFT (DRAFT → ORDERED): reserve incoming stock per line, stamp orderedAt. */
+  async placePurchaseOrder(
+    organizationId: string,
+    actorUserId: string,
+    id: string,
+  ): Promise<PurchaseOrderDetail> {
+    const order = await prisma.purchaseOrder.findFirst({
+      where: { id, organizationId },
+      include: { items: true },
+    });
+    if (!order) throw PurchaseOrderError.notFound();
+    if (order.status !== 'DRAFT') {
+      throw PurchaseOrderError.validation('Hanya draf yang bisa dijadikan pesanan.');
+    }
+    if (order.items.length === 0) {
+      throw PurchaseOrderError.validation('Draf tidak punya item untuk dipesan.');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.purchaseOrder.update({
+        where: { id },
+        data: { status: 'ORDERED', orderedAt: new Date() },
+      });
+      for (const item of order.items) {
+        await inventoryServerService.adjustIncomingTx(tx, {
+          organizationId,
+          actorUserId,
+          variantId: item.productVariantId,
+          delta: item.quantity,
+        });
+      }
+    });
+
+    appLogger.info('purchasing.placed', { organizationId, actorUserId, purchaseOrderId: id });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'purchasing.placed',
+      resource: 'purchase_order',
+      resourceId: id,
+      metadata: { code: order.code },
+    });
+    return this.getPurchaseOrder(organizationId, id);
+  }
+
+  /**
+   * Permanently delete a DRAFT (items cascade). Safe because a draft reserved no
+   * stock; a placed PO must be cancelled (which releases incoming), never deleted.
+   */
+  async discardDraftPurchaseOrder(
+    organizationId: string,
+    actorUserId: string,
+    id: string,
+  ): Promise<void> {
+    const order = await prisma.purchaseOrder.findFirst({
+      where: { id, organizationId },
+      select: { id: true, status: true, code: true },
+    });
+    if (!order) throw PurchaseOrderError.notFound();
+    if (order.status !== 'DRAFT') {
+      throw PurchaseOrderError.validation('Hanya draf yang bisa dihapus.');
+    }
+
+    await prisma.purchaseOrder.delete({ where: { id } });
+
+    appLogger.info('purchasing.draft_discarded', {
+      organizationId,
+      actorUserId,
+      purchaseOrderId: id,
+    });
+    void auditService.log({
+      organizationId,
+      actorUserId,
+      action: 'purchasing.draft_discarded',
+      resource: 'purchase_order',
+      resourceId: id,
+      metadata: { code: order.code },
+    });
+  }
+
+  /** Resolve a linked supplier (org-scoped) into a name snapshot, or accept free-text. */
+  private async resolveSupplier(
+    organizationId: string,
+    input: { supplierId?: string; supplierName?: string },
+  ): Promise<{ supplierId: string | null; supplierName: string | null }> {
+    if (input.supplierId) {
+      const supplier = await prisma.supplier.findFirst({
+        where: { id: input.supplierId, organizationId, deletedAt: null },
+        select: { id: true, name: true },
+      });
+      if (!supplier) throw PurchaseOrderError.validation('Pemasok tidak ditemukan.');
+      return { supplierId: supplier.id, supplierName: supplier.name };
+    }
+    return { supplierId: null, supplierName: input.supplierName?.trim() || null };
+  }
+
+  /** Validate cart items, explode bundles, and build the PO lines + total cost. */
+  private async resolveLines(
+    organizationId: string,
+    items: CreatePurchaseOrderInput['items'],
+  ): Promise<{
+    lines: Prisma.PurchaseOrderItemUncheckedCreateWithoutPurchaseOrderInput[];
+    totalCost: number;
+  }> {
+    const variantItems = items.filter((item) => item.kind === 'variant');
+    const bundleItems = items.filter((item) => item.kind === 'bundle');
 
     const variantIds = [...new Set(variantItems.map((item) => item.variantId))];
     const variants = variantIds.length
@@ -239,59 +462,7 @@ export class PurchasingServerService {
     // its single cost is allocated across components (proportional to each component's cost).
     const lines = this.buildPurchaseOrderLines(variantItems, bundleItems, variantById, bundles);
     const totalCost = lines.reduce((sum, line) => sum + Number(line.unitCost) * line.quantity, 0);
-
-    // A linked supplier must belong to this org; snapshot its name into supplierName so PO
-    // history survives a later rename/soft-delete. Free-text supplierName is the fallback.
-    let supplierId: string | null = null;
-    let supplierName = input.supplierName?.trim() || null;
-    if (input.supplierId) {
-      const supplier = await prisma.supplier.findFirst({
-        where: { id: input.supplierId, organizationId, deletedAt: null },
-        select: { id: true, name: true },
-      });
-      if (!supplier) throw PurchaseOrderError.validation('Pemasok tidak ditemukan.');
-      supplierId = supplier.id;
-      supplierName = supplier.name;
-    }
-
-    const created = await retryOnCodeCollision(() =>
-      prisma.$transaction(async (tx) => {
-        const count = await tx.purchaseOrder.count({ where: { organizationId } });
-        const code = `PO${(count + 1).toString().padStart(5, '0')}`;
-
-        const order = await tx.purchaseOrder.create({
-          data: {
-            userId: actorUserId,
-            organizationId,
-            code,
-            supplierId,
-            supplierName,
-            note: input.note ?? null,
-            totalCost,
-            items: { create: lines },
-          },
-        });
-
-        for (const line of lines) {
-          await inventoryServerService.adjustIncomingTx(tx, {
-            organizationId,
-            actorUserId,
-            variantId: line.productVariantId,
-            delta: line.quantity,
-          });
-        }
-
-        return order;
-      }),
-    );
-
-    appLogger.info('purchasing.created', {
-      organizationId,
-      actorUserId,
-      purchaseOrderId: created.id,
-      code: created.code,
-    });
-    return this.getPurchaseOrder(organizationId, created.id);
+    return { lines, totalCost };
   }
 
   /** Flatten variant + bundle cart items into per-variant PO rows (bundle cost allocated). */

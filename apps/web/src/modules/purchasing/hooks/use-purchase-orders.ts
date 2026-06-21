@@ -10,6 +10,7 @@ import { inventoryKeys } from '@/modules/inventory/hooks/inventory-keys';
 
 import { purchaseOrderKeys } from './purchase-order-keys';
 import type { CreatePurchaseOrderInput } from '../validators/create-po';
+import type { UpdatePurchaseOrderInput } from '../validators/update-po';
 import type { ReceivePurchaseOrderInput } from '../validators/receive-po';
 import type {
   PurchasableVariant,
@@ -99,6 +100,63 @@ export function useCreatePurchaseOrderMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.all });
       void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+/** Edit a DRAFT (supplier/note/lines). */
+export function useUpdatePurchaseOrderMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdatePurchaseOrderInput) => {
+      const result = await apiFetch<PurchaseOrderDetail>(`${apiRoutes.purchaseOrders}/${id}`, {
+        method: 'PATCH',
+        body: input,
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.all });
+    },
+  });
+}
+
+/** Place a DRAFT (DRAFT → ORDERED): reserves incoming stock. */
+export function usePlacePurchaseOrderMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await apiFetch<PurchaseOrderDetail>(
+        `${apiRoutes.purchaseOrders}/${id}/place`,
+        { method: 'POST' },
+      );
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.all });
+      void queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+/** Permanently delete a DRAFT. */
+export function useDiscardPurchaseOrderMutation(id: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await apiFetch<null>(`${apiRoutes.purchaseOrders}/${id}`, {
+        method: 'DELETE',
+      });
+      if (!result.success) throw new Error(formatApiErrorMessage(result.error));
+      return result.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: purchaseOrderKeys.all });
     },
   });
 }

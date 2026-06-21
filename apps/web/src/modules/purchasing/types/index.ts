@@ -36,6 +36,12 @@ export type PurchaseOrderItemDetail = {
   lineTotal: string;
   /** Snapshot of the bundle this line came from (null = a standalone variant line). */
   bundleName: string | null;
+  /** Live variant context (for rehydrating a draft into the edit form + richer detail). */
+  productName: string;
+  variantGroup: string | null;
+  availableStock: number;
+  incomingStock: number;
+  imageUrl: string | null;
 };
 
 export type PurchaseOrderListItem = {

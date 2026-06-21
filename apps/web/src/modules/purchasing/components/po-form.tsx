@@ -411,6 +411,7 @@ export function PoForm() {
     if (lines.length === 0 || createPo.isPending) return;
     try {
       const po = await createPo.mutateAsync({
+        status: 'ORDERED',
         supplierId: supplierId || undefined,
         supplierName: supplierName.trim() || undefined,
         items: lines.map((line) =>
