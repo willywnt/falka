@@ -5,11 +5,13 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   Layers,
+  Loader2,
   MoreHorizontal,
   Package,
   Pencil,
   Plus,
   QrCode,
+  Save,
   ScrollText,
   Settings2,
   SlidersHorizontal,
@@ -17,6 +19,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +38,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { EllipsisTooltip } from '@/components/ui/action-tooltip';
 import { EmptyState } from '@/components/empty-state';
 import { LowStockBadge } from '@/components/low-stock-badge';
@@ -39,24 +54,57 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 
 import {
   useDeleteVariantsMutation,
   useMarkLabelsPrintedMutation,
   useProductQuery,
+  useUpdateProductMutation,
+  useUpdateVariantDetailsMutation,
 } from '../hooks/use-products';
-import type { ProductVariantItem } from '../types';
+import type { ProductDetail as ProductDetailType, ProductVariantItem } from '../types';
 import { formatCurrency } from '../utils/format';
 import { buildVariantBlocks, formatVariantLabel } from '../utils/variants';
+import type { UpdateProductInput } from '../validators/update-product';
+import type { UpdateVariantDetailsInput } from '../validators/update-variant-details';
 import { AddSubvariantsDialog } from './add-subvariants-dialog';
 import { AddVariantDialog } from './add-variant-dialog';
 import { ArchivedVariants } from './archived-variants';
 import { ConnectionBadges } from './connection-badges';
 import { DeleteVariantDialog } from './delete-variant-dialog';
 import { EditVariantDialog } from './edit-variant-dialog';
-import { ProductEditForm } from './product-edit-form';
 import { VariantImage } from './variant-image';
+
+const MAX_MONEY = 9_999_999_999;
+
+type DraftVariant = { name: string; variantGroup: string; price: number; cost: number };
+type Draft = {
+  name: string;
+  category: string;
+  description: string;
+  variants: Record<string, DraftVariant>;
+};
+
+function buildDraft(product: ProductDetailType): Draft {
+  return {
+    name: product.name,
+    category: product.category ?? '',
+    description: product.description ?? '',
+    variants: Object.fromEntries(
+      product.variants.map((variant) => [
+        variant.id,
+        {
+          name: variant.name,
+          variantGroup: variant.variantGroup ?? '',
+          price: Number(variant.price),
+          cost: variant.cost != null ? Number(variant.cost) : 0,
+        },
+      ]),
+    ),
+  };
+}
 
 export function ProductDetail({
   productId,
@@ -75,24 +123,143 @@ export function ProductDetail({
     label: string;
   } | null>(null);
   const [addSubGroup, setAddSubGroup] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
   const markPrinted = useMarkLabelsPrintedMutation();
   const deleteVariants = useDeleteVariantsMutation(productId);
   const { allowed: canDelete } = useHasPermission('catalog.delete');
+
+  // Inline edit mode: the same layout, but editable fields become inputs.
+  const [editMode, setEditMode] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [snapshot, setSnapshot] = useState<string>('');
+  const [confirm, setConfirm] = useState<'save' | 'discard' | null>(null);
+  const [saving, setSaving] = useState(false);
+  const updateProduct = useUpdateProductMutation(productId);
+  const updateVariantDetails = useUpdateVariantDetailsMutation(productId);
+
+  const dirty = draft !== null && JSON.stringify(draft) !== snapshot;
+
+  function enterEdit(product: ProductDetailType) {
+    const next = buildDraft(product);
+    setDraft(next);
+    setSnapshot(JSON.stringify(next));
+    setEditMode(true);
+  }
+
+  function exitEdit() {
+    setEditMode(false);
+    setDraft(null);
+    setConfirm(null);
+  }
+
+  function setVariantField<K extends keyof DraftVariant>(
+    variantId: string,
+    field: K,
+    value: DraftVariant[K],
+  ) {
+    setDraft((current) => {
+      if (!current) return current;
+      const variant = current.variants[variantId];
+      if (!variant) return current;
+      return {
+        ...current,
+        variants: { ...current.variants, [variantId]: { ...variant, [field]: value } },
+      };
+    });
+  }
+
+  function setGroupName(variantIds: string[], value: string) {
+    setDraft((current) => {
+      if (!current) return current;
+      const variants = { ...current.variants };
+      for (const id of variantIds) {
+        const variant = variants[id];
+        if (variant) variants[id] = { ...variant, variantGroup: value };
+      }
+      return { ...current, variants };
+    });
+  }
+
+  function validateDraft(): string | null {
+    if (!draft) return 'Tidak ada data.';
+    if (!draft.name.trim()) return 'Nama produk wajib diisi.';
+    for (const variant of Object.values(draft.variants)) {
+      if (!variant.name.trim()) return 'Nama varian wajib diisi.';
+      if (variant.price < 0 || variant.price > MAX_MONEY) return 'Harga tidak valid.';
+      if (variant.cost < 0 || variant.cost > MAX_MONEY) return 'Modal tidak valid.';
+    }
+    return null;
+  }
+
+  async function doSave(product: ProductDetailType) {
+    if (!draft) return;
+    setSaving(true);
+    try {
+      const productPatch: UpdateProductInput = {};
+      if (draft.name.trim() !== product.name) productPatch.name = draft.name.trim();
+      const category = draft.category.trim() || null;
+      if (category !== (product.category ?? null)) productPatch.category = category;
+      const description = draft.description.trim() || null;
+      if (description !== (product.description ?? null)) productPatch.description = description;
+
+      const updates: { variantId: string; input: UpdateVariantDetailsInput }[] = [];
+      for (const variant of product.variants) {
+        const edited = draft.variants[variant.id];
+        if (!edited) continue;
+        const input: UpdateVariantDetailsInput = {};
+        if (edited.name.trim() !== variant.name) input.name = edited.name.trim();
+        const group = edited.variantGroup.trim();
+        if (group && group !== (variant.variantGroup ?? '')) input.variantGroup = group;
+        if (edited.price !== Number(variant.price)) input.price = edited.price;
+        const origCost = variant.cost != null ? Number(variant.cost) : 0;
+        if (edited.cost !== origCost) input.cost = edited.cost;
+        if (Object.keys(input).length > 0) updates.push({ variantId: variant.id, input });
+      }
+
+      if (Object.keys(productPatch).length === 0 && updates.length === 0) {
+        toast('Tidak ada perubahan');
+        exitEdit();
+        return;
+      }
+
+      if (Object.keys(productPatch).length > 0) await updateProduct.mutateAsync(productPatch);
+      for (const update of updates) await updateVariantDetails.mutateAsync(update);
+
+      toast.success('Produk diperbarui', { description: `${updates.length} varian diubah.` });
+      exitEdit();
+    } catch (saveError) {
+      toast.error('Gagal menyimpan', {
+        description: saveError instanceof Error ? saveError.message : 'Terjadi kesalahan',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function requestSave() {
+    const message = validateDraft();
+    if (message) {
+      toast.error('Periksa lagi', { description: message });
+      return;
+    }
+    setConfirm('save');
+  }
+
+  function requestCancel() {
+    if (dirty) setConfirm('discard');
+    else exitEdit();
+  }
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
     try {
       await deleteVariants.mutateAsync(deleteTarget.variantIds);
       toast.success('Dihapus', {
-        description: `${deleteTarget.variantIds.length} ${
-          deleteTarget.variantIds.length === 1 ? 'varian' : 'varian'
-        } diarsipkan.`,
+        description: `${deleteTarget.variantIds.length} varian diarsipkan.`,
       });
       setDeleteTarget(null);
-    } catch (error) {
+    } catch (deleteError) {
       toast.error('Gagal menghapus', {
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+        description: deleteError instanceof Error ? deleteError.message : 'Terjadi kesalahan',
       });
     }
   }
@@ -149,19 +316,17 @@ export function ProductDetail({
     );
   }
 
-  const totalAvailable = data.variants.reduce((sum, variant) => sum + variant.availableStock, 0);
-  // Standalone variants render flat; subvariants sharing a variantGroup collapse
-  // under one group header (placed where the group first appears).
-  const variantBlocks = buildVariantBlocks(data.variants);
+  const product = data;
+  const totalAvailable = product.variants.reduce((sum, variant) => sum + variant.availableStock, 0);
+  const variantBlocks = buildVariantBlocks(product.variants);
+  const columnCount = editMode ? 5 : 6; // Varian | Harga | Modal | Tersedia | Koneksi (+ Aksi when read-only)
 
-  // A variant can map to several listings in the same shop — show each connection once.
   function dedupeConnections(variant: ProductVariantItem) {
     return Array.from(
       new Map(variant.mappings.map((mapping) => [mapping.connectionId, mapping])).values(),
     );
   }
 
-  // The per-variant ⋯ menu — shared by the sm+ table rows and the <sm cards.
   function renderVariantMenu(variant: ProductVariantItem, grouped: boolean) {
     return (
       <DropdownMenu>
@@ -206,7 +371,6 @@ export function ProductDetail({
     );
   }
 
-  // The group ⋯ menu — shared by the table band row and the mobile group header.
   function renderGroupMenu(
     name: string,
     variants: ProductVariantItem[],
@@ -247,9 +411,11 @@ export function ProductDetail({
 
   function renderVariantRow(variant: ProductVariantItem, grouped: boolean) {
     const connections = dedupeConnections(variant);
+    const edited = draft?.variants[variant.id];
+
     return (
       <TableRow key={variant.id}>
-        <TableCell className={grouped ? 'max-w-[220px] pl-10' : 'max-w-[220px]'}>
+        <TableCell className={grouped ? 'max-w-[260px] pl-10' : 'max-w-[260px]'}>
           <div className="flex items-center gap-3">
             <VariantImage
               productId={productId}
@@ -257,38 +423,75 @@ export function ProductDetail({
               imageUrl={variant.imageUrl}
               label={formatVariantLabel(variant)}
             />
-            <div className="min-w-0">
-              <EllipsisTooltip text={variant.name} className="font-medium" />
+            <div className="min-w-0 flex-1">
+              {editMode && edited ? (
+                <Input
+                  value={edited.name}
+                  onChange={(event) => setVariantField(variant.id, 'name', event.target.value)}
+                  className="h-8"
+                  aria-label="Nama varian"
+                />
+              ) : (
+                <EllipsisTooltip text={variant.name} className="font-medium" />
+              )}
               <EllipsisTooltip text={variant.sku} className="text-muted-foreground text-xs" />
             </div>
           </div>
         </TableCell>
-        <TableCell className="num text-right">{formatCurrency(variant.price)}</TableCell>
+        <TableCell className="text-right">
+          {editMode && edited ? (
+            <NumberInput
+              value={edited.price}
+              onChange={(value) => setVariantField(variant.id, 'price', value)}
+              className="h-8 w-28 text-right"
+              aria-label="Harga"
+            />
+          ) : (
+            <span className="num">{formatCurrency(variant.price)}</span>
+          )}
+        </TableCell>
+        <TableCell className="text-right">
+          {editMode && edited ? (
+            <NumberInput
+              value={edited.cost}
+              onChange={(value) => setVariantField(variant.id, 'cost', value)}
+              className="h-8 w-28 text-right"
+              aria-label="Modal"
+            />
+          ) : (
+            <span className="num text-muted-foreground">
+              {variant.cost != null ? formatCurrency(variant.cost) : '—'}
+            </span>
+          )}
+        </TableCell>
         <TableCell className="text-right">
           <span className="num font-medium">{variant.availableStock}</span>
           {variant.isLowStock ? (
             <LowStockBadge threshold={variant.lowStockThreshold} className="ml-2" />
           ) : null}
         </TableCell>
-        <TableCell className="max-w-[220px]">
+        <TableCell className="max-w-[200px]">
           <ConnectionBadges connections={connections} />
         </TableCell>
-        <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => onAdjustVariant(variant)}>
-              <SlidersHorizontal className="size-4" />
-              Sesuaikan
-            </Button>
-            {renderVariantMenu(variant, grouped)}
-          </div>
-        </TableCell>
+        {!editMode ? (
+          <TableCell className="text-right">
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => onAdjustVariant(variant)}>
+                <SlidersHorizontal className="size-4" />
+                Sesuaikan
+              </Button>
+              {renderVariantMenu(variant, grouped)}
+            </div>
+          </TableCell>
+        ) : null}
       </TableRow>
     );
   }
 
-  // Mobile (<sm) stand-in for a table row — the same data and actions, stacked.
   function renderVariantCard(variant: ProductVariantItem, grouped: boolean) {
     const connections = dedupeConnections(variant);
+    const edited = draft?.variants[variant.id];
+
     return (
       <div key={variant.id} className="bg-card rounded-xl border p-4">
         <div className="flex items-start gap-3">
@@ -299,32 +502,72 @@ export function ProductDetail({
             label={formatVariantLabel(variant)}
           />
           <div className="min-w-0 flex-1">
-            <EllipsisTooltip text={variant.name} className="font-medium" />
+            {editMode && edited ? (
+              <Input
+                value={edited.name}
+                onChange={(event) => setVariantField(variant.id, 'name', event.target.value)}
+                className="h-8"
+                aria-label="Nama varian"
+              />
+            ) : (
+              <EllipsisTooltip text={variant.name} className="font-medium" />
+            )}
             <EllipsisTooltip text={variant.sku} className="text-muted-foreground text-xs" />
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
-          <span className="text-muted-foreground">
-            Harga{' '}
-            <span className="num text-foreground font-medium">{formatCurrency(variant.price)}</span>
-          </span>
-          <span className="text-muted-foreground">
-            Tersedia{' '}
-            <span className="num text-foreground font-medium">{variant.availableStock}</span>
-          </span>
-          {variant.isLowStock ? <LowStockBadge threshold={variant.lowStockThreshold} /> : null}
-        </div>
+        {editMode && edited ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <label className="space-y-1">
+              <span className="text-muted-foreground text-xs">Harga</span>
+              <NumberInput
+                value={edited.price}
+                onChange={(value) => setVariantField(variant.id, 'price', value)}
+                className="h-8"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-muted-foreground text-xs">Modal</span>
+              <NumberInput
+                value={edited.cost}
+                onChange={(value) => setVariantField(variant.id, 'cost', value)}
+                className="h-8"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+            <span className="text-muted-foreground">
+              Harga{' '}
+              <span className="num text-foreground font-medium">
+                {formatCurrency(variant.price)}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              Modal{' '}
+              <span className="num text-foreground font-medium">
+                {variant.cost != null ? formatCurrency(variant.cost) : '—'}
+              </span>
+            </span>
+            <span className="text-muted-foreground">
+              Tersedia{' '}
+              <span className="num text-foreground font-medium">{variant.availableStock}</span>
+            </span>
+            {variant.isLowStock ? <LowStockBadge threshold={variant.lowStockThreshold} /> : null}
+          </div>
+        )}
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <span className="text-muted-foreground text-xs">Koneksi</span>
           <ConnectionBadges connections={connections} />
         </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Button variant="outline" className="flex-1" onClick={() => onAdjustVariant(variant)}>
-            <SlidersHorizontal className="size-4" />
-            Sesuaikan
-          </Button>
-          {renderVariantMenu(variant, grouped)}
-        </div>
+        {!editMode ? (
+          <div className="mt-3 flex items-center gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => onAdjustVariant(variant)}>
+              <SlidersHorizontal className="size-4" />
+              Sesuaikan
+            </Button>
+            {renderVariantMenu(variant, grouped)}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -338,227 +581,339 @@ export function ProductDetail({
         </Link>
       </Button>
 
-      {editMode ? (
-        <ProductEditForm product={data} onDone={() => setEditMode(false)} />
-      ) : (
-        <>
-          <div className="space-y-1">
-            <p className="eyebrow text-primary">Katalog</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-semibold tracking-tight text-balance">{data.name}</h2>
-              <Badge variant={data.isActive ? 'default' : 'secondary'}>
-                {data.isActive ? 'Aktif' : 'Nonaktif'}
-              </Badge>
-            </div>
-          </div>
+      <div className="space-y-1">
+        <p className="eyebrow text-primary">Katalog</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {editMode && draft ? (
+            <Input
+              value={draft.name}
+              onChange={(event) => setDraft((d) => (d ? { ...d, name: event.target.value } : d))}
+              className="h-10 max-w-md text-lg font-semibold"
+              aria-label="Nama produk"
+            />
+          ) : (
+            <h2 className="text-2xl font-semibold tracking-tight text-balance">{product.name}</h2>
+          )}
+          <Badge variant={product.isActive ? 'default' : 'secondary'}>
+            {product.isActive ? 'Aktif' : 'Nonaktif'}
+          </Badge>
+        </div>
+      </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="space-y-3 lg:col-span-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">
-                  Varian <span className="text-muted-foreground">· {data.variants.length}</span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
-                    <Pencil className="size-4" />
-                    Edit
-                  </Button>
-                  <Button size="sm" onClick={() => setAddOpen(true)}>
-                    <Plus className="size-4" />
-                    Tambah varian
-                  </Button>
-                </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">
+              Varian <span className="text-muted-foreground">· {product.variants.length}</span>
+            </p>
+            {editMode ? (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={requestCancel} disabled={saving}>
+                  Batal
+                </Button>
+                <Button size="sm" onClick={requestSave} disabled={saving}>
+                  {saving ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
+                  {saving ? 'Menyimpan…' : 'Simpan'}
+                </Button>
               </div>
-              {data.variants.length === 0 ? (
-                <EmptyState
-                  icon={Package}
-                  title="Belum ada varian"
-                  description="Tambahkan varian untuk mulai melacak stok dan harga. Varian bisa berdiri sendiri atau menampung beberapa subvarian (mis. warna)."
-                  action={
-                    <Button size="sm" onClick={() => setAddOpen(true)}>
-                      <Plus className="size-4" />
-                      Tambah varian
-                    </Button>
-                  }
-                />
-              ) : (
-                <>
-                  <div className="hidden rounded-xl border sm:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Varian</TableHead>
-                          <TableHead className="text-right">Harga</TableHead>
-                          <TableHead className="text-right">Tersedia</TableHead>
-                          <TableHead>Koneksi</TableHead>
-                          <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {variantBlocks.map((block) =>
-                          block.kind === 'single' ? (
-                            renderVariantRow(block.variant, false)
-                          ) : (
-                            <Fragment key={`group-${block.name}`}>
-                              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                                <TableCell colSpan={5} className="py-2.5">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <div className="flex min-w-0 items-center gap-2">
-                                      <Layers className="text-muted-foreground size-3.5 shrink-0" />
-                                      <EllipsisTooltip
-                                        text={block.name}
-                                        className="font-semibold"
-                                      />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-muted-foreground num text-xs">
-                                        {block.variants.length}{' '}
-                                        {block.variants.length === 1 ? 'subvarian' : 'subvarian'} ·{' '}
-                                        {block.variants.reduce(
-                                          (sum, variant) => sum + variant.availableStock,
-                                          0,
-                                        )}{' '}
-                                        tersedia
-                                      </span>
-                                      {renderGroupMenu(block.name, block.variants, 'size-7')}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                              {block.variants.map((variant) => renderVariantRow(variant, true))}
-                            </Fragment>
-                          ),
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div className="space-y-4 sm:hidden">
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => enterEdit(product)}>
+                  <Pencil className="size-4" />
+                  Edit
+                </Button>
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <Plus className="size-4" />
+                  Tambah varian
+                </Button>
+              </div>
+            )}
+          </div>
+          {product.variants.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="Belum ada varian"
+              description="Tambahkan varian untuk mulai melacak stok dan harga. Varian bisa berdiri sendiri atau menampung beberapa subvarian (mis. warna)."
+              action={
+                <Button size="sm" onClick={() => setAddOpen(true)}>
+                  <Plus className="size-4" />
+                  Tambah varian
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              <div className="hidden rounded-xl border sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Varian</TableHead>
+                      <TableHead className="text-right">Harga</TableHead>
+                      <TableHead className="text-right">Modal</TableHead>
+                      <TableHead className="text-right">Tersedia</TableHead>
+                      <TableHead>Koneksi</TableHead>
+                      {!editMode ? <TableHead className="text-right">Aksi</TableHead> : null}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {variantBlocks.map((block) =>
                       block.kind === 'single' ? (
-                        renderVariantCard(block.variant, false)
+                        renderVariantRow(block.variant, false)
                       ) : (
-                        <div key={`group-${block.name}`} className="space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <Layers className="text-muted-foreground size-3.5 shrink-0" />
-                              <EllipsisTooltip
-                                text={block.name}
-                                className="text-sm font-semibold"
-                              />
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-muted-foreground num text-xs">
-                                {block.variants.length} subvarian ·{' '}
-                                {block.variants.reduce(
-                                  (sum, variant) => sum + variant.availableStock,
-                                  0,
-                                )}{' '}
-                                tersedia
-                              </span>
-                              {renderGroupMenu(block.name, block.variants)}
-                            </div>
-                          </div>
-                          <div className="space-y-3">
-                            {block.variants.map((variant) => renderVariantCard(variant, true))}
-                          </div>
-                        </div>
+                        <Fragment key={`group-${block.name}`}>
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableCell colSpan={columnCount} className="py-2.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <Layers className="text-muted-foreground size-3.5 shrink-0" />
+                                  {editMode && block.variants[0] ? (
+                                    <Input
+                                      value={
+                                        draft?.variants[block.variants[0].id]?.variantGroup ?? ''
+                                      }
+                                      onChange={(event) =>
+                                        setGroupName(
+                                          block.variants.map((variant) => variant.id),
+                                          event.target.value,
+                                        )
+                                      }
+                                      className="h-8 max-w-xs font-medium"
+                                      aria-label="Nama grup"
+                                    />
+                                  ) : (
+                                    <EllipsisTooltip text={block.name} className="font-semibold" />
+                                  )}
+                                </div>
+                                {!editMode ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground num text-xs">
+                                      {block.variants.length} subvarian ·{' '}
+                                      {block.variants.reduce(
+                                        (sum, variant) => sum + variant.availableStock,
+                                        0,
+                                      )}{' '}
+                                      tersedia
+                                    </span>
+                                    {renderGroupMenu(block.name, block.variants, 'size-7')}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {block.variants.map((variant) => renderVariantRow(variant, true))}
+                        </Fragment>
                       ),
                     )}
-                  </div>
-                </>
-              )}
+                  </TableBody>
+                </Table>
+              </div>
 
-              <ArchivedVariants productId={productId} />
-            </div>
+              <div className="space-y-4 sm:hidden">
+                {variantBlocks.map((block) =>
+                  block.kind === 'single' ? (
+                    renderVariantCard(block.variant, false)
+                  ) : (
+                    <div key={`group-${block.name}`} className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <Layers className="text-muted-foreground size-3.5 shrink-0" />
+                          {editMode && block.variants[0] ? (
+                            <Input
+                              value={draft?.variants[block.variants[0].id]?.variantGroup ?? ''}
+                              onChange={(event) =>
+                                setGroupName(
+                                  block.variants.map((variant) => variant.id),
+                                  event.target.value,
+                                )
+                              }
+                              className="h-8 font-medium"
+                              aria-label="Nama grup"
+                            />
+                          ) : (
+                            <EllipsisTooltip text={block.name} className="text-sm font-semibold" />
+                          )}
+                        </div>
+                        {!editMode ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground num text-xs">
+                              {block.variants.length} subvarian ·{' '}
+                              {block.variants.reduce(
+                                (sum, variant) => sum + variant.availableStock,
+                                0,
+                              )}{' '}
+                              tersedia
+                            </span>
+                            {renderGroupMenu(block.name, block.variants)}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="space-y-3">
+                        {block.variants.map((variant) => renderVariantCard(variant, true))}
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </>
+          )}
 
-            <aside className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Produk</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Total tersedia</span>
-                    <span className="num font-medium">{totalAvailable}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Varian</span>
-                    <span className="num font-medium">{data.variants.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge variant={data.isActive ? 'default' : 'secondary'}>
-                      {data.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </div>
-                  {data.category ? (
+          {!editMode ? <ArchivedVariants productId={productId} /> : null}
+        </div>
+
+        <aside className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Produk</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Total tersedia</span>
+                <span className="num font-medium">{totalAvailable}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Varian</span>
+                <span className="num font-medium">{product.variants.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant={product.isActive ? 'default' : 'secondary'}>
+                  {product.isActive ? 'Aktif' : 'Nonaktif'}
+                </Badge>
+              </div>
+              {editMode && draft ? (
+                <div className="space-y-3 border-t pt-3">
+                  <label className="block space-y-1">
+                    <span className="text-muted-foreground text-xs">Kategori</span>
+                    <Input
+                      value={draft.category}
+                      onChange={(event) =>
+                        setDraft((d) => (d ? { ...d, category: event.target.value } : d))
+                      }
+                      placeholder="Apparel"
+                      className="h-8"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-muted-foreground text-xs">Deskripsi</span>
+                    <Textarea
+                      value={draft.description}
+                      onChange={(event) =>
+                        setDraft((d) => (d ? { ...d, description: event.target.value } : d))
+                      }
+                      rows={3}
+                      placeholder="Deskripsi singkat"
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  {product.category ? (
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-muted-foreground">Kategori</span>
-                      <span className="truncate text-right font-medium">{data.category}</span>
+                      <span className="truncate text-right font-medium">{product.category}</span>
                     </div>
                   ) : null}
-                  {data.description ? (
-                    <p className="text-muted-foreground border-t pt-3">{data.description}</p>
+                  {product.description ? (
+                    <p className="text-muted-foreground border-t pt-3">{product.description}</p>
                   ) : null}
-                </CardContent>
-              </Card>
-            </aside>
-          </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
 
-          {qrTarget ? (
-            <QrCodeDialog
-              open={Boolean(qrTarget)}
-              onOpenChange={(open) => {
-                if (!open) setQrTarget(null);
+      {qrTarget ? (
+        <QrCodeDialog
+          open={Boolean(qrTarget)}
+          onOpenChange={(open) => {
+            if (!open) setQrTarget(null);
+          }}
+          value={qrTarget.barcode?.trim() || qrTarget.sku}
+          name={formatVariantLabel(qrTarget)}
+          sku={qrTarget.sku}
+          lastPrintedAt={qrTarget.labelPrintedAt}
+          onPrint={() => markPrinted.mutate([qrTarget.id])}
+        />
+      ) : null}
+
+      <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
+
+      {addSubGroup !== null ? (
+        <AddSubvariantsDialog
+          productId={productId}
+          groupName={addSubGroup}
+          open={addSubGroup !== null}
+          onOpenChange={(open) => {
+            if (!open) setAddSubGroup(null);
+          }}
+        />
+      ) : null}
+
+      <DeleteVariantDialog
+        productId={productId}
+        variantIds={deleteTarget?.variantIds ?? []}
+        kind={deleteTarget?.kind ?? 'variant'}
+        label={deleteTarget?.label ?? ''}
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={() => void handleDeleteConfirm()}
+        isDeleting={deleteVariants.isPending}
+      />
+
+      {editTarget ? (
+        <EditVariantDialog
+          key={editTarget.id}
+          productId={productId}
+          variant={editTarget}
+          open={Boolean(editTarget)}
+          onOpenChange={(open) => {
+            if (!open) setEditTarget(null);
+          }}
+        />
+      ) : null}
+
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(next) => {
+          if (!next) setConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm === 'discard' ? 'Buang perubahan?' : 'Simpan perubahan?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm === 'discard'
+                ? 'Perubahan yang belum disimpan akan hilang.'
+                : 'Perubahan akan langsung diterapkan ke produk dan variannya.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(
+                confirm === 'discard' && 'bg-destructive hover:bg-destructive/90 text-white',
+              )}
+              onClick={() => {
+                const mode = confirm;
+                setConfirm(null);
+                if (mode === 'discard') exitEdit();
+                else void doSave(product);
               }}
-              value={qrTarget.barcode?.trim() || qrTarget.sku}
-              name={formatVariantLabel(qrTarget)}
-              sku={qrTarget.sku}
-              lastPrintedAt={qrTarget.labelPrintedAt}
-              onPrint={() => markPrinted.mutate([qrTarget.id])}
-            />
-          ) : null}
-
-          <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
-
-          {addSubGroup !== null ? (
-            <AddSubvariantsDialog
-              productId={productId}
-              groupName={addSubGroup}
-              open={addSubGroup !== null}
-              onOpenChange={(open) => {
-                if (!open) setAddSubGroup(null);
-              }}
-            />
-          ) : null}
-
-          <DeleteVariantDialog
-            productId={productId}
-            variantIds={deleteTarget?.variantIds ?? []}
-            kind={deleteTarget?.kind ?? 'variant'}
-            label={deleteTarget?.label ?? ''}
-            open={Boolean(deleteTarget)}
-            onOpenChange={(open) => {
-              if (!open) setDeleteTarget(null);
-            }}
-            onConfirm={() => void handleDeleteConfirm()}
-            isDeleting={deleteVariants.isPending}
-          />
-
-          {editTarget ? (
-            <EditVariantDialog
-              key={editTarget.id}
-              productId={productId}
-              variant={editTarget}
-              open={Boolean(editTarget)}
-              onOpenChange={(open) => {
-                if (!open) setEditTarget(null);
-              }}
-            />
-          ) : null}
-        </>
-      )}
+            >
+              {confirm === 'discard' ? 'Ya, buang' : 'Ya, simpan'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
