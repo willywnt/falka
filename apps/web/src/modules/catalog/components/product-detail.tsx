@@ -11,6 +11,7 @@ import {
   Plus,
   QrCode,
   ScrollText,
+  Settings2,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ import { ArchivedVariants } from './archived-variants';
 import { ConnectionBadges } from './connection-badges';
 import { DeleteVariantDialog } from './delete-variant-dialog';
 import { EditVariantDialog } from './edit-variant-dialog';
+import { ProductEditForm } from './product-edit-form';
 import { VariantImage } from './variant-image';
 
 export function ProductDetail({
@@ -73,6 +75,7 @@ export function ProductDetail({
     label: string;
   } | null>(null);
   const [addSubGroup, setAddSubGroup] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const markPrinted = useMarkLabelsPrintedMutation();
   const deleteVariants = useDeleteVariantsMutation(productId);
   const { allowed: canDelete } = useHasPermission('catalog.delete');
@@ -174,8 +177,8 @@ export function ProductDetail({
             Tampilkan QR code
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditTarget(variant)}>
-            <Pencil className="size-4" />
-            {grouped ? 'Ubah subvarian' : 'Ubah varian'}
+            <Settings2 className="size-4" />
+            Ubah informasi tambahan
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href={`/dashboard/inventory/activity?search=${encodeURIComponent(variant.sku)}`}>
@@ -335,209 +338,227 @@ export function ProductDetail({
         </Link>
       </Button>
 
-      <div className="space-y-1">
-        <p className="eyebrow text-primary">Katalog</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-semibold tracking-tight text-balance">{data.name}</h2>
-          <Badge variant={data.isActive ? 'default' : 'secondary'}>
-            {data.isActive ? 'Aktif' : 'Nonaktif'}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-3 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">
-              Varian <span className="text-muted-foreground">· {data.variants.length}</span>
-            </p>
-            <Button size="sm" onClick={() => setAddOpen(true)}>
-              <Plus className="size-4" />
-              Tambah varian
-            </Button>
+      {editMode ? (
+        <ProductEditForm product={data} onDone={() => setEditMode(false)} />
+      ) : (
+        <>
+          <div className="space-y-1">
+            <p className="eyebrow text-primary">Katalog</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-semibold tracking-tight text-balance">{data.name}</h2>
+              <Badge variant={data.isActive ? 'default' : 'secondary'}>
+                {data.isActive ? 'Aktif' : 'Nonaktif'}
+              </Badge>
+            </div>
           </div>
-          {data.variants.length === 0 ? (
-            <EmptyState
-              icon={Package}
-              title="Belum ada varian"
-              description="Tambahkan varian untuk mulai melacak stok dan harga. Varian bisa berdiri sendiri atau menampung beberapa subvarian (mis. warna)."
-              action={
-                <Button size="sm" onClick={() => setAddOpen(true)}>
-                  <Plus className="size-4" />
-                  Tambah varian
-                </Button>
-              }
-            />
-          ) : (
-            <>
-              <div className="hidden rounded-xl border sm:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Varian</TableHead>
-                      <TableHead className="text-right">Harga</TableHead>
-                      <TableHead className="text-right">Tersedia</TableHead>
-                      <TableHead>Koneksi</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-3 lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">
+                  Varian <span className="text-muted-foreground">· {data.variants.length}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditMode(true)}>
+                    <Pencil className="size-4" />
+                    Edit
+                  </Button>
+                  <Button size="sm" onClick={() => setAddOpen(true)}>
+                    <Plus className="size-4" />
+                    Tambah varian
+                  </Button>
+                </div>
+              </div>
+              {data.variants.length === 0 ? (
+                <EmptyState
+                  icon={Package}
+                  title="Belum ada varian"
+                  description="Tambahkan varian untuk mulai melacak stok dan harga. Varian bisa berdiri sendiri atau menampung beberapa subvarian (mis. warna)."
+                  action={
+                    <Button size="sm" onClick={() => setAddOpen(true)}>
+                      <Plus className="size-4" />
+                      Tambah varian
+                    </Button>
+                  }
+                />
+              ) : (
+                <>
+                  <div className="hidden rounded-xl border sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Varian</TableHead>
+                          <TableHead className="text-right">Harga</TableHead>
+                          <TableHead className="text-right">Tersedia</TableHead>
+                          <TableHead>Koneksi</TableHead>
+                          <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {variantBlocks.map((block) =>
+                          block.kind === 'single' ? (
+                            renderVariantRow(block.variant, false)
+                          ) : (
+                            <Fragment key={`group-${block.name}`}>
+                              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                                <TableCell colSpan={5} className="py-2.5">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <Layers className="text-muted-foreground size-3.5 shrink-0" />
+                                      <EllipsisTooltip
+                                        text={block.name}
+                                        className="font-semibold"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground num text-xs">
+                                        {block.variants.length}{' '}
+                                        {block.variants.length === 1 ? 'subvarian' : 'subvarian'} ·{' '}
+                                        {block.variants.reduce(
+                                          (sum, variant) => sum + variant.availableStock,
+                                          0,
+                                        )}{' '}
+                                        tersedia
+                                      </span>
+                                      {renderGroupMenu(block.name, block.variants, 'size-7')}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {block.variants.map((variant) => renderVariantRow(variant, true))}
+                            </Fragment>
+                          ),
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="space-y-4 sm:hidden">
                     {variantBlocks.map((block) =>
                       block.kind === 'single' ? (
-                        renderVariantRow(block.variant, false)
+                        renderVariantCard(block.variant, false)
                       ) : (
-                        <Fragment key={`group-${block.name}`}>
-                          <TableRow className="bg-muted/40 hover:bg-muted/40">
-                            <TableCell colSpan={5} className="py-2.5">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <Layers className="text-muted-foreground size-3.5 shrink-0" />
-                                  <EllipsisTooltip text={block.name} className="font-semibold" />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground num text-xs">
-                                    {block.variants.length}{' '}
-                                    {block.variants.length === 1 ? 'subvarian' : 'subvarian'} ·{' '}
-                                    {block.variants.reduce(
-                                      (sum, variant) => sum + variant.availableStock,
-                                      0,
-                                    )}{' '}
-                                    tersedia
-                                  </span>
-                                  {renderGroupMenu(block.name, block.variants, 'size-7')}
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          {block.variants.map((variant) => renderVariantRow(variant, true))}
-                        </Fragment>
+                        <div key={`group-${block.name}`} className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Layers className="text-muted-foreground size-3.5 shrink-0" />
+                              <EllipsisTooltip
+                                text={block.name}
+                                className="text-sm font-semibold"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-muted-foreground num text-xs">
+                                {block.variants.length} subvarian ·{' '}
+                                {block.variants.reduce(
+                                  (sum, variant) => sum + variant.availableStock,
+                                  0,
+                                )}{' '}
+                                tersedia
+                              </span>
+                              {renderGroupMenu(block.name, block.variants)}
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            {block.variants.map((variant) => renderVariantCard(variant, true))}
+                          </div>
+                        </div>
                       ),
                     )}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </>
+              )}
 
-              <div className="space-y-4 sm:hidden">
-                {variantBlocks.map((block) =>
-                  block.kind === 'single' ? (
-                    renderVariantCard(block.variant, false)
-                  ) : (
-                    <div key={`group-${block.name}`} className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Layers className="text-muted-foreground size-3.5 shrink-0" />
-                          <EllipsisTooltip text={block.name} className="text-sm font-semibold" />
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground num text-xs">
-                            {block.variants.length} subvarian ·{' '}
-                            {block.variants.reduce(
-                              (sum, variant) => sum + variant.availableStock,
-                              0,
-                            )}{' '}
-                            tersedia
-                          </span>
-                          {renderGroupMenu(block.name, block.variants)}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        {block.variants.map((variant) => renderVariantCard(variant, true))}
-                      </div>
+              <ArchivedVariants productId={productId} />
+            </div>
+
+            <aside className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Produk</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Total tersedia</span>
+                    <span className="num font-medium">{totalAvailable}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Varian</span>
+                    <span className="num font-medium">{data.variants.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={data.isActive ? 'default' : 'secondary'}>
+                      {data.isActive ? 'Aktif' : 'Nonaktif'}
+                    </Badge>
+                  </div>
+                  {data.category ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Kategori</span>
+                      <span className="truncate text-right font-medium">{data.category}</span>
                     </div>
-                  ),
-                )}
-              </div>
-            </>
-          )}
+                  ) : null}
+                  {data.description ? (
+                    <p className="text-muted-foreground border-t pt-3">{data.description}</p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </aside>
+          </div>
 
-          <ArchivedVariants productId={productId} />
-        </div>
+          {qrTarget ? (
+            <QrCodeDialog
+              open={Boolean(qrTarget)}
+              onOpenChange={(open) => {
+                if (!open) setQrTarget(null);
+              }}
+              value={qrTarget.barcode?.trim() || qrTarget.sku}
+              name={formatVariantLabel(qrTarget)}
+              sku={qrTarget.sku}
+              lastPrintedAt={qrTarget.labelPrintedAt}
+              onPrint={() => markPrinted.mutate([qrTarget.id])}
+            />
+          ) : null}
 
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Produk</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Total tersedia</span>
-                <span className="num font-medium">{totalAvailable}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Varian</span>
-                <span className="num font-medium">{data.variants.length}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant={data.isActive ? 'default' : 'secondary'}>
-                  {data.isActive ? 'Aktif' : 'Nonaktif'}
-                </Badge>
-              </div>
-              {data.category ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Kategori</span>
-                  <span className="truncate text-right font-medium">{data.category}</span>
-                </div>
-              ) : null}
-              {data.description ? (
-                <p className="text-muted-foreground border-t pt-3">{data.description}</p>
-              ) : null}
-            </CardContent>
-          </Card>
-        </aside>
-      </div>
+          <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
 
-      {qrTarget ? (
-        <QrCodeDialog
-          open={Boolean(qrTarget)}
-          onOpenChange={(open) => {
-            if (!open) setQrTarget(null);
-          }}
-          value={qrTarget.barcode?.trim() || qrTarget.sku}
-          name={formatVariantLabel(qrTarget)}
-          sku={qrTarget.sku}
-          lastPrintedAt={qrTarget.labelPrintedAt}
-          onPrint={() => markPrinted.mutate([qrTarget.id])}
-        />
-      ) : null}
+          {addSubGroup !== null ? (
+            <AddSubvariantsDialog
+              productId={productId}
+              groupName={addSubGroup}
+              open={addSubGroup !== null}
+              onOpenChange={(open) => {
+                if (!open) setAddSubGroup(null);
+              }}
+            />
+          ) : null}
 
-      <AddVariantDialog productId={productId} open={addOpen} onOpenChange={setAddOpen} />
+          <DeleteVariantDialog
+            productId={productId}
+            variantIds={deleteTarget?.variantIds ?? []}
+            kind={deleteTarget?.kind ?? 'variant'}
+            label={deleteTarget?.label ?? ''}
+            open={Boolean(deleteTarget)}
+            onOpenChange={(open) => {
+              if (!open) setDeleteTarget(null);
+            }}
+            onConfirm={() => void handleDeleteConfirm()}
+            isDeleting={deleteVariants.isPending}
+          />
 
-      {addSubGroup !== null ? (
-        <AddSubvariantsDialog
-          productId={productId}
-          groupName={addSubGroup}
-          open={addSubGroup !== null}
-          onOpenChange={(open) => {
-            if (!open) setAddSubGroup(null);
-          }}
-        />
-      ) : null}
-
-      <DeleteVariantDialog
-        productId={productId}
-        variantIds={deleteTarget?.variantIds ?? []}
-        kind={deleteTarget?.kind ?? 'variant'}
-        label={deleteTarget?.label ?? ''}
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        onConfirm={() => void handleDeleteConfirm()}
-        isDeleting={deleteVariants.isPending}
-      />
-
-      {editTarget ? (
-        <EditVariantDialog
-          key={editTarget.id}
-          productId={productId}
-          variant={editTarget}
-          open={Boolean(editTarget)}
-          onOpenChange={(open) => {
-            if (!open) setEditTarget(null);
-          }}
-        />
-      ) : null}
+          {editTarget ? (
+            <EditVariantDialog
+              key={editTarget.id}
+              productId={productId}
+              variant={editTarget}
+              open={Boolean(editTarget)}
+              onOpenChange={(open) => {
+                if (!open) setEditTarget(null);
+              }}
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

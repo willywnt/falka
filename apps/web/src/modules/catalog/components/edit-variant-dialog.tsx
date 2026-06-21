@@ -87,7 +87,7 @@ export function EditVariantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Ubah {variant.variantGroup ? 'subvarian' : 'varian'}</DialogTitle>
+          <DialogTitle>Ubah informasi tambahan</DialogTitle>
           <DialogDescription>{formatVariantLabel(variant)}</DialogDescription>
         </DialogHeader>
 
