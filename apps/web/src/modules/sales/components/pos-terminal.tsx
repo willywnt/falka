@@ -23,7 +23,7 @@ import type { BundleDetail, BundleListItem, BundleResolution } from '@/modules/c
 import { ConnectScannerDialog } from '@/modules/scanner-pairing/components/connect-scanner-dialog';
 
 import { useCreateSaleMutation, useSellableVariantsQuery } from '../hooks/use-sales';
-import { usePosScanner } from '../hooks/use-pos-scanner';
+import { usePosScanner, usePosScanResolver } from '../hooks/use-pos-scanner';
 import { usePosFavoritesStore } from '../store/pos-favorites.store';
 import { computeSaleTotals } from '../utils/sale-totals';
 import { computeQuickTenderValues } from '../utils/pos-tender';
@@ -330,6 +330,19 @@ export function PosTerminal() {
     soundEnabled: soundOn,
   });
 
+  // Desktop HID-wedge: a USB scan gun types a code into the search box and hits
+  // Enter. Reuses the SAME resolver as the phone scanner; needs no socket, so it
+  // works in prod too. After a hit the box is cleared + refocused for the next scan.
+  const resolveScanToCart = usePosScanResolver({
+    onResolved: handleScanned,
+    soundEnabled: soundOn,
+  });
+  async function handleScanSubmit(code: string) {
+    await resolveScanToCart(code);
+    setSearchInput('');
+    searchInputRef.current?.focus();
+  }
+
   function patchVariantLine(variantId: string, patch: Partial<VariantCartLine>) {
     setCart((prev) =>
       prev.map((line) =>
@@ -413,6 +426,7 @@ export function PosTerminal() {
         searchInputRef={searchInputRef}
         searchInput={searchInput}
         onSearchInputChange={setSearchInput}
+        onScanSubmit={(code) => void handleScanSubmit(code)}
         hasSearch={Boolean(debouncedSearch)}
         hasBundles={hasBundles}
         variants={variants}

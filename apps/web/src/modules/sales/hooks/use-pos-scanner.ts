@@ -27,6 +27,55 @@ type UsePosScannerResult = {
   status: PosScannerStatus;
 };
 
+type UsePosScanResolverOptions = {
+  onResolved: (scanned: ScannedSaleItem) => void;
+  soundEnabled: boolean;
+};
+
+/**
+ * Resolve a scanned/typed code (barcode → SKU, case-insensitive) to a sellable
+ * variant or bundle, add it to the cart via `onResolved`, and give audible + toast
+ * feedback. Shared by BOTH input paths: the phone-pairing socket (usePosScanner)
+ * and the desktop HID-wedge (a USB scan gun typing into the till's search box +
+ * Enter) — the latter needs no socket, so it works in prod too. Returns a function
+ * that takes the raw code; a blank/whitespace code is a no-op.
+ */
+export function usePosScanResolver({
+  onResolved,
+  soundEnabled,
+}: UsePosScanResolverOptions): (code: string) => Promise<void> {
+  const resolve = useResolveScanMutation();
+  const soundRef = useRef(soundEnabled);
+  soundRef.current = soundEnabled;
+
+  return async function resolveAndAdd(code: string): Promise<void> {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    try {
+      const scanned = await resolve.mutateAsync(trimmed);
+      if (!scanned) {
+        if (soundRef.current) playScanError();
+        toast.warning('Produk tidak ditemukan', {
+          description: `Kode ${trimmed} gak cocok dengan SKU atau barcode mana pun.`,
+        });
+        return;
+      }
+      onResolved(scanned);
+      if (soundRef.current) playScanSuccess();
+      const description =
+        scanned.kind === 'variant'
+          ? `${scanned.variant.productName} · ${scanned.variant.name}`
+          : scanned.bundle.name;
+      toast.success('Masuk keranjang', { description });
+    } catch (error) {
+      if (soundRef.current) playScanError();
+      toast.error('Scan gagal', {
+        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
+      });
+    }
+  };
+}
+
 /**
  * Bridges the shared scanner-pairing flow into the POS cart: a phone scans a
  * product QR label → the desktop receives the (normalized) code → it resolves to
@@ -45,39 +94,14 @@ export function usePosScanner({
     scannerEnabled && activePairing?.session?.purpose === 'POS' ? activePairing.session : null;
   // Leaving the till (client nav) releases the phone; refresh keeps it.
   useReleasePairingOnNavigate(session);
-  const resolve = useResolveScanMutation();
 
-  const soundRef = useRef(soundEnabled);
-  soundRef.current = soundEnabled;
-
-  // useDesktopScannerSocket stores this in a ref, so a fresh closure each render
-  // (latest onResolved / sound flag) is fine — no need to memoize.
-  async function handleBarcodeScanned(payload: BarcodeScannedServerPayload): Promise<void> {
-    try {
-      const scanned = await resolve.mutateAsync(payload.barcode);
-      if (!scanned) {
-        if (soundRef.current) playScanError();
-        toast.warning('Produk tidak ditemukan', {
-          description: `Kode ${payload.barcode} gak cocok dengan SKU atau barcode mana pun.`,
-        });
-        return;
-      }
-      onResolved(scanned);
-      if (soundRef.current) playScanSuccess();
-      const description =
-        scanned.kind === 'variant'
-          ? `${scanned.variant.productName} · ${scanned.variant.name}`
-          : scanned.bundle.name;
-      toast.success('Masuk keranjang', { description });
-    } catch (error) {
-      if (soundRef.current) playScanError();
-      toast.error('Scan gagal', {
-        description: error instanceof Error ? error.message : 'Terjadi kesalahan',
-      });
-    }
-  }
-
-  useDesktopScannerSocket(session?.id ?? null, handleBarcodeScanned);
+  // The same resolver the desktop HID-wedge uses — one source of truth for
+  // resolve → add-to-cart → sound/toast feedback. useDesktopScannerSocket stores
+  // the handler in a ref, so a fresh closure each render is fine.
+  const resolveAndAdd = usePosScanResolver({ onResolved, soundEnabled });
+  useDesktopScannerSocket(session?.id ?? null, (payload: BarcodeScannedServerPayload) =>
+    resolveAndAdd(payload.barcode),
+  );
 
   // Surface drops (phone closed the app, went idle, or lost network) so the
   // cashier isn't left wondering why scanning stopped.

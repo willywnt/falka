@@ -326,6 +326,7 @@ export function PosProductBrowser({
   searchInputRef,
   searchInput,
   onSearchInputChange,
+  onScanSubmit,
   hasSearch,
   hasBundles,
   variants,
@@ -356,6 +357,8 @@ export function PosProductBrowser({
   searchInputRef: RefObject<HTMLInputElement | null>;
   searchInput: string;
   onSearchInputChange: (value: string) => void;
+  /** Enter in the search box = submit the typed/scanned code (HID-wedge → cart). */
+  onScanSubmit: (code: string) => void;
   hasSearch: boolean;
   hasBundles: boolean;
   variants: SellableVariant[];
@@ -413,7 +416,15 @@ export function PosProductBrowser({
             ref={searchInputRef}
             value={searchInput}
             onChange={(event) => onSearchInputChange(event.target.value)}
-            placeholder="Cari SKU atau nama produk..."
+            onKeyDown={(event) => {
+              // A USB scan gun types the code then sends Enter; resolve it to a
+              // cart line. Manual barcode/SKU entry + Enter works the same way.
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              const code = searchInput.trim();
+              if (code) onScanSubmit(code);
+            }}
+            placeholder="Cari SKU atau nama produk, atau scan..."
             className="md:pr-8"
           />
           <KbdHint label="/" className="absolute top-1/2 right-2 -translate-y-1/2" />
