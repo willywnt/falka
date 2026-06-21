@@ -137,6 +137,45 @@ export class AuthService {
       return toAuthUser({ ...user, membership });
     });
   }
+
+  /** Change the signed-in user's own password after verifying their current one. */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true, deletedAt: true },
+    });
+
+    if (!user || user.deletedAt) {
+      throw AuthError.unauthorized();
+    }
+
+    const isValidPassword = await verifyPassword(user.passwordHash, currentPassword);
+    if (!isValidPassword) {
+      throw AuthError.unauthorized('Password lama salah.');
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  }
+
+  /** Read-only last-login info for the Settings security view (time + IP). */
+  async getSecurityInfo(
+    userId: string,
+  ): Promise<{ lastLoginAt: string | null; lastLoginIp: string | null }> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastLoginAt: true, lastLoginIp: true },
+    });
+
+    return {
+      lastLoginAt: user?.lastLoginAt?.toISOString() ?? null,
+      lastLoginIp: user?.lastLoginIp ?? null,
+    };
+  }
 }
 
 export const authService = new AuthService();

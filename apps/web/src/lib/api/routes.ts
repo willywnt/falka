@@ -18,6 +18,7 @@ export const apiRoutes = {
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
   marketplace: `${API_BASE_PATH}/marketplaces`,
   storage: `${API_BASE_PATH}/storage`,
+  account: `${API_BASE_PATH}/account`,
   org: `${API_BASE_PATH}/org`,
   orgPermissions: `${API_BASE_PATH}/org/permissions`,
   audit: `${API_BASE_PATH}/audit`,

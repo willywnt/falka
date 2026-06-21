@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { logEvents } from '@falka/logger/server';
+import { prisma } from '@falka/db';
+import { logEvents, logger } from '@falka/logger/server';
 import {
   buildIpRateLimitKey,
   buildUserRateLimitKey,
@@ -57,6 +58,17 @@ export async function isSuspiciousLogin(email: string, ip: string): Promise<bool
 
 export function recordSuccessfulLogin(userId: string, ip: string): void {
   logEvents.authSuccess(userId, 'credentials', { ip });
+
+  // Best-effort last-login stamp for the Settings security view — fire-and-forget,
+  // like audit logging: a failure here must never block or fail the login.
+  void prisma.user
+    .update({ where: { id: userId }, data: { lastLoginAt: new Date(), lastLoginIp: ip } })
+    .catch((error: unknown) => {
+      logger.warn('auth.last_login.stamp_failed', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
 }
 
 /** Reserved for future OAuth provider linking and token refresh flows. */
