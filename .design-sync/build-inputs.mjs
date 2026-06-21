@@ -130,6 +130,36 @@ execFileSync(
 );
 console.error('  css: Tailwind v4 → apps/web/.ds-compiled.css');
 
+// ── 3b. classify framework/motion tokens for check_design_system ──
+// claude.ai/design's self-check (check_design_system) reads inline `/* @kind … */`
+// annotations from the compiled CSS to classify custom properties. Tailwind v4's
+// output ships motion/timing theme tokens and a large set of `--tw-*` `@property`
+// plumbing rules that the checker can't classify on its own → "unclassified token"
+// warnings. Mark them all `other` (none are color/spacing/radius/shadow/font design
+// tokens). Annotating the GENERATED output here is the only durable fix: the source
+// `@theme` block carries no such comments and the `--tw-*` rules are emitted by
+// Tailwind, not authored. See .design-sync/NOTES.md ("check_design_system token kinds").
+const compiledCssPath = join(web, '.ds-compiled.css');
+let compiledCss = readFileSync(compiledCssPath, 'utf8');
+const MOTION_TOKENS = [
+  'ease-in-out', 'ease-tide', 'animate-spin', 'animate-ping', 'animate-pulse',
+  'aspect-video', 'default-transition-duration', 'default-transition-timing-function',
+];
+let kindCount = 0;
+for (const token of MOTION_TOKENS) {
+  compiledCss = compiledCss.replace(
+    new RegExp(`^(\\s*--${token}:[^;\\n]*;)(?![^\\n]*@kind)`, 'gm'),
+    (m) => (kindCount++, `${m} /* @kind other */`),
+  );
+}
+// Every `@property --tw-*` rule is internal Tailwind plumbing, not a theme token.
+compiledCss = compiledCss.replace(
+  /^(@property --tw-[A-Za-z0-9-]+\s*\{)(?![^\n]*@kind)/gm,
+  (m) => (kindCount++, `${m} /* @kind other */`),
+);
+writeFileSync(compiledCssPath, compiledCss);
+console.error(`  css: annotated ${kindCount} tokens @kind other (checker classification)`);
+
 // ── 4. emit component .d.ts (real prop contracts for the design agent) ──
 writeFileSync(join(web, 'tsconfig.ds.json'), JSON.stringify({
   extends: './tsconfig.json',

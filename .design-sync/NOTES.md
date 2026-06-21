@@ -43,6 +43,24 @@ Repo-specific gotchas for future syncs. Read this BEFORE re-syncing.
   `useReducedMotion()` → full ring only with reduced-motion) and effect/timer-driven content need it.
   Without the edit, ChannelDonutChart re-flags as a partial-arc `needs-work` on every re-sync.
 
+## check_design_system token kinds (durable fix — build-inputs.mjs §3b)
+
+- `check_design_system` (the claude.ai/design server self-check) reads inline `/* @kind … */`
+  annotations in the compiled `_ds_bundle.css` to classify CSS custom properties. Tailwind v4's
+  output ships motion/timing theme tokens (`--ease-*`, `--animate-*`, `--aspect-video`,
+  `--default-transition-*`) and ~80 `--tw-*` `@property` plumbing rules that the checker can't
+  classify on its own → "unclassified token" warnings.
+- **FIXED durably (2026-06-22)**: `build-inputs.mjs` §3b post-processes the compiled CSS after the
+  Tailwind run, appending `/* @kind other */` to the 8 motion/timing theme tokens and to **every**
+  `@property --tw-*` rule (a safe superset of the 11 the checker flags — none are color/spacing/
+  radius/shadow/font tokens). The build prints `css: annotated N tokens @kind other`.
+- It MUST live on the generated output (not source): the source `@theme` block carries no such
+  comments and the `--tw-*` rules are emitted by Tailwind. `_adherence.oxlintrc.json` (server-
+  regenerated) maps these too, but the checker reads inline CSS `@kind`, **not** that JSON map.
+- Isu 2 (the ~77 `--tw-*` set inside component-style/utility selectors) needs **no** change —
+  those are framework plumbing under selectors, not theme tokens; classifying the `@property`
+  rules by name covers them. Don't move `--tw-*` into `:root` (it breaks Tailwind utilities).
+
 ## Per-component facts (matched from source — trust these over guesses)
 
 - **Select** is a styled NATIVE `<select>`, not a Radix overlay — NO `defaultOpen`. Render closed with
