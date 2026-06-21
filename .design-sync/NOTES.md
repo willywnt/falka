@@ -52,14 +52,21 @@ Repo-specific gotchas for future syncs. Read this BEFORE re-syncing.
   classify on its own → "unclassified token" warnings.
 - **FIXED durably (2026-06-22)**: `build-inputs.mjs` §3b post-processes the compiled CSS after the
   Tailwind run, appending `/* @kind other */` to the 8 motion/timing theme tokens and to **every**
-  `@property --tw-*` rule (a safe superset of the 11 the checker flags — none are color/spacing/
-  radius/shadow/font tokens). The build prints `css: annotated N tokens @kind other`.
+  `@property --tw-*` rule (a safe superset of the ~11 the checker flags — none are color/spacing/
+  radius/shadow/font tokens). The build prints `css: annotated N tokens @kind other` (≈90).
+- **PLACEMENT IS LOAD-BEARING** (learned the hard way on the 2nd check run): the checker only honors
+  `@kind` when it sits ON A CUSTOM-PROPERTY DECLARATION, right after its `;`. For a `@theme`/`:root`
+  token that's trivially the declaration line (`--ease-tide: …; /* @kind other */`). For a `@property`
+  rule it must go on the **last inner declaration** (`initial-value: 0; /* @kind other */`), NOT on
+  the `@property --tw-x { /* @kind */` SELECTOR line — a selector-line annotation is **silently
+  ignored**. The §3b regex appends after the final `;` before each block's closing `}`.
 - It MUST live on the generated output (not source): the source `@theme` block carries no such
   comments and the `--tw-*` rules are emitted by Tailwind. `_adherence.oxlintrc.json` (server-
-  regenerated) maps these too, but the checker reads inline CSS `@kind`, **not** that JSON map.
-- Isu 2 (the ~77 `--tw-*` set inside component-style/utility selectors) needs **no** change —
-  those are framework plumbing under selectors, not theme tokens; classifying the `@property`
-  rules by name covers them. Don't move `--tw-*` into `:root` (it breaks Tailwind utilities).
+  regenerated) carries an `x-omelette.tokens`/`tokenKinds` map, but the checker reads inline CSS
+  `@kind`, **not** that JSON — and there is **no converter knob** to exclude `--tw-*` from token
+  scanning (the scan is server-side), so correct inline annotation is the only available fix.
+- Isu 2 (the `--tw-*` set inside component-style/utility selectors) needs **no** change — those
+  aren't scanned as theme tokens (no warning). Don't move `--tw-*` into `:root` (breaks Tailwind).
 
 ## Per-component facts (matched from source — trust these over guesses)
 

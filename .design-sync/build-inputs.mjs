@@ -131,14 +131,19 @@ execFileSync(
 console.error('  css: Tailwind v4 → apps/web/.ds-compiled.css');
 
 // ── 3b. classify framework/motion tokens for check_design_system ──
-// claude.ai/design's self-check (check_design_system) reads inline `/* @kind … */`
-// annotations from the compiled CSS to classify custom properties. Tailwind v4's
-// output ships motion/timing theme tokens and a large set of `--tw-*` `@property`
-// plumbing rules that the checker can't classify on its own → "unclassified token"
-// warnings. Mark them all `other` (none are color/spacing/radius/shadow/font design
-// tokens). Annotating the GENERATED output here is the only durable fix: the source
-// `@theme` block carries no such comments and the `--tw-*` rules are emitted by
-// Tailwind, not authored. See .design-sync/NOTES.md ("check_design_system token kinds").
+// claude.ai/design's self-check (check_design_system) classifies a CSS custom
+// property from an inline `/* @kind … */` annotation that sits ON THE PROPERTY
+// DECLARATION, right after its `;`. (An annotation on the `@property … {` SELECTOR
+// line is IGNORED — verified against the live checker.) Tailwind v4's output ships
+// motion/timing theme tokens and a large set of `--tw-*` `@property` plumbing rules
+// it can't classify on its own → "unclassified token" warnings. Mark them all `other`
+// (none are color/spacing/radius/shadow/font design tokens). Annotating the GENERATED
+// output here is the only fix the converter can make: token scanning is server-side
+// (no converter knob to exclude `--tw-*`), the source `@theme` block carries no such
+// comments, and the `--tw-*` rules are emitted by Tailwind. The `--tw-*` declarations
+// set INSIDE utility-class selectors are not scanned as theme tokens (no warning), so
+// only the `@property` registrations need annotating.
+// See .design-sync/NOTES.md ("check_design_system token kinds").
 const compiledCssPath = join(web, '.ds-compiled.css');
 let compiledCss = readFileSync(compiledCssPath, 'utf8');
 const MOTION_TOKENS = [
@@ -152,10 +157,12 @@ for (const token of MOTION_TOKENS) {
     (m) => (kindCount++, `${m} /* @kind other */`),
   );
 }
-// Every `@property --tw-*` rule is internal Tailwind plumbing, not a theme token.
+// `--tw-*` `@property` rules are internal Tailwind plumbing, not theme tokens.
+// Annotate the LAST declaration inside each block (right after its `;`), NOT the
+// `@property … {` selector line — greedy `[^}]*;` ends at the final `;` before `}`.
 compiledCss = compiledCss.replace(
-  /^(@property --tw-[A-Za-z0-9-]+\s*\{)(?![^\n]*@kind)/gm,
-  (m) => (kindCount++, `${m} /* @kind other */`),
+  /(@property --tw-[A-Za-z0-9-]+\s*\{[^}]*;)(\s*\})/g,
+  (_m, body, close) => (kindCount++, `${body} /* @kind other */${close}`),
 );
 writeFileSync(compiledCssPath, compiledCss);
 console.error(`  css: annotated ${kindCount} tokens @kind other (checker classification)`);
