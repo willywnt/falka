@@ -961,6 +961,7 @@ model SaleRefundItem {
 }
 
 enum PurchaseOrderStatus {
+  DRAFT // saved but not placed — no incoming stock reserved yet; freely editable
   ORDERED // placed with the supplier — units are incoming
   PARTIALLY_RECEIVED
   RECEIVED
