@@ -139,16 +139,21 @@ Org-scoped (`organizationId`), internal-first. Roadmap + locked decisions:
   browser beep. Endpoints: `GET/POST /api/v1/sales`, `/sales/:id`, `/sales/variants?q=`,
   `/sales/variants/resolve?code=`.
 - **purchasing (restock / POs)** — `PurchaseOrder` + `PurchaseOrderItem` (snapshot sku/name + `quantity`/
-  `receivedQuantity`/`unitCost`), `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED,
+  `receivedQuantity`/`unitCost`), `PurchaseOrderStatus` DRAFT→ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED,
   code `PO00001` per-user. **Lights up the `incomingStock` bucket** (the last empty one). Two inventory
   tx-methods (no over-credit): `adjustIncomingTx(tx,{variantId,delta})` — `incomingStock += delta`
   clamped at 0, **NO ledger row** (forecast bucket, available unchanged); `applyPurchaseReceiveTx` —
-  `incoming−` (clamped) + `available+`, ledger `RESTOCK` / source `PURCHASE` / ref = PO id. Lifecycle:
-  **create** (already ORDERED) → `adjustIncomingTx(+qty)` per line + `totalCost`; **receive** (only
-  ORDERED/PARTIALLY_RECEIVED, per-line qty clamped to outstanding) → `receivedQuantity +=` +
-  `applyPurchaseReceiveTx`, recompute status (all received → RECEIVED + `receivedAt`, else
-  PARTIALLY_RECEIVED), propagate received variants to **all** channels; **cancel** (not-yet-RECEIVED) →
-  `adjustIncomingTx(−outstanding)` per line, status CANCELLED (already-received units stay in available).
+  `incoming−` (clamped) + `available+`, ledger `RESTOCK` / source `PURCHASE` / ref = PO id (and folds the
+  received cost into the variant's **moving-average HPP** via `computeMovingAverageCost`). Lifecycle:
+  **create** (`status` DRAFT or ORDERED) — ORDERED → `adjustIncomingTx(+qty)` per line + `totalCost`; a
+  **DRAFT reserves nothing** and is freely **edited** (`updatePurchaseOrder` — replaces supplier/note/lines
+  wholesale, bundle lines collapse to component variant rows), **placed** (`placePurchaseOrder` DRAFT→ORDERED,
+  `adjustIncomingTx(+qty)`, stamps `orderedAt`), or **discarded** (`discardDraftPurchaseOrder`, hard delete);
+  edit/place/discard are **DRAFT-only** (server-guarded). **receive** (only ORDERED/PARTIALLY_RECEIVED,
+  per-line qty clamped to outstanding) → `receivedQuantity +=` + `applyPurchaseReceiveTx`, recompute status
+  (all received → RECEIVED + `receivedAt`, else PARTIALLY_RECEIVED), propagate received variants to **all**
+  channels; **cancel** (ORDERED/PARTIALLY) → `adjustIncomingTx(−outstanding)` per line, status CANCELLED
+  (already-received units stay in available).
   A PO can link a saved **`Supplier`** (`PurchaseOrder.supplierId`, FK SetNull) via a New-PO typeahead;
   `supplierName` is kept as a denormalized snapshot (org-scoped, soft-delete `Supplier` model + CRUD + a
   "Pemasok" page under Stok; `ProductVariant.supplierId` feeds the reorder fallback; variant `cost` stays

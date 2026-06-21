@@ -344,13 +344,18 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
     favorites** (`store/pos-favorites.store.ts`, ids-only UI state, capped 12) render a "Favorit"
     quick-add strip while search is empty; desktop shortcuts `/` (focus search) and `F8` (jump to pay).
 - **Purchasing / restock** (`purchasing` module — `PurchaseOrder`/`PurchaseOrderItem`,
-  `PurchaseOrderStatus` ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED): lights up the **`incomingStock`**
-  bucket. Create a PO → `adjustIncomingTx(+qty)` per line (forecast bucket, **no ledger row**, available
-  unchanged). **Receive** (partial per-line, clamped to outstanding) → `applyPurchaseReceiveTx`
-  (`incoming−`, `available+`, ledger `RESTOCK` / source `PURCHASE`), recompute status, propagate to all
-  channels. **Cancel** (pre-receive) → `adjustIncomingTx(−outstanding)`. A PO can link a saved
+  `PurchaseOrderStatus` DRAFT→ORDERED→PARTIALLY_RECEIVED→RECEIVED/CANCELLED): lights up the **`incomingStock`**
+  bucket. A PO can be saved as a **DRAFT** first (`createPurchaseOrder` with `status:'DRAFT'`) — it reserves
+  **NO** incoming, is freely **edited** (`updatePurchaseOrder`, replaces supplier/note/lines wholesale),
+  then **placed** (`placePurchaseOrder` DRAFT→ORDERED, stamps `orderedAt`) or permanently **discarded**
+  (`discardDraftPurchaseOrder`, hard delete) — all three are **DRAFT-only**. Placing (or creating ORDERED
+  directly) → `adjustIncomingTx(+qty)` per line (forecast bucket, **no ledger row**, available unchanged).
+  **Receive** (partial per-line, clamped to outstanding) → `applyPurchaseReceiveTx` (`incoming−`,
+  `available+`, ledger `RESTOCK` / source `PURCHASE`), recompute status, propagate to all channels.
+  **Cancel** (pre-receive, ORDERED/PARTIALLY) → `adjustIncomingTx(−outstanding)`. A PO can link a saved
   **`Supplier`** (`PurchaseOrder.supplierId`, FK SetNull) via a typeahead on New-PO; `supplierName` is
-  kept as a denormalized snapshot (free-text still allowed). Variant `cost` stays manual. Code
+  kept as a denormalized snapshot (free-text still allowed). Variant `cost` **auto-updates to the
+  moving-average HPP on receive** (`computeMovingAverageCost`, inventory service). Code
   `PO00001` per-user. The reorder report's
   **"Create PO"** prefills the form from URGENT/SOON suggestions (its `suggestedReorderQty` already nets
   `incoming`, so a PO immediately corrects the suggestion).
