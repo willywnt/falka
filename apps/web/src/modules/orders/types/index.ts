@@ -41,10 +41,28 @@ export type OrderListItem = {
   lastPulledAt: string | null;
 };
 
+/** Marketplace-specific order metadata pulled best-effort from the raw payload (see utils). */
+export type OrderMarketplaceMeta = {
+  /** Human-facing order number (distinct from externalOrderId). */
+  orderNumber: string | null;
+  paymentMethod: string | null;
+  shippingFee: number | null;
+  /** Ship-by SLA the channel promised the buyer. */
+  promisedShipTime: string | null;
+  /** Logistics provider / courier for the shipment. */
+  courier: string | null;
+  warehouseCode: string | null;
+  returnStatus: string | null;
+  /** A buyer/system cancellation is awaiting the seller's action — don't ship. */
+  cancelPending: boolean;
+};
+
 export type OrderDetail = OrderListItem & {
   items: OrderItemDetail[];
   /** Free-text reason captured when the order was cancelled manually (null otherwise). */
   cancelReason: string | null;
+  /** Channel-specific metadata (SLA, courier, payment, …) surfaced per status. */
+  marketplace: OrderMarketplaceMeta;
 };
 
 /** Result of pulling from several stores at once. */

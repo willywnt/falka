@@ -148,6 +148,9 @@ export function OrderPeek({
                 <span className="num">{data.externalOrderId}</span>
                 <OrderStatusBadge status={data.status} />
                 {data.fulfilledAt ? <StatusBadge tone="info">Fulfillment</StatusBadge> : null}
+                {data.marketplace.cancelPending ? (
+                  <StatusBadge tone="warn">Batal diminta</StatusBadge>
+                ) : null}
               </>
             ) : (
               'Ringkasan pesanan'
@@ -188,6 +191,21 @@ export function OrderPeek({
               <MetaRow label="No. resi">
                 <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </MetaRow>
+              {data.marketplace.courier ? (
+                <MetaRow label="Kurir">
+                  <span className="truncate text-right font-medium">
+                    {data.marketplace.courier}
+                  </span>
+                </MetaRow>
+              ) : null}
+              {(data.status === 'PENDING' || data.status === 'PAID') &&
+              data.marketplace.promisedShipTime ? (
+                <MetaRow label="Batas kirim">
+                  <span className="truncate text-right font-medium">
+                    {data.marketplace.promisedShipTime}
+                  </span>
+                </MetaRow>
+              ) : null}
             </section>
 
             <section className="border-t pt-4">

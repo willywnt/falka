@@ -18,6 +18,7 @@ import { returnsServerService } from '@/modules/returns/services/returns-server.
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
+import { extractOrderMarketplaceMeta } from '../utils/marketplace-meta';
 import type { ListOrdersQuery } from '../validators/list-orders';
 import type { MultiPullOrdersResult, OrderDetail, OrderItemDetail, OrderListItem } from '../types';
 
@@ -47,6 +48,8 @@ export class OrdersServerService {
     const where: Prisma.OrderWhereInput = {
       organizationId,
       ...(query.status ? { status: query.status } : {}),
+      ...(query.provider ? { provider: query.provider } : {}),
+      ...(query.connectionId ? { marketplaceConnectionId: query.connectionId } : {}),
       ...(query.search
         ? {
             OR: [
@@ -65,7 +68,9 @@ export class OrdersServerService {
           connection: { select: { shopName: true, lastOrdersPulledAt: true } },
           items: { select: { productVariantId: true } },
         },
-        orderBy: { placedAt: 'desc' },
+        // Most-recently-changed first: a re-pull bumps updatedAt, so orders whose status just
+        // moved (newly paid/shipped/cancelled) surface at the top of the ops list.
+        orderBy: { updatedAt: 'desc' },
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
@@ -155,6 +160,7 @@ export class OrdersServerService {
       placedAt: order.placedAt.toISOString(),
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
       cancelReason: order.cancelReason,
+      marketplace: extractOrderMarketplaceMeta(order.rawPayload),
       items,
     };
   }

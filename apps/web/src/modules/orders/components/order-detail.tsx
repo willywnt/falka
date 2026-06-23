@@ -33,6 +33,17 @@ import type { OrderItemDetail } from '../types';
 import { OrderActionsMenu } from './order-actions-menu';
 import { OrderStatusBadge } from './order-status-badge';
 
+/** One label/value line in the "Pesanan" card — renders nothing when the value is absent. */
+function OrderMetaLine({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="truncate text-right font-medium">{value}</span>
+    </div>
+  );
+}
+
 export function OrderDetail({ orderId }: { orderId: string }) {
   const router = useRouter();
   const { data, isLoading, error } = useOrderQuery(orderId);
@@ -273,6 +284,12 @@ export function OrderDetail({ orderId }: { orderId: string }) {
         </div>
 
         <aside className="space-y-4">
+          {data.marketplace.cancelPending && data.status === 'PAID' ? (
+            <div className="border-highlight/40 bg-highlight/15 text-status-warn rounded-lg border p-3 text-sm">
+              Pembeli/sistem minta pembatalan — jangan dikirim dulu sampai statusnya jelas.
+            </div>
+          ) : null}
+
           {data.inventoryApplied ? (
             <div className="border-status-ok/30 bg-status-ok/10 text-status-ok rounded-lg border p-3 text-sm">
               Stok sudah diperbarui untuk pesanan ini.
@@ -297,6 +314,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                 <span className="text-muted-foreground">Toko</span>
                 <span className="truncate text-right font-medium">{data.shopName}</span>
               </div>
+              <OrderMetaLine label="No. pesanan" value={data.marketplace.orderNumber} />
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pembeli</span>
                 <span className="truncate text-right font-medium">{data.buyerName ?? '—'}</span>
@@ -317,6 +335,21 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                 <span className="text-muted-foreground">No. resi</span>
                 <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
               </div>
+              <OrderMetaLine label="Metode bayar" value={data.marketplace.paymentMethod} />
+              <OrderMetaLine
+                label="Ongkir"
+                value={
+                  data.marketplace.shippingFee !== null
+                    ? formatCurrency(data.marketplace.shippingFee)
+                    : null
+                }
+              />
+              {data.status === 'PENDING' || data.status === 'PAID' ? (
+                <OrderMetaLine label="Batas kirim" value={data.marketplace.promisedShipTime} />
+              ) : null}
+              <OrderMetaLine label="Kurir" value={data.marketplace.courier} />
+              <OrderMetaLine label="Gudang" value={data.marketplace.warehouseCode} />
+              <OrderMetaLine label="Status retur" value={data.marketplace.returnStatus} />
               {data.status === 'CANCELLED' && data.cancelReason ? (
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-muted-foreground shrink-0">Alasan batal</span>

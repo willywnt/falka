@@ -23,14 +23,20 @@ export type OrdersListFilters = {
   search?: string;
   /** OrderStatus value; empty = all. */
   status?: string;
+  /** MarketplaceProvider value; empty = all marketplaces. */
+  provider?: string;
+  /** A specific store (connection) id; empty = all stores. */
+  connectionId?: string;
 };
 
 export function useOrdersQuery(page: number, pageSize: number, filters: OrdersListFilters = {}) {
   const search = filters.search?.trim() ?? '';
   const status = filters.status ?? '';
+  const provider = filters.provider ?? '';
+  const connectionId = filters.connectionId ?? '';
 
   return useQuery({
-    queryKey: orderKeys.list(page, pageSize, search, status),
+    queryKey: orderKeys.list(page, pageSize, search, status, provider, connectionId),
     queryFn: async () => {
       const result = await apiFetch<OrdersPage>(apiRoutes.orders, {
         params: {
@@ -38,6 +44,8 @@ export function useOrdersQuery(page: number, pageSize: number, filters: OrdersLi
           pageSize,
           ...(search ? { search } : {}),
           ...(status ? { status } : {}),
+          ...(provider ? { provider } : {}),
+          ...(connectionId ? { connectionId } : {}),
         },
       });
 

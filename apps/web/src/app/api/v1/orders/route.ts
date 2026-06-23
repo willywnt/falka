@@ -13,6 +13,8 @@ export const GET = withApiRoute(
       pageSize: searchParams.get('pageSize') ?? undefined,
       search: searchParams.get('search') ?? undefined,
       status: searchParams.get('status') ?? undefined,
+      provider: searchParams.get('provider') ?? undefined,
+      connectionId: searchParams.get('connectionId') ?? undefined,
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 

@@ -6,6 +6,7 @@ import { DownloadCloud, SearchX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -25,6 +26,7 @@ import { usePagination } from '@/hooks/use-pagination';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { useMarketplaceConnectionsQuery } from '@/modules/marketplace/hooks/use-marketplace-connections';
 
 import { useOrdersQuery } from '../hooks/use-orders';
 import type { OrderListItem } from '../types';
@@ -42,7 +44,13 @@ const STATUS_FILTERS = [
   { value: 'CANCELLED', label: 'Dibatalkan' },
 ] as const;
 
-const URL_DEFAULTS = { search: '', status: '', page: '1' };
+const URL_DEFAULTS = { search: '', status: '', provider: '', connectionId: '', page: '1' };
+
+const PROVIDER_LABELS: Record<string, string> = {
+  LAZADA: 'Lazada',
+  SHOPEE: 'Shopee',
+  TOKOPEDIA: 'Tokopedia',
+};
 
 /**
  * The order's INTERNAL stock state (not a marketplace sync) — whether stock was reserved,
@@ -124,12 +132,25 @@ function OrdersDashboardContent() {
   const { data, isLoading, isFetching, error, refetch } = useOrdersQuery(page, pageSize, {
     search: filters.search,
     status: filters.status,
+    provider: filters.provider,
+    connectionId: filters.connectionId,
   });
+
+  // Connected stores drive the marketplace + store dropdowns; only providers the org
+  // actually has are offered, and the store list narrows to the chosen marketplace.
+  const { data: connections } = useMarketplaceConnectionsQuery();
+  const stores = connections ?? [];
+  const providerOptions = [...new Set(stores.map((store) => store.provider))];
+  const storeOptions = filters.provider
+    ? stores.filter((store) => store.provider === filters.provider)
+    : stores;
 
   const orders = data?.items ?? [];
   const total = data?.meta.total ?? 0;
   const isEmpty = !isLoading && total === 0;
-  const isFiltered = Boolean(filters.search || filters.status);
+  const isFiltered = Boolean(
+    filters.search || filters.status || filters.provider || filters.connectionId,
+  );
 
   return (
     <div className="space-y-6">
@@ -159,6 +180,42 @@ function OrdersDashboardContent() {
           </Button>
         ))}
       </div>
+
+      {/* Marketplace + store dropdowns — only shown once the org has a connected store. */}
+      {providerOptions.length > 0 ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Select
+            value={filters.provider}
+            aria-label="Filter marketplace"
+            className="sm:max-w-[180px]"
+            // Switching marketplace clears a store from a different one (would AND to empty).
+            onChange={(event) =>
+              setFilters({ provider: event.target.value, connectionId: '', page: '1' })
+            }
+          >
+            <option value="">Semua marketplace</option>
+            {providerOptions.map((provider) => (
+              <option key={provider} value={provider}>
+                {PROVIDER_LABELS[provider] ?? provider}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            value={filters.connectionId}
+            aria-label="Filter toko"
+            className="sm:max-w-[220px]"
+            onChange={(event) => setFilters({ connectionId: event.target.value, page: '1' })}
+          >
+            <option value="">Semua toko</option>
+            {storeOptions.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.shopName}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
 
       {isLoading ? (
         <OrdersTableSkeleton />
@@ -198,7 +255,7 @@ function OrdersDashboardContent() {
                   <TableHead>Status</TableHead>
                   <TableHead>Pembeli</TableHead>
                   <TableHead className="text-right">Item</TableHead>
-                  <TableHead>Stok</TableHead>
+                  <TableHead>Status stok</TableHead>
                   <TableHead>Dibuat</TableHead>
                   <TableHead>Terakhir ditarik</TableHead>
                 </TableRow>
