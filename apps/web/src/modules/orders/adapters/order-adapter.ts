@@ -1,4 +1,7 @@
+import { getServerEnv } from '@falka/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
+
+import { LazadaOrderAdapter } from './lazada-order-adapter';
 
 export type NormalizedOrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
 
@@ -25,7 +28,14 @@ export type NormalizedOrder = {
 
 export interface MarketplaceOrderAdapter {
   readonly provider: MarketplaceProvider;
-  fetchOrders(params: { shopId: string; accessToken: string }): Promise<NormalizedOrder[]>;
+  fetchOrders(params: {
+    shopId: string;
+    /** TikTok Shop shop_cipher (Tokopedia channel); null for providers that don't use it. */
+    shopCipher: string | null;
+    accessToken: string;
+    /** Incremental watermark — pull orders changed since this instant (the store's last pull). */
+    since?: Date;
+  }): Promise<NormalizedOrder[]>;
 }
 
 function stubItem(
@@ -144,11 +154,24 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
 
 const adapters = new Map<MarketplaceProvider, MarketplaceOrderAdapter>();
 
+/** Real adapter when the provider is configured via env; the stub otherwise. */
+function createOrderAdapter(provider: MarketplaceProvider): MarketplaceOrderAdapter {
+  const env = getServerEnv();
+
+  if (provider === 'LAZADA' && env.LAZADA_APP_KEY && env.LAZADA_APP_SECRET) {
+    return new LazadaOrderAdapter();
+  }
+
+  // Shopee + Tokopedia order adapters are not built yet — they fall back to the stub
+  // timeline (their stock/listing adapters are real, but order pull stays simulated).
+  return new StubMarketplaceOrderAdapter(provider);
+}
+
 export function getMarketplaceOrderAdapter(provider: MarketplaceProvider): MarketplaceOrderAdapter {
   const existing = adapters.get(provider);
   if (existing) return existing;
 
-  const adapter = new StubMarketplaceOrderAdapter(provider);
+  const adapter = createOrderAdapter(provider);
   adapters.set(provider, adapter);
   return adapter;
 }

@@ -11,6 +11,7 @@ import type { MarketplaceConnection, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
+import { marketplaceEncryptionService } from '@/modules/marketplace/services/encryption.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
 import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { returnsServerService } from '@/modules/returns/services/returns-server.service';
@@ -30,6 +31,12 @@ function isCoolingDown(lastPulledAt: Date | null): boolean {
 /** Stable map key for a marketplace listing (external product + variant). */
 function listingKey(externalProductId: string, externalVariantId: string): string {
   return JSON.stringify([externalProductId, externalVariantId]);
+}
+
+/** Normalize a SKU for the case-insensitive seller-SKU fallback (exact match only, never fuzzy). */
+function normalizeSkuKey(sku: string | null): string | null {
+  const trimmed = sku?.trim().toUpperCase();
+  return trimmed ? trimmed : null;
 }
 
 export class OrdersServerService {
@@ -481,41 +488,73 @@ export class OrdersServerService {
   }
 
   /**
-   * Resolve the mapped internal variant id for every order line in ONE query,
-   * keyed by listingKey(externalProductId, externalVariantId). Unmapped or unknown
-   * listings are simply absent from the map (callers default to null). Replaces an
-   * N×M per-item findUnique across the whole pull.
+   * Resolve the mapped internal variant id for every order line in ONE pair of queries,
+   * keyed two ways: `byListing` (listingKey(externalProductId, externalVariantId), the
+   * primary join) and `bySku` (normalized seller SKU → variant, a fallback for providers
+   * like Lazada whose order lines don't carry the listing's external variant id). Unmapped
+   * or unknown listings are simply absent (callers default to null). Replaces an N×M
+   * per-item findUnique across the whole pull.
    */
   private async resolveOrderItemVariantIds(
     connectionId: string,
     orders: ReadonlyArray<{
-      items: ReadonlyArray<{ externalProductId: string; externalVariantId: string }>;
+      items: ReadonlyArray<{
+        externalProductId: string;
+        externalVariantId: string;
+        externalSku: string | null;
+      }>;
     }>,
-  ): Promise<Map<string, string>> {
+  ): Promise<{ byListing: Map<string, string>; bySku: Map<string, string> }> {
+    const byListing = new Map<string, string>();
+    const bySku = new Map<string, string>();
+
     const pairs = orders.flatMap((order) =>
       order.items.map((item) => ({
         externalProductId: item.externalProductId,
         externalVariantId: item.externalVariantId,
       })),
     );
-    const byListing = new Map<string, string>();
-    if (pairs.length === 0) return byListing;
 
-    const listings = await prisma.marketplaceProduct.findMany({
-      where: { marketplaceConnectionId: connectionId, OR: pairs },
-      select: {
-        externalProductId: true,
-        externalVariantId: true,
-        mapping: { select: { productVariantId: true } },
-      },
-    });
-    for (const listing of listings) {
-      const variantId = listing.mapping?.productVariantId;
-      if (variantId) {
-        byListing.set(listingKey(listing.externalProductId, listing.externalVariantId), variantId);
+    if (pairs.length > 0) {
+      const listings = await prisma.marketplaceProduct.findMany({
+        where: { marketplaceConnectionId: connectionId, OR: pairs },
+        select: {
+          externalProductId: true,
+          externalVariantId: true,
+          mapping: { select: { productVariantId: true } },
+        },
+      });
+      for (const listing of listings) {
+        const variantId = listing.mapping?.productVariantId;
+        if (variantId) {
+          byListing.set(
+            listingKey(listing.externalProductId, listing.externalVariantId),
+            variantId,
+          );
+        }
       }
     }
-    return byListing;
+
+    // Fallback: map the connection's mapped listings by normalized externalSku, so an order
+    // line that didn't match on (product, variant) ids can still resolve by its seller SKU.
+    const hasSku = orders.some((order) => order.items.some((item) => item.externalSku));
+    if (hasSku) {
+      const mapped = await prisma.marketplaceProduct.findMany({
+        where: {
+          marketplaceConnectionId: connectionId,
+          externalSku: { not: null },
+          mapping: { isNot: null },
+        },
+        select: { externalSku: true, mapping: { select: { productVariantId: true } } },
+      });
+      for (const listing of mapped) {
+        const key = normalizeSkuKey(listing.externalSku);
+        const variantId = listing.mapping?.productVariantId;
+        if (key && variantId && !bySku.has(key)) bySku.set(key, variantId);
+      }
+    }
+
+    return { byListing, bySku };
   }
 
   private async pullOneConnection(
@@ -530,7 +569,15 @@ export class OrdersServerService {
     affected: Set<string>;
   }> {
     const adapter = getMarketplaceOrderAdapter(connection.provider);
-    const orders = await adapter.fetchOrders({ shopId: connection.shopId, accessToken: '' });
+    const orders = await adapter.fetchOrders({
+      shopId: connection.shopId,
+      shopCipher: connection.externalShopCipher,
+      // Stub adapters ignore these; a real adapter decrypts the connection token and pulls the
+      // window since this store's last pull (idempotent upserts make the overlap safe).
+      accessToken:
+        marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '',
+      since: connection.lastOrdersPulledAt ?? undefined,
+    });
 
     let pulled = 0;
     let applied = 0;
@@ -538,17 +585,20 @@ export class OrdersServerService {
     let reverted = 0;
     const affectedVariantIds = new Set<string>();
 
-    // Resolve every line's mapped variant in ONE query for the whole pull, then
+    // Resolve every line's mapped variant in ONE pair of queries for the whole pull, then
     // look each up below — was an N×M per-item findUnique (N orders × M items).
-    const variantIdByListing = await this.resolveOrderItemVariantIds(connection.id, orders);
+    const { byListing, bySku } = await this.resolveOrderItemVariantIds(connection.id, orders);
 
     for (const order of orders) {
-      const resolvedItems = order.items.map((item) => ({
-        ...item,
-        productVariantId:
-          variantIdByListing.get(listingKey(item.externalProductId, item.externalVariantId)) ??
-          null,
-      }));
+      const resolvedItems = order.items.map((item) => {
+        const skuKey = normalizeSkuKey(item.externalSku);
+        return {
+          ...item,
+          productVariantId:
+            byListing.get(listingKey(item.externalProductId, item.externalVariantId)) ??
+            (skuKey ? (bySku.get(skuKey) ?? null) : null),
+        };
+      });
 
       const saved = await prisma.$transaction(async (tx) => {
         const upserted = await tx.order.upsert({
