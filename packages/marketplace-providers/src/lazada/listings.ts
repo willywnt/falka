@@ -1,4 +1,5 @@
 import { isLazadaSuccess } from './client.js';
+import { isTransientLazadaError, sleep } from './throttle.js';
 import type { LazadaClient } from './types.js';
 
 const PRODUCTS_GET_PATH = '/products/get';
@@ -34,27 +35,6 @@ function buildVariantName(saleProp: Record<string, string | number> | undefined)
     .map(([, value]) => String(value).trim())
     .filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : null;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Lazada's flow-control / "system busy" responses are transient — the same call
- * usually succeeds after a short wait. Seen while paging a large catalog: E1002
- * ("third-party service sentinel") and E506 ("Get product failed"), both intermittent
- * backend throttles rather than bad input.
- */
-function isTransientLazadaError(code: string, message: string | undefined): boolean {
-  return (
-    code === '1002' ||
-    code === '506' ||
-    code === 'SellerCallLimit' ||
-    /sentinel|system\s*busy|flow\s*control|try\s*again|get product failed|access frequency|frequency exceeds/i.test(
-      message ?? '',
-    )
-  );
 }
 
 type LazadaWarehouseInventory = {
