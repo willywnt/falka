@@ -28,7 +28,12 @@ export type OrderListItem = {
   currency: string | null;
   itemCount: number;
   unresolvedCount: number;
+  /** Stock was reserved for this order (available−, reserved+) — `inventoryAppliedAt` set. */
   inventoryApplied: boolean;
+  /** The reservation was consumed at ship time (reserved−) — `inventoryShippedAt` set. */
+  inventoryShipped: boolean;
+  /** The reservation was released back to available on a pre-ship cancel — `inventoryRevertedAt` set. */
+  inventoryReverted: boolean;
   /** When a packing video for this order's resi completed (ISO), if ever. */
   fulfilledAt: string | null;
   placedAt: string;

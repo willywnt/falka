@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { DownloadCloud, SearchX } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,11 +44,17 @@ const STATUS_FILTERS = [
 
 const URL_DEFAULTS = { search: '', status: '', page: '1' };
 
-/** Stock-sync state — shared by the sm+ table cell and the <sm card line. */
-function StockSyncState({ order, placeholder }: { order: OrderListItem; placeholder?: boolean }) {
-  if (order.inventoryApplied) return <Badge variant="secondary">Sudah sinkron</Badge>;
-  if (order.status === 'PAID')
-    return <span className="text-muted-foreground text-xs">belum sinkron</span>;
+/**
+ * The order's INTERNAL stock state (not a marketplace sync) — whether stock was reserved,
+ * consumed at ship, or released on cancel. Shared by the sm+ table cell and the <sm card line.
+ */
+function OrderStockState({ order, placeholder }: { order: OrderListItem; placeholder?: boolean }) {
+  if (order.inventoryReverted)
+    return <span className="text-muted-foreground text-xs">Dilepas</span>;
+  if (order.inventoryShipped) return <StatusBadge tone="info">Terpotong</StatusBadge>;
+  if (order.inventoryApplied) return <StatusBadge tone="ok">Direservasi</StatusBadge>;
+  // Paid but nothing reserved yet → the actionable case (usually unmapped items).
+  if (order.status === 'PAID') return <StatusBadge tone="warn">Belum direservasi</StatusBadge>;
   return placeholder ? <span className="text-muted-foreground text-xs">—</span> : null;
 }
 
@@ -235,7 +240,7 @@ function OrdersDashboardContent() {
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      <StockSyncState order={order} placeholder />
+                      <OrderStockState order={order} placeholder />
                     </TableCell>
                     <TableCell className="whitespace-nowrap" suppressHydrationWarning>
                       {formatDateTime(order.placedAt)}
@@ -293,7 +298,7 @@ function OrdersDashboardContent() {
                       <span className="num">{order.unresolvedCount}</span> belum dikaitkan
                     </StatusBadge>
                   ) : null}
-                  <StockSyncState order={order} />
+                  <OrderStockState order={order} />
                 </div>
 
                 <p className="text-muted-foreground text-xs">
