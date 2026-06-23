@@ -42,13 +42,27 @@ function readNumber(value: unknown): number | null {
   return parsed === null ? null : parsed;
 }
 
+/**
+ * Lazada order items omit a standalone item_id but embed it in shop_sku as
+ * `<itemId>_<region>-<skuId>` (e.g. `8708856468_ID-16145310478`). Derive it so the order
+ * line carries the same external product id the listing import stored.
+ */
+function deriveItemId(item: LazadaApiOrderItem): string {
+  const explicit = readString(item.item_id);
+  if (explicit) return explicit;
+  const shopSku = readString(item.shop_sku);
+  if (!shopSku) return '';
+  const underscore = shopSku.indexOf('_');
+  return underscore > 0 ? shopSku.slice(0, underscore) : '';
+}
+
 /** One Lazada order line aggregated from its per-unit item objects (see {@link aggregateLines}). */
 export type LazadaOrderLine = {
-  /** Lazada product item_id — the external product id (mirrors the listing's itemId). */
+  /** Lazada product item_id (derived from shop_sku) — mirrors the listing's external product id. */
   itemId: string;
-  /** Lazada SkuId when present — the external variant id that matches the imported listing. */
+  /** Lazada SkuId — the external variant id that matches the imported listing. */
   skuId: string | null;
-  /** The seller's own SKU (Lazada seller_sku) — the best field to auto-map by. */
+  /** The seller's own SKU (Lazada `sku`, fallback `seller_sku`) — the best field to auto-map by. */
   sellerSku: string | null;
   /** Lazada shop-scoped listing identifier. */
   shopSku: string | null;
@@ -161,9 +175,12 @@ function aggregateLines(items: LazadaApiOrderItem[]): LazadaOrderLine[] {
     }
 
     byLine.set(key, {
-      itemId: readString(item.item_id) ?? '',
+      itemId: deriveItemId(item),
       skuId: readString(item.sku_id),
-      sellerSku: readString(item.seller_sku),
+      // Real Lazada order items put the SELLER's own SKU in `sku` (there is no `seller_sku`
+      // field); `shop_sku` is the Lazada composite. Prefer an explicit seller_sku if a region
+      // ever sends one, else fall back to `sku`.
+      sellerSku: readString(item.seller_sku) ?? readString(item.sku),
       shopSku: readString(item.shop_sku),
       sku: readString(item.sku),
       name: readString(item.name) ?? 'Lazada item',

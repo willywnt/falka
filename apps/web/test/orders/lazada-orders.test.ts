@@ -134,6 +134,39 @@ describe('fetchLazadaOrders — header + item stitching and per-unit aggregation
     expect(records[0]!.lines[0]!.quantity).toBe(2);
   });
 
+  it('derives itemId from shop_sku and reads the seller SKU from `sku` (real Lazada shape)', async () => {
+    // Real order items omit item_id + seller_sku; the seller SKU lives in `sku`, and item_id
+    // is the shop_sku prefix `<itemId>_<region>-<skuId>`.
+    const realItems = [
+      {
+        order_id: 100663397,
+        order_items: [
+          {
+            sku: 'PITA-HITAM-1',
+            sku_id: '16145310478',
+            shop_sku: '8708856468_ID-16145310478',
+            name: 'Black Satin Ribbon',
+            paid_price: 3000,
+            status: 'ready_to_ship',
+            tracking_code: 'JZ1084072946',
+          },
+        ],
+      },
+    ];
+
+    const records = await fetchLazadaOrders(fakeClient([ORDER_HEADER], realItems), {
+      accessToken: 'tok',
+      updateAfter: '2026-05-01T00:00:00+07:00',
+    });
+
+    const line = records[0]!.lines[0]!;
+    expect(line.itemId).toBe('8708856468');
+    expect(line.skuId).toBe('16145310478');
+    expect(line.sellerSku).toBe('PITA-HITAM-1');
+    expect(line.shopSku).toBe('8708856468_ID-16145310478');
+    expect(line.trackingCode).toBe('JZ1084072946');
+  });
+
   it('sends update_after with sort_by=updated_at and skips items when no orders', async () => {
     const log: CallLog[] = [];
     const records = await fetchLazadaOrders(fakeClient([], [], log), {
@@ -160,6 +193,9 @@ describe('reduceLazadaStatuses — mixed per-item statuses → one normalized st
   it('maps Lazada pending (paid-and-awaiting-pack) to PAID, not PENDING', () => {
     expect(reduceLazadaStatuses(['pending'])).toBe('PAID');
     expect(reduceLazadaStatuses(['ready_to_ship'])).toBe('PAID');
+    // Real tokens seen on the live shop: confirmed + packed are post-payment, pre-ship → PAID.
+    expect(reduceLazadaStatuses(['confirmed'])).toBe('PAID');
+    expect(reduceLazadaStatuses(['packed'])).toBe('PAID');
     expect(reduceLazadaStatuses(['unpaid'])).toBe('PENDING');
   });
 

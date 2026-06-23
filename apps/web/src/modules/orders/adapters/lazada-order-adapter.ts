@@ -37,6 +37,9 @@ const BACKFILL_MS = 30 * 24 * 60 * 60 * 1000;
  */
 const LAZADA_ORDER_STATUS_MAP: Record<string, NormalizedOrderStatus> = {
   unpaid: 'PENDING',
+  // `confirmed` is a post-payment, pre-pack state (seen on real orders, incl. digital goods) —
+  // the buyer has paid and the order is actionable, so it reserves stock like `pending`.
+  confirmed: 'PAID',
   pending: 'PAID',
   processing: 'PAID',
   packed: 'PAID',
