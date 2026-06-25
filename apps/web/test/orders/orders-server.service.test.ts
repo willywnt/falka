@@ -280,6 +280,64 @@ describe('pullFromConnections — frozen reserved line set', () => {
   });
 });
 
+describe('pullFromConnections — per-line cancel within a shipped order', () => {
+  it('releases the cancelled line and ships the rest (no phantom consumption)', async () => {
+    state.orders = [
+      {
+        externalOrderId: 'EXT-1',
+        status: 'SHIPPED',
+        noResi: 'RESI-1',
+        buyerName: 'Budi',
+        totalAmount: 2,
+        currency: 'IDR',
+        placedAt: new Date('2026-01-10T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-11T00:00:00.000Z'),
+        items: [
+          {
+            externalProductId: 'P1',
+            externalVariantId: 'VA',
+            externalSku: 'A',
+            externalName: 'A',
+            quantity: 1,
+            unitPrice: 1,
+            status: 'SHIPPED',
+          },
+          {
+            externalProductId: 'P2',
+            externalVariantId: 'VB',
+            externalSku: 'B',
+            externalName: 'B',
+            quantity: 1,
+            unitPrice: 1,
+            status: 'CANCELLED',
+          },
+        ],
+        raw: { source: 'test' },
+      },
+    ];
+    state.saved = savedOrder({ status: 'SHIPPED' }); // first-seen SHIPPED → reserve+ship in one pull
+    prismaMock.marketplaceProduct.findMany.mockResolvedValue([
+      { externalProductId: 'P1', externalVariantId: 'VA', mapping: { productVariantId: 'va' } },
+      { externalProductId: 'P2', externalVariantId: 'VB', mapping: { productVariantId: 'vb' } },
+    ]);
+
+    await service.pullFromConnections(ORG, USER);
+
+    expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'va' }),
+    );
+    expect(inventoryMock.applyOrderReleaseTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'vb' }),
+    );
+    expect(inventoryMock.applyOrderShipTx).not.toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'vb' }),
+    );
+  });
+});
+
 describe('pullFromConnections — ship (SHIPPED/COMPLETED)', () => {
   it('reserves then ships an order first seen as SHIPPED', async () => {
     state.orders = [orderFromAdapter('SHIPPED')];

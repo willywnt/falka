@@ -12,6 +12,12 @@ export type NormalizedOrderItem = {
   externalName: string;
   quantity: number;
   unitPrice: number | null;
+  /**
+   * Per-line normalized status, when the provider reports status per item (Lazada). Lets the
+   * pull release a line cancelled inside an otherwise-shipped order instead of consuming its
+   * reservation. Undefined ⇒ follow the order-level status (the stub + single-status providers).
+   */
+  status?: NormalizedOrderStatus;
 };
 
 export type NormalizedOrder = {

@@ -653,11 +653,20 @@ export class OrdersServerService {
         },
         select: { externalSku: true, mapping: { select: { productVariantId: true } } },
       });
+      // externalSku is NOT unique per connection — two listings can share a seller SKU yet map
+      // to DIFFERENT internal variants. Resolving such a key to whichever row came back first
+      // would silently reserve the wrong variant's stock, so mark it AMBIGUOUS and drop it (the
+      // line stays unresolved + surfaced via unresolvedCount instead of a wrong guess).
+      const ambiguousSkus = new Set<string>();
       for (const listing of mapped) {
         const key = normalizeSkuKey(listing.externalSku);
         const variantId = listing.mapping?.productVariantId;
-        if (key && variantId && !bySku.has(key)) bySku.set(key, variantId);
+        if (!key || !variantId) continue;
+        const existing = bySku.get(key);
+        if (existing === undefined) bySku.set(key, variantId);
+        else if (existing !== variantId) ambiguousSkus.add(key);
       }
+      for (const key of ambiguousSkus) bySku.delete(key);
     }
 
     return { byListing, bySku };
@@ -711,6 +720,15 @@ export class OrdersServerService {
             (skuKey ? (bySku.get(skuKey) ?? null) : null),
         };
       });
+
+      // Per-line status from THIS pull (Lazada reports status per item) — lets the ship stage
+      // release a line cancelled inside an otherwise-shipped order instead of consuming it.
+      const lineStatusByKey = new Map(
+        order.items.map((item) => [
+          listingKey(item.externalProductId, item.externalVariantId),
+          item.status,
+        ]),
+      );
 
       const { order: saved, items: lifecycleItems } = await prisma.$transaction(async (tx) => {
         const upserted = await tx.order.upsert({
@@ -897,18 +915,33 @@ export class OrdersServerService {
       }
 
       if (isShippedStatus && reservedNow && !wasShipped && !wasReleased) {
-        // SHIP: consume the reservation (reserved−). Available is unchanged, so the
-        // shipped variants are intentionally NOT added to affectedVariantIds.
+        // SHIP: consume the reservation (reserved−). Available is unchanged for shipped lines, so
+        // they are NOT added to affectedVariantIds. A line CANCELLED within this otherwise-shipped
+        // order never left — release it back to available instead of consuming its reservation.
         await prisma.$transaction(async (tx) => {
           for (const item of lifecycleItems) {
             if (!item.productVariantId) continue;
-            await inventoryServerService.applyOrderShipTx(tx, {
-              organizationId,
-              actorUserId,
-              variantId: item.productVariantId,
-              quantity: item.quantity,
-              orderId: saved.id,
-            });
+            const lineCancelled =
+              lineStatusByKey.get(listingKey(item.externalProductId, item.externalVariantId)) ===
+              'CANCELLED';
+            if (lineCancelled) {
+              await inventoryServerService.applyOrderReleaseTx(tx, {
+                organizationId,
+                actorUserId,
+                variantId: item.productVariantId,
+                quantity: item.quantity,
+                orderId: saved.id,
+              });
+              affectedVariantIds.add(item.productVariantId);
+            } else {
+              await inventoryServerService.applyOrderShipTx(tx, {
+                organizationId,
+                actorUserId,
+                variantId: item.productVariantId,
+                quantity: item.quantity,
+                orderId: saved.id,
+              });
+            }
           }
           await tx.order.update({
             where: { id: saved.id },

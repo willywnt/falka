@@ -150,6 +150,9 @@ function toNormalizedOrder(record: LazadaOrderRecord): NormalizedOrder {
     externalName: line.name,
     quantity: line.quantity,
     unitPrice: line.unitPaidPrice,
+    // Per-line status — Lazada statuses are per item, so a line cancelled within an otherwise
+    // shipped order is visible to the lifecycle (released, not consumed).
+    status: reduceLazadaStatuses(line.statuses),
   }));
 
   return {
