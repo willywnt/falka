@@ -309,6 +309,10 @@ model MarketplaceConnection {
   knownWarehouseCodes   String[]            @default([])
   lastImportedAt        DateTime?
   lastOrdersPulledAt    DateTime? // last time orders were pulled from this store (display + pull cooldown)
+  // Incremental order-pull watermark: the next pull asks the provider for orders changed since
+  // here (minus a small overlap). Decoupled from lastOrdersPulledAt so the cooldown and the
+  // sync window can move independently. null = never synced (first pull backfills a window).
+  ordersSyncedThrough   DateTime?
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   deletedAt             DateTime?
@@ -686,6 +690,13 @@ model Order {
   rawPayload              Json?
   placedAt                DateTime
   /**
+   * The order's last-update time AS REPORTED BY THE MARKETPLACE (Lazada `updated_at`),
+   * distinct from our own `updatedAt`. Drives the most-recently-changed list sort and the
+   * incremental pull cursor. Null for orders pulled before this column existed / providers
+   * that don't report it.
+   */
+  externalUpdatedAt       DateTime?
+  /**
    * Set once a PAID order's items have decremented internal stock (idempotency).
    */
   inventoryAppliedAt      DateTime?
@@ -721,6 +732,8 @@ model Order {
   // list orders by placedAt. These composites turn org-wide scans into index seeks.
   @@index([organizationId, status])
   @@index([organizationId, placedAt])
+  // The list now sorts org-scoped by most-recently-changed (externalUpdatedAt desc).
+  @@index([organizationId, externalUpdatedAt])
   @@map("orders")
 }
 
