@@ -199,6 +199,21 @@ export class OrdersServerService {
    * packing video completes.
    */
   async markFulfilledByResi(organizationId: string, noResi: string): Promise<number> {
+    // An order is "fulfilled" only when a COMPLETED packing video actually exists for its resi.
+    // Marking shipped / setting a resi must NOT fake fulfillment when no video was recorded —
+    // it just retroactively links a video that already exists. (Fulfillment is the order↔
+    // recording noResi join; recordings already calls in here, so reading the Recording table
+    // here keeps that cross-cut in one place without a circular service dependency.)
+    const videoCount = await prisma.recording.count({
+      where: {
+        organizationId,
+        noResi: { equals: noResi, mode: 'insensitive' },
+        status: 'COMPLETED',
+        deletedAt: null,
+      },
+    });
+    if (videoCount === 0) return 0;
+
     const result = await prisma.order.updateMany({
       where: { organizationId, noResi: { equals: noResi, mode: 'insensitive' }, fulfilledAt: null },
       data: { fulfilledAt: new Date() },

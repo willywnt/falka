@@ -54,6 +54,7 @@ const {
       marketplaceProduct: { findMany: vi.fn() },
       inventory: { findUnique: vi.fn() },
       order: { findFirst: vi.fn(), updateMany: vi.fn() },
+      recording: { count: vi.fn() },
       $transaction: vi.fn((cb: (tx: TxClient) => Promise<unknown>) => cb(txMock)),
     },
   };
@@ -156,6 +157,9 @@ beforeEach(() => {
     ),
   );
   prismaMock.inventory.findUnique.mockResolvedValue({ availableStock: 10 });
+  // Default: a completed packing video exists (fulfillment can stamp); tests that need the
+  // no-video path override this to 0.
+  prismaMock.recording.count.mockResolvedValue(1);
   txMock.order.upsert.mockImplementation(() => Promise.resolve(state.saved));
   txMock.order.update.mockResolvedValue({});
   txMock.orderItem.deleteMany.mockResolvedValue({});
@@ -325,7 +329,17 @@ describe('findByResi / markFulfilledByResi (fulfillment)', () => {
     expect(await service.findByResi(ORG, 'RESI-NONE')).toBeNull();
   });
 
-  it('stamps fulfilledAt only on not-yet-fulfilled matching orders', async () => {
+  it('does NOT stamp fulfilledAt when no completed packing video exists for the resi', async () => {
+    prismaMock.recording.count.mockResolvedValue(0);
+
+    const count = await service.markFulfilledByResi(ORG, 'RESI-1');
+
+    expect(count).toBe(0);
+    expect(prismaMock.order.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('stamps fulfilledAt only on not-yet-fulfilled matching orders (when a video exists)', async () => {
+    prismaMock.recording.count.mockResolvedValue(1);
     prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
 
     const count = await service.markFulfilledByResi(ORG, 'RESI-1');
