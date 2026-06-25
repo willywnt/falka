@@ -37,6 +37,8 @@ export type OrderListItem = {
   /** When a packing video for this order's resi completed (ISO), if ever. */
   fulfilledAt: string | null;
   placedAt: string;
+  /** The order's last-change time on the marketplace (ISO); drives the recency sort. Null = unknown. */
+  updatedAt: string | null;
   /** When this order's store was last pulled (ISO), if ever. */
   lastPulledAt: string | null;
 };

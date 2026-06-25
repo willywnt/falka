@@ -159,6 +159,7 @@ function toNormalizedOrder(record: LazadaOrderRecord): NormalizedOrder {
     totalAmount: parseAmount(record.price),
     currency: record.currency,
     placedAt,
+    updatedAt: parseLazadaDate(record.updatedAt),
     items,
     raw: record.raw,
   };
@@ -199,10 +200,14 @@ export class LazadaOrderAdapter implements MarketplaceOrderAdapter {
     shopCipher: string | null;
     accessToken: string;
     since?: Date;
+    full?: boolean;
   }): Promise<NormalizedOrder[]> {
-    const windowStart = params.since
-      ? new Date(params.since.getTime() - OVERLAP_MS)
-      : new Date(Date.now() - BACKFILL_MS);
+    // A full re-pull (or a never-synced store) backfills a fixed window; otherwise resume from
+    // the cursor minus an overlap that absorbs clock skew + Lazada's eventual consistency.
+    const windowStart =
+      params.since && !params.full
+        ? new Date(params.since.getTime() - OVERLAP_MS)
+        : new Date(Date.now() - BACKFILL_MS);
 
     try {
       const records = await fetchLazadaOrders(this.client, {

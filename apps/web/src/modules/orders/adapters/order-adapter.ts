@@ -22,6 +22,8 @@ export type NormalizedOrder = {
   totalAmount: number | null;
   currency: string | null;
   placedAt: Date;
+  /** The order's last-change time as reported by the marketplace (null when unknown). */
+  updatedAt: Date | null;
   items: NormalizedOrderItem[];
   raw: Record<string, unknown>;
 };
@@ -35,6 +37,8 @@ export interface MarketplaceOrderAdapter {
     accessToken: string;
     /** Incremental watermark — pull orders changed since this instant (the store's last pull). */
     since?: Date;
+    /** Ignore `since` and re-pull the provider's full backfill window (manual re-sync). */
+    full?: boolean;
   }): Promise<NormalizedOrder[]>;
 }
 
@@ -92,7 +96,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       step === 0 ? 'PAID' : step === 1 ? 'SHIPPED' : 'CANCELLED';
     const raw = { source: 'stub', step };
 
-    return Promise.resolve([
+    const orders: Omit<NormalizedOrder, 'updatedAt'>[] = [
       {
         externalOrderId: `${s}-RESERVE`,
         status: 'PAID',
@@ -148,7 +152,11 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
         items: [stubItem(s, 5, '300ML', 'Enamel Mug - 300ml', 3)],
         raw,
       },
-    ]);
+    ];
+
+    // The stub has no separate marketplace update time — use placedAt so the recency sort
+    // (externalUpdatedAt desc) stays stable across pulls.
+    return Promise.resolve(orders.map((order) => ({ ...order, updatedAt: order.placedAt })));
   }
 }
 

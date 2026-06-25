@@ -11,11 +11,10 @@ export const POST = withApiRoute(
     const parsed = pullOrdersBodySchema.safeParse(body);
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const result = await ordersServerService.pullFromConnections(
-      org.id,
-      user.id,
-      parsed.data.connectionIds,
-    );
+    const result = await ordersServerService.pullFromConnections(org.id, user.id, {
+      connectionIds: parsed.data.connectionIds,
+      full: parsed.data.full,
+    });
     return apiSuccess(result);
   },
   { requireAuth: true },

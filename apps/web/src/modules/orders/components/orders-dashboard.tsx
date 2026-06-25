@@ -257,6 +257,7 @@ function OrdersDashboardContent() {
                   <TableHead className="text-right">Item</TableHead>
                   <TableHead>Status stok</TableHead>
                   <TableHead>Dibuat</TableHead>
+                  <TableHead>Diupdate</TableHead>
                   <TableHead>Terakhir ditarik</TableHead>
                 </TableRow>
               </TableHeader>
@@ -301,6 +302,13 @@ function OrdersDashboardContent() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap" suppressHydrationWarning>
                       {formatDateTime(order.placedAt)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {order.updatedAt ? (
+                        <span suppressHydrationWarning>{formatDateTime(order.updatedAt)}</span>
+                      ) : (
+                        '—'
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                       {order.lastPulledAt ? (
@@ -360,6 +368,12 @@ function OrdersDashboardContent() {
 
                 <p className="text-muted-foreground text-xs">
                   <span suppressHydrationWarning>Dibuat {formatDateTime(order.placedAt)}</span>
+                  {order.updatedAt ? (
+                    <span suppressHydrationWarning>
+                      {' '}
+                      · diupdate {formatDateTime(order.updatedAt)}
+                    </span>
+                  ) : null}
                   {order.lastPulledAt ? (
                     <span suppressHydrationWarning>
                       {' '}

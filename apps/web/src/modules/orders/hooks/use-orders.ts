@@ -204,10 +204,10 @@ export function usePullFromConnectionsMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (connectionIds?: string[]) => {
+    mutationFn: async (input: { connectionIds?: string[]; full?: boolean } = {}) => {
       const result = await apiFetch<MultiPullOrdersResult>(`${apiRoutes.orders}/pull`, {
         method: 'POST',
-        body: { connectionIds },
+        body: { connectionIds: input.connectionIds, full: input.full },
       });
 
       if (!result.success) {

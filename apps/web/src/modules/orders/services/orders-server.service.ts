@@ -7,7 +7,7 @@ import {
   type TransactionClient,
 } from '@falka/db';
 import { enqueuePropagateInventoryStock } from '@falka/queue';
-import type { MarketplaceConnection, Prisma } from '@prisma/client';
+import type { MarketplaceConnection, MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
@@ -22,11 +22,17 @@ import { extractOrderMarketplaceMeta } from '../utils/marketplace-meta';
 import type { ListOrdersQuery } from '../validators/list-orders';
 import type { MultiPullOrdersResult, OrderDetail, OrderItemDetail, OrderListItem } from '../types';
 
-/** Minimum gap between pulls from the same store, to curb API abuse. */
-const PULL_COOLDOWN_MS = 30_000;
+/** Minimum gap between pulls from the SAME store, to curb API abuse. Per-provider so each
+ *  channel's rate limits can be tuned independently; DEFAULT covers any unlisted provider. */
+const DEFAULT_PULL_COOLDOWN_MS = 30_000;
+const PULL_COOLDOWN_MS_BY_PROVIDER: Partial<Record<MarketplaceProvider, number>> = {
+  LAZADA: 30_000,
+};
 
-function isCoolingDown(lastPulledAt: Date | null): boolean {
-  return lastPulledAt !== null && Date.now() - lastPulledAt.getTime() < PULL_COOLDOWN_MS;
+function isCoolingDown(provider: MarketplaceProvider, lastPulledAt: Date | null): boolean {
+  if (lastPulledAt === null) return false;
+  const cooldown = PULL_COOLDOWN_MS_BY_PROVIDER[provider] ?? DEFAULT_PULL_COOLDOWN_MS;
+  return Date.now() - lastPulledAt.getTime() < cooldown;
 }
 
 /** Stable map key for a marketplace listing (external product + variant). */
@@ -68,9 +74,10 @@ export class OrdersServerService {
           connection: { select: { shopName: true, lastOrdersPulledAt: true } },
           items: { select: { productVariantId: true } },
         },
-        // Most-recently-changed first: a re-pull bumps updatedAt, so orders whose status just
-        // moved (newly paid/shipped/cancelled) surface at the top of the ops list.
-        orderBy: { updatedAt: 'desc' },
+        // Most-recently-changed first, by the marketplace's own update time; orders pulled
+        // before that was captured (externalUpdatedAt null) fall to the bottom, tie-broken by
+        // when they were placed.
+        orderBy: [{ externalUpdatedAt: { sort: 'desc', nulls: 'last' } }, { placedAt: 'desc' }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
@@ -94,6 +101,7 @@ export class OrdersServerService {
       inventoryReverted: order.inventoryRevertedAt !== null,
       fulfilledAt: order.fulfilledAt?.toISOString() ?? null,
       placedAt: order.placedAt.toISOString(),
+      updatedAt: order.externalUpdatedAt?.toISOString() ?? null,
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
     }));
 
@@ -158,6 +166,7 @@ export class OrdersServerService {
       inventoryReverted: order.inventoryRevertedAt !== null,
       fulfilledAt: order.fulfilledAt?.toISOString() ?? null,
       placedAt: order.placedAt.toISOString(),
+      updatedAt: order.externalUpdatedAt?.toISOString() ?? null,
       lastPulledAt: order.connection.lastOrdersPulledAt?.toISOString() ?? null,
       cancelReason: order.cancelReason,
       marketplace: extractOrderMarketplaceMeta(order.rawPayload),
@@ -447,8 +456,9 @@ export class OrdersServerService {
   async pullFromConnections(
     organizationId: string,
     actorUserId: string,
-    connectionIds?: string[],
+    options: { connectionIds?: string[]; full?: boolean } = {},
   ): Promise<MultiPullOrdersResult> {
+    const { connectionIds, full } = options;
     const connections = await prisma.marketplaceConnection.findMany({
       where: {
         organizationId,
@@ -466,18 +476,12 @@ export class OrdersServerService {
     const storesSkipped: string[] = [];
 
     for (const connection of connections) {
-      if (isCoolingDown(connection.lastOrdersPulledAt)) {
+      if (isCoolingDown(connection.provider, connection.lastOrdersPulledAt)) {
         storesSkipped.push(connection.shopName);
         continue;
       }
 
-      const result = await this.pullOneConnection(organizationId, actorUserId, connection);
-      await prisma.marketplaceConnection.update({
-        where: { id: connection.id },
-        data: { lastOrdersPulledAt: new Date() },
-      });
-      await this.propagateAffected(organizationId, actorUserId, result.affected, connection.id);
-
+      const result = await this.pullAndApplyConnection(connection, actorUserId, full ?? false);
       pulled += result.pulled;
       applied += result.applied;
       shipped += result.shipped;
@@ -495,6 +499,74 @@ export class OrdersServerService {
       reverted,
     });
     return { storesPulled, storesSkipped, pulled, applied, shipped, reverted };
+  }
+
+  /**
+   * Pull one connection, advance its cursor + cooldown stamp, and propagate affected stock.
+   * Shared by the manual multi-pull and the scheduled auto-pull. The cursor advances to the
+   * moment the pull STARTED (the adapter applies an overlap next run) so an order changed
+   * mid-pull is never skipped; lastOrdersPulledAt stays the cooldown/display stamp.
+   */
+  private async pullAndApplyConnection(
+    connection: MarketplaceConnection,
+    actorUserId: string,
+    full: boolean,
+  ): Promise<{ pulled: number; applied: number; shipped: number; reverted: number }> {
+    const pullStartedAt = new Date();
+    const result = await this.pullOneConnection(
+      connection.organizationId,
+      actorUserId,
+      connection,
+      full,
+    );
+    await prisma.marketplaceConnection.update({
+      where: { id: connection.id },
+      data: { lastOrdersPulledAt: new Date(), ordersSyncedThrough: pullStartedAt },
+    });
+    await this.propagateAffected(
+      connection.organizationId,
+      actorUserId,
+      result.affected,
+      connection.id,
+    );
+    return {
+      pulled: result.pulled,
+      applied: result.applied,
+      shipped: result.shipped,
+      reverted: result.reverted,
+    };
+  }
+
+  /**
+   * Pull EVERY active store across all orgs — the VPS custom-server scheduler calls this on an
+   * interval (dormant on Vercel, where the custom server doesn't run). Per connection: honours
+   * the per-provider cooldown, uses the connection's own creator as the actor, and never lets
+   * one store's failure abort the rest. Incremental only (a full backfill stays a manual action).
+   */
+  async runScheduledPull(): Promise<{ storesPulled: number; pulled: number }> {
+    const connections = await prisma.marketplaceConnection.findMany({
+      where: { deletedAt: null, isActive: true },
+    });
+
+    let storesPulled = 0;
+    let pulled = 0;
+    for (const connection of connections) {
+      if (isCoolingDown(connection.provider, connection.lastOrdersPulledAt)) continue;
+      try {
+        const result = await this.pullAndApplyConnection(connection, connection.userId, false);
+        pulled += result.pulled;
+        storesPulled += 1;
+      } catch (error) {
+        appLogger.warn('orders.scheduled_pull.connection_failed', {
+          connectionId: connection.id,
+          organizationId: connection.organizationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (storesPulled > 0) appLogger.info('orders.scheduled_pull', { storesPulled, pulled });
+    return { storesPulled, pulled };
   }
 
   /**
@@ -571,6 +643,7 @@ export class OrdersServerService {
     organizationId: string,
     actorUserId: string,
     connection: MarketplaceConnection,
+    full = false,
   ): Promise<{
     pulled: number;
     applied: number;
@@ -586,7 +659,10 @@ export class OrdersServerService {
       // window since this store's last pull (idempotent upserts make the overlap safe).
       accessToken:
         marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '',
-      since: connection.lastOrdersPulledAt ?? undefined,
+      // The incremental window comes from the dedicated cursor, not the cooldown timestamp.
+      // A full re-pull ignores the cursor and uses the adapter's backfill window instead.
+      since: full ? undefined : (connection.ordersSyncedThrough ?? undefined),
+      full,
     });
 
     let pulled = 0;
@@ -631,6 +707,7 @@ export class OrdersServerService {
             currency: order.currency,
             rawPayload: order.raw as Prisma.InputJsonValue,
             placedAt: order.placedAt,
+            externalUpdatedAt: order.updatedAt,
           },
           update: {
             status: order.status,
@@ -640,6 +717,7 @@ export class OrdersServerService {
             currency: order.currency,
             rawPayload: order.raw as Prisma.InputJsonValue,
             placedAt: order.placedAt,
+            externalUpdatedAt: order.updatedAt,
           },
         });
 

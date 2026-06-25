@@ -125,10 +125,13 @@ beforeEach(() => {
   prismaMock.marketplaceConnection.findMany.mockResolvedValue([
     {
       id: CONN_ID,
+      organizationId: ORG,
+      userId: USER,
       provider: 'SHOPEE',
       shopId: 'shop-1',
       shopName: 'Toko A',
       lastOrdersPulledAt: null,
+      ordersSyncedThrough: null,
     },
   ]);
   prismaMock.marketplaceConnection.update.mockResolvedValue({});
@@ -265,6 +268,41 @@ describe('pullFromConnections — release (CANCELLED)', () => {
 
     expect(inventoryMock.applyOrderReleaseTx).not.toHaveBeenCalled();
     expect(result.reverted).toBe(0);
+  });
+});
+
+describe('runScheduledPull (VPS scheduler)', () => {
+  it('pulls every due store across orgs and skips ones inside the per-provider cooldown', async () => {
+    state.orders = [orderFromAdapter('PAID')];
+    state.saved = savedOrder({ status: 'PAID' });
+    prismaMock.marketplaceConnection.findMany.mockResolvedValueOnce([
+      {
+        id: 'c-due',
+        organizationId: ORG,
+        userId: USER,
+        provider: 'LAZADA',
+        shopId: 's1',
+        shopName: 'Due',
+        lastOrdersPulledAt: null,
+        ordersSyncedThrough: null,
+      },
+      {
+        id: 'c-cooling',
+        organizationId: ORG,
+        userId: USER,
+        provider: 'LAZADA',
+        shopId: 's2',
+        shopName: 'Cooling',
+        lastOrdersPulledAt: new Date(), // just pulled → inside the 30s cooldown
+        ordersSyncedThrough: null,
+      },
+    ]);
+
+    const result = await service.runScheduledPull();
+
+    expect(result.storesPulled).toBe(1);
+    expect(fetchOrdersMock).toHaveBeenCalledTimes(1);
+    expect(inventoryMock.applyOrderReserveTx).toHaveBeenCalledTimes(1);
   });
 });
 

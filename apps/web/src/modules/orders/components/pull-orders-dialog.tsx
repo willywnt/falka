@@ -31,11 +31,13 @@ export function PullOrdersDialog({
   const activeStores = (connections ?? []).filter((connection) => connection.isActive);
   const pullMutation = usePullFromConnectionsMutation();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [full, setFull] = useState(false);
 
-  // Default to every active store each time the dialog opens.
+  // Default to every active store + incremental each time the dialog opens.
   useEffect(() => {
     if (open) {
       setSelected(new Set((connections ?? []).filter((c) => c.isActive).map((c) => c.id)));
+      setFull(false);
     }
   }, [open, connections]);
 
@@ -56,9 +58,10 @@ export function PullOrdersDialog({
     }
 
     try {
-      const result = await pullMutation.mutateAsync(
-        ids.length === activeStores.length ? undefined : ids,
-      );
+      const result = await pullMutation.mutateAsync({
+        connectionIds: ids.length === activeStores.length ? undefined : ids,
+        full,
+      });
       const parts = [`${result.pulled} pesanan dari ${result.storesPulled} toko`];
       if (result.applied > 0) parts.push(`${result.applied} stok dipesan`);
       if (result.shipped > 0) parts.push(`${result.shipped} dikirim`);
@@ -118,6 +121,18 @@ export function PullOrdersDialog({
             ))}
           </div>
         )}
+
+        {activeStores.length > 0 ? (
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-dashed px-3 py-2">
+            <div className="min-w-0">
+              <span className="block text-sm font-medium">Tarik ulang semua</span>
+              <span className="text-muted-foreground block text-xs">
+                Abaikan riwayat sinkron, tarik ulang ~30 hari terakhir (mis. setelah ubah pemetaan).
+              </span>
+            </div>
+            <Switch checked={full} onCheckedChange={setFull} aria-label="Tarik ulang semua" />
+          </div>
+        ) : null}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
