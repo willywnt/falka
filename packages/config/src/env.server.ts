@@ -65,6 +65,9 @@ const serverEnvSchema = z
     WORKER_HEALTH_PORT: z.coerce.number().int().positive().optional(),
     WORKER_HEALTH_URL: optionalUrl,
     WORKER_ENABLE_SCHEDULERS: z.enum(['true', 'false']).optional(),
+    // Custom-server (VPS/dev) scheduled order-pull interval in ms; 0/unset = off (the default,
+    // and always off on Vercel where the custom server doesn't run). e.g. 300000 = every 5 min.
+    ORDERS_AUTO_PULL_INTERVAL_MS: z.coerce.number().int().nonnegative().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.REDIS_URL) {

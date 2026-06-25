@@ -50,6 +50,45 @@ function isSocketIoPath(pathname: string): boolean {
   return pathname === SOCKET_PATH || pathname.startsWith(`${SOCKET_PATH}/`);
 }
 
+/**
+ * Periodic order pull (VPS/self-hosted). Hits the secret-gated internal endpoint on loopback so
+ * the order-ingest module graph resolves inside Next (the bootstrap can't import it directly).
+ * Off by default (ORDERS_AUTO_PULL_INTERVAL_MS unset/0) and always dormant on Vercel, where this
+ * custom server never runs. Skipped under DEV_HTTPS — prod serves http behind a TLS proxy.
+ */
+function startScheduledOrderPull(useHttps: boolean): void {
+  const intervalMs = Number(process.env.ORDERS_AUTO_PULL_INTERVAL_MS ?? 0);
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) return;
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    console.warn('> Auto-pull disabled: AUTH_SECRET is required to call the internal endpoint.');
+    return;
+  }
+  if (useHttps) {
+    console.warn('> Auto-pull skipped under DEV_HTTPS (intended for the http prod server).');
+    return;
+  }
+
+  const url = `http://127.0.0.1:${port}/api/v1/internal/pull-orders`;
+  let pulling = false;
+  console.log(`> Auto-pull enabled: every ${Math.round(intervalMs / 1000)}s`);
+
+  const timer = setInterval(() => {
+    if (pulling) return; // never overlap a slow pull
+    pulling = true;
+    fetch(url, { method: 'POST', headers: { authorization: `Bearer ${secret}` } })
+      .then((res) => {
+        if (!res.ok) console.warn(`> Auto-pull HTTP ${res.status}`);
+      })
+      .catch((error) => console.warn('> Auto-pull request failed', error))
+      .finally(() => {
+        pulling = false;
+      });
+  }, intervalMs);
+  timer.unref();
+}
+
 app.prepare().then(async () => {
   // Next reloads apps/web/.env.local during prepare — read DEV_HTTPS after that.
   const useDevHttps = isDevHttpsEnabled();
@@ -115,6 +154,8 @@ app.prepare().then(async () => {
     } else {
       console.log(`> Ready on ${scheme}://localhost:${port}`);
     }
+
+    startScheduledOrderPull(useDevHttps);
 
     console.log('');
   });
