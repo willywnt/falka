@@ -46,7 +46,7 @@ import { useDesktopStationRecordingSync } from '@/modules/scanner-pairing/hooks/
 import { useActivePairingQuery } from '@/modules/scanner-pairing/hooks/use-pairing-api';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 
-export function RecordingPanel() {
+export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
   const {
     status,
     noResi,
@@ -75,6 +75,15 @@ export function RecordingPanel() {
 
   const pendingStartRef = useRef(false);
   const [pairingDialogOpen, setPairingDialogOpen] = useState(false);
+
+  // Prefill the resi once when arriving from an order's "Rekam di station" deep link.
+  const seededResiRef = useRef(false);
+  useEffect(() => {
+    if (!seededResiRef.current && initialResi) {
+      seededResiRef.current = true;
+      setNoResi(initialResi);
+    }
+  }, [initialResi, setNoResi]);
 
   // Hidden in production until the realtime socket host is deployed.
   const scannerEnabled = isMobileScannerEnabled();

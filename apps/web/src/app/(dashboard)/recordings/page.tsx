@@ -11,7 +11,13 @@ export const metadata: Metadata = {
   title: 'Rekam baru',
 };
 
-export default function RecordingsPage() {
+export default async function RecordingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ resi?: string }>;
+}) {
+  const { resi } = await searchParams;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -27,7 +33,7 @@ export default function RecordingsPage() {
           </Link>
         </Button>
       </PageHeader>
-      <RecordingPanel />
+      <RecordingPanel initialResi={typeof resi === 'string' ? resi : undefined} />
     </div>
   );
 }
