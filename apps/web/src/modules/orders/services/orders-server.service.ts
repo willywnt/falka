@@ -712,7 +712,7 @@ export class OrdersServerService {
         };
       });
 
-      const saved = await prisma.$transaction(async (tx) => {
+      const { order: saved, items: lifecycleItems } = await prisma.$transaction(async (tx) => {
         const upserted = await tx.order.upsert({
           where: {
             marketplaceConnectionId_externalOrderId: {
@@ -742,14 +742,59 @@ export class OrdersServerService {
             totalAmount: order.totalAmount,
             currency: order.currency,
             rawPayload: order.raw as Prisma.InputJsonValue,
-            placedAt: order.placedAt,
+            // placedAt is the immutable placement instant — never re-write it (a parse-fallback
+            // 'now' would otherwise drift it forward each pull); set it only on create.
             externalUpdatedAt: order.updatedAt,
           },
         });
 
+        // Once an order is reserved its line set is FROZEN: a re-pull must not change the
+        // reserved qty/variant or wipe the COGS snapshot (those drive stock + profit). Carry the
+        // persisted values forward; only FILL a still-null variant from a fresh (late) resolution.
+        const existingByKey = new Map<
+          string,
+          { productVariantId: string | null; quantity: number; unitCost: Prisma.Decimal | null }
+        >();
+        if (upserted.inventoryAppliedAt !== null) {
+          const existing = await tx.orderItem.findMany({
+            where: { orderId: upserted.id },
+            select: {
+              externalProductId: true,
+              externalVariantId: true,
+              productVariantId: true,
+              quantity: true,
+              unitCost: true,
+            },
+          });
+          for (const item of existing) {
+            existingByKey.set(listingKey(item.externalProductId, item.externalVariantId), {
+              productVariantId: item.productVariantId,
+              quantity: item.quantity,
+              unitCost: item.unitCost,
+            });
+          }
+        }
+
+        const items = resolvedItems.map((item) => {
+          const frozen = existingByKey.get(
+            listingKey(item.externalProductId, item.externalVariantId),
+          );
+          if (frozen) {
+            const productVariantId = frozen.productVariantId ?? item.productVariantId;
+            return {
+              ...item,
+              quantity: frozen.quantity,
+              unitCost: frozen.unitCost,
+              productVariantId,
+              lateResolved: frozen.productVariantId === null && productVariantId !== null,
+            };
+          }
+          return { ...item, unitCost: null as Prisma.Decimal | null, lateResolved: false };
+        });
+
         await tx.orderItem.deleteMany({ where: { orderId: upserted.id } });
         await tx.orderItem.createMany({
-          data: resolvedItems.map((item) => ({
+          data: items.map((item) => ({
             orderId: upserted.id,
             externalProductId: item.externalProductId,
             externalVariantId: item.externalVariantId,
@@ -757,11 +802,12 @@ export class OrdersServerService {
             externalName: item.externalName,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            unitCost: item.unitCost,
             productVariantId: item.productVariantId,
           })),
         });
 
-        return upserted;
+        return { order: upserted, items };
       });
       pulled += 1;
 
@@ -774,7 +820,7 @@ export class OrdersServerService {
       const isPaidOrBeyond =
         saved.status === 'PAID' || saved.status === 'SHIPPED' || saved.status === 'COMPLETED';
       const isShippedStatus = saved.status === 'SHIPPED' || saved.status === 'COMPLETED';
-      const hasResolvedItems = resolvedItems.some((item) => item.productVariantId !== null);
+      const hasResolvedItems = lifecycleItems.some((item) => item.productVariantId !== null);
 
       let reservedNow = wasReserved;
 
@@ -783,7 +829,7 @@ export class OrdersServerService {
       if (isPaidOrBeyond && !wasReserved && !wasReleased && hasResolvedItems) {
         await prisma.$transaction(async (tx) => {
           const reservedVariantIds: string[] = [];
-          for (const item of resolvedItems) {
+          for (const item of lifecycleItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderReserveTx(tx, {
               organizationId,
@@ -803,6 +849,34 @@ export class OrdersServerService {
         });
         applied += 1;
         reservedNow = true;
+      }
+
+      // RESERVE-DELTA: lines that mapped AFTER the order was first reserved (the listing got
+      // imported/mapped, or the SKU fallback newly matched) — reserve just those, so a partially
+      // -mapped order doesn't strand stock when its remaining lines resolve on a later pull.
+      // Only while still pre-ship; the manual resolveOrderItem path covers the same case.
+      if (wasReserved && isPaidOrBeyond && !wasReleased && !wasShipped) {
+        const lateItems = lifecycleItems.filter(
+          (item) => item.lateResolved && item.productVariantId,
+        );
+        if (lateItems.length > 0) {
+          await prisma.$transaction(async (tx) => {
+            const lateVariantIds: string[] = [];
+            for (const item of lateItems) {
+              if (!item.productVariantId) continue;
+              await inventoryServerService.applyOrderReserveTx(tx, {
+                organizationId,
+                actorUserId,
+                variantId: item.productVariantId,
+                quantity: item.quantity,
+                orderId: saved.id,
+              });
+              affectedVariantIds.add(item.productVariantId);
+              lateVariantIds.push(item.productVariantId);
+            }
+            await this.snapshotOrderItemCostsTx(tx, saved.id, lateVariantIds);
+          });
+        }
       }
 
       // New-order alert: fire once, when this order first becomes reserved (newly PAID).
@@ -826,7 +900,7 @@ export class OrdersServerService {
         // SHIP: consume the reservation (reserved−). Available is unchanged, so the
         // shipped variants are intentionally NOT added to affectedVariantIds.
         await prisma.$transaction(async (tx) => {
-          for (const item of resolvedItems) {
+          for (const item of lifecycleItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderShipTx(tx, {
               organizationId,
@@ -862,7 +936,7 @@ export class OrdersServerService {
       } else if (saved.status === 'CANCELLED' && reservedNow && !wasShipped && !wasReleased) {
         // RELEASE: cancelled before shipping → give the reserved units back.
         await prisma.$transaction(async (tx) => {
-          for (const item of resolvedItems) {
+          for (const item of lifecycleItems) {
             if (!item.productVariantId) continue;
             await inventoryServerService.applyOrderReleaseTx(tx, {
               organizationId,

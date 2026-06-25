@@ -14,6 +14,7 @@ type TxClient = {
     deleteMany: ReturnType<typeof vi.fn>;
     createMany: ReturnType<typeof vi.fn>;
     updateMany: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
   };
   productVariant: { findMany: ReturnType<typeof vi.fn> };
 };
@@ -30,7 +31,7 @@ const {
 } = vi.hoisted(() => {
   const txMock: TxClient = {
     order: { upsert: vi.fn(), update: vi.fn() },
-    orderItem: { deleteMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
+    orderItem: { deleteMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn(), findMany: vi.fn() },
     productVariant: { findMany: vi.fn() },
   };
   return {
@@ -165,6 +166,9 @@ beforeEach(() => {
   txMock.orderItem.deleteMany.mockResolvedValue({});
   txMock.orderItem.createMany.mockResolvedValue({});
   txMock.orderItem.updateMany.mockResolvedValue({});
+  // Default: no pre-existing persisted items (carry-forward only kicks in for reserved orders
+  // that already have rows); individual tests override to exercise the freeze/late-resolve path.
+  txMock.orderItem.findMany.mockResolvedValue([]);
   txMock.productVariant.findMany.mockResolvedValue([]);
   fetchOrdersMock.mockImplementation(() =>
     Promise.resolve({ orders: state.orders, complete: true }),
@@ -226,6 +230,53 @@ describe('pullFromConnections — incremental cursor', () => {
     ).data;
     expect(data.lastOrdersPulledAt).toBeInstanceOf(Date);
     expect(data).not.toHaveProperty('ordersSyncedThrough');
+  });
+});
+
+describe('pullFromConnections — frozen reserved line set', () => {
+  it('ships the FROZEN reserved variant + qty, not a re-resolved value, and never re-reserves', async () => {
+    state.orders = [orderFromAdapter('SHIPPED')]; // fresh: qty 2, resolves to v1
+    state.saved = savedOrder({ status: 'SHIPPED', inventoryAppliedAt: APPLIED_AT });
+    // The persisted (reserved) line carries a DIFFERENT variant + qty than the fresh pull.
+    txMock.orderItem.findMany.mockResolvedValue([
+      {
+        externalProductId: 'P1',
+        externalVariantId: 'V1',
+        productVariantId: 'frozen-v',
+        quantity: 5,
+        unitCost: null,
+      },
+    ]);
+
+    await service.pullFromConnections(ORG, USER);
+
+    expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'frozen-v', quantity: 5, orderId: 'o1' }),
+    );
+    expect(inventoryMock.applyOrderReserveTx).not.toHaveBeenCalled();
+  });
+
+  it('reserves a line that resolves AFTER the order was first reserved (reserve-delta)', async () => {
+    state.orders = [orderFromAdapter('PAID')]; // fresh: resolves to v1
+    state.saved = savedOrder({ status: 'PAID', inventoryAppliedAt: APPLIED_AT });
+    // The persisted line was unresolved (null variant) when the order first reserved.
+    txMock.orderItem.findMany.mockResolvedValue([
+      {
+        externalProductId: 'P1',
+        externalVariantId: 'V1',
+        productVariantId: null,
+        quantity: 2,
+        unitCost: null,
+      },
+    ]);
+
+    await service.pullFromConnections(ORG, USER);
+
+    expect(inventoryMock.applyOrderReserveTx).toHaveBeenCalledWith(
+      txMock,
+      expect.objectContaining({ variantId: 'v1', quantity: 2, orderId: 'o1' }),
+    );
   });
 });
 
