@@ -2,12 +2,13 @@
 
 import { Suspense, useEffect, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
-import { DownloadCloud, SearchX } from 'lucide-react';
+import { AlertTriangle, DownloadCloud, SearchX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -292,9 +293,19 @@ function OrdersDashboardContent() {
                     <TableCell className="text-right">
                       <span className="num">{order.itemCount}</span>
                       {order.unresolvedCount > 0 ? (
-                        <StatusBadge tone="warn" className="ml-2">
-                          <span className="num">{order.unresolvedCount}</span> belum dikaitkan
-                        </StatusBadge>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="text-status-warn ml-1.5 inline-flex align-middle"
+                              aria-label={`${order.unresolvedCount} item belum dikaitkan`}
+                            >
+                              <AlertTriangle className="size-4" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span className="num">{order.unresolvedCount}</span> belum dikaitkan
+                          </TooltipContent>
+                        </Tooltip>
                       ) : null}
                     </TableCell>
                     <TableCell>

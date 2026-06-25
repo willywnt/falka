@@ -1,8 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Video } from 'lucide-react';
+import { ExternalLink, Link2, Video } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,11 +17,13 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/error-state';
+import { ImageThumb } from '@/components/image-thumb';
 import { StatusBadge } from '@/components/status-badge';
+import { VariantPickerDialog } from '@/components/variant-picker-dialog';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { useRecordingsByResiQuery } from '@/modules/recordings/hooks/use-recordings-management';
 
-import { useOrderQuery } from '../hooks/use-orders';
+import { useOrderQuery, useResolveOrderItemMutation } from '../hooks/use-orders';
 import type { OrderItemDetail } from '../types';
 import { OrderStatusBadge } from './order-status-badge';
 
@@ -33,37 +37,68 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** One compact item line: name, variant/SKU, qty × unit price; warn when unmapped. */
-function PeekItemRow({ item }: { item: OrderItemDetail }) {
+/** One compact item line: photo + name (links out), variant/SKU, qty × price; map when unmapped. */
+function PeekItemRow({
+  item,
+  onMap,
+}: {
+  item: OrderItemDetail;
+  onMap: (item: OrderItemDetail) => void;
+}) {
   return (
     <li className="space-y-1.5 py-3 first:pt-2 last:pb-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium break-words">{item.externalName}</p>
-          <p className="text-muted-foreground text-xs">
-            {item.variant ? (
-              <>
-                {item.variant.productName} / {item.variant.name} ·{' '}
-                <span className="num">{item.variant.sku}</span>
-              </>
-            ) : item.externalSku ? (
-              <span className="num">{item.externalSku}</span>
+        <div className="flex min-w-0 items-start gap-2.5">
+          {item.externalImageUrl ? (
+            <ImageThumb src={item.externalImageUrl} alt={item.externalName} />
+          ) : null}
+          <div className="min-w-0">
+            {item.externalDetailUrl ? (
+              <a
+                href={item.externalDetailUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium break-words hover:underline"
+              >
+                {item.externalName}
+                <ExternalLink className="size-3 shrink-0" />
+              </a>
             ) : (
-              '—'
+              <p className="text-sm font-medium break-words">{item.externalName}</p>
             )}
-          </p>
+            <p className="text-muted-foreground text-xs">
+              {item.variant ? (
+                <>
+                  {item.variant.productName} / {item.variant.name} ·{' '}
+                  <span className="num">{item.variant.sku}</span>
+                </>
+              ) : item.externalSku ? (
+                <span className="num">{item.externalSku}</span>
+              ) : (
+                '—'
+              )}
+            </p>
+          </div>
         </div>
         <span className="num shrink-0 text-sm whitespace-nowrap">
           {item.quantity} × {item.unitPrice ? formatCurrency(item.unitPrice) : '—'}
         </span>
       </div>
-      {!item.resolved ? <StatusBadge tone="warn">Belum dikaitkan</StatusBadge> : null}
+      {!item.resolved ? (
+        <div className="flex items-center gap-2">
+          <StatusBadge tone="warn">Belum dikaitkan</StatusBadge>
+          <Button variant="outline" size="sm" onClick={() => onMap(item)}>
+            <Link2 className="size-4" />
+            Kaitkan
+          </Button>
+        </div>
+      ) : null}
     </li>
   );
 }
 
-/** Packing-video evidence for the order's resi — count + jump to the library. */
-function PeekPackingVideos({ noResi }: { noResi: string }) {
+/** Packing-video evidence for the order's resi — count + jump to the library, or record. */
+function PeekPackingVideos({ noResi, canRecord }: { noResi: string; canRecord: boolean }) {
   const { data, isLoading, error, refetch } = useRecordingsByResiQuery(noResi);
 
   return (
@@ -90,9 +125,17 @@ function PeekPackingVideos({ noResi }: { noResi: string }) {
           </Button>
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">
-          Belum ada video packing — rekam di station untuk resi ini.
-        </p>
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-xs">Belum ada video packing untuk resi ini.</p>
+          {canRecord ? (
+            <Button variant="outline" size="sm" asChild className="w-full">
+              <Link href={`/recordings?resi=${encodeURIComponent(noResi)}`}>
+                <Video className="size-4" />
+                Rekam di station
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       )}
     </section>
   );
@@ -137,6 +180,30 @@ export function OrderPeek({
   onOpenChange: (open: boolean) => void;
 }) {
   const { data, isLoading, error, refetch } = useOrderQuery(orderId, open);
+  const resolveMutation = useResolveOrderItemMutation(orderId ?? '');
+  const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
+
+  function openMapDialog(item: OrderItemDetail) {
+    setMapTarget({
+      id: item.id,
+      label: `${item.externalName}${item.externalSku ? ` · ${item.externalSku}` : ''}`,
+    });
+  }
+
+  async function handleResolve(variantId: string) {
+    if (!mapTarget) return;
+    try {
+      await resolveMutation.mutateAsync({ orderItemId: mapTarget.id, variantId });
+      toast.success('Item dikaitkan', {
+        description: 'Stok ikut diperbarui kalau pesanan sudah dibayar.',
+      });
+      setMapTarget(null);
+    } catch (err) {
+      toast.error('Gagal mengaitkan item', {
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
+      });
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -206,6 +273,22 @@ export function OrderPeek({
                   </span>
                 </MetaRow>
               ) : null}
+              {data.status === 'CANCELLED' &&
+              (data.cancelReason ?? data.marketplace.cancelReason) ? (
+                <MetaRow label="Alasan batal">
+                  <span className="text-right font-medium">
+                    {data.cancelReason ?? data.marketplace.cancelReason}
+                  </span>
+                </MetaRow>
+              ) : null}
+              {data.marketplace.buyerNote ? (
+                <div className="space-y-1 text-sm">
+                  <span className="text-muted-foreground">Catatan pembeli</span>
+                  <p className="bg-muted/50 rounded-md p-2 break-words">
+                    {data.marketplace.buyerNote}
+                  </p>
+                </div>
+              ) : null}
             </section>
 
             <section className="border-t pt-4">
@@ -217,12 +300,14 @@ export function OrderPeek({
               </p>
               <ul className="divide-y">
                 {data.items.map((item) => (
-                  <PeekItemRow key={item.id} item={item} />
+                  <PeekItemRow key={item.id} item={item} onMap={openMapDialog} />
                 ))}
               </ul>
             </section>
 
-            {data.noResi ? <PeekPackingVideos noResi={data.noResi} /> : null}
+            {data.noResi ? (
+              <PeekPackingVideos noResi={data.noResi} canRecord={data.status !== 'CANCELLED'} />
+            ) : null}
           </div>
         )}
 
@@ -237,6 +322,19 @@ export function OrderPeek({
           ) : null}
         </SheetFooter>
       </SheetContent>
+
+      {mapTarget ? (
+        <VariantPickerDialog
+          open={Boolean(mapTarget)}
+          onOpenChange={(next) => {
+            if (!next) setMapTarget(null);
+          }}
+          title="Kaitkan ke produk"
+          description={mapTarget.label}
+          busy={resolveMutation.isPending}
+          onSelect={(variantId) => void handleResolve(variantId)}
+        />
+      ) : null}
     </Sheet>
   );
 }

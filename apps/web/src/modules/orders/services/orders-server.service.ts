@@ -18,7 +18,7 @@ import { returnsServerService } from '@/modules/returns/services/returns-server.
 
 import { getMarketplaceOrderAdapter } from '../adapters/order-adapter';
 import { OrderError } from '../errors/order-errors';
-import { extractOrderMarketplaceMeta } from '../utils/marketplace-meta';
+import { extractOrderItemMedia, extractOrderMarketplaceMeta } from '../utils/marketplace-meta';
 import type { ListOrdersQuery } from '../validators/list-orders';
 import type { MultiPullOrdersResult, OrderDetail, OrderItemDetail, OrderListItem } from '../types';
 
@@ -131,12 +131,15 @@ export class OrdersServerService {
     });
     if (!order) throw OrderError.notFound();
 
+    const itemMedia = extractOrderItemMedia(order.rawPayload);
     const items: OrderItemDetail[] = order.items.map((item) => ({
       id: item.id,
       externalName: item.externalName,
       externalSku: item.externalSku,
       quantity: item.quantity,
       unitPrice: item.unitPrice?.toString() ?? null,
+      externalImageUrl: itemMedia.get(item.externalVariantId)?.imageUrl ?? null,
+      externalDetailUrl: itemMedia.get(item.externalVariantId)?.detailUrl ?? null,
       resolved: item.productVariantId !== null,
       variant: item.productVariant
         ? {

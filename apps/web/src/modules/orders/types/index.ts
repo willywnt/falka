@@ -6,6 +6,10 @@ export type OrderItemDetail = {
   externalSku: string | null;
   quantity: number;
   unitPrice: string | null;
+  /** Marketplace product photo for this line (product_main_image), if any. */
+  externalImageUrl: string | null;
+  /** Storefront URL for the listing (product_detail_url) — links the item name out. */
+  externalDetailUrl: string | null;
   resolved: boolean;
   variant: {
     id: string;
@@ -57,6 +61,10 @@ export type OrderMarketplaceMeta = {
   returnStatus: string | null;
   /** A buyer/system cancellation is awaiting the seller's action — don't ship. */
   cancelPending: boolean;
+  /** The buyer's note on the order, if any. */
+  buyerNote: string | null;
+  /** The marketplace's cancellation reason (distinct from a manual cancel reason). */
+  cancelReason: string | null;
 };
 
 export type OrderDetail = OrderListItem & {

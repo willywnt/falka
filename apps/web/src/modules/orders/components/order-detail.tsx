@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Link2, Undo2, Video } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Link2, Undo2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -93,14 +93,31 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     });
   }
 
-  /** Item name + external SKU — shared by the table row and the mobile card. */
+  /** Item photo + name (links to the listing) + external SKU — shared by row and card. */
   function renderItemName(item: OrderItemDetail) {
     return (
-      <div className="min-w-0">
-        <div className="font-medium break-words">{item.externalName}</div>
-        {item.externalSku ? (
-          <div className="num text-muted-foreground text-xs">{item.externalSku}</div>
+      <div className="flex min-w-0 items-start gap-3">
+        {item.externalImageUrl ? (
+          <ImageThumb src={item.externalImageUrl} alt={item.externalName} />
         ) : null}
+        <div className="min-w-0">
+          {item.externalDetailUrl ? (
+            <a
+              href={item.externalDetailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-medium break-words hover:underline"
+            >
+              {item.externalName}
+              <ExternalLink className="size-3 shrink-0" />
+            </a>
+          ) : (
+            <div className="font-medium break-words">{item.externalName}</div>
+          )}
+          {item.externalSku ? (
+            <div className="num text-muted-foreground text-xs">{item.externalSku}</div>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -350,10 +367,21 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               <OrderMetaLine label="Kurir" value={data.marketplace.courier} />
               <OrderMetaLine label="Gudang" value={data.marketplace.warehouseCode} />
               <OrderMetaLine label="Status retur" value={data.marketplace.returnStatus} />
-              {data.status === 'CANCELLED' && data.cancelReason ? (
+              {data.status === 'CANCELLED' &&
+              (data.cancelReason ?? data.marketplace.cancelReason) ? (
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-muted-foreground shrink-0">Alasan batal</span>
-                  <span className="text-right font-medium">{data.cancelReason}</span>
+                  <span className="text-right font-medium">
+                    {data.cancelReason ?? data.marketplace.cancelReason}
+                  </span>
+                </div>
+              ) : null}
+              {data.marketplace.buyerNote ? (
+                <div className="space-y-1 border-t pt-3">
+                  <span className="text-muted-foreground">Catatan pembeli</span>
+                  <p className="bg-muted/50 rounded-md p-2 break-words">
+                    {data.marketplace.buyerNote}
+                  </p>
                 </div>
               ) : null}
             </CardContent>
@@ -389,9 +417,19 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                     <ShareEvidenceControl recordings={packingVideos} />
                   </>
                 ) : (
-                  <p className="text-muted-foreground text-xs">
-                    Belum ada video packing — rekam di station untuk resi ini.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-xs">
+                      Belum ada video packing untuk resi ini.
+                    </p>
+                    {data.status !== 'CANCELLED' ? (
+                      <Button variant="outline" size="sm" asChild className="w-full">
+                        <Link href={`/recordings?resi=${encodeURIComponent(data.noResi)}`}>
+                          <Video className="size-4" />
+                          Rekam di station
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 )}
               </CardContent>
             </Card>

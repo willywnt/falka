@@ -9,6 +9,8 @@ const EMPTY_META: OrderMarketplaceMeta = {
   warehouseCode: null,
   returnStatus: null,
   cancelPending: false,
+  buyerNote: null,
+  cancelReason: null,
 };
 
 function readString(value: unknown): string | null {
@@ -33,6 +35,17 @@ function meaningful(value: string | null): string | null {
 }
 
 /**
+ * Lazada packs the fulfilment route into shipment_provider as "Drop-off: <pickup>, Delivery:
+ * <courier>". The seller cares about the delivery courier, so return only that part (the
+ * value after "Delivery:"); fall back to the whole string when it isn't in that shape.
+ */
+function parseCourier(value: string | null): string | null {
+  if (!value) return null;
+  const match = /Delivery:\s*(.+)$/i.exec(value);
+  return (match?.[1] ?? value).trim() || null;
+}
+
+/**
  * Best-effort extraction of marketplace-specific order metadata from the stored raw payload —
  * the fields a seller wants per status (SLA, courier, payment, cancellation), surfaced without
  * a schema change. Lazada-shaped (`{ order, items }`); returns empty meta for the stub/demo
@@ -48,9 +61,15 @@ export function extractOrderMarketplaceMeta(rawPayload: unknown): OrderMarketpla
   // The SLA lives on the header (`promised_shipping_times`) or per item (`promised_shipping_time`).
   const promisedShipTime =
     readString(header.promised_shipping_times) ?? readString(firstItem.promised_shipping_time);
-  // A return status / cancel initiator that any item carries (first non-empty wins).
+  // A return status that any item carries (first non-empty wins).
   const returnStatus = meaningful(
     items.map((item) => readString(item.return_status)).find((value) => meaningful(value)) ?? null,
+  );
+  // A cancellation reason any item carries (reason_detail is the fuller text; first non-empty wins).
+  const cancelReason = meaningful(
+    items
+      .map((item) => readString(item.reason_detail) ?? readString(item.reason))
+      .find((value) => meaningful(value)) ?? null,
   );
 
   return {
@@ -58,9 +77,35 @@ export function extractOrderMarketplaceMeta(rawPayload: unknown): OrderMarketpla
     paymentMethod: readString(header.payment_method),
     shippingFee: readNumber(header.shipping_fee),
     promisedShipTime,
-    courier: readString(firstItem.shipment_provider),
+    courier: parseCourier(readString(firstItem.shipment_provider)),
     warehouseCode: readString(header.warehouse_code) ?? readString(firstItem.warehouse_code),
     returnStatus,
     cancelPending: header.is_cancel_pending === true || header.need_cancel_confirm === true,
+    buyerNote: readString(header.buyer_note) ?? readString(header.remarks),
+    cancelReason,
   };
+}
+
+/**
+ * Per-SKU media (marketplace product photo + storefront URL) keyed by the external variant id
+ * (Lazada sku_id), so the order detail can show each line's photo and link out. Best-effort:
+ * empty for the stub/demo payload or any provider that doesn't carry these keys.
+ */
+export function extractOrderItemMedia(
+  rawPayload: unknown,
+): Map<string, { imageUrl: string | null; detailUrl: string | null }> {
+  const media = new Map<string, { imageUrl: string | null; detailUrl: string | null }>();
+  if (!rawPayload || typeof rawPayload !== 'object') return media;
+  const raw = rawPayload as Record<string, unknown>;
+  const items = Array.isArray(raw.items) ? (raw.items as Record<string, unknown>[]) : [];
+
+  for (const item of items) {
+    const skuId = readString(item.sku_id);
+    if (!skuId || media.has(skuId)) continue;
+    media.set(skuId, {
+      imageUrl: readString(item.product_main_image),
+      detailUrl: readString(item.product_detail_url),
+    });
+  }
+  return media;
 }
