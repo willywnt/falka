@@ -407,10 +407,17 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
-  **Multi-store pull** `pullFromConnections` (default all active, 30s per-store cooldown). Provider creds
-  thread as **`ProviderShopCredentials = {accessToken, shopId, shopCipher}`** through the worker
-  stock-adapter + web import-adapter (Lazada ignores shopId/shopCipher; Shopee uses shopId; Tokopedia/
-  TikTok needs the `MarketplaceConnection.externalShopCipher` column).
+  **Multi-store pull** `pullFromConnections(org, actor, { connectionIds?, full? })` (default all active,
+  per-provider cooldown). **Order pull is REAL for LAZADA** (`LazadaOrderAdapter`; Shopee/Tokopedia still
+  stub). Incremental cursor `MarketplaceConnection.ordersSyncedThrough` (decoupled from the cooldown),
+  advanced ONLY on a COMPLETE pull (adapter → `{ orders, complete }`); `full:true` re-syncs the whole
+  window. **INVARIANT: a reserved order's line set is FROZEN** (carry qty/variant/`unitCost` forward +
+  reserve-delta for late maps; ship/release run off the frozen set). Per-line status releases a line
+  cancelled inside a shipped order. VPS auto-pull (`runScheduledPull` + `server.ts` timer + internal
+  endpoint, env `ORDERS_AUTO_PULL_INTERVAL_MS`, dormant on Vercel). Design + open issues (Batch-3 VPS
+  hardening owed): `docs/roadmap/lazada-order-pull.md`. Provider creds thread as
+  **`ProviderShopCredentials = {accessToken, shopId, shopCipher}`** (Lazada ignores shopId/shopCipher;
+  Shopee uses shopId; Tokopedia/TikTok needs `MarketplaceConnection.externalShopCipher`).
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
   layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/sales/stock to re-test
   the loop (then restart the dev server to rewind the stub pull timeline). `pnpm --filter @falka/db

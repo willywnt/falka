@@ -7,10 +7,12 @@ alwaysApply: false
 # Inventory / Marketplace MVP
 
 Internal inventory is the **source of truth**, integrated with marketplaces. **Adapter-first**: LAZADA is
-the live-validated real adapter; SHOPEE and TOKOPEDIA (= TikTok Shop Open API v202309) have env-gated real
-adapter scaffolds (NOT live-verified) that fall back to the Dev/stub when their app creds are unset.
+the live-validated real adapter for listing import, stock-write AND **order pull** (`LazadaOrderAdapter`,
+wired + paired-test-validated 2026-06; field shapes still flagged VERIFY); SHOPEE and TOKOPEDIA (= TikTok
+Shop Open API v202309) have env-gated real listing/stock adapter scaffolds (NOT live-verified) and still use
+the **stub** for order pull; all fall back to the Dev/stub when their app creds are unset.
 Org-scoped (`organizationId`), internal-first. Roadmap + locked decisions:
-`docs/roadmap/inventory-mvp.md`.
+`docs/roadmap/inventory-mvp.md` + the order-pull design `docs/roadmap/lazada-order-pull.md`.
 
 ## Modules & domains
 - **catalog** — Product / ProductVariant (master). Server service owns Prisma (no repository).
@@ -90,26 +92,53 @@ Org-scoped (`organizationId`), internal-first. Roadmap + locked decisions:
 - **marketplace** — connections (`MarketplaceConnection`; now also `lastOrdersPulledAt`) +
   `MarketplaceProduct` (listing snapshot) + `MarketplaceProductMapping` (listing↔variant). Mapping
   is **1:1 on the listing** (`marketplaceProductId @unique`) but ONE variant MAY map to many
-  listings — cross-channel sync is by design, do NOT force 1:1. Import via STUB adapter; auto-map by
+  listings — cross-channel sync is by design, do NOT force 1:1. Import via the **env-gated adapter**
+  (real `LazadaImportAdapter`/`fetchLazadaListings` for LAZADA, else STUB); auto-map by
   NORMALIZED sku (`utils/sku-match.ts`, NOT edit-distance — `…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW` + sync stays off (per-listing sync is a **Switch**, disabled while NEEDS_REVIEW).
   `mapByExternalRef` upserts a listing (creating its snapshot if never imported) + its mapping.
-- **orders** — **multi-store pull** `pullFromConnections(connectionIds?)` (default every active
-  store; STUB adapter) → resolve items via mapping → advance the per-order **stock lifecycle** (each
-  stage once, idempotent via `Order.inventoryAppliedAt`/`inventoryShippedAt`/`inventoryRevertedAt`):
-  RESERVE on PAID, SHIP on SHIPPED/COMPLETED (consumes the reservation; an order first seen already
-  shipped reserves then ships), RELEASE on CANCELLED-before-ship. CANCELLED-**after**-ship is a return,
-  NOT a release (goods already left → no credit): it auto-opens a return via the returns service
-  (best-effort). Only available changes (reserve/release) propagate to OTHER channels — excluding the
-  source channel (`excludeConnectionId`); ship does not. Per-store **30s cooldown** keyed on
-  `lastOrdersPulledAt` (skipped, not errored = anti-abuse). `resolveOrderItem` maps an unmapped item
-  from the order page (via `mapByExternalRef`) then reserves stock for just the newly-resolved items of
-  a PAID order (idempotent). Endpoints: `POST /api/v1/orders/pull`, `/orders/:id/resolve-item`. Pull
-  lives on the **Orders** page (removed from marketplace detail).
+- **orders** — **multi-store pull** `pullFromConnections(org, actor, { connectionIds?, full? })`
+  (default every active store) via an **env-gated order adapter**: real **`LazadaOrderAdapter`**
+  (`fetchLazadaOrders` — pages `/orders/get`, batch-hydrates `/orders/items/get`, collapses Lazada's
+  one-object-per-unit rows into per-SKU lines; field shapes VERIFY-flagged but paired-test-validated);
+  SHOPEE/TOKOPEDIA still the **stub**. Resolve items via mapping → advance the per-order **stock
+  lifecycle** (each stage once, idempotent via `Order.inventoryAppliedAt`/`inventoryShippedAt`/
+  `inventoryRevertedAt`): RESERVE on PAID, SHIP on SHIPPED/COMPLETED (consumes the reservation; an order
+  first seen already shipped reserves then ships), RELEASE on CANCELLED-before-ship. CANCELLED-**after**
+  -ship is a return, NOT a release (auto-opens a return, best-effort). Only available changes
+  (reserve/release) propagate to OTHER channels (`excludeConnectionId`); ship does not.
+  - **INVARIANT — a reserved order's line set is FROZEN.** Re-pulls re-resolve + delete/recreate items
+    only while `inventoryAppliedAt` is null; once reserved, carry the persisted **qty + variant +
+    unitCost (COGS snapshot)** forward (never wipe/downgrade), and a line that maps later gets a
+    **reserve-delta** (don't re-reserve the whole order). Ship/release run off the frozen set. Do NOT
+    revert to re-resolving reserved items.
+  - **Per-line status** (`NormalizedOrderItem.status`, Lazada per item): a line CANCELLED inside an
+    otherwise-shipped order is RELEASED, not consumed. **Seller-SKU fallback** in
+    `resolveOrderItemVariantIds` (order line `sku`=seller SKU → `externalSku`) resolves a line the
+    `(productId,variantId)` join misses — but an **ambiguous** SKU (same externalSku → 2 variants) stays
+    unresolved, never a wrong-variant guess.
+  - **Incremental cursor** `MarketplaceConnection.ordersSyncedThrough` (decoupled from the per-provider
+    cooldown `lastOrdersPulledAt`): the window is `update_after = cursor − 10min overlap` (30-day first
+    backfill); the cursor advances to pull-start **ONLY on a COMPLETE pull** (adapter returns
+    `{ orders, complete }`; a throttle/page-cap-truncated pull leaves it so the tail isn't skipped).
+    `full:true` ignores the cursor (manual re-sync / fix backlog). Sort = `externalUpdatedAt desc NULLS
+    LAST, placedAt, id`.
+  - **VPS auto-pull** (dormant on Vercel): `runScheduledPull()` (all orgs, `connection.userId` as actor)
+    hit by a `server.ts` loopback timer → secret-gated `POST /api/v1/internal/pull-orders`, env
+    `ORDERS_AUTO_PULL_INTERVAL_MS` (unset=off). [Batch-3 hardening owed: dedicated secret + 404 on Vercel
+    + fetch timeout.]
+  - `resolveOrderItem` (manual Kaitkan, also from the peek) maps via `mapByExternalRef` + reserves just
+    the newly-resolved PAID-order items (idempotent). Per-status detail (SLA/courier/payment/note/cancel
+    reason) + per-item photo/link come from `Order.rawPayload` at read-time (`extractOrderMarketplaceMeta`
+    /`extractOrderItemMedia`, no schema). Endpoints: `POST /api/v1/orders/pull` (+`full`),
+    `/orders/:id/resolve-item`. List has marketplace+store filters. Pull lives on the **Orders** page.
 - **fulfillment (Phase 5)** — orders ↔ packing videos are joined by the shared **`noResi`**
   (no FK; matched **case-insensitively** — the resi input is NOT force-uppercased, the scanner is).
   `Order.fulfilledAt` is stamped best-effort when a packing video completes (the recordings complete
-  route calls `markFulfilledByResi` — never fails the save). `findByResi` resolves the order for a resi
+  route calls `markFulfilledByResi` — never fails the save). `markFulfilledByResi` stamps ONLY when a
+  **COMPLETED Recording exists** for that resi — so marking an order shipped / setting a resi never
+  fakes the Fulfillment badge without a video; it just retroactively links a video that already exists.
+  `findByResi` resolves the order for a resi
   (the station **pack view** shows its items via `useOrderByResiQuery`); recordings `findByResi` lists
   completed videos for a resi (order/return **evidence**, via `useRecordingsByResiQuery`). Links work
   **both ways**: order/return → packing video, and the recording detail modal + pack view → order.
