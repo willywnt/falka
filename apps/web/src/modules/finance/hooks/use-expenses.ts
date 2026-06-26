@@ -34,6 +34,16 @@ export function useExpensesQuery(filters: ExpenseFilters = {}) {
   });
 }
 
+/** A download URL for the expense-ledger CSV, honoring the active filters. */
+export function expenseExportUrl(filters: ExpenseFilters = {}): string {
+  const params = new URLSearchParams();
+  if (filters.from) params.set('from', filters.from);
+  if (filters.to) params.set('to', filters.to);
+  if (filters.category) params.set('category', filters.category);
+  const qs = params.toString();
+  return `${apiRoutes.expenses}/export${qs ? `?${qs}` : ''}`;
+}
+
 export function useCreateExpenseMutation() {
   const queryClient = useQueryClient();
   return useMutation({

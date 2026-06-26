@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { Coins, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { Coins, Download, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -39,7 +39,11 @@ import { ErrorState } from '@/components/error-state';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 
-import { useDeleteExpenseMutation, useExpensesQuery } from '../hooks/use-expenses';
+import {
+  expenseExportUrl,
+  useDeleteExpenseMutation,
+  useExpensesQuery,
+} from '../hooks/use-expenses';
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, type ExpenseListItem } from '../types';
 import { ExpenseFormDialog } from './expense-form-dialog';
 
@@ -108,12 +112,27 @@ export function ExpensesDashboard() {
             ))}
           </Select>
         </div>
-        {canManage ? (
-          <Button onClick={openCreate} className="sm:shrink-0">
-            <Plus className="size-4" />
-            Catat biaya
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-2 sm:shrink-0">
+          {expenses.length > 0 ? (
+            <Button variant="outline" asChild>
+              <a href={expenseExportUrl(filters)} download>
+                <Download className="size-4" />
+                Ekspor CSV
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled>
+              <Download className="size-4" />
+              Ekspor CSV
+            </Button>
+          )}
+          {canManage ? (
+            <Button onClick={openCreate}>
+              <Plus className="size-4" />
+              Catat biaya
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {!isLoading && !error && expenses.length > 0 ? (
