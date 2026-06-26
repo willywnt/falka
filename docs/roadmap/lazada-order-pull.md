@@ -99,8 +99,10 @@ fallback, placedAt-not-rewritten). Plus the earlier fulfilledAt false-stamp fix.
 - **#7 (skipped, safe):** an items-fetch throttle THROWS → the cursor isn't advanced → safe retry.
   Making it `partial` risks the freeze interaction (a reserved order returned with empty lines), so left
   as-is. Revisit only if a very busy shop perpetually re-throttles the items phase.
-- **snapshotOrderItemCostsTx** overwrites all same-variant lines of an order (narrow low — the manual
-  `resolveOrderItem` path, two listings→one variant + a cost change between). Snapshot by orderItem id.
+- ~~**snapshotOrderItemCostsTx** overwrites all same-variant lines of an order~~ **FIXED 2026-06-26**:
+  a `unitCost: null` guard means each line is stamped once, at its own reserve time, and a later
+  reserve of a sibling line (same variant, manual `resolveOrderItem` path, cost changed between)
+  never overwrites it.
 - **VERIFY against more live data:** exact field casing per region, the GetMultipleOrderItems batch cap
   (set 20), the real SHIPPED/DELIVERED pull (the test shop's drop-off orders don't reach `shipped` in
   sandbox — needs a self-delivery test order or a real shipment).
