@@ -30,3 +30,10 @@ export type ExpenseListItem = {
 };
 
 export type ExpenseDetail = ExpenseListItem;
+
+/** A raw expense row for report aggregation (numbers, not strings). */
+export type ExpenseLine = {
+  date: Date;
+  category: ExpenseCategory;
+  amount: number;
+};

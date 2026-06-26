@@ -1,4 +1,4 @@
-import type { MarketplaceProvider, SalePaymentMethod } from '@prisma/client';
+import type { ExpenseCategory, MarketplaceProvider, SalePaymentMethod } from '@prisma/client';
 
 /** Where a realized sale happened: the offline counter or a marketplace channel. */
 export type ProfitChannel = 'POS' | MarketplaceProvider;
@@ -261,4 +261,33 @@ export type AbcReport = {
   classes: AbcClassSummary[];
   /** Every SKU, highest net revenue first. */
   rows: AbcRow[];
+};
+
+/** Net P&L = gross profit − operating expenses. Reuses the profit report's revenue/COGS. */
+export type NetProfitSummary = {
+  grossRevenue: string;
+  cogs: string;
+  grossProfit: string;
+  operatingExpenses: string;
+  netProfit: string;
+  /** netProfit / grossRevenue × 100; null when there's no revenue. */
+  netMarginPct: number | null;
+};
+
+export type NetProfitByCategory = { category: ExpenseCategory; amount: string };
+
+export type NetProfitByPeriod = {
+  period: string;
+  grossProfit: string;
+  operatingExpenses: string;
+  netProfit: string;
+};
+
+export type NetProfitReport = {
+  range: { from: string; to: string; groupBy: ProfitPeriodGranularity };
+  summary: NetProfitSummary;
+  /** Operating expenses per category, largest first. */
+  byCategory: NetProfitByCategory[];
+  /** Per-period gross profit, expenses, and net profit (the trend). */
+  byPeriod: NetProfitByPeriod[];
 };

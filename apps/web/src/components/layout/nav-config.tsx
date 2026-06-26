@@ -11,6 +11,7 @@ import {
   LineChart,
   PackageSearch,
   QrCode,
+  Scale,
   ScrollText,
   Settings,
   ShoppingBag,
@@ -203,6 +204,13 @@ export const sidebarNavSections: readonly NavSection[] = [
         icon: LineChart,
         keywords: ['laba', 'profit', 'omzet', 'margin', 'channel', 'laporan'],
         permission: 'reports.view',
+      },
+      {
+        title: 'Laba bersih',
+        href: '/dashboard/reports/net-profit',
+        icon: Scale,
+        keywords: ['laba bersih', 'net profit', 'netto', 'untung', 'rugi', 'p&l', 'keuangan'],
+        permission: 'finance.view',
       },
       {
         title: 'Nilai stok',

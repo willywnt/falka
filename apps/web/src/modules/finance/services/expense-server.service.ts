@@ -7,7 +7,7 @@ import { appLogger } from '@/lib/logger';
 import { auditService } from '@/modules/audit/services/audit.service';
 
 import { ExpenseError } from '../errors/expense-errors';
-import type { ExpenseDetail, ExpenseListItem } from '../types';
+import type { ExpenseDetail, ExpenseLine, ExpenseListItem } from '../types';
 import type {
   CreateExpenseInput,
   ListExpensesQuery,
@@ -56,6 +56,19 @@ export class ExpenseServerService {
 
   async getExpense(organizationId: string, id: string): Promise<ExpenseDetail> {
     return mapExpense(await this.getOwnedExpense(id, organizationId));
+  }
+
+  /** Raw expense lines in a date range — feeds the Net P&L report's category/period aggregation. */
+  async listExpenseLines(organizationId: string, from: Date, to: Date): Promise<ExpenseLine[]> {
+    const rows = await prisma.expense.findMany({
+      where: { organizationId, deletedAt: null, date: { gte: from, lte: to } },
+      select: { date: true, category: true, amount: true },
+    });
+    return rows.map((row) => ({
+      date: row.date,
+      category: row.category,
+      amount: Number(row.amount),
+    }));
   }
 
   async createExpense(

@@ -4,6 +4,7 @@ import { prisma } from '@falka/db';
 import { StockLedgerReason } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
+import { expenseServerService } from '@/modules/finance/services/expense-server.service';
 
 import { REPORT_EXPORT_CAP } from '../config';
 import type {
@@ -11,6 +12,7 @@ import type {
   ChannelPerformanceReport,
   DeadStockReport,
   InventoryValuationReport,
+  NetProfitReport,
   ProfitBySku,
   ProfitChannel,
   ProfitReport,
@@ -29,6 +31,7 @@ import {
   type ValuationVariant,
 } from '../utils/inventory-valuation-aggregate';
 import { computePaymentMix, type PaymentMixInput } from '../utils/payment-mix';
+import { aggregateNetProfit } from '../utils/net-profit-aggregate';
 import { aggregateProfit, aggregateProfitBySku, type SoldLine } from '../utils/profit-aggregate';
 
 const DEFAULT_RANGE_DAYS = 30;
@@ -283,6 +286,23 @@ export class ReportingServerService {
   async getProfitReport(organizationId: string, query: ProfitReportQuery): Promise<ProfitReport> {
     const { lines, from, to } = await this.loadSoldLines(organizationId, query);
     return aggregateProfit(lines, { from, to, groupBy: query.groupBy });
+  }
+
+  /**
+   * True Net P&L: the profit report's gross profit (revenue − COGS) minus operating
+   * expenses (the finance ledger) over the same range — surfaced per category + period.
+   */
+  async getNetProfitReport(
+    organizationId: string,
+    query: ProfitReportQuery,
+  ): Promise<NetProfitReport> {
+    const profit = await this.getProfitReport(organizationId, query);
+    const expenseLines = await expenseServerService.listExpenseLines(
+      organizationId,
+      new Date(profit.range.from),
+      new Date(profit.range.to),
+    );
+    return aggregateNetProfit(profit, expenseLines, { groupBy: query.groupBy });
   }
 
   /** Full per-SKU profit rows for the CSV export (no top/bottom slicing). */

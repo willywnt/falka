@@ -12,6 +12,7 @@ import type {
   ChannelPerformanceReport,
   DeadStockReport,
   InventoryValuationReport,
+  NetProfitReport,
   ProfitPeriodGranularity,
   ProfitReport,
 } from '../types';
@@ -37,6 +38,26 @@ export function useProfitReportQuery(params: ProfitReportParams) {
     queryKey: reportingKeys.profit(queryParams),
     queryFn: async () => {
       const result = await apiFetch<ProfitReport>(`${apiRoutes.reports}/profit`, {
+        params: queryParams,
+      });
+
+      if (!result.success) {
+        throw new Error(formatApiErrorMessage(result.error));
+      }
+
+      return result.data;
+    },
+  });
+}
+
+/** True Net P&L: gross profit − operating expenses over a date range + period grouping. */
+export function useNetProfitReportQuery(params: ProfitReportParams) {
+  const queryParams = toQueryParams(params);
+
+  return useQuery({
+    queryKey: reportingKeys.netProfit(queryParams),
+    queryFn: async () => {
+      const result = await apiFetch<NetProfitReport>(`${apiRoutes.reports}/net-profit`, {
         params: queryParams,
       });
 
