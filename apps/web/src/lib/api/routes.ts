@@ -13,6 +13,7 @@ export const apiRoutes = {
   sales: `${API_BASE_PATH}/sales`,
   purchaseOrders: `${API_BASE_PATH}/purchase-orders`,
   suppliers: `${API_BASE_PATH}/suppliers`,
+  expenses: `${API_BASE_PATH}/expenses`,
   reports: `${API_BASE_PATH}/reports`,
   notifications: `${API_BASE_PATH}/notifications`,
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
