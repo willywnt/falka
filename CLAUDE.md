@@ -37,7 +37,7 @@ web: `noEmit`, `jsx: preserve`, `allowJs`, next plugin. Alias **`@/*` → `apps/
 
 ## 3. Module boundaries (apps/web/src/modules/<feature>/)
 
-Modules: `admin audit auth catalog inventory marketplace notifications orders purchasing recordings reporting returns sales scanner-pairing storage users`.
+Modules: `admin audit auth catalog finance inventory marketplace notifications orders purchasing recordings reporting returns sales scanner-pairing storage users`.
 
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
@@ -168,23 +168,23 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 - **Auth**: sign-in (credentials + pairing QR) resolves membership; no active membership ⇒ login
   refused (`AuthError.accessRevoked`). JWT carries `organizationId`/`orgRole` as a HINT; the DB is
   authoritative (re-resolved per request).
-- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 11
+- **RBAC is per-org CONFIGURABLE** (server = boundary, UI hiding cosmetic). A catalog of 13
   permission keys (`modules/users/permissions/catalog.ts`) in two tiers: **VIEW keys**
-  (`reports.view`, `purchasing.view`, `marketplace.view`) hide a whole section — nav menu + pages
-  - create entries + deep-link buttons — when off; **ACTION keys** (`sales.refund`,
-    `purchasing.cancel`, `catalog.delete`, `catalog.import`, `inventory.adjust`, `opname.post`,
-    `marketplace.manage`, `team.manage`) hide a single button. The OWNER edits an ADMIN/STAFF allow-matrix in Settings →
-    "Peran & akses". OWNER always has all keys; **defaults = ADMIN all on, STAFF all off** (STAFF is
-    pure daily-ops: Kasir/Pesanan/Inventaris/Opname-count/Katalog/Rekam/Retur — no reports,
-    purchasing, marketplace, or money/config). Stored in `Organization.permissions` (Json, null =
-    defaults), resolved per request into `org.permissions` by `resolveOrgContext`. Gate routes with
-    **`requirePermission: '<key>'`** (OWNER bypasses) + pages with `requireOrgPermission`; reserve
-    **`minOrgRole: 'OWNER'`** for owner-only (member role-change/remove, the matrix editor, **store
-    rename** `PATCH /api/v1/org`). Client mirrors it with `useHasPermission(key)` + nav `permission`
-    (NOT role checks). Team authority stays **hybrid**: ADMIN (with `team.manage`) lists members +
-    mints/revokes STAFF invites; OWNER additionally changes roles, removes members, mints ADMIN
-    invites; the OWNER row is immutable. Settings: Penyimpanan is visible to ALL roles (read-only
-    quota); Tim/Riwayat = ADMIN+; Peran & akses = OWNER only.
+  (`reports.view`, `purchasing.view`, `marketplace.view`, `finance.view`) hide a whole section — nav
+  menu + pages + create entries + deep-link buttons — when off; **ACTION keys** (`sales.refund`,
+  `purchasing.cancel`, `catalog.delete`, `catalog.import`, `inventory.adjust`, `opname.post`,
+  `marketplace.manage`, `team.manage`, `finance.manage`) hide a single button. The OWNER edits an ADMIN/STAFF allow-matrix in Settings →
+  "Peran & akses". OWNER always has all keys; **defaults = ADMIN all on, STAFF all off** (STAFF is
+  pure daily-ops: Kasir/Pesanan/Inventaris/Opname-count/Katalog/Rekam/Retur — no reports,
+  purchasing, marketplace, or money/config). Stored in `Organization.permissions` (Json, null =
+  defaults), resolved per request into `org.permissions` by `resolveOrgContext`. Gate routes with
+  **`requirePermission: '<key>'`** (OWNER bypasses) + pages with `requireOrgPermission`; reserve
+  **`minOrgRole: 'OWNER'`** for owner-only (member role-change/remove, the matrix editor, **store
+  rename** `PATCH /api/v1/org`). Client mirrors it with `useHasPermission(key)` + nav `permission`
+  (NOT role checks). Team authority stays **hybrid**: ADMIN (with `team.manage`) lists members +
+  mints/revokes STAFF invites; OWNER additionally changes roles, removes members, mints ADMIN
+  invites; the OWNER row is immutable. Settings: Penyimpanan is visible to ALL roles (read-only
+  quota); Tim/Riwayat = ADMIN+; Peran & akses = OWNER only.
 - **Invites**: 8-char code (`A-Z2-9`, no 0/O/1/I), 7-day expiry, shared via WhatsApp; subject to
   the org's `memberLimit` (`assertMemberCapacity`: members + pending invites < limit; null =
   unlimited). **Registration is invite-only** — `inviteCode` is REQUIRED; `registerUser` claims it
@@ -407,6 +407,15 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   days-since-last-sale from the `SALE`/`ORDER_RESERVE` ledger) valued at moving-avg cost; ABC = Pareto by
   net revenue (A/B/C over positive revenue). Pure aggregates (unit-tested) + CSV export; the sales reports
   reuse `loadSoldLines` so processed returns net out.
+- **Keuangan / True Net P&L** (`finance` module + a `reporting` report): an org-scoped, soft-deleted
+  `Expense` ledger (`ExpenseCategory` enum: advertising/packaging/shipping-subsidy/salary/rent/
+  marketplace-commission/payment-fee/utilities/other) at `/dashboard/finance/expenses` (nav "Keuangan",
+  CRUD gated `finance.manage`), and a **"Laba bersih (Net P&L)"** report under Laporan at
+  `/dashboard/reports/net-profit` (gated `finance.view`): `getNetProfitReport` reuses `getProfitReport`
+  (revenue−COGS) and subtracts `expenseServerService.listExpenseLines` over the same range via the pure
+  `aggregateNetProfit` util (same `money()` rounding → reconciles) → **net profit = gross profit − Σ
+  opex**, with per-category + per-period breakdowns. OWNER/ADMIN only (STAFF never sees money). Deferred:
+  recurring/auto-derived expenses, CSV, ledger filter UI.
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
