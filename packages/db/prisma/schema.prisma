@@ -80,6 +80,7 @@ model User {
   actedNotifications         Notification[]              @relation("NotificationActor")
   notificationReads          NotificationRead[]
   notificationPreferences    NotificationPreference[]
+  expenses                   Expense[]
 
   @@map("users")
 }
@@ -137,6 +138,7 @@ model Organization {
   stockOpnames               StockOpname[]
   notifications              Notification[]
   notificationPreferences    NotificationPreference[]
+  expenses                   Expense[]
 
   @@map("organizations")
 }
@@ -996,21 +998,21 @@ enum PurchaseOrderStatus {
  * variants that don't set their own. Org-scoped, soft-deleted (PO + variant FKs SetNull).
  */
 model Supplier {
-  id             String       @id @default(cuid())
-  userId         String // actor/creator
-  user           User         @relation(fields: [userId], references: [id])
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  name           String
-  phone          String?
-  note           String?
+  id                  String       @id @default(cuid())
+  userId              String // actor/creator
+  user                User         @relation(fields: [userId], references: [id])
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id])
+  name                String
+  phone               String?
+  note                String?
   // Reorder fallbacks — used ONLY when a variant's own leadTimeDays/minOrderQty is null.
   defaultLeadTimeDays Int?
   defaultMinOrderQty  Int?
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  isActive            Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
 
   purchaseOrders  PurchaseOrder[]
   productVariants ProductVariant[]
@@ -1272,4 +1274,40 @@ model NotificationPreference {
   @@unique([organizationId, userId, category, channel])
   @@index([organizationId, userId])
   @@map("notification_preferences")
+}
+
+enum ExpenseCategory {
+  ADVERTISING
+  PACKAGING
+  SHIPPING_SUBSIDY
+  SALARY
+  RENT
+  MARKETPLACE_COMMISSION
+  PAYMENT_FEE
+  UTILITIES
+  OTHER
+}
+
+/// An operating-expense (opex) entry for the True Net P&L report: net profit =
+/// gross profit − Σ operating expenses. Org-scoped, OWNER/ADMIN-managed (the finance.*
+/// permission keys), soft-deleted so the ledger + report history survive. `amount` is
+/// positive rupiah; a correction is a delete + re-add. `date` is when the expense was
+/// incurred (drives the report's date range, distinct from createdAt).
+model Expense {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  category       ExpenseCategory
+  amount         Decimal         @db.Decimal(14, 2)
+  date           DateTime
+  note           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  @@index([organizationId])
+  @@index([organizationId, date])
+  @@map("expenses")
 }
