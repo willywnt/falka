@@ -81,6 +81,7 @@ model User {
   notificationReads          NotificationRead[]
   notificationPreferences    NotificationPreference[]
   expenses                   Expense[]
+  expenseTemplates           ExpenseTemplate[]
 
   @@map("users")
 }
@@ -139,6 +140,7 @@ model Organization {
   notifications              Notification[]
   notificationPreferences    NotificationPreference[]
   expenses                   Expense[]
+  expenseTemplates           ExpenseTemplate[]
 
   @@map("organizations")
 }
@@ -1303,11 +1305,49 @@ model Expense {
   amount         Decimal         @db.Decimal(14, 2)
   date           DateTime
   note           String?
+  /// Set when this row was generated from a recurring ExpenseTemplate (null = entered manually).
+  templateId     String?
+  template       ExpenseTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  /// "YYYY-MM" the generated row covers; with templateId it gives one generated expense per
+  /// template per month (enforced by a partial unique index — see the migration).
+  periodMonth    String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
 
   @@index([organizationId])
   @@index([organizationId, date])
+  @@index([templateId])
+  // NOTE: a PARTIAL UNIQUE index `expenses_templateId_periodMonth_key` on (templateId, periodMonth)
+  // WHERE templateId IS NOT NULL AND periodMonth IS NOT NULL AND deletedAt IS NULL exists ONLY in
+  // migration 20260627090000_add_expense_templates (Prisma @@unique can't express a partial predicate).
+  // It is the per-template/per-month idempotency backstop for "Buat bulan ini". Deploy replays the SQL
+  // forward (migrate deploy, never diffs) so prod keeps it — but a local `prisma migrate dev` will see
+  // it as drift and try to DROP it: do NOT accept that drop.
   @@map("expenses")
+}
+
+/// A recurring operating-expense definition (e.g. monthly sewa / gaji). NOT a ledger entry —
+/// it only GENERATES `Expense` rows when "Buat bulan ini" runs (manual v1; auto-generation on
+/// the 1st is the VPS-era worker step). Org-scoped, soft-deleted, gated by the finance.* keys.
+/// `dayOfMonth` (1..31, clamped to the target month) sets the generated expense's `date`.
+model ExpenseTemplate {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  category       ExpenseCategory
+  amount         Decimal         @db.Decimal(14, 2)
+  dayOfMonth     Int             @default(1)
+  note           String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+
+  expenses       Expense[]
+
+  @@index([organizationId])
+  @@map("expense_templates")
 }
