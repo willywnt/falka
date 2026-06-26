@@ -20,6 +20,7 @@ import {
   Truck,
   Undo2,
   Video,
+  Wallet,
   Warehouse,
   type LucideIcon,
 } from 'lucide-react';
@@ -220,6 +221,18 @@ export const sidebarNavSections: readonly NavSection[] = [
     ],
   },
   {
+    label: 'Keuangan',
+    items: [
+      {
+        title: 'Pengeluaran',
+        href: '/dashboard/finance/expenses',
+        icon: Wallet,
+        keywords: ['pengeluaran', 'biaya', 'expense', 'operasional', 'keuangan'],
+        permission: 'finance.view',
+      },
+    ],
+  },
+  {
     label: 'Sistem',
     items: [
       {
@@ -258,6 +271,13 @@ export const CREATE_ACTIONS: readonly NavItem[] = [
     href: '/recordings',
     icon: Video,
     keywords: ['rekam', 'packing'],
+  },
+  {
+    title: 'Catat biaya',
+    href: '/dashboard/finance/expenses',
+    icon: Wallet,
+    keywords: ['biaya', 'pengeluaran', 'expense'],
+    permission: 'finance.manage',
   },
 ];
 
