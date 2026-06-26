@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Coins, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { Coins, MoreHorizontal, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -21,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -30,17 +33,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DateRangePicker } from '@/components/date-range-picker';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 
 import { useDeleteExpenseMutation, useExpensesQuery } from '../hooks/use-expenses';
-import { EXPENSE_CATEGORY_LABELS, type ExpenseListItem } from '../types';
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, type ExpenseListItem } from '../types';
 import { ExpenseFormDialog } from './expense-form-dialog';
 
 export function ExpensesDashboard() {
-  const { data, isLoading, error, refetch } = useExpensesQuery();
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
+  const [category, setCategory] = useState<string>('');
+
+  const filters = {
+    from: range?.from ? format(range.from, 'yyyy-MM-dd') : undefined,
+    to: range?.to ? format(range.to, 'yyyy-MM-dd') : undefined,
+    category: category || undefined,
+  };
+
+  const { data, isLoading, error, refetch } = useExpensesQuery(filters);
   const deleteExpense = useDeleteExpenseMutation();
   const { allowed: canManage } = useHasPermission('finance.manage');
 
@@ -49,6 +62,8 @@ export function ExpensesDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<ExpenseListItem | null>(null);
 
   const expenses = data ?? [];
+  const total = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+  const isFiltered = Boolean(range?.from || category);
   const isEmpty = !isLoading && expenses.length === 0;
 
   function openCreate() {
@@ -76,13 +91,36 @@ export function ExpensesDashboard() {
 
   return (
     <div className="space-y-6">
-      {canManage ? (
-        <div className="flex justify-end">
-          <Button onClick={openCreate}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangePicker value={range} onChange={setRange} placeholder="Semua tanggal" />
+          <Select
+            value={category}
+            aria-label="Filter kategori"
+            className="sm:max-w-[200px]"
+            onChange={(event) => setCategory(event.target.value)}
+          >
+            <option value="">Semua kategori</option>
+            {EXPENSE_CATEGORIES.map((value) => (
+              <option key={value} value={value}>
+                {EXPENSE_CATEGORY_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {canManage ? (
+          <Button onClick={openCreate} className="sm:shrink-0">
             <Plus className="size-4" />
             Catat biaya
           </Button>
-        </div>
+        ) : null}
+      </div>
+
+      {!isLoading && !error && expenses.length > 0 ? (
+        <p className="text-muted-foreground text-sm">
+          Total <span className="num text-foreground font-semibold">{formatCurrency(total)}</span> ·{' '}
+          {expenses.length} biaya
+        </p>
       ) : null}
 
       {isLoading ? (
@@ -94,19 +132,27 @@ export function ExpensesDashboard() {
       ) : error ? (
         <ErrorState title="Gagal memuat biaya" onRetry={() => void refetch()} />
       ) : isEmpty ? (
-        <EmptyState
-          icon={Coins}
-          title="Belum ada biaya"
-          description="Catat biaya operasional (iklan, packaging, ongkir, gaji, dll.) agar laporan Laba bersih menghitung untung yang sebenarnya."
-          action={
-            canManage ? (
-              <Button onClick={openCreate}>
-                <Plus className="size-4" />
-                Catat biaya
-              </Button>
-            ) : undefined
-          }
-        />
+        isFiltered ? (
+          <EmptyState
+            icon={SearchX}
+            title="Tidak ada biaya yang cocok"
+            description="Coba ubah rentang tanggal atau kategori."
+          />
+        ) : (
+          <EmptyState
+            icon={Coins}
+            title="Belum ada biaya"
+            description="Catat biaya operasional (iklan, packaging, ongkir, gaji, dll.) agar laporan Laba bersih menghitung untung yang sebenarnya."
+            action={
+              canManage ? (
+                <Button onClick={openCreate}>
+                  <Plus className="size-4" />
+                  Catat biaya
+                </Button>
+              ) : undefined
+            }
+          />
+        )
       ) : (
         <>
           {/* Desktop table — same rows render as cards below sm. */}
