@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { PageHeader } from '@/components/page-header';
 import { requireOrgPermission } from '@/modules/auth/services/session';
+import { BudgetVsActual } from '@/modules/finance/components/budget-vs-actual';
 import { NetProfitReport } from '@/modules/reporting/components/net-profit-report';
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default async function NetProfitReportPage() {
         description="Laba kotor dikurangi biaya operasional — untung bisnis kamu yang sebenarnya."
       />
       <NetProfitReport />
+      <BudgetVsActual />
     </div>
   );
 }
