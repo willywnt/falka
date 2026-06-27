@@ -15,6 +15,7 @@ export const apiRoutes = {
   suppliers: `${API_BASE_PATH}/suppliers`,
   expenses: `${API_BASE_PATH}/expenses`,
   expenseTemplates: `${API_BASE_PATH}/expense-templates`,
+  feeConfig: `${API_BASE_PATH}/fee-config`,
   reports: `${API_BASE_PATH}/reports`,
   notifications: `${API_BASE_PATH}/notifications`,
   scannerPairing: `${API_BASE_PATH}/scanner-pairing`,
