@@ -51,14 +51,34 @@ WHERE both set AND deletedAt IS NULL` (one live generated expense per template p
   `20260627090000_add_expense_templates` (additive). Tests: generation idempotency + day clamp
   (short/leap Feb) + active-only + CRUD.
 
+## ✅ Phase 2c — SHIPPED 2026-06-27 (auto-derived fees)
+
+- **Estimate-grade fees from configurable rates** (NOT actual provider-reported fees — our adapters
+  don't receive them): `Organization.qrisFeeRate` + `MarketplaceConnection.commissionRate` (Decimal(5,2)
+  percent, default 0). A "Fee otomatis" panel on the Pengeluaran page sets the QRIS rate + per-connection
+  commission rates (diff-saved; commission rates routed through `marketplaceServerService.updateCommissionRate`).
+- **"Hitung fee bulan ini"** — `deriveFeesForMonth(org, actor, "YYYY-MM")`: QRIS fee = gross QRIS sales
+  (`salesServerService.sumQrisAmountForMonth`) × rate; commission = fulfilled order revenue per connection
+  (`ordersServerService.sumRevenueByConnectionForMonth`, dated by `inventoryShippedAt`) × that rate. Each
+  fee UPSERTs an `Expense` (PAYMENT_FEE / MARKETPLACE_COMMISSION) keyed by `Expense.autoSourceKey`
+  (`qris-fee:<month>` / `mp-commission:<connId>:<month>`), backed by a PARTIAL unique index
+  `(organizationId, autoSourceKey) WHERE …` — so a re-run refreshes the month's estimate, a zeroed rate
+  soft-deletes the stale row, and a P2002 race converges. Monthly aggregate (one row per source/month),
+  re-clickable safely. OWNER/ADMIN only.
+- Built understand (5-scout data-source map) → implement → 4-reviewer adversarial review (schema/RBAC/
+  conventions clean; **fixed a confirmed HIGH**: a rate turned to 0 left a stale commission row — now
+  always-upsert soft-deletes it; plus a P2002 race-converge). Migration `20260627100000_add_auto_fee_config`
+  (additive; 2nd raw-only partial index, same do-not-drop comment). Tests: QRIS/commission math + round2 +
+  upsert + stale-cleanup + P2002.
+
 ## 🔭 Phase 2 — backlog (prioritized)
 
-| #   | Item                         | Effort | Gate | Notes                                                                                                                                                                                                     |
-| --- | ---------------------------- | ------ | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Auto-derived fees**        | M      | 🟡   | Auto-create opex from data we already have: marketplace commission per shipped order, QRIS/payment fee per POS sale. Needs a per-channel fee-rate config + idempotent generation. Migration (fee config). |
-| 2   | **Expense → order/sale ref** | S      | 🟡   | Optional FK from an expense to the order/sale it relates to (traceability). Migration. Pairs naturally with auto-derived fees.                                                                            |
-| 3   | **Budget vs actual**         | L      | 🟡   | Per-category monthly budgets + variance in the report. Migration.                                                                                                                                         |
+| #   | Item                         | Effort | Gate | Notes                                                                                                                                                                                       |
+| --- | ---------------------------- | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Budget vs actual**         | L      | 🟡   | Per-category monthly budgets + variance in the Net P&L report. Migration (a Budget model).                                                                                                  |
+| 2   | **Expense → order/sale ref** | S      | 🟡   | Optional FK from an expense to the order/sale it relates to (traceability). Migration. Lower value now that fees derive as monthly aggregates (no per-event ref needed); standalone nicety. |
 
-Order of pull: Phase 2a (filter/CSV/home card) + 2b (recurring) shipped. Remaining items all need a
-schema migration: **auto-derived fees (#1)** is the highest-value (accurate net without manual input)
-but larger; expense→order ref (#2) is its natural foundation; budget (#3) is multi-session.
+Order of pull: Phase 2a (filter/CSV/home card) + 2b (recurring) + 2c (auto-derived fees) shipped. What's
+left both need a migration: **budget vs actual (#1)** is the bigger, more valuable next step (turns the Net
+P&L into a plan-vs-actual); expense→order ref (#2) is a small standalone traceability nicety. Also future:
+auto-derive fees on a schedule (VPS worker) + per-payment-method fees beyond QRIS (CARD).

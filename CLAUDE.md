@@ -420,8 +420,14 @@ taxAmount` in BOTH modes** (exclusive PPN adds on top; inclusive PPN is carved o
   (sewa/gaji; a monthly DEFINITION, not a ledger row) + **"Buat bulan ini"** `generateForMonth` that
   materializes active templates into `Expense` rows, **idempotent** via `Expense.templateId`+`periodMonth`
   and a PARTIAL unique index (one live generated expense per template/month; manual rows excluded) — see
-  the schema comment + migration `20260627090000`; auto-gen on the 1st is VPS-era. Deferred:
-  auto-derived fees (marketplace commission / QRIS) · expense→order ref · budget vs actual.
+  the schema comment + migration `20260627090000`; auto-gen on the 1st is VPS-era. **Auto-derived fees**
+  (estimate-grade, NOT provider-reported): `Organization.qrisFeeRate` + `MarketplaceConnection.commissionRate`
+  (Decimal(5,2) percent) feed a "Fee otomatis" panel + **"Hitung fee bulan ini"** (`feeServerService.
+deriveFeesForMonth`) → QRIS fee = gross QRIS sales × rate, commission = fulfilled order revenue per
+  connection (`inventoryShippedAt`-dated) × rate, each UPSERTed as an `Expense` (PAYMENT_FEE /
+  MARKETPLACE_COMMISSION) keyed by `Expense.autoSourceKey` + a 2nd partial unique index (migration
+  `20260627100000`); commission rates write through `marketplaceServerService.updateCommissionRate`.
+  Deferred: budget vs actual · expense→order ref · schedule the fee derive on the VPS worker.
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
