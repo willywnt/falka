@@ -71,14 +71,27 @@ WHERE both set AND deletedAt IS NULL` (one live generated expense per template p
   (additive; 2nd raw-only partial index, same do-not-drop comment). Tests: QRIS/commission math + round2 +
   upsert + stale-cleanup + P2002.
 
-## 🔭 Phase 2 — backlog (prioritized)
+## ✅ Phase 2d — SHIPPED 2026-06-27 (budget vs actual + source flagging)
+
+- **Source flag** — `Expense` rows now show a "Berulang"/"Otomatis" StatusBadge (derived `source` from
+  `templateId` / `autoSourceKey`) in the ledger + a "Sumber" column in the CSV, so generated/auto-fee rows
+  are visually distinct from manual entries.
+- **Budget vs actual** — a `Budget` model (one monthly budget per category, set once, applies every month;
+  `@@unique([organizationId, category])`). A current-month **"Anggaran vs realisasi"** card on the Net P&L
+  page: `getBudgetReport(org, month)` joins budgets with `expenseServerService.sumByCategoryForRange` (Σ
+  live expenses — manual + recurring + auto-fee — per category) → per category anggaran/realisasi/sisa + a
+  usage bar (amber ≥80%, red over-budget), over-budget first, + totals. An "Atur anggaran" dialog (9 inputs,
+  gated `finance.manage`; amount 0 unsets). Month-scoped independent of the report's range picker (monthly
+  budget vs monthly actual). `monthBounds`/`round2` were lifted to a shared `finance/utils/period`.
+- Built implement → 3-reviewer adversarial review (correctness / RBAC / schema all clean). Migration
+  `20260627110000_add_budgets` (additive). Tests: budget math + over-budget sort + unset-on-zero + list.
+
+## 🔭 Phase 2 — backlog
 
 | #   | Item                         | Effort | Gate | Notes                                                                                                                                                                                       |
 | --- | ---------------------------- | ------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Budget vs actual**         | L      | 🟡   | Per-category monthly budgets + variance in the Net P&L report. Migration (a Budget model).                                                                                                  |
-| 2   | **Expense → order/sale ref** | S      | 🟡   | Optional FK from an expense to the order/sale it relates to (traceability). Migration. Lower value now that fees derive as monthly aggregates (no per-event ref needed); standalone nicety. |
+| 1   | **Expense → order/sale ref** | S      | 🟡   | Optional FK from an expense to the order/sale it relates to (traceability). Migration. Low value now that fees derive as monthly aggregates (no per-event ref needed); a standalone nicety. |
 
-Order of pull: Phase 2a (filter/CSV/home card) + 2b (recurring) + 2c (auto-derived fees) shipped. What's
-left both need a migration: **budget vs actual (#1)** is the bigger, more valuable next step (turns the Net
-P&L into a plan-vs-actual); expense→order ref (#2) is a small standalone traceability nicety. Also future:
-auto-derive fees on a schedule (VPS worker) + per-payment-method fees beyond QRIS (CARD).
+Future (not backlog'd yet): auto-derive fees on a schedule (VPS worker) · per-payment-method fees beyond
+QRIS (CARD) · per-month budget overrides (the current model is one budget per category, applied every month).
+The finance module's core (ledger · Net P&L · recurring · auto-fees · budgets) is now feature-complete.

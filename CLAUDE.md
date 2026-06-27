@@ -427,7 +427,13 @@ deriveFeesForMonth`) → QRIS fee = gross QRIS sales × rate, commission = fulfi
   connection (`inventoryShippedAt`-dated) × rate, each UPSERTed as an `Expense` (PAYMENT_FEE /
   MARKETPLACE_COMMISSION) keyed by `Expense.autoSourceKey` + a 2nd partial unique index (migration
   `20260627100000`); commission rates write through `marketplaceServerService.updateCommissionRate`.
-  Deferred: budget vs actual · expense→order ref · schedule the fee derive on the VPS worker.
+  The ledger flags each row's **`source`** (MANUAL/RECURRING/AUTO_FEE, from templateId/autoSourceKey) as a
+  "Berulang"/"Otomatis" badge + CSV "Sumber" column. **Budget vs actual**: a `Budget` model (one monthly
+  budget per category, `@@unique([organizationId, category])`, set once) + an "Anggaran vs realisasi"
+  current-month card on the Net P&L page (`budgetServerService.getBudgetReport` joins budgets with
+  `expenseServerService.sumByCategoryForRange`; over-budget first + usage bars; "Atur anggaran" gated
+  finance.manage, amount 0 unsets; migration `20260627110000`). Shared `finance/utils/period` holds
+  `monthBounds`/`round2`. Deferred: expense→order ref · schedule the fee derive on the VPS worker.
 - **Mapping / pull**: mapping is 1:1 per LISTING but a variant MAY map to many listings (cross-channel
   — do NOT force 1:1). Auto-map is NORMALIZED sku, NEVER edit-distance (`…-M` ≠ `…-L`); non-exact →
   `NEEDS_REVIEW`, sync stays off. `resolveOrderItem` maps an unmapped item (`mapByExternalRef`).
