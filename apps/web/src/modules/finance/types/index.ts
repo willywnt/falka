@@ -18,6 +18,15 @@ export const EXPENSE_CATEGORY_LABELS = {
 /** Categories in display order (Select + report breakdown). */
 export const EXPENSE_CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
 
+/** How an expense entered the ledger — drives the "Berulang"/"Otomatis" flag in the list. */
+export type ExpenseSource = 'MANUAL' | 'RECURRING' | 'AUTO_FEE';
+
+/** Labels for the non-manual sources (manual rows show no flag). */
+export const EXPENSE_SOURCE_LABELS: Record<Exclude<ExpenseSource, 'MANUAL'>, string> = {
+  RECURRING: 'Berulang',
+  AUTO_FEE: 'Otomatis',
+};
+
 /** A single operating-expense row (money as a decimal string, dates as ISO). */
 export type ExpenseListItem = {
   id: string;
@@ -26,6 +35,8 @@ export type ExpenseListItem = {
   /** When the expense was incurred (ISO). */
   date: string;
   note: string | null;
+  /** Manual entry, generated from a recurring template, or an auto-derived fee. */
+  source: ExpenseSource;
   createdAt: string;
 };
 

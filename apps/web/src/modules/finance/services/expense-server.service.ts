@@ -7,12 +7,19 @@ import { appLogger } from '@/lib/logger';
 import { auditService } from '@/modules/audit/services/audit.service';
 
 import { ExpenseError } from '../errors/expense-errors';
-import type { ExpenseDetail, ExpenseLine, ExpenseListItem } from '../types';
+import type { ExpenseDetail, ExpenseLine, ExpenseListItem, ExpenseSource } from '../types';
 import type {
   CreateExpenseInput,
   ListExpensesQuery,
   UpdateExpenseInput,
 } from '../validators/expense';
+
+/** Derive how the row entered the ledger: auto-derived fee → recurring template → manual. */
+function expenseSource(row: Expense): ExpenseSource {
+  if (row.autoSourceKey) return 'AUTO_FEE';
+  if (row.templateId) return 'RECURRING';
+  return 'MANUAL';
+}
 
 function mapExpense(row: Expense): ExpenseListItem {
   return {
@@ -21,6 +28,7 @@ function mapExpense(row: Expense): ExpenseListItem {
     amount: row.amount.toString(),
     date: row.date.toISOString(),
     note: row.note,
+    source: expenseSource(row),
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -36,6 +36,7 @@ import {
 import { DateRangePicker } from '@/components/date-range-picker';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useHasPermission } from '@/modules/users/hooks/use-org';
 
@@ -44,7 +45,13 @@ import {
   useDeleteExpenseMutation,
   useExpensesQuery,
 } from '../hooks/use-expenses';
-import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, type ExpenseListItem } from '../types';
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_LABELS,
+  EXPENSE_SOURCE_LABELS,
+  type ExpenseListItem,
+  type ExpenseSource,
+} from '../types';
 import { ExpenseFormDialog } from './expense-form-dialog';
 
 export function ExpensesDashboard() {
@@ -192,7 +199,12 @@ export function ExpensesDashboard() {
                     <TableCell className="num whitespace-nowrap">
                       {formatDate(new Date(expense.date))}
                     </TableCell>
-                    <TableCell>{EXPENSE_CATEGORY_LABELS[expense.category]}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>{EXPENSE_CATEGORY_LABELS[expense.category]}</span>
+                        <ExpenseSourceBadge source={expense.source} />
+                      </div>
+                    </TableCell>
                     <TableCell className="num text-right font-medium">
                       {formatCurrency(expense.amount)}
                     </TableCell>
@@ -220,7 +232,12 @@ export function ExpensesDashboard() {
               <article key={expense.id} className="bg-card space-y-2 rounded-xl border p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium">{EXPENSE_CATEGORY_LABELS[expense.category]}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {EXPENSE_CATEGORY_LABELS[expense.category]}
+                      </span>
+                      <ExpenseSourceBadge source={expense.source} />
+                    </div>
                     <p className="text-muted-foreground num text-xs">
                       {formatDate(new Date(expense.date))}
                     </p>
@@ -280,6 +297,16 @@ export function ExpensesDashboard() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** A "Berulang"/"Otomatis" flag so generated + auto-fee rows are distinct from manual entries. */
+function ExpenseSourceBadge({ source }: { source: ExpenseSource }) {
+  if (source === 'MANUAL') return null;
+  return (
+    <StatusBadge tone={source === 'RECURRING' ? 'info' : 'neutral'}>
+      {EXPENSE_SOURCE_LABELS[source]}
+    </StatusBadge>
   );
 }
 

@@ -107,6 +107,17 @@ describe('expenseServerService.listExpenses', () => {
       },
     });
   });
+
+  it('flags each row source: templateId → RECURRING, autoSourceKey → AUTO_FEE, neither → MANUAL', async () => {
+    prismaMock.expense.findMany.mockResolvedValue([
+      expenseRow({ id: 'm', templateId: null, autoSourceKey: null }),
+      expenseRow({ id: 'r', templateId: 't1', autoSourceKey: null }),
+      expenseRow({ id: 'f', templateId: null, autoSourceKey: 'qris-fee:2026-06' }),
+    ]);
+
+    const list = await service.listExpenses(ORG, {});
+    expect(list.map((expense) => expense.source)).toEqual(['MANUAL', 'RECURRING', 'AUTO_FEE']);
+  });
 });
 
 describe('expenseServerService.listExpenseLines', () => {
