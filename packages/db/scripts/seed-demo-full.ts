@@ -6,7 +6,7 @@
  *   history · POS sales (with discount/PPN + a partial refund) · marketplace connections +
  *   mapped listings + sync jobs · marketplace orders across all statuses · a processed return ·
  *   purchase orders (ordered / partial / received) · a posted stock-opname · packing recordings ·
- *   notifications · audit log.
+ *   notifications · audit log · finance (opex ledger · recurring templates · budgets · fee rates).
  *
  * Idempotent by existence: if the demo org already has products it only re-asserts the three
  * accounts and exits (re-run safely; to fully re-seed, drop the org or use a fresh DB).
