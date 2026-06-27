@@ -111,6 +111,9 @@ model Organization {
    */
   plan              String    @default("FREE")
   memberLimit       Int?
+  /// QRIS payment-fee rate as a PERCENT (e.g. 0.70 = 0.7%) used to ESTIMATE the PAYMENT_FEE
+  /// opex auto-derived from QRIS POS sales. 0 = no auto QRIS fee. finance.manage-managed.
+  qrisFeeRate       Decimal   @default(0) @db.Decimal(5, 2)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
@@ -317,6 +320,9 @@ model MarketplaceConnection {
   // here (minus a small overlap). Decoupled from lastOrdersPulledAt so the cooldown and the
   // sync window can move independently. null = never synced (first pull backfills a window).
   ordersSyncedThrough   DateTime?
+  /// Commission rate as a PERCENT (e.g. 5.00 = 5%) used to ESTIMATE the MARKETPLACE_COMMISSION
+  /// opex auto-derived from this connection's shipped/completed orders. 0 = no auto commission.
+  commissionRate        Decimal             @default(0) @db.Decimal(5, 2)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   deletedAt             DateTime?
@@ -1311,6 +1317,11 @@ model Expense {
   /// "YYYY-MM" the generated row covers; with templateId it gives one generated expense per
   /// template per month (enforced by a partial unique index — see the migration).
   periodMonth    String?
+  /// Stable idempotency key for an AUTO-DERIVED fee row (e.g. "qris-fee:2026-06" or
+  /// "mp-commission:<connectionId>:2026-06"); null for manual + recurring rows. A partial unique
+  /// index on (organizationId, autoSourceKey) WHERE … (migration only) gives one live derived row
+  /// per (org, key) so "Hitung fee bulan ini" UPSERTS the month's estimate instead of duplicating.
+  autoSourceKey  String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
@@ -1324,6 +1335,9 @@ model Expense {
   // It is the per-template/per-month idempotency backstop for "Buat bulan ini". Deploy replays the SQL
   // forward (migrate deploy, never diffs) so prod keeps it — but a local `prisma migrate dev` will see
   // it as drift and try to DROP it: do NOT accept that drop.
+  // NOTE: a SECOND raw-only PARTIAL UNIQUE index `expenses_organizationId_autoSourceKey_key` on
+  // (organizationId, autoSourceKey) WHERE autoSourceKey IS NOT NULL AND deletedAt IS NULL exists only in
+  // migration 20260627100000_add_auto_fee_config (auto-derived-fee upsert key) — same do-not-drop rule.
   @@map("expenses")
 }
 
