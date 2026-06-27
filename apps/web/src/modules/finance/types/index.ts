@@ -59,3 +59,35 @@ export type GenerateRecurringResult = {
   skipped: number;
   total: number;
 };
+
+/** A marketplace connection's commission rate, for the fee-config UI. */
+export type ConnectionFeeRate = {
+  connectionId: string;
+  shopName: string;
+  provider: string;
+  /** Percent string (e.g. "5.00"); "0" = no auto commission. */
+  commissionRate: string;
+};
+
+/** Auto-derived-fee config: the org QRIS rate + each connection's commission rate (percent strings). */
+export type FeeConfig = {
+  qrisFeeRate: string;
+  connections: ConnectionFeeRate[];
+};
+
+/** Result of deriving a month's fee estimates (amounts as decimal strings). */
+export type DeriveFeesResult = {
+  month: string;
+  /** QRIS payment fee: `base` = gross QRIS sales, `fee` = base × rate. */
+  qris: { base: string; rate: string; fee: string };
+  /** Per-connection commission: `base` = fulfilled revenue, `fee` = base × rate. */
+  commissions: {
+    connectionId: string;
+    shopName: string;
+    base: string;
+    rate: string;
+    fee: string;
+  }[];
+  /** Σ of all derived fees written/updated this run. */
+  totalFee: string;
+};
