@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import '@fontsource-variable/plus-jakarta-sans';
@@ -40,7 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" className={cn(GeistSans.variable, GeistMono.variable)} suppressHydrationWarning>
       <body className="min-h-screen antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
-        <SpeedInsights />
       </body>
     </html>
   );

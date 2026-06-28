@@ -1,6 +1,12 @@
 # Deployment Guide
 
-> **Legacy / stopgap.** This documents the current **Vercel + Neon** production setup. The committed direction is a **self-hosted Biznet VPS managed by Coolify** (web + worker + Postgres + Redis, keeping Cloudflare R2) — the chosen runbook is [coolify-setup.md](./coolify-setup.md) (start on a 4 GB box + Coolify, grow to 8 GB at go-live); see also [vps-migration.md](./vps-migration.md), the plain-compose reference [vps-setup.md](./vps-setup.md), the cost ladder [vps-cost-packages.md](./vps-cost-packages.md), and the [cloudflare-fallback.md](./cloudflare-fallback.md) resilience plan. On Vercel the worker + Socket.IO don't run, so marketplace sync / scheduled jobs / scanner are dormant in prod until cutover.
+> **⚠️ DECOMMISSIONED (2026-06-28) — this doc is HISTORICAL.** Production is now the **self-hosted
+> Biznet VPS managed by Coolify**, LIVE at **`https://app.trypalka.com`** (the old Vercel + Neon stack
+> has been retired). The runbook is **[coolify-setup.md](./coolify-setup.md)** (+ its §9 field notes);
+> see also [vps-migration.md](./vps-migration.md), the plain-compose reference [vps-setup.md](./vps-setup.md),
+> the cost ladder [vps-cost-packages.md](./vps-cost-packages.md), and the resilience plan
+> [cloudflare-fallback.md](./cloudflare-fallback.md). The Vercel/Neon content below is kept only for
+> historical reference.
 
 Production stack:
 
@@ -103,7 +109,6 @@ Future: pipe Pino output to Sentry, Datadog, or Axiom.
 - [VPS cost packages / staged ladder](./vps-cost-packages.md)
 - [Cloudflare-in-Indonesia fallback](./cloudflare-fallback.md)
 - [VPS migration](./vps-migration.md)
-- [Neon PostgreSQL](./neon.md)
 - [Cloudflare R2](./r2.md)
 - [Auth.js production](./auth.md)
 - [Security](./security.md)
