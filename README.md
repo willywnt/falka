@@ -127,7 +127,6 @@ _(The previous **Vercel + Neon** production stack was decommissioned 2026-06-28.
 | File                          | Purpose                                |
 | ----------------------------- | -------------------------------------- |
 | `.env.example`                | Local development template             |
-| `.env.production.example`     | Production reference (Vercel)          |
 | `.env.production.vps.example` | Production reference (self-hosted VPS) |
 | `apps/web/.env.example`       | Public client variables                |
 

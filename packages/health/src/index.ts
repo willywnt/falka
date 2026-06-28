@@ -24,7 +24,7 @@ export function getPlatformUptimeSeconds(): number {
 }
 
 export function resolveAppVersion(): string {
-  return process.env.APP_VERSION ?? process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'dev';
+  return process.env.APP_VERSION ?? 'dev';
 }
 
 async function checkRedis(): Promise<DependencyStatus> {
