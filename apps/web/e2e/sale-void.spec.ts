@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 test('voiding a sale marks it cancelled', async ({ page }) => {
   // 1. Ring up a sale and capture its code from the success toast.
   await page.goto('/dashboard/sales/new');
-  await page.getByPlaceholder('Cari SKU atau nama produk...').fill('KAOS-HTM-L');
+  await page.getByPlaceholder(/Cari SKU atau nama produk/).fill('KAOS-HTM-L');
   await page.getByRole('button', { name: 'Tambah' }).first().click();
   await page.getByRole('button', { name: 'Bayar' }).click();
 

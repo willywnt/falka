@@ -12,7 +12,7 @@ const SKU = 'KAOS-HTM-L';
 test('CASH checkout records a sale', async ({ page }) => {
   await page.goto('/dashboard/sales/new');
 
-  await page.getByPlaceholder('Cari SKU atau nama produk...').fill(SKU);
+  await page.getByPlaceholder(/Cari SKU atau nama produk/).fill(SKU);
 
   // Wait for the debounced search to surface the result, then add it to the cart.
   const addButton = page.getByRole('button', { name: 'Tambah' }).first();
