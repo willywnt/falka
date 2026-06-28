@@ -18,15 +18,30 @@ test('voiding a sale marks it cancelled', async ({ page }) => {
   const code = (await toast.textContent())?.match(/S\d+/)?.[0];
   expect(code, 'sale code from toast').toBeTruthy();
 
-  // 2. Open it from the sales list.
+  // 2. Open it from the sales list. Read the detail href off the link and navigate
+  //    directly — a fast click on a Next <Link> can race hydration in the CI prod
+  //    build (the click is swallowed before the client router is ready), leaving the
+  //    URL on the list. goto(href) is deterministic.
   await page.goto('/dashboard/sales');
-  await page.getByRole('link', { name: code! }).first().click();
+  const saleLink = page.getByRole('link', { name: code! }).first();
+  await expect(saleLink).toBeVisible();
+  const href = await saleLink.getAttribute('href');
+  expect(href, 'sale detail href').toBeTruthy();
+  await page.goto(href!);
   await expect(page).toHaveURL(/\/dashboard\/sales\/[^/]+$/);
 
   // 3. Cancel it (button is gated on status COMPLETED + the sales.refund permission,
-  //    which the demo OWNER has). Confirm in the alert dialog.
-  await page.getByRole('button', { name: 'Batalkan penjualan' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Batalkan penjualan' }).click();
+  //    which the demo OWNER has). Retry the open until the confirm dialog appears — a
+  //    too-early click can be swallowed by the same prod-build hydration race; the
+  //    isVisible guard avoids re-clicking once the dialog is already up.
+  const voidButton = page.getByRole('button', { name: 'Batalkan penjualan' });
+  const dialog = page.getByRole('alertdialog');
+  await expect(voidButton).toBeVisible();
+  await expect(async () => {
+    if (!(await dialog.isVisible())) await voidButton.click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await dialog.getByRole('button', { name: 'Batalkan penjualan' }).click();
 
   // 4. The sale now shows the cancelled badge.
   await expect(page.getByText('Dibatalkan')).toBeVisible();
