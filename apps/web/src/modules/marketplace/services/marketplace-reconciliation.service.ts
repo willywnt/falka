@@ -1,12 +1,12 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import {
   computeStockDrift,
   findDriftMappedListings,
   resolveSyncWarehouseStock,
-} from '@falka/queue';
-import type { DriftExternalInput } from '@falka/queue';
+} from '@palka/queue';
+import type { DriftExternalInput } from '@palka/queue';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
@@ -50,7 +50,7 @@ export class MarketplaceReconciliationService {
           });
     // With a sync warehouse configured, `external` already reflects only that warehouse's
     // sellable (set in fetchExternalStock) — so drift compares apples to apples: internal
-    // available vs the ONE warehouse Falka owns, not the cross-warehouse sum.
+    // available vs the ONE warehouse Palka owns, not the cross-warehouse sum.
 
     // Per-item drift pulls ONLY the mapped items, so the computed unmappedExternal is
     // meaningless — report the real "listings not yet mapped" count from the DB instead.
@@ -113,7 +113,7 @@ export class MarketplaceReconciliationService {
     return listings.map((listing) => ({
       externalProductId: listing.externalProductId,
       externalVariantId: listing.externalVariantId,
-      // Falka owns ONE warehouse: compare against its own sellable (0 if the SKU doesn't carry
+      // Palka owns ONE warehouse: compare against its own sellable (0 if the SKU doesn't carry
       // it), not the cross-warehouse sum. Falls back to total sellable when unconfigured.
       stock: resolveSyncWarehouseStock(listing, connection.syncWarehouseCode),
     }));

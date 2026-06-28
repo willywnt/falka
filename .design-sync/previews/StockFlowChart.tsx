@@ -1,4 +1,4 @@
-import { StockFlowChart } from '@falka/web';
+import { StockFlowChart } from '@palka/web';
 
 export function DailyFlow() {
   return (

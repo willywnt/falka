@@ -1,4 +1,4 @@
-import { buildShopeeSignBase, signShopeeRequest } from '@falka/marketplace-providers';
+import { buildShopeeSignBase, signShopeeRequest } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

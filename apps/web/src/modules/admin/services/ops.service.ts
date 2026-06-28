@@ -1,10 +1,10 @@
 import 'server-only';
 
-import { STALE_RECORDING_SESSION_HOURS } from '@falka/config/limits';
-import { prisma } from '@falka/db';
-import { getMetricsSnapshot } from '@falka/metrics';
-import { getFailedJobsSummary, getQueueObservabilitySnapshot } from '@falka/queue';
-import { getObjectStorageProvider } from '@falka/storage';
+import { STALE_RECORDING_SESSION_HOURS } from '@palka/config/limits';
+import { prisma } from '@palka/db';
+import { getMetricsSnapshot } from '@palka/metrics';
+import { getFailedJobsSummary, getQueueObservabilitySnapshot } from '@palka/queue';
+import { getObjectStorageProvider } from '@palka/storage';
 
 export async function getFailedUploadsReport(limit = 50) {
   // Computed per request — a module-level constant would freeze the cutoff at

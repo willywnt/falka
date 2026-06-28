@@ -1,5 +1,5 @@
 {
-  "name": "@falka/storage",
+  "name": "@palka/storage",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,12 +17,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1072.0",
-    "@falka/config": "workspace:*",
-    "@falka/utils": "workspace:*"
+    "@palka/config": "workspace:*",
+    "@palka/utils": "workspace:*"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3"
   }

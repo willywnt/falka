@@ -43,7 +43,7 @@ Shape:
 1. **Upload + stage.** `POST /products/import/jobs` accepts the parsed rows (or the raw
    file via R2 presign for huge files), persists them to a staging table
    (`ProductImportJob` + `ProductImportJobRow`, status `PENDING`), enqueues a
-   `process-product-import` job (queue in `@falka/queue`), returns a `jobId`.
+   `process-product-import` job (queue in `@palka/queue`), returns a `jobId`.
 2. **Worker** (`apps/worker`) processes rows in chunks using the SAME pure
    `planProductImport` + `catalogServerService` paths, updating per-row status + a
    running counter on the job (so progress is durable across reloads).

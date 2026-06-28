@@ -1,4 +1,4 @@
-import { nextJsConfig } from '@falka/eslint-config/next-js';
+import { nextJsConfig } from '@palka/eslint-config/next-js';
 
 /** @type {import("eslint").Linter.Config[]} */
 export default [

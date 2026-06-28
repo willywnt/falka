@@ -70,6 +70,6 @@ export const usePanduStore = create<PanduState>()(
         }),
       clearAskHistory: () => set({ askHistory: [] }),
     }),
-    { name: 'falka-pandu' },
+    { name: 'palka-pandu' },
   ),
 );

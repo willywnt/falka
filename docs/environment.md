@@ -1,6 +1,6 @@
 # Environment Variables
 
-Falka separates **public** (client) and **server-only** environment variables with Zod validation in `@falka/config`.
+Palka separates **public** (client) and **server-only** environment variables with Zod validation in `@palka/config`.
 
 ## File layout
 
@@ -60,7 +60,7 @@ under [Marketplace OAuth](#marketplace-oauth) below.
 | Variable                                | Required | Description                                               |
 | --------------------------------------- | -------- | --------------------------------------------------------- |
 | `NEXT_PUBLIC_APP_URL`                   | Yes      | Public app URL (desktop in dev: `http://localhost:3000`)  |
-| `NEXT_PUBLIC_APP_NAME`                  | No       | Display name (defaults to `Falka`)                        |
+| `NEXT_PUBLIC_APP_NAME`                  | No       | Display name (defaults to `Palka`)                        |
 | `NEXT_PUBLIC_SENTRY_DSN`                | Prod     | Client Sentry DSN                                         |
 | `NEXT_PUBLIC_SENTRY_ENVIRONMENT`        | No       | Client Sentry environment tag                             |
 | `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | No       | Client Sentry traces sample rate 0–1                      |
@@ -88,9 +88,9 @@ scaffolded** (Tokopedia runs on the **TikTok Shop Open API**).
 
 ## Validation
 
-Server env is validated at runtime via `getServerEnv()` in `@falka/config/env.server`.
+Server env is validated at runtime via `getServerEnv()` in `@palka/config/env.server`.
 
-Client env is validated via `getClientEnv()` in `@falka/config/env.client`.
+Client env is validated via `getClientEnv()` in `@palka/config/env.client`.
 
 ## Generating secrets
 

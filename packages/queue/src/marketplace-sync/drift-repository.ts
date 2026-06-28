@@ -1,4 +1,4 @@
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import type { DriftMappedInput } from './drift.js';

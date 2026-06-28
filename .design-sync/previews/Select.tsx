@@ -1,4 +1,4 @@
-import { Select, Label } from '@falka/web';
+import { Select, Label } from '@palka/web';
 
 export function Default() {
   return (

@@ -1,4 +1,4 @@
-# Falka Monorepo
+# Palka Monorepo
 
 Turborepo for an Indonesian small-shop operations platform: inventory (a `StockLedger`
 source-of-truth synced to marketplaces), offline POS/sales, purchasing, returns/RMA,
@@ -19,7 +19,7 @@ background worker for marketplace sync and scheduled jobs.
 | Realtime        | Socket.IO (scanner pairing) — dev/VPS only                                                                 |
 | Storage         | Cloudflare R2 (presigned uploads)                                                                          |
 | Auth            | Auth.js v5 (JWT) + multi-org RBAC (Organization + OrgRole + permission catalog)                            |
-| Logging         | Pino (structured JSON) via `@falka/logger`                                                                 |
+| Logging         | Pino (structured JSON) via `@palka/logger`                                                                 |
 | Tests           | Vitest (unit/integration) + Playwright (E2E)                                                               |
 | Deployment      | Vercel + Neon today; **migrating to a self-hosted VPS** (see [docs/deployment](docs/deployment/README.md)) |
 
@@ -78,7 +78,7 @@ Full guide: [docs/onboarding.md](docs/onboarding.md)
 | `pnpm db:migrate:dev`                                                 | Create/apply dev migrations              |
 | `pnpm db:migrate:deploy`                                              | Apply migrations (production)            |
 | `pnpm db:seed`                                                        | Seed base accounts + sample data         |
-| `pnpm db:seed-demo-full`                                              | Seed the rich demo org "Toko Falka Demo" |
+| `pnpm db:seed-demo-full`                                              | Seed the rich demo org "Toko Palka Demo" |
 | `pnpm db:reset-demo`                                                  | Reset the demo orders/sales/stock loop   |
 | `pnpm db:studio`                                                      | Open Prisma Studio                       |
 | `pnpm lazada:smoke` (+ `:token` / `:products` / `:stock` / `:seller`) | Lazada adapter smoke scripts             |
@@ -90,7 +90,7 @@ Full guide: [docs/onboarding.md](docs/onboarding.md)
 | `pnpm typecheck`                    | TypeScript across the workspace             |
 | `pnpm lint`                         | ESLint (`--max-warnings 0`)                 |
 | `pnpm test`                         | Unit/integration (Vitest) — `web` + `queue` |
-| `pnpm --filter @falka/web test:e2e` | End-to-end (Playwright)                     |
+| `pnpm --filter @palka/web test:e2e` | End-to-end (Playwright)                     |
 
 - **The four gates** — `typecheck` · `lint` · `build` · `test` — must be green after
   every change. CI (`.github/workflows/ci.yml`) re-runs them on push/PR to `main`.
@@ -98,8 +98,8 @@ Full guide: [docs/onboarding.md](docs/onboarding.md)
   runtime-level regression (e.g. a bad raw query) won't surface here — cover those
   with E2E or a real-DB probe.
 - **E2E** (Playwright, `apps/web/e2e`) drives the real app. Prereqs: `pnpm dev`
-  running + the demo seed (`pnpm --filter @falka/db db:seed-demo`). First run only:
-  `pnpm --filter @falka/web exec playwright install chromium`. Override the login
+  running + the demo seed (`pnpm --filter @palka/db db:seed-demo`). First run only:
+  `pnpm --filter @palka/web exec playwright install chromium`. Override the login
   via `E2E_EMAIL` / `E2E_PASSWORD`. See [docs/onboarding.md](docs/onboarding.md#testing).
 
 ## Deployment

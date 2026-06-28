@@ -5,7 +5,7 @@ import { tokopediaOAuthService } from '@/modules/marketplace/services/tokopedia-
 
 /**
  * TikTok Shop redirects the seller back here with ?code & ?state. Public on purpose — the
- * redirect may not carry the Falka session, so the encrypted state (minted by the gated
+ * redirect may not carry the Palka session, so the encrypted state (minted by the gated
  * authorize route) is the authority for which org gets the connection. We swap the code,
  * resolve the shop_cipher, create the connection, then bounce to /dashboard/marketplace (the
  * real page — /marketplace is a legacy redirect that would DROP the ?tokopedia query).

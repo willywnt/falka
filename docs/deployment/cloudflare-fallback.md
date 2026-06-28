@@ -5,7 +5,7 @@
 > **NOT executed a nationwide block** as of mid-2026 — it went to dialogue. This is a "have a ready
 > fallback," not "redesign now." **Re-check the Komdigi–Cloudflare status before any irreversible call.**
 
-## Why Falka's exposure is LOW
+## Why Palka's exposure is LOW
 
 The app runs as a **direct Jakarta-origin VPS, not behind Cloudflare's orange-cloud proxy** — so the
 sharpest vector (ISPs blocking shared proxy IP ranges to catch judol sites) does **not** touch
@@ -24,7 +24,7 @@ dashboard/Socket.IO traffic. Only **two** Cloudflare dependencies remain, and bo
 1. **Object storage** — behind the S3-SDK `StorageProvider` abstraction → swapping is a config change
    (`endpoint` / `region` / keys / `forcePathStyle` / public-URL base + bucket name, all env-driven),
    ~½–1 day incl. presign test + `rclone` copy. Not a rewrite.
-2. **DNS/TLS** — **TLS is issued by Let's Encrypt on Falka's own Caddy; Cloudflare is NOT the CA.** The
+2. **DNS/TLS** — **TLS is issued by Let's Encrypt on Palka's own Caddy; Cloudflare is NOT the CA.** The
    only Cloudflare dependency is the DNS provider for the DNS-01 wildcard. Customer bring-your-own
    domains use on-demand **HTTP-01** → no DNS API at all; only the `*.palka.app` wildcard needs DNS-01.
 3. **CDN/DDoS** — for ID buyers served from a Jakarta origin, a CDN is practically unnecessary for

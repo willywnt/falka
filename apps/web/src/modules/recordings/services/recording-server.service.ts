@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { buildPaginatedResult, prisma } from '@falka/db';
-import { getServerEnv } from '@falka/config/env.server';
-import { ALLOWED_UPLOAD_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
-import { generateId } from '@falka/utils/crypto';
+import { buildPaginatedResult, prisma } from '@palka/db';
+import { getServerEnv } from '@palka/config/env.server';
+import { ALLOWED_UPLOAD_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } from '@palka/config/limits';
+import { generateId } from '@palka/utils/crypto';
 import { RecordingStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 

@@ -1,4 +1,4 @@
-import { PageHeader, Button } from '@falka/web';
+import { PageHeader, Button } from '@palka/web';
 import { Plus, Download } from 'lucide-react';
 
 export function WithActions() {
@@ -38,7 +38,7 @@ export function WithBreadcrumb() {
   return (
     <div style={{ width: 720 }}>
       <PageHeader
-        breadcrumb="Toko Falka Demo · Gudang Pusat"
+        breadcrumb="Toko Palka Demo · Gudang Pusat"
         eyebrow="Stok"
         title="Stock opname"
         description="Hitung ulang stok fisik dan rekonsiliasi selisih dengan sistem."

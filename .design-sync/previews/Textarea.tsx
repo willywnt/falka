@@ -1,4 +1,4 @@
-import { Textarea, Label } from '@falka/web';
+import { Textarea, Label } from '@palka/web';
 
 export function Default() {
   return (

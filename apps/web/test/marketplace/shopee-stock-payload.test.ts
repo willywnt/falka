@@ -1,4 +1,4 @@
-import { buildShopeeStockUpdateBody } from '@falka/marketplace-providers';
+import { buildShopeeStockUpdateBody } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

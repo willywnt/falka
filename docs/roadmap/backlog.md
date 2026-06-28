@@ -1,4 +1,4 @@
-# Falka — Product Backlog
+# Palka — Product Backlog
 
 > Companion to [`inventory-mvp.md`](./inventory-mvp.md). The MVP loop (inventory SoT · multi-channel
 > orders · POS · purchasing · packing-video evidence · finance foundation) is shipped. This file tracks
@@ -22,7 +22,7 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
   branded error/404 routes, `StatusBadge`/`ErrorState` primitives, mobile bottom tab bar + card-list
   pattern, maritime empty-state art, and the **Pandu** assistant pattern (honest stub: deterministic
   nudges + keyword router, permanent "Pratinjau" label). Detail in `.cursor/rules/50-ui-design-system.mdc`
-  - `docs/roadmap/falka-redesign.md` + memory `falka-redesign-suar-dermaga`.
+  - `docs/roadmap/palka-redesign.md` + memory `palka-redesign-suar-dermaga`.
 - **Kasir & Pesanan pack** (on `main`) — orders list search + status filter; products list pagination;
   marketplace per-connection sync-health badges; below-cost flag at sale-create; `grup · subvarian`
   picker label; 0-quota storage display fix.
@@ -49,16 +49,16 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 
 ## ✅ Shipped (2026-06-14)
 
-- **Organization / team RBAC foundation** (big-bet G) + the **"Falka Live" hardening** (storage-quota
+- **Organization / team RBAC foundation** (big-bet G) + the **"Palka Live" hardening** (storage-quota
   blocker, deploy boot blockers, middleware auth-gating fix, cross-tenant probe) — on `main`. See
-  `org-foundation.md` + memory `olshop-falka-live`.
+  `org-foundation.md` + memory `olshop-palka-live`.
 - **Lazada Open Platform — real OAuth multi-seller integration** (branch `session/lazada-integration`,
   13 commits, gates + `pnpm build` green, OAuth flow tested through the UI). Each org connects its own
   Lazada shop via OAuth (authorize + public callback with an encrypted `state`); token refresh +
   test-connection routes/buttons; import (`/products/get`) live-validated + auto-map; stock-push
   payload fixed to **ItemId+SkuId** (Lazada deprecated `SellerSku`); worker E501 made non-retryable.
-  Signer/client/payload/token helpers live in `@falka/marketplace-providers`. **Stock-WRITE is blocked
-  by a Lazada seller-eligibility/dropshipping-warehouse rule, not Falka code.** Detail + the Lazada-side
+  Signer/client/payload/token helpers live in `@palka/marketplace-providers`. **Stock-WRITE is blocked
+  by a Lazada seller-eligibility/dropshipping-warehouse rule, not Palka code.** Detail + the Lazada-side
   gotchas: `.cursor/rules/40-inventory-marketplace.mdc` (Lazada OAuth section) + memory
   `olshop-lazada-integration`. **Stock-WRITE unblocked 2026-06-15** — switched to
   `/product/stock/sellable/update` (POST + XML, **absolute** `SellableQuantity`), the path
@@ -78,8 +78,8 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 /[id]/drift-check` (marketplace.manage); a "Kesehatan & drift" panel + dashboard badges + a
   `marketplaceUnhealthy` nav pulse. Worker: `reconcile-marketplace-drift` (daily, logs drift per active
   connection) + `refresh-marketplace-tokens` (daily, renews Lazada tokens nearing expiry), sharing the
-  `MARKETPLACE_RECONCILE` queue. `computeStockDrift` + the drift/token data-access live in `@falka/queue`
-  (web + worker share them); `fetchLazadaListings` lifted to `@falka/marketplace-providers`. Detail in
+  `MARKETPLACE_RECONCILE` queue. `computeStockDrift` + the drift/token data-access live in `@palka/queue`
+  (web + worker share them); `fetchLazadaListings` lifted to `@palka/marketplace-providers`. Detail in
   `inventory-mvp.md` Phase 6 + `.cursor/rules/40-inventory-marketplace.mdc`. **Deferred:** a persistent
   drift audit-log + configurable alert thresholds, OAuth callbacks for the other providers.
 
@@ -187,7 +187,7 @@ order actions (mark-shipped / edit resi / cancel-with-reason) · DAMAGE write-of
 | 1   | ✅ **Per-channel performance report**                                | reporting         | S      | 🟢   | **Done 2026-06-15**: revenue share, AOV, return rate, trend matrix, charts, **POS payment-method mix**, **per-channel time-to-ship** (placedAt→shipped). Deferred: inventory turnover (needs historical inventory we don't track yet).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2   | ✅ **Phase 6: scheduled reconciliation + provider-health dashboard** | queue/marketplace | L      | 🟢   | **Shipped 2026-06-15** (see ✅ section above): on-demand + scheduled drift detect, on-read provider-health dashboard + nav pulse, scheduled token auto-refresh. Deferred: persistent drift audit-log + alert thresholds.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 3   | ✅ **Supplier entity + per-supplier lead time**                      | purchasing        | L      | 🟡   | **Shipped 2026-06-17** (on `session/2026-06-17-shopee-integration`). `Supplier` model (org-scoped, soft-deleted, default lead time/MOQ) + `ProductVariant.supplierId` (preferred) + `PurchaseOrder.supplierId` (FKs SetNull). Reorder report resolves lead time/MOQ as **variant value → preferred-supplier default → global** (variant wins; soft-deleted suppliers ignored). Supplier CRUD module (service/validators/routes/hooks, gated `purchasing.view`) + a "Pemasok" management page (list/create/edit/soft-delete) under Stok + a "Pemasok utama" picker in the variant edit dialog + a saved-supplier picker in the New-PO form (validates org ownership, snapshots the name into `supplierName`). Migrations applied to local dev DB 2026-06-17. Precursor to AP (#F). |
-| 4   | ✅ **Lazada multi-warehouse stock sync** (non-destructive)           | marketplace       | M      | 🟢   | **Shipped 2026-06-16.** Falka owns ONE warehouse per connection (`syncWarehouseCode`, picked in the "Gudang sinkron" card from `knownWarehouseCodes` captured at import). Push writes `available` to ONLY that warehouse (single-entry `<MultiWarehouseInventories>`, inner `<Quantity>`) and **OMITS the rest — Lazada leaves omitted warehouses untouched** (partial update, live-verified); never zeroes a warehouse we don't own. Drift compares `available` vs the sync warehouse's own sellable (`resolveSyncWarehouseStock`), not the sum. null = bare single-warehouse path (unchanged). The internal multi-location/WMS generalization (this is its n=1 case) is scoped separately in `docs/roadmap/wms-scoping.md`. Found + fixed 2026-06-16.                           |
+| 4   | ✅ **Lazada multi-warehouse stock sync** (non-destructive)           | marketplace       | M      | 🟢   | **Shipped 2026-06-16.** Palka owns ONE warehouse per connection (`syncWarehouseCode`, picked in the "Gudang sinkron" card from `knownWarehouseCodes` captured at import). Push writes `available` to ONLY that warehouse (single-entry `<MultiWarehouseInventories>`, inner `<Quantity>`) and **OMITS the rest — Lazada leaves omitted warehouses untouched** (partial update, live-verified); never zeroes a warehouse we don't own. Drift compares `available` vs the sync warehouse's own sellable (`resolveSyncWarehouseStock`), not the sum. null = bare single-warehouse path (unchanged). The internal multi-location/WMS generalization (this is its n=1 case) is scoped separately in `docs/roadmap/wms-scoping.md`. Found + fixed 2026-06-16.                           |
 | 5   | **Approach B: multi-SKU batch stock sync**                           | queue/marketplace | M      | 🟡   | Escalation from the shipped per-variant coalesce (Approach A, 60s window): when many DISTINCT SKUs change at once (big opname, multi-line PO receive), batch several SKUs into ONE Lazada call (`<Skus>` accepts multiple `<Sku>`) via a dirty-set + scheduled flush, with per-SKU `detail[]` error attribution. Full design + open decisions in `docs/roadmap/sync-batching.md`. Build only when single-SKU calls actually pile up; needs a small migration (dirty column/outbox) + live payload validation.                                                                                                                                                                                                                                                                     |
 | 6   | **Reporting DB-side aggregation**                                    | reporting         | M      | 🟢   | **POC done + validated EXACT 2026-06-26, SHELVED** (branch `session/2026-06-26-reporting-sql-poc`). Push the profit report's money aggregation down to SQL (a `sold_lines` CTE) instead of loading every line + reducing in JS; validated Δ=0.0000 vs the JS path (incl PPN-inclusive/refund/return) on real local data. **Deferred**: the JS path is index-backed + fast at small-shop scale, and a full rewrite duplicates the per-line net-math in two languages (maintenance cost) — pull the trigger only when real volume makes the in-memory reduce slow. POC file: `modules/reporting/services/profit-sql.poc.ts` + a localhost-gated validation test.                                                                                                                    |
 | 7   | **Keuangan / True Net P&L** (expense ledger + net-profit report)     | finance/reporting | L      | 🟢   | **FEATURE-COMPLETE & SHIPPED 2026-06-26→27** (branch `session/2026-06-26-finance-net-pl`, 37 commits, gates green, UNPUSHED): Expense ledger (`/dashboard/finance/expenses`) + "Laba bersih (Net P&L)" report (`/dashboard/reports/net-profit`) · filter/CSV/dashboard-home card · recurring `ExpenseTemplate` ("Buat bulan ini") · auto-derived fees (QRIS + marketplace commission, "Hitung fee bulan ini") · source flag badges · budget-vs-actual. `finance.view`/`finance.manage` keys (catalog 13); 4 additive migrations; demo seed covers it. Audit big-bet #1. Detail + tiny remaining backlog: `docs/roadmap/finance.md`.                                                                                                                                               |

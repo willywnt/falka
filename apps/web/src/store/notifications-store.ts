@@ -32,6 +32,6 @@ export const useNotificationsStore = create<NotificationsState>()(
           ),
         })),
     }),
-    { name: 'falka-notifications' },
+    { name: 'palka-notifications' },
   ),
 );

@@ -1,5 +1,5 @@
 import type { Job } from 'bullmq';
-import { JOB_DEFAULT_ATTEMPTS } from '@falka/config/limits';
+import { JOB_DEFAULT_ATTEMPTS } from '@palka/config/limits';
 
 import { runJobWithLogging } from '../utils/job-logger.js';
 import { createWorker } from './create-worker.js';

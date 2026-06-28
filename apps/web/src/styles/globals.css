@@ -289,7 +289,7 @@
 }
 
 /* react-day-picker — match the app accent + sizing (compact) */
-.rdp-falka {
+.rdp-palka {
   font-size: 0.78rem;
   --rdp-accent-color: var(--color-primary);
   --rdp-accent-background-color: color-mix(in oklab, var(--color-primary) 14%, transparent);
@@ -302,8 +302,8 @@
   --rdp-day_button-border-radius: 9999px;
 }
 
-.rdp-falka .rdp-caption_label,
-.rdp-falka .rdp-weekday {
+.rdp-palka .rdp-caption_label,
+.rdp-palka .rdp-weekday {
   font-size: 0.78rem;
 }
 

@@ -52,6 +52,6 @@ export const usePosHeldSalesStore = create<PosHeldSalesStore>()(
       removeHeldSale: (id) =>
         set((state) => ({ heldSales: state.heldSales.filter((held) => held.id !== id) })),
     }),
-    { name: 'falka-pos-held-sales' },
+    { name: 'palka-pos-held-sales' },
   ),
 );

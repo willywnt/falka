@@ -1,4 +1,4 @@
-import { ErrorScreen } from '@falka/web';
+import { ErrorScreen } from '@palka/web';
 
 export function Default() {
   return (

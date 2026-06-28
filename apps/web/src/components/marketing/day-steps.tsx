@@ -4,7 +4,7 @@ import {
   PosTotalMock,
   ProfitMock,
 } from '@/components/marketing/product-mocks';
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 
 import { Reveal } from './reveal';
 import { SectionHead } from './primitives';

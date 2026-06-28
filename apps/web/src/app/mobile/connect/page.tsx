@@ -14,9 +14,9 @@ import {
 } from '@/modules/scanner-pairing/validators/pairing';
 import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 
-const PAIRING_STORAGE_KEY = 'falka-mobile-pairing-id';
-const PAIRING_CODE_STORAGE_KEY = 'falka-mobile-pairing-code';
-const PAIRING_PURPOSE_STORAGE_KEY = 'falka-mobile-pairing-purpose';
+const PAIRING_STORAGE_KEY = 'palka-mobile-pairing-id';
+const PAIRING_CODE_STORAGE_KEY = 'palka-mobile-pairing-code';
+const PAIRING_PURPOSE_STORAGE_KEY = 'palka-mobile-pairing-purpose';
 
 function parseCodeParam(raw: string): string {
   try {

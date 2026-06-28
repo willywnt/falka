@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'crypto';
 
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import { NextResponse } from 'next/server';
 
 import { appLogger } from '@/lib/logger';

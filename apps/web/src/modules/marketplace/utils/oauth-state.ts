@@ -1,8 +1,8 @@
-import { decrypt, encrypt } from '@falka/utils/crypto';
+import { decrypt, encrypt } from '@palka/utils/crypto';
 
 /**
  * The OAuth `state` round-trips the connecting org + actor through the third-party
- * (Lazada) redirect. The callback can't rely on the Falka session cookie (the redirect
+ * (Lazada) redirect. The callback can't rely on the Palka session cookie (the redirect
  * comes from Lazada, possibly on a different origin), so we encrypt the org/actor into the
  * state with a server secret: an attacker can't forge it, and decryption == authenticity.
  * A short max-age limits replay (the auth code is single-use + ~30 min anyway).

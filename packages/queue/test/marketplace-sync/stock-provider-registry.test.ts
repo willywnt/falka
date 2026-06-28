@@ -10,7 +10,7 @@ import type { MarketplaceProvider } from '@prisma/client';
  */
 
 const { getServerEnvMock } = vi.hoisted(() => ({ getServerEnvMock: vi.fn() }));
-vi.mock('@falka/config/env.server', () => ({ getServerEnv: getServerEnvMock }));
+vi.mock('@palka/config/env.server', () => ({ getServerEnv: getServerEnvMock }));
 
 const { getMarketplaceStockProvider } =
   await import('../../src/marketplace-sync/stock-provider.registry.js');

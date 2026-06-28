@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   createLazadaClient,
   fetchLazadaItemsStock,
   fetchLazadaListings,
   LazadaApiError,
-} from '@falka/marketplace-providers';
-import type { LazadaClient, LazadaListingItem } from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
+import type { LazadaClient, LazadaListingItem } from '@palka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { MarketplaceError } from '../errors/marketplace-errors';

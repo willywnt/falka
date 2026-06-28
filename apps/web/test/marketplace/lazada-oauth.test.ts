@@ -1,4 +1,4 @@
-import { exchangeLazadaCode, refreshLazadaToken } from '@falka/marketplace-providers';
+import { exchangeLazadaCode, refreshLazadaToken } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

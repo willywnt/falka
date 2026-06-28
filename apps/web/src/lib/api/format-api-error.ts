@@ -1,4 +1,4 @@
-import type { ApiError } from '@falka/types';
+import type { ApiError } from '@palka/types';
 
 export function formatApiErrorMessage(error: ApiError): string {
   if (error.details && typeof error.details === 'object') {

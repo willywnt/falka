@@ -89,7 +89,7 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
   const scannerEnabled = isMobileScannerEnabled();
   // First interaction unlocks audio so the scan beep + countdown ticks can play.
   useSoundUnlock(scannerEnabled);
-  const { soundOn, toggleSound } = useScanSoundPref('falka-recording-scan-sound');
+  const { soundOn, toggleSound } = useScanSoundPref('palka-recording-scan-sound');
   const { data: activePairing } = useActivePairingQuery(scannerEnabled);
   // Only act on a phone paired for RECORDING — a POS pairing must not auto-record.
   const pairingSession =

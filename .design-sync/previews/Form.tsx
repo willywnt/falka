@@ -9,7 +9,7 @@ import {
   FormDescription,
   FormMessage,
   Input,
-} from '@falka/web';
+} from '@palka/web';
 
 type ProductForm = {
   nama: string;

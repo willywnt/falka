@@ -15,7 +15,7 @@
 
 ## 1. What & why
 
-Let a seller's customers place an order **inside WhatsApp** that lands directly in Falka
+Let a seller's customers place an order **inside WhatsApp** that lands directly in Palka
 as an internal order. The owner's explicit direction: **structured input (catalog / in-chat
 form), NOT free-text parsing** — to minimise ambiguity. Per-org config: each Organization
 registers **exactly ONE** WhatsApp business number; the whole feature is gated behind a
@@ -37,8 +37,8 @@ typing the order by hand, the customer's structured WhatsApp submission creates 
   limit (no cross-org catalog leakage).
 - **Premium-gated**, OWNER/ADMIN-only to connect/disconnect the number.
 - **Billing model A for v1 — bring-your-own-WABA:** the seller's own WABA carries the
-  Meta charges (their payment method); **Falka never touches message money or BSP markup**.
-  Premium = a feature flag, not a wallet. (Falka-as-BSP rebilling = deferred, see §6.)
+  Meta charges (their payment method); **Palka never touches message money or BSP markup**.
+  Premium = a feature flag, not a wallet. (Palka-as-BSP rebilling = deferred, see §6.)
 - **VPS-only:** inbound webhooks + the Flows data-exchange endpoint need the always-on
   custom server (`apps/web/server.ts`) + worker — sequence this AFTER the VPS cutover.
 
@@ -62,7 +62,7 @@ in parallel with everything else (concrete legal-docs → verification checklist
    country/BSP/number). Without it, the existing app account must be deleted/migrated
    (downtime + chat-history loss).
 
-## 4. Architecture in Falka (when built)
+## 4. Architecture in Palka (when built)
 
 Mirror the existing **adapter-first marketplace** pattern — keep the rest of the app
 provider-agnostic so a BSP today and direct Cloud API later are swappable.
@@ -73,11 +73,11 @@ provider-agnostic so a BSP today and direct Cloud API later are swappable.
 - **Per-org connection record** (mirror `MarketplaceConnection`, org-scoped): store
   `{ wabaId, phoneNumberId, catalogId, displayName, qualityRating, accessToken(encrypted) }`
   with a **`@@unique([organizationId])`** (exactly one WA number per org). Reuse the same
-  **token-crypto** util the other adapters need — lift it to a `@falka/*` package once
+  **token-crypto** util the other adapters need — lift it to a `@palka/*` package once
   (already a flagged gotcha) so a leaked token can't cross tenants.
 - **Onboarding = Meta Embedded Signup**, embedded in the org's Settings ("Hubungkan
   WhatsApp") — a Facebook-login popup that auto-creates the org's WABA + registers the
-  number and grants Falka API access. Analogous to the Lazada OAuth authorize/callback we
+  number and grants Palka API access. Analogous to the Lazada OAuth authorize/callback we
   already built. The token exchange + webhook subscription happen **server-side on the VPS**.
 - **Inbound webhook** = a new Route Handler `POST /api/v1/whatsapp/webhook` (+ a `GET`
   verify-token handshake) that **runs only on the VPS custom server**. It MUST verify
@@ -138,11 +138,11 @@ absorbs onboarding + billing.
 
 | Option                                     | Gist                                                                                                                                                                                                                                                            | Verdict                                                                                                                                                                                         |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Direct Meta Cloud API**                  | Falka becomes a Meta **Tech Provider** (one-time business verification + App Review + Access Verification), self-hosts Embedded Signup + webhooks on the VPS. Cheapest at scale (no markup), most control, matches the self-host direction.                     | **Eventual destination**, AFTER the integration + onboarding UX are proven. Front-loads weeks of Meta bureaucracy.                                                                              |
+| **Direct Meta Cloud API**                  | Palka becomes a Meta **Tech Provider** (one-time business verification + App Review + Access Verification), self-hosts Embedded Signup + webhooks on the VPS. Cheapest at scale (no markup), most control, matches the self-host direction.                     | **Eventual destination**, AFTER the integration + onboarding UX are proven. Front-loads weeks of Meta bureaucracy.                                                                              |
 | **BSP — 360dialog (primary)**              | Developer-first Tech-Provider BSP: clean Cloud-API passthrough (we own the catalog/Flows→order webhook, no forced inbox), true multi-tenant Partner Hub (one number per org), **flat per-channel license** (~€25/€49 per number/mo, **no per-message markup**). | **Recommended phase-1 provider.** Flat license maps cleanly to premium gating. Caveat: EUR/USD billing + 4% card fee; confirm passthrough/webhook specifics + all-in IDR cost in a **sandbox**. |
 | **BSP — Twilio (fallback)**                | Mature docs, dedicated subaccount per client (clean isolation), first-class Flows. **Per-message markup** ($0.005 sent + $0.005 received).                                                                                                                      | Fallback if 360dialog's billing/onboarding blocks us. Markup less predictable for gating.                                                                                                       |
 | **Local IDR BSP — Mekari Qontak / Qiscus** | Official ID BSPs, IDR billing, Bahasa onboarding, NIB/NPWP handling. But inbox/CRM-first; weaker "one account → many client numbers via our own webhook".                                                                                                       | **Reserve** for a future managed/white-glove or IDR-billed tier; not the build-on layer.                                                                                                        |
-| **Falka-as-BSP wallet (Model B)**          | One central credit line, Falka pays Meta + meters/rebills per org.                                                                                                                                                                                              | **Defer.** Makes Falka liable for every org's marketing spend + an Indonesian payments/tax surface. Only with real demand + a hard per-org spend cap.                                           |
+| **Palka-as-BSP wallet (Model B)**          | One central credit line, Palka pays Meta + meters/rebills per org.                                                                                                                                                                                              | **Defer.** Makes Palka liable for every org's marketing spend + an Indonesian payments/tax surface. Only with real demand + a hard per-org spend cap.                                           |
 
 **Recommended path = Hybrid (Option C):** start the owner's Meta business verification
 immediately; ship v1 behind **360dialog** (Embedded Signup + Coexistence + Flows) so each
@@ -183,7 +183,7 @@ Log every send (category, est. cost, template) to audit so the owner sees spend.
 - **Phase 2 — Flows checkout + outbound:** a Flow for address/payment/notes; outbound
   **utility** order-confirmation/shipping templates via the notification outbox; a health
   panel surfacing quality rating / messaging tier (mirror the Phase-6 marketplace health).
-- **Phase 3 — direct Cloud API:** once Falka passes Tech Provider App Review, flip the
+- **Phase 3 — direct Cloud API:** once Palka passes Tech Provider App Review, flip the
   adapter off the BSP to drop the per-message/license markup.
 
 ## 9. Risks
@@ -223,7 +223,7 @@ Log every send (category, est. cost, template) to audit so the owner sees spend.
 Kerja / PP 8/2021): register online at AHU Kemenkumham — file the _Pernyataan Pendirian_,
 receive the _Sertifikat Pendirian PT Perseorangan_. No notary required; usually fast/cheap;
 founder must be a WNI with a KTP. This entity is also the legal home for the whole SaaS
-(billing, ToS, the Falka→**Palka** rename) — not only WhatsApp.
+(billing, ToS, the Palka→**Palka** rename) — not only WhatsApp.
 
 **2. Get the business identifiers Meta checks.**
 
@@ -235,14 +235,14 @@ founder must be a WNI with a KTP. This entity is also the legal home for the who
 
 **3. Make the website match (Meta's #1 check).** A live business website whose **domain +
 visible content carry the registered legal name + logo**. The PT name, the website brand, and
-the Meta Business Portfolio legal name must align — mind the Falka→Palka rename and register/
+the Meta Business Portfolio legal name must align — mind the Palka→Palka rename and register/
 verify under whatever name the website + PT will actually use.
 
 **4. Meta side (only once docs are in hand).** Create a **Meta Business Portfolio** (enter
 legal name/address/phone **exactly as on the docs**) → submit **business verification** (NIB/
 NPWP/Sertifikat + phone/website checks; days–weeks; a rejection = ~30-day cooldown, so make
 docs consistent first) → then onboard the first number via the **BSP (360dialog)** Embedded
-Signup, _or_ start Falka's own **Tech Provider** App Review for the direct path.
+Signup, _or_ start Palka's own **Tech Provider** App Review for the direct path.
 
 **Critical path:** steps 1–3 (legal + matching website) gate step 4, and step 4 is the
 multi-week Meta clock — so forming the PT + lining up NIB/NPWP + the matching website is the

@@ -1,6 +1,6 @@
-import { prisma } from '@falka/db';
-import { logger } from '@falka/logger/server';
-import { getObjectStorageProvider, isPendingStorageKey } from '@falka/storage';
+import { prisma } from '@palka/db';
+import { logger } from '@palka/logger/server';
+import { getObjectStorageProvider, isPendingStorageKey } from '@palka/storage';
 
 import type { JobResultMetadata } from '../types/index.js';
 import {

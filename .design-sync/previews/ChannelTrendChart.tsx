@@ -1,4 +1,4 @@
-import { ChannelTrendChart } from '@falka/web';
+import { ChannelTrendChart } from '@palka/web';
 
 export function StackedRevenue() {
   return (

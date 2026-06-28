@@ -96,7 +96,7 @@ export function LabelSheet({
         />
       ))}
       <div className="text-muted-foreground col-span-full mt-3 flex items-baseline justify-between gap-2 border-t pt-2 text-[10px]">
-        <span className="font-semibold">Falka</span>
+        <span className="font-semibold">Palka</span>
         <span suppressHydrationWarning>dicetak {PRINT_STAMP_FORMAT.format(new Date())}</span>
       </div>
     </div>

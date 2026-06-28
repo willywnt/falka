@@ -5,7 +5,7 @@ import {
   REQUEST_ID_HEADER,
   resolveRequestId,
   runWithRequestId,
-} from '@falka/logger/server';
+} from '@palka/logger/server';
 
 export function getRequestIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');

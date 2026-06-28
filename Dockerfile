@@ -4,7 +4,7 @@
 #   - apps/web    → custom Next + Socket.IO server (`tsx server.ts`)
 #   - apps/worker → BullMQ background jobs (`node dist/index.js`)
 # docker-compose.yml runs both from this image, overriding the command for the
-# worker. Build once; compose tags it as `falka-app:latest`.
+# worker. Build once; compose tags it as `palka-app:latest`.
 #
 # NOTE: untested build scaffold — validate/tune at first deploy (native deps,
 # image size, build-time env). See docs/deployment/vps-setup.md.
@@ -24,7 +24,7 @@ WORKDIR /app
 FROM base AS build
 # NEXT_PUBLIC_* are inlined into the client bundle at BUILD time — pass as build args.
 ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_APP_NAME=Falka
+ARG NEXT_PUBLIC_APP_NAME=Palka
 ARG NEXT_PUBLIC_ENABLE_MOBILE_SCANNER=true
 # Placeholder keeps any build-time Prisma client instantiation happy; `next build`
 # never opens a real connection. The runtime DATABASE_URL comes from env at run time.
@@ -46,4 +46,4 @@ ENV NODE_ENV=production \
 COPY --from=build /app /app
 EXPOSE 3000
 # Default: web custom server (Next + Socket.IO). Compose overrides it for the worker.
-CMD ["pnpm", "--filter", "@falka/web", "start"]
+CMD ["pnpm", "--filter", "@palka/web", "start"]

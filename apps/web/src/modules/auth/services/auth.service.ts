@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import type { OrgRole, UserRole } from '@prisma/client';
 
 import { assertMemberCapacity } from '@/modules/users/services/member-capacity';

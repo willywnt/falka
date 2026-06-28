@@ -1,12 +1,12 @@
-import { Avatar, Badge } from '@falka/web';
+import { Avatar, Badge } from '@palka/web';
 
 export function Initials() {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <Avatar name="Budi Santoso" />
       <Avatar name="Siti Rahmawati" />
-      <Avatar name="Toko Falka Demo" />
-      <Avatar name="owner@falka.demo" />
+      <Avatar name="Toko Palka Demo" />
+      <Avatar name="owner@palka.demo" />
     </div>
   );
 }
@@ -30,7 +30,7 @@ export function MemberRow() {
         <div style={{ display: 'grid', gap: 1 }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>Rina Kusuma</span>
           <span style={{ fontSize: 12, color: 'var(--muted-foreground, #6b7280)' }}>
-            rina@falka.demo
+            rina@palka.demo
           </span>
         </div>
         <Badge variant="secondary" style={{ marginLeft: 'auto' }}>
@@ -42,7 +42,7 @@ export function MemberRow() {
         <div style={{ display: 'grid', gap: 1 }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>Dewi Lestari</span>
           <span style={{ fontSize: 12, color: 'var(--muted-foreground, #6b7280)' }}>
-            dewi@falka.demo
+            dewi@palka.demo
           </span>
         </div>
         <Badge variant="outline" style={{ marginLeft: 'auto' }}>

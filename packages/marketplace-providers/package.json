@@ -1,5 +1,5 @@
 {
-  "name": "@falka/marketplace-providers",
+  "name": "@palka/marketplace-providers",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3"

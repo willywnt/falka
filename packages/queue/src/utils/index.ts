@@ -1,4 +1,4 @@
-import { JOB_DEFAULT_ATTEMPTS, JOB_DEFAULT_BACKOFF_MS } from '@falka/config/limits';
+import { JOB_DEFAULT_ATTEMPTS, JOB_DEFAULT_BACKOFF_MS } from '@palka/config/limits';
 
 export const DEFAULT_JOB_OPTIONS = {
   attempts: JOB_DEFAULT_ATTEMPTS,

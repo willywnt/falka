@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Per-connection config update. `syncWarehouseCode` designates the ONE Lazada warehouse Falka
+ * Per-connection config update. `syncWarehouseCode` designates the ONE Lazada warehouse Palka
  * owns (stock push targets only it); an empty/whitespace value clears it back to the
  * single-warehouse bare path. Tokens/secrets are NOT editable here.
  */

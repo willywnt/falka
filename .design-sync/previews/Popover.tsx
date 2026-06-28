@@ -5,7 +5,7 @@ import {
   Button,
   Label,
   Input,
-} from '@falka/web';
+} from '@palka/web';
 import { SlidersHorizontal } from 'lucide-react';
 
 export function StockFilter() {

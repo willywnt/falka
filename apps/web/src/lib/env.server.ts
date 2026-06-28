@@ -1,3 +1,3 @@
 import 'server-only';
 
-export { getServerEnv } from '@falka/config/env.server';
+export { getServerEnv } from '@palka/config/env.server';

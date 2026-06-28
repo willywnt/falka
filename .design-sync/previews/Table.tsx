@@ -7,7 +7,7 @@ import {
   TableHead,
   TableCell,
   Badge,
-} from '@falka/web';
+} from '@palka/web';
 
 export function InventoryTable() {
   return (

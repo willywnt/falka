@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'crypto';
 
 import type { PairingPurpose, PairingSession } from '@prisma/client';
 
-import { createLogger } from '@falka/logger/server';
+import { createLogger } from '@palka/logger/server';
 import type { AuthUser } from '@/modules/auth/types';
 
 const pairingLogger = createLogger({ component: 'pairing' });

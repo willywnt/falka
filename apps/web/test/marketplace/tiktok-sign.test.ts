@@ -1,4 +1,4 @@
-import { buildTikTokSignBase, signTikTokRequest } from '@falka/marketplace-providers';
+import { buildTikTokSignBase, signTikTokRequest } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

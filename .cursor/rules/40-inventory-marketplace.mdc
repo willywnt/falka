@@ -234,12 +234,12 @@ VERIFY; TOKOPEDIA = TikTok Shop Open API v202309 since the standalone Tokopedia 
 detail: `docs/roadmap/shopee-tokopedia-integration.md`). Lazada signer (HMAC-SHA256, prepend apiPath, UPPER
 hex), REST client, import (`/products/get`), stock-push (**`/product/stock/sellable/update`**, POST +
 XML, **absolute** `SellableQuantity`), token helpers (`exchangeLazadaCode`/`refreshLazadaToken`) and
-`buildLazadaSellableStockPayload` all live in **`@falka/marketplace-providers`** (shared web+worker). The import/stock adapters are **env-gated**:
+`buildLazadaSellableStockPayload` all live in **`@palka/marketplace-providers`** (shared web+worker). The import/stock adapters are **env-gated**:
 real only when `LAZADA_APP_KEY`+`LAZADA_APP_SECRET` are set, else fall back to the stub.
 - **OAuth onboarding (multi-seller):** each org connects its own shop. `GET /marketplaces/lazada/oauth/
 authorize` (gated `marketplace.manage`) → encrypted `state` (org+actor sealed with
   `MARKETPLACE_ENCRYPTION_SECRET`, 15-min TTL, pure codec `utils/oauth-state.ts`) → `auth.lazada.com`.
-  `GET …/oauth/callback` is **PUBLIC** (the redirect may not carry the Falka cookie — state is the
+  `GET …/oauth/callback` is **PUBLIC** (the redirect may not carry the Palka cookie — state is the
   authority) → exchange code → `marketplaceServerService.upsertOAuthConnection` (create / reactivate /
   **re-auth refreshes the token**) → redirect `/marketplace?lazada=connected|error` (toasted). Manual
   paste stays as a dev/fallback for providers without OAuth.
@@ -265,7 +265,7 @@ update` returns `SELLER_NOT_PERMITTED`/E501 for **dropshipping-warehouse** selle
   are stock-only (never touch price). Verified `code:0` + absolute set/read-back on a real dropshipping SKU.
   (9) **multi-warehouse — SHIPPED non-destructive 2026-06-16:** a Lazada SKU can split stock across
   `multiWarehouseInventories[]` (read shape: `warehouseCode`/`sellableQuantity`/…; top-level `quantity` = Σ
-  sellableQuantity). **Falka owns exactly ONE warehouse** (per-connection `MarketplaceConnection.syncWarehouseCode`,
+  sellableQuantity). **Palka owns exactly ONE warehouse** (per-connection `MarketplaceConnection.syncWarehouseCode`,
   picked in the connection-detail "Gudang sinkron" card from `knownWarehouseCodes` captured at import). The push
   writes `available` to ONLY that warehouse via a **single-entry** `<MultiWarehouseInventories><MultiWarehouse
 Inventory><WarehouseCode/><Quantity/></…>` block and **OMITS the rest — Lazada leaves omitted warehouses
@@ -283,14 +283,14 @@ Inventory><WarehouseCode/><Quantity/></…>` block and **OMITS the rest — Laza
 - **Zero DB migration, observe-only.** Internal `available` is the SoT; drift is only SURFACED, never
   auto-corrected — the only fix is a manual re-push (`syncNow`). Health is computed on-read from existing
   fields; no new tables.
-- **`computeStockDrift`** (`@falka/queue/marketplace-sync/drift.ts`, pure, unit-tested in
+- **`computeStockDrift`** (`@palka/queue/marketplace-sync/drift.ts`, pure, unit-tested in
   `apps/web/test/marketplace/drift.test.ts`): joins mapped listings to a fresh provider pull and classifies
   each `in_sync | over (external > internal = oversell risk) | under | missing_external`, plus an
-  `unmappedExternal` count. Lives in `@falka/queue` so the worker job and the web service compute identically;
+  `unmappedExternal` count. Lives in `@palka/queue` so the worker job and the web service compute identically;
   the web client only imports the TYPES (erased), never runtime.
 - **Web:** `marketplaceHealthService.listHealth/getHealth` (token lifecycle + sync coverage + needs-review +
   failed pushes + recent sync → `ok|warn|danger` tone); `marketplaceReconciliationService.checkDrift` (pulls
-  live external via the import adapter, read-only, reuses `findDriftMappedListings` from `@falka/queue`).
+  live external via the import adapter, read-only, reuses `findDriftMappedListings` from `@palka/queue`).
   Routes: `GET /api/v1/marketplaces/health` + `/[id]/health` (**marketplace.view**) · `POST /[id]/drift-check`
   (**marketplace.manage** — it calls the provider). UI: a **"Kesehatan & drift"** panel on the connection
   detail (health summary + "Periksa drift" + per-row "Sync sekarang"), dashboard health badges/summary, and a
@@ -300,9 +300,9 @@ Inventory><WarehouseCode/><Quantity/></…>` block and **OMITS the rest — Laza
   `adapter.fetchListings` → `computeStockDrift` → **log** over/under/missing; stub providers return `null` →
   skipped; best-effort per connection) and `refresh-marketplace-tokens` (renews tokens expiring within the
   window for ALL OAuth providers — `REFRESHABLE_PROVIDERS` = LAZADA+SHOPEE+TOKOPEDIA — via the stored refresh
-  token, re-seals with `@falka/utils` crypto; complements the sync engine's lazy refresh-before-use
+  token, re-seals with `@palka/utils` crypto; complements the sync engine's lazy refresh-before-use
   `ensureFreshAccessToken`). Drift/token data-access (`findActiveConnectionsForDrift`, `findDriftMappedListings`,
-  `findConnectionsForTokenRefresh`, `applyRefreshedConnectionTokens`) lives in `@falka/queue`;
+  `findConnectionsForTokenRefresh`, `applyRefreshedConnectionTokens`) lives in `@palka/queue`;
   `findDriftMappedListings` is always called with the connection's OWN `organizationId` (no cross-tenant read).
   Adapter calls take **`ProviderShopCredentials = {accessToken, shopId, shopCipher}`** (worker
   `stock-provider.registry.ts` + web import-adapter params): `shopId` is in Shopee/TikTok signatures,
@@ -337,7 +337,7 @@ Inventory><WarehouseCode/><Quantity/></…>` block and **OMITS the rest — Laza
   old rows keep stale URLs → re-upload.
 - **BullMQ custom jobId CANNOT contain `:`** → job-id builders use `-` (DB idempotency keys keep `:`).
 - A real provider adapter needs the **DECRYPTED token** → lift marketplace token-crypto into a
-  shared `@falka/*` package (the engine passes the encrypted token; stubs ignore it).
+  shared `@palka/*` package (the engine passes the encrypted token; stubs ignore it).
 - A running dev server (`tsx watch server.ts`) holds the Prisma query-engine DLL on Windows →
   `prisma generate` fails `EPERM`. Stop it before generate/migrate; restart after. BUT an
   index-only / no-client-change migration can run with `prisma migrate dev --skip-generate`
@@ -408,7 +408,7 @@ return-API sync; a `StockLedger (userId, createdAt)` index for the activity feed
 `(userId, reason, createdAt)` index serves reorder); **purchasing**: auto **cost update** on receive
 (moving-average → profit reporting), PO
 edit/DRAFT, supplier invoice (faktur) printing, landed cost; reorder velocity is a simple EWMA (could add seasonality); real
-provider adapters need the decrypted token → lift token-crypto to `@falka/*`; queue package has no
+provider adapters need the decrypted token → lift token-crypto to `@palka/*`; queue package has no
 vitest (engine is gate-checked only).
 
 > Done this round (was deferred): `cost` + lead-time/MOQ on variants; reorder intelligence;

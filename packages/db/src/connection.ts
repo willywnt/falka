@@ -1,4 +1,4 @@
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 
 import { prisma } from './client.js';
 

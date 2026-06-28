@@ -1,4 +1,4 @@
-import { formatBytes } from '@falka/utils/date';
+import { formatBytes } from '@palka/utils/date';
 
 export { formatBytes as formatFileSize };
 

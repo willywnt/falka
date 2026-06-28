@@ -1,4 +1,4 @@
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@falka/config/limits';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@palka/config/limits';
 import { z } from 'zod';
 
 /** Mirrors Prisma's OrderStatus — kept as literals so the validator stays client-safe. */

@@ -1,4 +1,4 @@
-import type { OrgRole } from '@falka/types';
+import type { OrgRole } from '@palka/types';
 
 import type { PermissionKey } from '../permissions/catalog';
 

@@ -1,4 +1,4 @@
-import { Sparkline } from '@falka/web';
+import { Sparkline } from '@palka/web';
 
 export function BesideHeroNumber() {
   return (

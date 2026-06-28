@@ -14,7 +14,7 @@ let staleLockClearedOnInit = false;
 function getTabId(): string {
   if (typeof window === 'undefined') return 'server';
 
-  const key = 'falka-recording-tab-id';
+  const key = 'palka-recording-tab-id';
   const existing = sessionStorage.getItem(key);
 
   if (existing) return existing;

@@ -1,4 +1,4 @@
-import { CompositionBar } from '@falka/web';
+import { CompositionBar } from '@palka/web';
 
 export function StockComposition() {
   return (

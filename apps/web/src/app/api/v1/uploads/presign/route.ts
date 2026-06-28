@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { METRIC_KEYS, incrementMetric } from '@falka/metrics';
+import { METRIC_KEYS, incrementMetric } from '@palka/metrics';
 import { StorageError } from '@/modules/storage/errors/storage-errors';
 import { uploadService } from '@/modules/storage/services/upload.service';
 import { presignUploadSchema } from '@/modules/storage/validators/presign';

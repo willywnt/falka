@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, LogOut } from 'lucide-react';
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 
 import { BrandBadge } from '@/components/brand-mark';
 import { Button, buttonVariants } from '@/components/ui/button';

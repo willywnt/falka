@@ -1,4 +1,4 @@
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { LazadaImportAdapter } from './lazada-import-adapter';

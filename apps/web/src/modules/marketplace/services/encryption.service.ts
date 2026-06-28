@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { getServerEnv } from '@falka/config/env.server';
-import { decrypt, encrypt } from '@falka/utils/crypto';
+import { getServerEnv } from '@palka/config/env.server';
+import { decrypt, encrypt } from '@palka/utils/crypto';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
 

@@ -7,12 +7,12 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   PRESIGNED_ACCESS_EXPIRY_SECONDS,
   PRESIGNED_UPLOAD_EXPIRY_SECONDS,
-} from '@falka/config/limits';
-import { buildPublicUrl } from '@falka/utils/storage';
+} from '@palka/config/limits';
+import { buildPublicUrl } from '@palka/utils/storage';
 
 import { StorageError } from '../errors/storage-errors';
 import type {

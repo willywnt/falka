@@ -1,4 +1,4 @@
-import { getPlatformHealthSnapshot } from '@falka/health';
+import { getPlatformHealthSnapshot } from '@palka/health';
 
 import { apiSuccess } from '@/lib/api-response';
 

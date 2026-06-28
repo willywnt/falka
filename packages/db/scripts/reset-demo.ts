@@ -8,7 +8,7 @@
  *
  * Idempotent and safe to run repeatedly. After running, RESTART the dev server so
  * the stub adapter's in-memory pull counter rewinds to pull #1. Run:
- *   pnpm --filter @falka/db db:reset-demo
+ *   pnpm --filter @palka/db db:reset-demo
  */
 import { PrismaClient } from '@prisma/client';
 
@@ -23,7 +23,7 @@ async function main() {
   });
   if (!demoUser?.membership) {
     console.log(
-      `No demo user/org (${DEMO_USER_EMAIL}). Run \`pnpm --filter @falka/db db:seed\` first.`,
+      `No demo user/org (${DEMO_USER_EMAIL}). Run \`pnpm --filter @palka/db db:seed\` first.`,
     );
     return;
   }

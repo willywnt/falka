@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import type { OrgRole } from '@prisma/client';
 
 import { resolvePermissions } from '@/modules/users/permissions/resolve';

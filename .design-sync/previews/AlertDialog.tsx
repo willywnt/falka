@@ -7,7 +7,7 @@ import {
   AlertDialogFooter,
   AlertDialogAction,
   AlertDialogCancel,
-} from '@falka/web';
+} from '@palka/web';
 
 export function ConfirmDelete() {
   return (

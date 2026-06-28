@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
-import { isWithinQuota, quotaUsagePercent, remainingQuotaBytes } from '@falka/utils/storage';
+import { prisma } from '@palka/db';
+import { isWithinQuota, quotaUsagePercent, remainingQuotaBytes } from '@palka/utils/storage';
 
 import { StorageError } from '../errors/storage-errors';
 import type { StorageQuotaSnapshot } from '../types';

@@ -1,4 +1,4 @@
-import { API_BASE_PATH } from '@falka/config/constants';
+import { API_BASE_PATH } from '@palka/config/constants';
 
 export const apiRoutes = {
   health: `${API_BASE_PATH}/health`,

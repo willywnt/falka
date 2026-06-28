@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { buildPaginatedResult, prisma, type PaginatedResult } from '@falka/db';
+import { buildPaginatedResult, prisma, type PaginatedResult } from '@palka/db';
 import type { NotificationCategory, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

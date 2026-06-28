@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'Bukti packing — Falka';
+export const alt = 'Bukti packing — Palka';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -45,7 +45,7 @@ export default function ShareOpengraphImage() {
         Bukti packing
       </div>
       <div style={{ display: 'flex', fontSize: 28, color: '#6b7280' }}>
-        Video packing pesanan — dibagikan lewat Falka
+        Video packing pesanan — dibagikan lewat Palka
       </div>
       <svg width="520" height="14" viewBox="0 0 520 14" fill="none">
         <path

@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   buildTikTokAuthUrl,
   createTikTokClient,
   exchangeTikTokCode,
   fetchTikTokShops,
   refreshTikTokToken,
-} from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
 import { MarketplaceProvider } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
@@ -26,7 +26,7 @@ const DEFAULT_BASE_URL = 'https://open-api.tiktokglobalshop.com';
  * it). Mirrors {@link lazadaOAuthService}/{@link shopeeOAuthService}; reuses the OAuth-state helpers.
  *
  * ⚠ Verify the authorize/token hosts + the shops payload against the live Partner Center docs
- * once sandbox access lands (see the @falka/marketplace-providers tiktok client).
+ * once sandbox access lands (see the @palka/marketplace-providers tiktok client).
  */
 class TokopediaOAuthService {
   /** Build the seller-authorization URL (state encrypts org + actor; redirect is app-registered). */

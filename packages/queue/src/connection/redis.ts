@@ -2,7 +2,7 @@ import type { ConnectionOptions } from 'bullmq';
 import type { Redis, RedisOptions } from 'ioredis';
 import { Redis as RedisClient } from 'ioredis';
 
-import { logger } from '@falka/utils/logger';
+import { logger } from '@palka/utils/logger';
 
 let sharedConnection: Redis | undefined;
 

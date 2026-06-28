@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 
 /** The subset of `skus` currently owned by a live variant or a bundle (shared scan namespace). */
 export async function takenSkus(organizationId: string, skus: string[]): Promise<Set<string>> {

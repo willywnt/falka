@@ -1,5 +1,5 @@
 import type { Route } from 'next';
-import type { OrgRole } from '@falka/types';
+import type { OrgRole } from '@palka/types';
 import {
   Boxes,
   Building2,

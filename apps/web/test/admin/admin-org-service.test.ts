@@ -26,8 +26,8 @@ const { prismaMock, hashMock, auditLogMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock }));
-vi.mock('@falka/config/limits', () => ({ DEFAULT_STORAGE_QUOTA_BYTES: 500 }));
+vi.mock('@palka/db', () => ({ prisma: prismaMock }));
+vi.mock('@palka/config/limits', () => ({ DEFAULT_STORAGE_QUOTA_BYTES: 500 }));
 vi.mock('@/modules/auth/utils/password', () => ({ hashPassword: hashMock }));
 vi.mock('@/modules/audit/services/audit.service', () => ({
   auditService: { log: auditLogMock },

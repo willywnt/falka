@@ -13,7 +13,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock }));
+vi.mock('@palka/db', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/db-retry', () => ({
   // Run the thunk once (no collision in tests).
   retryOnCodeCollision: (run: () => unknown) => run(),

@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@falka/web';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@palka/web';
 
 export function ProductTabs() {
   return (

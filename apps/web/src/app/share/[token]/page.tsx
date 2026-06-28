@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 import { PackageCheck, ShieldAlert } from 'lucide-react';
 
 import { recordingShareService } from '@/modules/recordings/services/recording-share.service';
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   // Chat-preview framing only — the og image is deliberately data-free so no
   // resi/order detail ever leaks into a link unfurl.
   openGraph: {
-    title: 'Bukti packing — Falka',
+    title: 'Bukti packing — Palka',
     description: 'Video packing pesanan, dibagikan sebagai bukti sengketa.',
   },
 };

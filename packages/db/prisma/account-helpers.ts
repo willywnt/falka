@@ -1,6 +1,6 @@
 import { OrgRole } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
+import { DEFAULT_STORAGE_QUOTA_BYTES } from '@palka/config/limits';
 import argon2 from 'argon2';
 
 /** Argon2id hash with the same cost params the app uses for login. */

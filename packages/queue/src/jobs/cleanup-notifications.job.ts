@@ -1,5 +1,5 @@
-import { prisma } from '@falka/db';
-import { NOTIFICATION_RETENTION_DAYS } from '@falka/config/limits';
+import { prisma } from '@palka/db';
+import { NOTIFICATION_RETENTION_DAYS } from '@palka/config/limits';
 
 import {
   cleanupNotificationsJobSchema,

@@ -1,4 +1,4 @@
-import { buildLazadaSellableStockPayload } from '@falka/marketplace-providers';
+import { buildLazadaSellableStockPayload } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -55,7 +55,7 @@ describe('buildLazadaSellableStockPayload', () => {
   });
 
   // ── Multi-warehouse (non-destructive sync warehouse) ────────────────────────────────
-  // A Lazada SKU can split stock across warehouses. Falka owns exactly ONE designated
+  // A Lazada SKU can split stock across warehouses. Palka owns exactly ONE designated
   // warehouse: with a syncWarehouseCode set, write ONLY that warehouse and OMIT the rest —
   // Lazada leaves omitted warehouses untouched (partial update, live-verified 2026-06-16).
   // We never zero a warehouse we don't own. Inner element is <Quantity> (NOT <SellableQuantity>).

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getRequestId, logger, resolveRequestId, REQUEST_ID_HEADER } from '@falka/logger/server';
+import { getRequestId, logger, resolveRequestId, REQUEST_ID_HEADER } from '@palka/logger/server';
 
 import { handleApiError } from '@/lib/api-response';
 import {

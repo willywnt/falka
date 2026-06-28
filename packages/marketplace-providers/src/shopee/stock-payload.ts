@@ -36,7 +36,7 @@ function toNumericId(value: string | null | undefined): number {
  * **Multi-location:** a Shopee shop can split stock across locations (`location_id`). With a
  * `syncWarehouseCode` configured, push the quantity to ONLY that `location_id` and omit the
  * rest (Shopee leaves omitted locations untouched); otherwise a single entry with no
- * `location_id`. Falka owns one location and never zeroes the others.
+ * `location_id`. Palka owns one location and never zeroes the others.
  *
  * NOTE: verify the exact `seller_stock`/`stock_list` field names against the live Shopee
  * Open Platform docs when wiring the sandbox — the v2 shape is stable but version-tagged.

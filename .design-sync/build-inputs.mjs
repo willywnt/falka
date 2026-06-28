@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds the /design-sync inputs for the @falka/web component library:
+// Builds the /design-sync inputs for the @palka/web component library:
 //   1. a barrel that re-exports the design-system surface (esbuild bundle entry)
 //   2. the brand fonts (Plus Jakarta Sans + Geist) copied into apps/web/.ds-fonts
 //   3. a Tailwind v4 compile of the "Suar Dermaga" theme + component utilities

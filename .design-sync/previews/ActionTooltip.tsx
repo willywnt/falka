@@ -1,4 +1,4 @@
-import { TooltipProvider, ActionTooltip, Button } from '@falka/web';
+import { TooltipProvider, ActionTooltip, Button } from '@palka/web';
 import { Printer } from 'lucide-react';
 
 // ActionTooltip is a convenience wrapper around <Tooltip> that does NOT forward an

@@ -11,7 +11,7 @@ import { ensureOwnOrganization, hashPassword } from './account-helpers';
 
 const prisma = new PrismaClient();
 
-const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@falka.local';
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@palka.local';
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 const SEED_DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD ?? 'Demo123!';
 const SEED_STAFF_PASSWORD = process.env.SEED_STAFF_PASSWORD ?? 'Staff123!';
@@ -185,7 +185,7 @@ async function main() {
         noResi: 'SEED-RESI-001',
         generatedFilename: 'seed-recording-001.webm',
         storageProvider: 'cloudflare-r2',
-        storageBucket: 'falka-recordings',
+        storageBucket: 'palka-recordings',
         // Org-prefixed key — matches the production format `${orgId}/...`.
         storageKey: `${demoOrg.id}/seed-recording-001.webm`,
         publicUrl: 'https://example.r2.dev/users/seed-recording-001.webm',

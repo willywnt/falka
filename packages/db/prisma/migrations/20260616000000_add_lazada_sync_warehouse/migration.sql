@@ -1,5 +1,5 @@
 -- AlterTable
--- Lazada multi-warehouse: per-connection designated sync warehouse (Falka owns one warehouse;
+-- Lazada multi-warehouse: per-connection designated sync warehouse (Palka owns one warehouse;
 -- stock push writes `available` to ONLY this warehouseCode, leaving others untouched) + the
 -- distinct warehouseCodes seen at import (populates the sync-warehouse picker). Both additive
 -- and backward-compatible (null / empty = legacy single-warehouse bare path).

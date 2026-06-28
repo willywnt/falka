@@ -1,6 +1,6 @@
 # Auth.js Production Configuration
 
-Falka uses **Auth.js v5** with JWT sessions and a Credentials provider.
+Palka uses **Auth.js v5** with JWT sessions and a Credentials provider.
 
 ## Required environment variables
 

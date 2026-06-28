@@ -1,4 +1,4 @@
-# Falka — Project Rules (read fully every session)
+# Palka — Project Rules (read fully every session)
 
 Modular-monolith, pnpm@9 + Turborepo, Node ≥20. Edit code to match surrounding
 style. These rules are derived from the actual refactored code — keep them true.
@@ -14,7 +14,7 @@ style. These rules are derived from the actual refactored code — keep them tru
   marketplace sync / scheduled jobs / scanner socket are dormant in prod until the **VPS cutover**
   (committed direction: self-hosted Docker runs the custom server + worker; `docs/deployment`).
 - **apps/worker** — BullMQ background jobs.
-- **packages/** = shared `@falka/*`: `db` (Prisma+schema), `config` (env+limits),
+- **packages/** = shared `@palka/*`: `db` (Prisma+schema), `config` (env+limits),
   `logger`, `types`, `utils`, `metrics`, `health`, `queue`, `storage`, `rate-limit`,
   `redis`, `ui`, `eslint-config`, `typescript-config`.
 - Server state → **TanStack Query v5**. UI state → **Zustand v5**.
@@ -42,12 +42,12 @@ Modules: `admin audit auth catalog finance inventory marketplace notifications o
 - A module owns its feature. Talk to another module ONLY through its conventional
   layer files (`services/`, `hooks/`, `validators/`, `types/`) — never reach into
   another module's deep internals.
-- Cross-cutting/shared logic lives in `@falka/*` packages or `apps/web/src/lib` —
+- Cross-cutting/shared logic lives in `@palka/*` packages or `apps/web/src/lib` —
   never duplicated per module.
 - A submodule (e.g. `recordings/recovery/`, has its own `index.ts`) is internal to
   its parent domain; outside code goes through the parent.
 - **CONFLICT RULE: preserve the boundary over removing duplication.** If dedup would
-  force a boundary-breaking cross-import, keep the duplication (or lift to `@falka/*`)
+  force a boundary-breaking cross-import, keep the duplication (or lift to `@palka/*`)
   and flag it as a separate suggestion.
 
 ## 4. Folder & naming per module (real structure)
@@ -70,7 +70,7 @@ Files kebab-case. **Shared non-module:** `src/lib` (api infra, errors, logger, e
 | **Hooks** `hooks/`                      | useQuery/useMutation, query keys, invalidation, call fetch-client                           | business rules, Prisma              |
 | **Route Handler** `app/api/**/route.ts` | `withApiRoute`, Zod-parse input, call ONE service, return `apiSuccess`/`apiValidationError` | business logic, Prisma, manual auth |
 | **Service** `services/*.service.ts`     | business logic, throw module errors                                                         | import `next/server`, touch HTTP    |
-| **Repository / data**                   | Prisma queries (`@falka/db`)                                                                | leak Prisma types past the module   |
+| **Repository / data**                   | Prisma queries (`@palka/db`)                                                                | leak Prisma types past the module   |
 | **Validators** `validators/`            | Zod schema = single input source; `z.infer` types                                           | —                                   |
 
 Prisma belongs in the data layer — a `repository` where one exists (scanner-pairing),
@@ -132,7 +132,7 @@ if (!result.success) throw new Error(formatApiErrorMessage(result.error));
 // onSuccess: queryClient.invalidateQueries({ queryKey: recordingKeys.active })
 ```
 
-**Logging:** `appLogger`/`logger` from `@falka/logger`; structured `('event.name', { ctx })`.
+**Logging:** `appLogger`/`logger` from `@palka/logger`; structured `('event.name', { ctx })`.
 Never `console.log`; never log secrets (errors go through `sanitizeError`).
 
 **R2 presigned upload:** client → `POST /api/v1/uploads/presign` →
@@ -196,7 +196,7 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
   real plan tier reads. Routes under `/api/v1/admin/organizations` (`requireAdmin`). Billing is a
   labeled placeholder. **A platform-admin is confined to `/admin`**: login routes there and the
   `authorized` callback + `(dashboard)` layout bounce them out of the shop entirely (so the seed
-  `admin@falka.local` never uses a shop dashboard — it's a pure operator account).
+  `admin@palka.local` never uses a shop dashboard — it's a pure operator account).
 - **Audit**: `auditService.log` writes best-effort AFTER each sensitive tx; Settings → Riwayat
   aktivitas (ADMIN+) lists it.
 
@@ -207,7 +207,7 @@ R2 signs **content-type only**) → browser `PUT`s the file straight to R2 →
 multi-responsibility files.** pre-commit (husky+lint-staged) runs eslint --fix +
 prettier. Repo line-endings = **LF**. CI (`.github/workflows/ci.yml`) re-runs the
 four gates (build→typecheck→lint→test, build first so typedRoutes types exist) on
-push/PR to main. **E2E** (`pnpm --filter @falka/web test:e2e`, Playwright) is NOT
+push/PR to main. **E2E** (`pnpm --filter @palka/web test:e2e`, Playwright) is NOT
 in the gate — run it locally against `pnpm dev` + the demo seed (`pnpm db:seed-demo`).
 
 ## 10. Anti-patterns (reject these)
@@ -300,7 +300,7 @@ developer.tokopedia.com API is terminated. `docs/roadmap/shopee-tokopedia-integr
 - **Phase 6 — provider-health + drift reconciliation + token auto-refresh** (shipped 2026-06-15,
   zero-migration, **observe-only**): per-connection health computed on-read (`marketplaceHealthService` →
   ok/warn/danger) drives a "Kesehatan & drift" panel + dashboard badges + a `marketplaceUnhealthy` nav
-  pulse; `computeStockDrift` (pure, in `@falka/queue`, shared by web + worker) compares a live external
+  pulse; `computeStockDrift` (pure, in `@palka/queue`, shared by web + worker) compares a live external
   pull vs internal `available` (over/under/missing) for an on-demand `POST /[id]/drift-check`
   (marketplace.manage; health reads = marketplace.view) and a daily worker job — internal stays the SoT,
   drift is only surfaced (fix = manual re-push). A daily `refresh-marketplace-tokens` worker + a lazy
@@ -450,9 +450,9 @@ deriveFeesForMonth`) → QRIS fee = gross QRIS sales × rate, commission = fulfi
   Shopee uses shopId; Tokopedia/TikTok needs `MarketplaceConnection.externalShopCipher`).
 - **UI cross-module**: import another module's hooks/types, NOT its components — compose at the app
   layer (page). **Dev data**: `pnpm db:reset-demo` resets the demo orders/returns/sales/stock to re-test
-  the loop (then restart the dev server to rewind the stub pull timeline). `pnpm --filter @falka/db
-db:seed-demo` (flags `--fresh`/`SEED_FRESH=1`) seeds the full demo org "Toko Falka Demo" +
-  OWNER/ADMIN/STAFF logins (owner@/admin@/staff@falka.demo) with data across every feature.
+  the loop (then restart the dev server to rewind the stub pull timeline). `pnpm --filter @palka/db
+db:seed-demo` (flags `--fresh`/`SEED_FRESH=1`) seeds the full demo org "Toko Palka Demo" +
+  OWNER/ADMIN/STAFF logins (owner@/admin@/staff@palka.demo) with data across every feature.
 - **QR-scan (POS phase 2) — ✅ shipped.** Per-SKU **QR labels**: a label studio at `/dashboard/labels`
   (catalog) prints an A4 grid encoding `barcode ?? sku` (`listLabelVariants` paginated, already-printed
   sort last). **`ProductVariant.labelPrintedAt`** records the last print (`markLabelsPrinted`) — surfaced

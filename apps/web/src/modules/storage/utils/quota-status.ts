@@ -1,7 +1,7 @@
 import {
   STORAGE_QUOTA_CRITICAL_PERCENT,
   STORAGE_QUOTA_WARNING_PERCENT,
-} from '@falka/config/limits';
+} from '@palka/config/limits';
 
 export type StorageQuotaLevel = 'normal' | 'warning' | 'critical' | 'full';
 

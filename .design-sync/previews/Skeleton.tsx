@@ -1,4 +1,4 @@
-import { Skeleton } from '@falka/web';
+import { Skeleton } from '@palka/web';
 
 export function LoadingCard() {
   return (

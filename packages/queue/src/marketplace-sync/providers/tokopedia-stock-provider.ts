@@ -1,12 +1,12 @@
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   buildTikTokInventoryUpdateBody,
   createTikTokClient,
   fetchTikTokItemsStock,
   fetchTikTokListings,
   isTikTokSuccess,
-} from '@falka/marketplace-providers';
-import type { TikTokClient, TikTokResponse } from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
+import type { TikTokClient, TikTokResponse } from '@palka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import type { NormalizedStockUpdateResponse } from '../stock-normalizer.js';

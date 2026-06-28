@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Phase 1 (local) E2E. Drives the real app against a running dev server + the
- * seeded demo org ("Toko Falka Demo" — `pnpm db:seed-demo`). Serial + single
+ * seeded demo org ("Toko Palka Demo" — `pnpm db:seed-demo`). Serial + single
  * worker because the POS flow mutates shared stock. CI wiring is deferred.
  *
  * Prereqs: `pnpm dev` (web on :3000) is up and the demo seed is loaded. Override

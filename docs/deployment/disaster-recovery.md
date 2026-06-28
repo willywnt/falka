@@ -2,7 +2,7 @@
 
 > **Legacy / stopgap.** This documents the current **Vercel + Neon** production setup. The committed direction is a **self-hosted single-host VPS** (Docker Compose: web + worker + Postgres + Redis, keeping Cloudflare R2) — see [vps-migration.md](./vps-migration.md) and [vps-setup.md](./vps-setup.md). On Vercel the worker + Socket.IO don't run, so marketplace sync / scheduled jobs / scanner are dormant in prod until cutover.
 
-Falka is a modular monolith. Recovery focuses on PostgreSQL, R2 object storage, and Redis queue state.
+Palka is a modular monolith. Recovery focuses on PostgreSQL, R2 object storage, and Redis queue state.
 
 ## Recovery priorities
 
@@ -34,7 +34,7 @@ Never point production at local Docker Postgres.
 **Recommendation:**
 
 - Enable object versioning or periodic bucket sync to secondary bucket/account
-- Document bucket name per environment (`falka-recordings` vs `falka-recordings-prod`)
+- Document bucket name per environment (`palka-recordings` vs `palka-recordings-prod`)
 - Use lifecycle rules for incomplete multipart uploads
 
 **Orphan handling:**
@@ -55,7 +55,7 @@ Redis holds BullMQ queues, rate-limit counters, and lightweight metrics.
 **Recovery:**
 
 1. Restart Redis / Upstash instance
-2. Restart worker (`pnpm --filter @falka/worker start`)
+2. Restart worker (`pnpm --filter @palka/worker start`)
 3. Schedulers re-register repeat jobs on boot
 4. Failed jobs remain in BullMQ failed set if persistence enabled
 5. Rate limits and metrics counters reset (acceptable)

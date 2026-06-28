@@ -1,5 +1,5 @@
-import { healthCheckDb } from '@falka/db';
-import { getObjectStorageProvider } from '@falka/storage';
+import { healthCheckDb } from '@palka/db';
+import { getObjectStorageProvider } from '@palka/storage';
 
 export type DependencyStatus = 'ok' | 'degraded' | 'unavailable' | 'skipped';
 

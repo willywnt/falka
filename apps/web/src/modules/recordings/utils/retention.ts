@@ -1,4 +1,4 @@
-import { RECORDING_RETENTION_DAYS } from '@falka/config/limits';
+import { RECORDING_RETENTION_DAYS } from '@palka/config/limits';
 import type { RecordingStatus } from '@prisma/client';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

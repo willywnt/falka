@@ -1,4 +1,4 @@
-import { QrCodeDialog } from '@falka/web';
+import { QrCodeDialog } from '@palka/web';
 
 export function Open() {
   return (

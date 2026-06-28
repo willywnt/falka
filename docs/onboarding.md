@@ -1,6 +1,6 @@
 # Onboarding
 
-Get Falka running locally in under 10 minutes.
+Get Palka running locally in under 10 minutes.
 
 ## Prerequisites
 
@@ -17,8 +17,8 @@ Optional: [Make](https://gnuwin32.sourceforge.net/packages/make.htm) for `make s
 
 ```bash
 # 1. Clone and install
-git clone <repo-url> falka
-cd falka
+git clone <repo-url> palka
+cd palka
 pnpm install
 
 # 2. Environment files
@@ -43,9 +43,9 @@ Default seed accounts (after `pnpm db:seed`):
 
 | Email               | Password    | Role                    |
 | ------------------- | ----------- | ----------------------- |
-| `admin@falka.local` | `Admin123!` | Platform admin          |
-| `demo@falka.local`  | `Demo123!`  | Shop owner (demo org)   |
-| `staff@falka.local` | `Staff123!` | STAFF member (demo org) |
+| `admin@palka.local` | `Admin123!` | Platform admin          |
+| `demo@palka.local`  | `Demo123!`  | Shop owner (demo org)   |
+| `staff@palka.local` | `Staff123!` | STAFF member (demo org) |
 
 ## Daily workflow
 
@@ -84,19 +84,19 @@ pnpm typecheck && pnpm lint && pnpm build && pnpm test   # the four gates (CI re
 | Command                                | What it runs                                            |
 | -------------------------------------- | ------------------------------------------------------- |
 | `pnpm test`                            | Unit/integration (Vitest) — Prisma mocked, no DB needed |
-| `pnpm --filter @falka/web test:e2e`    | End-to-end (Playwright) against the running app         |
-| `pnpm --filter @falka/web test:e2e:ui` | E2E in the Playwright inspector                         |
+| `pnpm --filter @palka/web test:e2e`    | End-to-end (Playwright) against the running app         |
+| `pnpm --filter @palka/web test:e2e:ui` | E2E in the Playwright inspector                         |
 
 Unit tests mock Prisma, so a DB/runtime regression (e.g. a bad raw query) won't show
 there — that's what the E2E suite is for. End-to-end tests drive a real browser, so:
 
 1. **Run the app** — `pnpm dev` (Playwright reuses it if already up).
-2. **Seed the demo org** — `pnpm --filter @falka/db db:seed-demo` (the E2E logs in as `owner@falka.demo`
+2. **Seed the demo org** — `pnpm --filter @palka/db db:seed-demo` (the E2E logs in as `owner@palka.demo`
    / `Demo123!`; override with `E2E_EMAIL` / `E2E_PASSWORD`).
-3. **Install the browser once** — `pnpm --filter @falka/web exec playwright install chromium`.
+3. **Install the browser once** — `pnpm --filter @palka/web exec playwright install chromium`.
 
 ```bash
-pnpm --filter @falka/web test:e2e
+pnpm --filter @palka/web test:e2e
 ```
 
 ## Cloudflare R2 (local uploads)
@@ -121,7 +121,7 @@ See [deployment/r2.md](./deployment/r2.md) for production setup.
 **Next.js 500 / stale cache**
 
 ```bash
-pnpm --filter @falka/web clean
+pnpm --filter @palka/web clean
 pnpm dev
 ```
 

@@ -1,4 +1,4 @@
-import { logger } from '@falka/utils/logger';
+import { logger } from '@palka/utils/logger';
 
 import { createQueue } from '../queues/create-queue.js';
 import { buildScheduledJobId } from '../utils/index.js';

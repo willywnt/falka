@@ -1,4 +1,4 @@
-import { BrandBadge } from '@falka/web';
+import { BrandBadge } from '@palka/web';
 
 export function Sidebar() {
   return (
@@ -16,7 +16,7 @@ export function Sidebar() {
       <BrandBadge />
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: '#f4efe6' }}>Palka</span>
-        <span style={{ fontSize: 12, color: '#9fb0bd' }}>Toko Falka Demo</span>
+        <span style={{ fontSize: 12, color: '#9fb0bd' }}>Toko Palka Demo</span>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { ALLOWED_UPLOAD_MIME_TYPES } from '@falka/config/limits';
+import { ALLOWED_UPLOAD_MIME_TYPES } from '@palka/config/limits';
 
 export const ALLOWED_MIME_TYPES = ALLOWED_UPLOAD_MIME_TYPES;
 

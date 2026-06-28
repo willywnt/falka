@@ -1,7 +1,7 @@
 import {
   getDefaultRecalculateStoragePayload,
   processRecalculateStorageJob,
-} from '@falka/queue';
+} from '@palka/queue';
 
 const dryRun = process.argv.includes('--dry-run');
 const orgIdArg = process.argv.find((arg) => arg.startsWith('--org='));

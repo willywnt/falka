@@ -1,4 +1,4 @@
-import { getPlatformHealthSnapshot } from '@falka/health';
+import { getPlatformHealthSnapshot } from '@palka/health';
 import { NextResponse } from 'next/server';
 
 export async function GET() {

@@ -1,5 +1,5 @@
-import { computeStockDrift, resolveSyncWarehouseStock } from '@falka/queue';
-import type { DriftExternalInput, DriftMappedInput } from '@falka/queue';
+import { computeStockDrift, resolveSyncWarehouseStock } from '@palka/queue';
+import type { DriftExternalInput, DriftMappedInput } from '@palka/queue';
 import { describe, expect, it } from 'vitest';
 
 function mapped(
@@ -132,7 +132,7 @@ describe('computeStockDrift', () => {
   });
 });
 
-// Falka owns ONE marketplace warehouse: with a sync warehouse configured, drift compares
+// Palka owns ONE marketplace warehouse: with a sync warehouse configured, drift compares
 // against THAT warehouse's own sellable (Option A), not the cross-warehouse sum — otherwise
 // other warehouses' stock would always read as drift.
 describe('resolveSyncWarehouseStock', () => {

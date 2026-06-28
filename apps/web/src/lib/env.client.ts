@@ -1,1 +1,1 @@
-export { getClientEnv } from '@falka/config/env.client';
+export { getClientEnv } from '@palka/config/env.client';

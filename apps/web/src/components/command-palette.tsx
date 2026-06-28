@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Route } from 'next';
-import type { OrgRole } from '@falka/types';
+import type { OrgRole } from '@palka/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Boxes,

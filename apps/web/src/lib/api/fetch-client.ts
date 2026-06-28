@@ -1,4 +1,4 @@
-import type { ApiError, ApiResponse } from '@falka/types';
+import type { ApiError, ApiResponse } from '@palka/types';
 
 import { AppError, DomainError } from '@/lib/errors';
 

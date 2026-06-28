@@ -1,4 +1,4 @@
-import { StatCard } from '@falka/web';
+import { StatCard } from '@palka/web';
 import { Wallet, Package, TrendingUp } from 'lucide-react';
 
 export function Grid() {

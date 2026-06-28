@@ -66,7 +66,7 @@ DATABASE_URL="postgresql://..." pnpm db:migrate:deploy
 | Root Directory  | `apps/web`                                                                                      |
 | Framework       | Next.js                                                                                         |
 | Install Command | `cd ../.. && pnpm install`                                                                      |
-| Build Command   | `cd ../.. && pnpm --filter @falka/db db:migrate:deploy && pnpm turbo build --filter=@falka/web` |
+| Build Command   | `cd ../.. && pnpm --filter @palka/db db:migrate:deploy && pnpm turbo build --filter=@palka/web` |
 | Node.js Version | 20.x                                                                                            |
 
 These are configured in `apps/web/vercel.json`.
@@ -83,7 +83,7 @@ In Vercel project settings, ensure **Root Directory** is `apps/web` and **Includ
 # Apply pending migrations (CI, local, or Neon SQL editor alternative)
 pnpm db:migrate:deploy
 
-# Generate client (runs automatically via @falka/db postinstall)
+# Generate client (runs automatically via @palka/db postinstall)
 pnpm db:generate
 ```
 

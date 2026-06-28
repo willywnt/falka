@@ -12,7 +12,7 @@ import { useUpdateSyncWarehouseMutation } from '../hooks/use-marketplace-connect
 const SINGLE_WAREHOUSE = '' as const;
 
 /**
- * Per-connection sync-warehouse picker (Lazada multi-warehouse). Falka owns exactly ONE
+ * Per-connection sync-warehouse picker (Lazada multi-warehouse). Palka owns exactly ONE
  * warehouse: stock push writes `available` to the chosen warehouseCode and LEAVES every other
  * warehouse untouched (non-destructive). "Satu gudang (default)" clears it back to the bare
  * single-warehouse path. Options come from the warehouseCodes seen at the last import.
@@ -63,7 +63,7 @@ export function SyncWarehouseCard({
         <div className="space-y-1">
           <h2 className="text-sm font-semibold">Gudang sinkron</h2>
           <p className="text-muted-foreground text-sm">
-            Lazada bisa memecah stok satu SKU ke beberapa gudang. Pilih satu gudang yang Falka
+            Lazada bisa memecah stok satu SKU ke beberapa gudang. Pilih satu gudang yang Palka
             kelola — stok hanya dikirim ke situ, gudang lain dibiarkan apa adanya (tidak
             di-nol-kan).
           </p>

@@ -8,7 +8,7 @@ import {
   CardAction,
   Button,
   Badge,
-} from '@falka/web';
+} from '@palka/web';
 
 export function Basic() {
   return (

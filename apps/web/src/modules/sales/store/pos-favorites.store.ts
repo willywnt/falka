@@ -37,6 +37,6 @@ export const usePosFavoritesStore = create<PosFavoritesStore>()(
       toggleFavoriteBundle: (id) =>
         set((state) => ({ favoriteBundleIds: toggleId(state.favoriteBundleIds, id) })),
     }),
-    { name: 'falka-pos-favorites' },
+    { name: 'palka-pos-favorites' },
   ),
 );

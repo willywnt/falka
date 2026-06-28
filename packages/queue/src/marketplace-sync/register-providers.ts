@@ -1,5 +1,5 @@
-import { getServerEnv } from '@falka/config/env.server';
-import { logger } from '@falka/utils/logger';
+import { getServerEnv } from '@palka/config/env.server';
+import { logger } from '@palka/utils/logger';
 
 import { LazadaStockProvider } from './providers/lazada-stock-provider.js';
 import { ShopeeStockProvider } from './providers/shopee-stock-provider.js';

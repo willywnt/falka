@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Boxes, RefreshCw, ShoppingCart } from 'lucide-react';
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 
 import { auth } from '@/auth';
 import { BrandBadge } from '@/components/brand-mark';

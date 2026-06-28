@@ -1,9 +1,9 @@
-# Falka UI/UX Redesign — Phase 0: Audit & Plan
+# Palka UI/UX Redesign — Phase 0: Audit & Plan
 
-> Status: **Phases 1–4 implemented (2026-06-11) — 28 commits on `feat/redesign-falka`, all gates
+> Status: **Phases 1–4 implemented (2026-06-11) — 28 commits on `feat/redesign-palka`, all gates
 > green. Remaining: visual QA on a running dev server (dark-mode/mobile spot-checks) + the §5
 > separate suggestions, which still need explicit approval.**
-> Branch: `feat/redesign-falka`. Method per task brief: Phase 0 audit → pick 1 of 3 visual
+> Branch: `feat/redesign-palka`. Method per task brief: Phase 0 audit → pick 1 of 3 visual
 > directions → Phase 1 tokens/foundations → Phase 2 shared components → Phase 3 per-surface
 > rollout (one commit per surface) → Phase 4 polish. Gates green at every commit.
 

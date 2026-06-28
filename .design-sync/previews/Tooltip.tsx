@@ -4,7 +4,7 @@ import {
   TooltipTrigger,
   TooltipContent,
   Button,
-} from '@falka/web';
+} from '@palka/web';
 import { Info } from 'lucide-react';
 
 export function Hint() {

@@ -36,7 +36,7 @@ const { prismaMock, txMock, mappingMock, returnsMock, bundleMock, takenSkusMock 
   },
 );
 
-vi.mock('@falka/db', () => ({
+vi.mock('@palka/db', () => ({
   prisma: prismaMock,
   notDeleted: { deletedAt: null },
   buildPaginatedResult: (items: unknown[]) => ({ items, meta: {} }),

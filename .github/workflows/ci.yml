@@ -84,7 +84,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: falka_ci
+          POSTGRES_DB: palka_ci
         ports:
           - 5432:5432
         options: >-
@@ -104,8 +104,8 @@ jobs:
     env:
       # Real Postgres (service container) — migrations + the demo seed run against it.
       # DIRECT_URL = DATABASE_URL: no PgBouncer in CI, so migrate uses the same endpoint.
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/falka_ci
-      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/falka_ci
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/palka_ci
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/palka_ci
       # `next start` runs NODE_ENV=production; the env schema requires REDIS_URL there
       # and the `write`-scope rate limiter actually evals against it.
       REDIS_URL: redis://localhost:6379
@@ -150,23 +150,23 @@ jobs:
           MARKETPLACE_ENCRYPTION_SECRET=${MARKETPLACE_ENCRYPTION_SECRET}
           EOF
 
-      # Build first (also builds the @falka/* package dist the seed imports), then
+      # Build first (also builds the @palka/* package dist the seed imports), then
       # apply migrations + seed the demo org against the live service DB.
       - name: Build
         run: pnpm build
 
       - name: Apply migrations
-        run: pnpm --filter @falka/db db:migrate:deploy
+        run: pnpm --filter @palka/db db:migrate:deploy
 
       - name: Seed demo data
-        run: pnpm --filter @falka/db db:seed-demo
+        run: pnpm --filter @palka/db db:seed-demo
 
       - name: Install Playwright browser
-        run: pnpm --filter @falka/web exec playwright install --with-deps chromium
+        run: pnpm --filter @palka/web exec playwright install --with-deps chromium
 
       # Playwright boots `next start` itself (webServer, CI branch) and runs the suite.
       - name: Run E2E
-        run: pnpm --filter @falka/web test:e2e
+        run: pnpm --filter @palka/web test:e2e
 
       - name: Upload Playwright report
         if: ${{ failure() }}

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import type { Expense, ExpenseCategory, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

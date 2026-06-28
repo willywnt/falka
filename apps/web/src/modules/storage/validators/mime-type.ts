@@ -1,4 +1,4 @@
-import { ALLOWED_UPLOAD_MIME_TYPES } from '@falka/config/limits';
+import { ALLOWED_UPLOAD_MIME_TYPES } from '@palka/config/limits';
 import { z } from 'zod';
 
 const allowedMimeTypes = ALLOWED_UPLOAD_MIME_TYPES as unknown as [string, ...string[]];

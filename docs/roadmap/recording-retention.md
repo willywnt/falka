@@ -25,7 +25,7 @@
 
 Different retention per `Organization.plan` instead of one global constant.
 
-- **Option A (simplest):** a `plan → retentionDays` map in `@falka/config` (e.g. FREE 30, PRO 90). No schema.
+- **Option A (simplest):** a `plan → retentionDays` map in `@palka/config` (e.g. FREE 30, PRO 90). No schema.
 - **Option B (most flexible):** a nullable `Organization.recordingRetentionDays` column (per-org override),
   falling back to the plan default → the global default. Schema migration (HARD #1).
 - The cleanup job resolves retention **per org** (it already iterates orgs for storage) instead of reading

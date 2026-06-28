@@ -1,4 +1,4 @@
-import { RevenueTrendChart } from '@falka/web';
+import { RevenueTrendChart } from '@palka/web';
 
 export function OmzetVsLaba() {
   return (

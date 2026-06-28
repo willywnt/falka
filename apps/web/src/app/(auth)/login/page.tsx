@@ -15,7 +15,7 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Selamat datang kembali</CardTitle>
-        <CardDescription>Masuk ke akun Falka kamu</CardDescription>
+        <CardDescription>Masuk ke akun Palka kamu</CardDescription>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<AuthFormSkeleton fields={2} />}>

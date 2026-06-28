@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import { Prisma } from '@prisma/client';
 
 import type { ProfitChannel, ProfitMetrics, ProfitReport } from '../types';

@@ -57,6 +57,6 @@ export const useCommandHistoryStore = create<CommandHistoryState>()(
         }),
       clearHistory: () => set({ recents: [] }),
     }),
-    { name: 'falka-command-history' },
+    { name: 'palka-command-history' },
   ),
 );

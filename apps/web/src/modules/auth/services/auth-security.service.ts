@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
-import { logEvents, logger } from '@falka/logger/server';
+import { prisma } from '@palka/db';
+import { logEvents, logger } from '@palka/logger/server';
 import {
   buildIpRateLimitKey,
   buildUserRateLimitKey,
   getRateLimitStatus,
   incrementRateLimitCounter,
-} from '@falka/rate-limit';
+} from '@palka/rate-limit';
 
 const FAILED_LOGIN_WINDOW_SECONDS = 15 * 60;
 const FAILED_LOGIN_ALERT_THRESHOLD = 5;

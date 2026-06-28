@@ -15,7 +15,7 @@ const { prismaMock, warnMock } = vi.hoisted(() => ({
   warnMock: vi.fn(),
 }));
 
-vi.mock('@falka/db', () => ({
+vi.mock('@palka/db', () => ({
   prisma: prismaMock,
   buildPaginatedResult: (items: unknown[], total: number, page: number, pageSize: number) => ({
     items,

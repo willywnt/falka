@@ -108,7 +108,7 @@ export async function ensureDatabase() {
   console.error('     pnpm db:migrate:dev');
   console.error('     pnpm db:seed\n');
   console.error('Example DATABASE_URL:');
-  console.error('  postgresql://postgres:YOUR_PASSWORD@localhost:5432/falka\n');
+  console.error('  postgresql://postgres:YOUR_PASSWORD@localhost:5432/palka\n');
   process.exit(1);
 }
 

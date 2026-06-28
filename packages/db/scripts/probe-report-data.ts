@@ -1,7 +1,7 @@
 /**
  * One-off probe: how much report-relevant data does the local DB hold, and which org
  * has the richest set (for the reporting SQL-aggregation POC validation). Run:
- *   pnpm --filter @falka/db exec node scripts/with-env.mjs tsx scripts/probe-report-data.ts
+ *   pnpm --filter @palka/db exec node scripts/with-env.mjs tsx scripts/probe-report-data.ts
  */
 import { PrismaClient } from '@prisma/client';
 

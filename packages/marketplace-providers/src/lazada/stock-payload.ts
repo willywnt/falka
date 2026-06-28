@@ -16,13 +16,13 @@ export type LazadaStockPayloadInput = {
   externalVariantId?: string | null;
   quantity: number;
   /**
-   * Per-connection designated "sync warehouse" (the ONE Lazada warehouse Falka owns). When
+   * Per-connection designated "sync warehouse" (the ONE Lazada warehouse Palka owns). When
    * set, `quantity` is written to ONLY this warehouseCode via a single-entry
    * `<MultiWarehouseInventories>` block; every other warehouse of the SKU is OMITTED and left
    * untouched (Lazada partial-update, live-verified 2026-06-16). null/undefined => legacy
    * single-warehouse path (bare `<SellableQuantity>`, byte-for-byte unchanged).
    *
-   * Falka never zeroes a warehouse it doesn't own (that would erase stock another writer
+   * Palka never zeroes a warehouse it doesn't own (that would erase stock another writer
    * manages); we own exactly one warehouse, so the buyer-facing SKU total may legitimately
    * exceed our `available` when other warehouses hold their own stock.
    */
@@ -67,7 +67,7 @@ function buildStockElement(input: LazadaStockPayloadInput): string {
  * (`multiWarehouseInventories[]`); a bare `<SellableQuantity>` only sets ONE (the default).
  * With a `syncWarehouseCode` configured, push the full quantity to ONLY that warehouse via a
  * single-entry `<MultiWarehouseInventories>` block and OMIT the rest — Lazada leaves omitted
- * warehouses untouched (non-destructive). Falka owns one warehouse and never zeroes the others.
+ * warehouses untouched (non-destructive). Palka owns one warehouse and never zeroes the others.
  *
  * Identify by ItemId + SkuId (Lazada deprecated SellerSku for stock writes); SellerSku
  * is still included when known (Lazada's own demo carries all three) but never relied on.

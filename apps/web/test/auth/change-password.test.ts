@@ -13,7 +13,7 @@ const { prismaMock, verifyMock, hashMock } = vi.hoisted(() => ({
   hashMock: vi.fn(),
 }));
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock }));
+vi.mock('@palka/db', () => ({ prisma: prismaMock }));
 vi.mock('@/modules/auth/utils/password', () => ({
   hashPassword: hashMock,
   verifyPassword: verifyMock,

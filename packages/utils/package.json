@@ -1,5 +1,5 @@
 {
-  "name": "@falka/utils",
+  "name": "@palka/utils",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -32,12 +32,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@falka/logger": "workspace:*",
+    "@palka/logger": "workspace:*",
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3"
   }

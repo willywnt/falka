@@ -1,4 +1,4 @@
-import { StatusBadge } from '@falka/web';
+import { StatusBadge } from '@palka/web';
 
 export function Tones() {
   return (

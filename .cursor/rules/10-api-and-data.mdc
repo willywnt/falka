@@ -74,7 +74,7 @@ ad-hoc per-call 401 redirects — reuse this. (Unauthenticated route gating + th
 Mutations invalidate the right key (`recordingKeys.active`, `.all`, `storageQueryKeys.quota`).
 
 ## Logging
-`appLogger`/`logger` from `@falka/logger`: `('event.name', { ctx })`. No `console.log`,
+`appLogger`/`logger` from `@palka/logger`: `('event.name', { ctx })`. No `console.log`,
 no secrets (errors via `sanitizeError`).
 
 ## R2 presigned upload

@@ -34,7 +34,7 @@ export type SaveTemporaryRecordingInput = {
 };
 
 export const RECORDING_RECOVERY_CONFIG = {
-  dbName: 'falka-recording-recovery',
+  dbName: 'palka-recording-recovery',
   dbVersion: 2,
   storeName: 'temporary_recordings',
   metadataStoreName: 'recovery_metadata',

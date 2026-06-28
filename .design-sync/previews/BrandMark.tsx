@@ -1,4 +1,4 @@
-import { BrandMark } from '@falka/web';
+import { BrandMark } from '@palka/web';
 
 export function Sizes() {
   return (

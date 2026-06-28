@@ -253,7 +253,7 @@ export function PoForm({ editPoId }: { editPoId?: string } = {}) {
   }, [prefillVariantId, reorder.data]);
 
   const [scannerOpen, setScannerOpen] = useState(false);
-  const { soundOn, toggleSound } = useScanSoundPref('falka-purchasing-scan-sound');
+  const { soundOn, toggleSound } = useScanSoundPref('palka-purchasing-scan-sound');
   useSoundUnlock();
   // Mobile scan-to-order: a paired phone scans a product/bundle label → add/bump the line.
   const { scannerEnabled, status: scannerStatus } = usePurchaseScanner({

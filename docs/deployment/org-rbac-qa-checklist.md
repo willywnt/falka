@@ -11,16 +11,16 @@ deploy-specific rows). Check each box with evidence (a screenshot or the respons
 ## Prep
 
 ```bash
-pnpm --filter @falka/db db:seed     # admin@falka.local/Admin123!, demo@falka.local/Demo123!, staff@falka.local/Staff123!
+pnpm --filter @palka/db db:seed     # admin@palka.local/Admin123!, demo@palka.local/Demo123!, staff@palka.local/Staff123!
 pnpm dev                            # http://localhost:3000
 ```
 
-Seed accounts: `demo@falka.local` = OWNER of the demo org · `staff@falka.local` = STAFF in it ·
-`admin@falka.local` = platform admin (confined to `/admin`).
+Seed accounts: `demo@palka.local` = OWNER of the demo org · `staff@palka.local` = STAFF in it ·
+`admin@palka.local` = platform admin (confined to `/admin`).
 
 ## 1. STAFF is daily-ops only (default permissions = all off)
 
-- [ ] Sign in as `staff@falka.local`. Nav shows Kasir/Pesanan/Inventaris/Opname/Katalog/Rekam/Retur
+- [ ] Sign in as `staff@palka.local`. Nav shows Kasir/Pesanan/Inventaris/Opname/Katalog/Rekam/Retur
       only — **no Laporan, no Purchasing, no Marketplace** menus.
 - [ ] Deep-link to a gated page (`/dashboard/reports/profit`, `/dashboard/purchasing`,
       `/marketplace`) → redirected away, not rendered.
@@ -30,7 +30,7 @@ Seed accounts: `demo@falka.local` = OWNER of the demo org · `staff@falka.local`
 
 ## 2. OWNER edits the permission matrix → STAFF gains/loses access live
 
-- [ ] As `demo@falka.local` (OWNER), Settings → **Peran & akses**: turn ON one ACTION key for STAFF
+- [ ] As `demo@palka.local` (OWNER), Settings → **Peran & akses**: turn ON one ACTION key for STAFF
       (e.g. `sales.refund`).
 - [ ] Re-login as STAFF (or refresh): the refund button now shows AND the refund API returns 200.
 - [ ] Turn the key back OFF → button hides AND the API returns 403 again (200↔403 toggles).
@@ -54,7 +54,7 @@ Seed accounts: `demo@falka.local` = OWNER of the demo org · `staff@falka.local`
 
 ## 5. Platform admin is confined to /admin
 
-- [ ] Sign in as `admin@falka.local` → lands on `/admin` (admin-ops chrome), not the shop dashboard.
+- [ ] Sign in as `admin@palka.local` → lands on `/admin` (admin-ops chrome), not the shop dashboard.
 - [ ] Manually navigate to `/dashboard` → bounced back to `/admin`.
 - [ ] In `/admin`: provision a NEW org + its OWNER (typed initial password), and edit an org's
       `plan` / `memberLimit` / storage quota.

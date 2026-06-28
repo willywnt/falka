@@ -38,8 +38,8 @@ const { prismaMock, txMock, quotaMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock, buildPaginatedResult: vi.fn() }));
-vi.mock('@falka/config/env.server', () => ({
+vi.mock('@palka/db', () => ({ prisma: prismaMock, buildPaginatedResult: vi.fn() }));
+vi.mock('@palka/config/env.server', () => ({
   getServerEnv: () => ({ R2_RECORDINGS_BUCKET_NAME: 'test-bucket' }),
 }));
 vi.mock('@/modules/storage/services/quota.service', () => ({ quotaService: quotaMock }));

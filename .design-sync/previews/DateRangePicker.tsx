@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DateRangePicker } from '@falka/web';
+import { DateRangePicker } from '@palka/web';
 
 export function Selected() {
   const [range, setRange] = useState({

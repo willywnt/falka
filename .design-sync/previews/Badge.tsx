@@ -1,4 +1,4 @@
-import { Badge } from '@falka/web';
+import { Badge } from '@palka/web';
 import { Check, Package, TriangleAlert } from 'lucide-react';
 
 export function Variants() {

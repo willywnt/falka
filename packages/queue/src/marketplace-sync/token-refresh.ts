@@ -1,9 +1,9 @@
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   refreshLazadaToken,
   refreshShopeeToken,
   refreshTikTokToken,
-} from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 const LAZADA_DEFAULT_BASE_URL = 'https://api.lazada.co.id/rest';

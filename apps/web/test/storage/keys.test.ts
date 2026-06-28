@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { isOrgStorageKey, isPendingStorageKey } from '@falka/storage';
+import { isOrgStorageKey, isPendingStorageKey } from '@palka/storage';
 
 /**
  * Regression guard for the shared storage-key predicates that BOTH the web app and the
  * BullMQ worker import. A worker-local copy used to hard-code a stale `recordings/<orgId>/`
  * prefix that never matched the real `<orgId>/<year>/<month>/...` key layout, so the cleanup
  * job silently stopped decrementing per-org `storageUsedBytes` on hard-delete (quota drift).
- * These cases pin the contract the worker now relies on via @falka/storage.
+ * These cases pin the contract the worker now relies on via @palka/storage.
  */
-describe('@falka/storage isOrgStorageKey', () => {
+describe('@palka/storage isOrgStorageKey', () => {
   it('matches the real recording key layout `<orgId>/<year>/<month>/<file>`', () => {
     expect(isOrgStorageKey('org-1/2026/06/rec_20260602_abcd1234.webm', 'org-1')).toBe(true);
   });
@@ -28,7 +28,7 @@ describe('@falka/storage isOrgStorageKey', () => {
   });
 });
 
-describe('@falka/storage isPendingStorageKey', () => {
+describe('@palka/storage isPendingStorageKey', () => {
   it('detects in-flight pending uploads only', () => {
     expect(isPendingStorageKey('pending/org-1/abcd')).toBe(true);
     expect(isPendingStorageKey('org-1/2026/06/rec.webm')).toBe(false);

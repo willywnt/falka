@@ -1,4 +1,4 @@
-import type { StockDriftStatus, StockDriftSummary } from '@falka/queue';
+import type { StockDriftStatus, StockDriftSummary } from '@palka/queue';
 import type {
   MarketplaceMappingStatus,
   MarketplaceProvider,
@@ -26,7 +26,7 @@ export type MarketplaceConnectionListItem = {
   /** When this shop's orders were last pulled (null = never) — shown in the pull dialog. */
   lastOrdersPulledAt: string | null;
   /**
-   * Lazada multi-warehouse: the ONE warehouse Falka owns (stock push targets only it, leaving
+   * Lazada multi-warehouse: the ONE warehouse Palka owns (stock push targets only it, leaving
    * the others untouched). null = single-warehouse bare path (behavior unchanged).
    */
   syncWarehouseCode: string | null;
@@ -122,9 +122,9 @@ export const MARKETPLACE_HEALTH_LABELS: Record<MarketplaceHealthTone, string> = 
   danger: 'Bermasalah',
 };
 
-// Drift shapes live in @falka/queue so the worker reconciliation job and this
+// Drift shapes live in @palka/queue so the worker reconciliation job and this
 // web service compute drift the same way; re-exported here for the client.
-export type { StockDriftLine, StockDriftStatus, StockDriftSummary } from '@falka/queue';
+export type { StockDriftLine, StockDriftStatus, StockDriftSummary } from '@palka/queue';
 
 export const STOCK_DRIFT_STATUS_LABELS: Record<StockDriftStatus, string> = {
   in_sync: 'Sinkron',

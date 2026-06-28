@@ -51,7 +51,7 @@ import {
   useUpdateMemberRoleMutation,
 } from '@/modules/users/hooks/use-team';
 import type { TeamInviteItem, TeamMemberItem } from '@/modules/users/types';
-import type { OrgRole } from '@falka/types';
+import type { OrgRole } from '@palka/types';
 
 const ROLE_TONE: Record<OrgRole, StatusTone> = {
   OWNER: 'info',
@@ -388,7 +388,7 @@ function InviteRow({ invite }: { invite: TeamInviteItem }) {
 
   function handleShare() {
     const origin = window.location.origin;
-    const text = `Gabung ke tokoku di Falka. Buka ${origin}/register dan masukkan kode undangan: ${invite.code}`;
+    const text = `Gabung ke tokoku di Palka. Buka ${origin}/register dan masukkan kode undangan: ${invite.code}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   }
 

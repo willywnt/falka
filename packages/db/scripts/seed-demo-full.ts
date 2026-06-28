@@ -1,5 +1,5 @@
 /**
- * Comprehensive demo seed: ONE organization ("Toko Falka Demo") with three sign-ins
+ * Comprehensive demo seed: ONE organization ("Toko Palka Demo") with three sign-ins
  * (OWNER / ADMIN / STAFF) and rich, internally-consistent data across every feature, so a
  * fresh login looks complete and "alive":
  *   suppliers · catalog (products + grouped variants + a bundle) · inventory + a real ledger
@@ -11,9 +11,9 @@
  * Idempotent by existence: if the demo org already has products it only re-asserts the three
  * accounts and exits (re-run safely; to fully re-seed, drop the org or use a fresh DB).
  *
- * Run: pnpm --filter @falka/db db:seed-demo   (needs DATABASE_URL + DIRECT_URL in .env)
+ * Run: pnpm --filter @palka/db db:seed-demo   (needs DATABASE_URL + DIRECT_URL in .env)
  */
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
+import { DEFAULT_STORAGE_QUOTA_BYTES } from '@palka/config/limits';
 import {
   ExpenseCategory,
   MarketplaceMappingStatus,
@@ -44,10 +44,10 @@ import { hashPassword } from '../prisma/account-helpers';
 const prisma = new PrismaClient();
 
 const PASSWORD = process.env.SEED_DEMO_PASSWORD ?? 'Demo123!';
-const OWNER_EMAIL = 'owner@falka.demo';
-const ADMIN_EMAIL = 'admin@falka.demo';
-const STAFF_EMAIL = 'staff@falka.demo';
-const ORG_NAME = 'Toko Falka Demo';
+const OWNER_EMAIL = 'owner@palka.demo';
+const ADMIN_EMAIL = 'admin@palka.demo';
+const STAFF_EMAIL = 'staff@palka.demo';
+const ORG_NAME = 'Toko Palka Demo';
 
 const DAY = 86_400_000;
 const daysAgo = (n: number): Date => new Date(Date.now() - n * DAY);
@@ -649,21 +649,21 @@ async function main() {
       key: 'lazada',
       provider: MarketplaceProvider.LAZADA,
       shopId: 'demo-lazada-01',
-      shopName: 'Toko Falka (Lazada)',
+      shopName: 'Toko Palka (Lazada)',
       commission: 5,
     },
     {
       key: 'shopee',
       provider: MarketplaceProvider.SHOPEE,
       shopId: 'demo-shopee-01',
-      shopName: 'Toko Falka (Shopee)',
+      shopName: 'Toko Palka (Shopee)',
       commission: 4.5,
     },
     {
       key: 'tokopedia',
       provider: MarketplaceProvider.TOKOPEDIA,
       shopId: 'demo-tokopedia-01',
-      shopName: 'Toko Falka (Tokopedia)',
+      shopName: 'Toko Palka (Tokopedia)',
       commission: 3,
     },
   ];
@@ -1063,7 +1063,7 @@ async function main() {
         noResi: resi,
         generatedFilename: `demo-pack-${i + 1}.webm`,
         storageProvider: 'cloudflare-r2',
-        storageBucket: 'falka-recordings',
+        storageBucket: 'palka-recordings',
         storageKey: `${organizationId}/demo-pack-${i + 1}.webm`,
         publicUrl: `https://example.r2.dev/${organizationId}/demo-pack-${i + 1}.webm`,
         mimeType: 'video/webm',
@@ -1318,7 +1318,7 @@ async function main() {
       category: ExpenseCategory.MARKETPLACE_COMMISSION,
       amount: '210000',
       day: 19,
-      note: 'Komisi Toko Falka (Lazada)',
+      note: 'Komisi Toko Palka (Lazada)',
       autoSourceKey: `mp-commission:${connections.lazada!.id}:${thisMonth}`,
     },
     // Last month (gives the Net P&L per-period trend some history).

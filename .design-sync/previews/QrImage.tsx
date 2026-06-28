@@ -1,4 +1,4 @@
-import { QrImage } from '@falka/web';
+import { QrImage } from '@palka/web';
 
 export function Label() {
   return (

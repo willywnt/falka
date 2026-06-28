@@ -3,10 +3,10 @@ description: Core architecture, structure, state, quality gate, hard constraints
 alwaysApply: true
 ---
 
-# Falka core rules (see CLAUDE.md for full detail + code examples)
+# Palka core rules (see CLAUDE.md for full detail + code examples)
 
 Modular-monolith: pnpm@9 + Turborepo, Node ≥20. apps/web (Next.js 15 App Router,
-React 19, custom server.ts for Socket.IO), apps/worker (BullMQ), packages/* = `@falka/*`.
+React 19, custom server.ts for Socket.IO), apps/worker (BullMQ), packages/* = `@palka/*`.
 
 ## TypeScript (packages/typescript-config/base.json)
 strict · moduleResolution bundler · ESNext · ES2022 · isolatedModules ·
@@ -19,7 +19,7 @@ admin · audit · auth · catalog · inventory · marketplace · notifications �
 recordings · reporting · returns · sales · scanner-pairing · storage · users.
 - Cross-module talk ONLY via the other module's `services/`/`hooks/`/`validators/`/`types/`.
   Never import another module's deep internals.
-- Shared logic → `@falka/*` or `apps/web/src/lib`, never duplicated per module.
+- Shared logic → `@palka/*` or `apps/web/src/lib`, never duplicated per module.
 - CONFLICT RULE: **preserve boundary over removing duplication** (then flag the dup).
 
 ## Folders per module

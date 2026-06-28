@@ -3,9 +3,9 @@
  * and the `db:reset-demo` script so they stay in lockstep. Each `index` mirrors the
  * stub import/order adapters' external ids (`${shopId}-P{index}`/`-V{index}`) and SKU.
  */
-export const DEMO_USER_EMAIL = 'demo@falka.local';
+export const DEMO_USER_EMAIL = 'demo@palka.local';
 /** A STAFF member of the demo org, so RBAC is testable out of the box. */
-export const DEMO_STAFF_EMAIL = 'staff@falka.local';
+export const DEMO_STAFF_EMAIL = 'staff@palka.local';
 export const DEMO_SHOP_ID = 'seed-shop-001';
 
 export const DEMO_VARIANTS = [

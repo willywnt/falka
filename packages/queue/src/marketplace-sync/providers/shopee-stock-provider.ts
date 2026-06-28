@@ -1,12 +1,12 @@
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   buildShopeeStockUpdateBody,
   createShopeeClient,
   fetchShopeeItemsStock,
   fetchShopeeListings,
   isShopeeSuccess,
-} from '@falka/marketplace-providers';
-import type { ShopeeClient, ShopeeResponse } from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
+import type { ShopeeClient, ShopeeResponse } from '@palka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import type { NormalizedStockUpdateResponse } from '../stock-normalizer.js';

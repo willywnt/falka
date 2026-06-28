@@ -1,7 +1,7 @@
-import { prisma } from '@falka/db';
-import { FAILED_UPLOAD_RETENTION_DAYS, STALE_RECORDING_SESSION_HOURS } from '@falka/config/limits';
+import { prisma } from '@palka/db';
+import { FAILED_UPLOAD_RETENTION_DAYS, STALE_RECORDING_SESSION_HOURS } from '@palka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider, isPendingStorageKey } from '@falka/storage';
+import { getObjectStorageProvider, isPendingStorageKey } from '@palka/storage';
 
 import {
   cleanupFailedUploadsJobSchema,

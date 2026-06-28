@@ -129,8 +129,8 @@ Regions Indonesia (Bogor) + Singapore + London, same price all regions, **hourly
 ## Open items / next steps
 
 - Confirm **Coolify vs plain-compose** (HEMAT implies plain-compose for now).
-- Pick + register the domain (`palka.app` leading candidate; see brand note — the brand will become
-  "Palka", legal pending, so the domain may sit ahead of the code rename).
+- Pick + register the domain (`palka.app` leading candidate). The codebase is now branded **Palka**
+  (renamed 2026-06-28); trademark clearance still in progress — see `docs/business/`.
 - Then: step-by-step deploy runbook, harden `docker-compose.prod.yml` (+ `pg_dump`→R2 backup cron),
   `.env.production` checklist.
 

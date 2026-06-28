@@ -1,4 +1,4 @@
-import { ErrorState } from '@falka/web';
+import { ErrorState } from '@palka/web';
 
 export function Default() {
   return (

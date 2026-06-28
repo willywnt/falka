@@ -45,7 +45,7 @@ export function ReceiptDialog({
           className="mx-auto w-64 rounded-md border bg-white p-4 font-mono text-[11px] leading-relaxed text-zinc-900"
         >
           <div className="text-center">
-            <p className="text-sm font-bold tracking-tight">Falka</p>
+            <p className="text-sm font-bold tracking-tight">Palka</p>
             <p>Struk penjualan</p>
           </div>
 

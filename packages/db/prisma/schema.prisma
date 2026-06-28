@@ -309,7 +309,7 @@ model MarketplaceConnection {
   encryptedRefreshToken String?
   tokenExpiresAt        DateTime?
   isActive              Boolean             @default(true)
-  // Lazada multi-warehouse: the ONE warehouse Falka owns. Stock push writes `available` to
+  // Lazada multi-warehouse: the ONE warehouse Palka owns. Stock push writes `available` to
   // ONLY this warehouseCode and leaves every other warehouse untouched (non-destructive).
   // null = legacy single-warehouse bare path (behavior unchanged).
   syncWarehouseCode     String?

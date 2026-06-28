@@ -1,4 +1,4 @@
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 
 import { BrandBadge } from '@/components/brand-mark';
 import { GullArt, LighthouseArt } from '@/components/maritime-art';

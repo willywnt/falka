@@ -1,6 +1,6 @@
-import { getServerEnv } from '@falka/config/env.server';
-import { decrypt, encrypt } from '@falka/utils/crypto';
-import { logger } from '@falka/utils/logger';
+import { getServerEnv } from '@palka/config/env.server';
+import { decrypt, encrypt } from '@palka/utils/crypto';
+import { logger } from '@palka/utils/logger';
 
 import {
   applyRefreshedConnectionTokens,

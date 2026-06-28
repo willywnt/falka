@@ -1,4 +1,4 @@
-import { Label, Input } from '@falka/web';
+import { Label, Input } from '@palka/web';
 
 export function WithInput() {
   return (

@@ -1,4 +1,4 @@
-import { ValueRankList } from '@falka/web';
+import { ValueRankList } from '@palka/web';
 
 const rupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 

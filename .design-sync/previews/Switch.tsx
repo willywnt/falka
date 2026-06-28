@@ -1,4 +1,4 @@
-import { Switch, Label } from '@falka/web';
+import { Switch, Label } from '@palka/web';
 
 export function States() {
   return (

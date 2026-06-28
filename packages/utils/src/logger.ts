@@ -1,1 +1,1 @@
-export * from '@falka/logger/server';
+export * from '@palka/logger/server';

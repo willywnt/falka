@@ -1,5 +1,5 @@
 {
-  "name": "@falka/db",
+  "name": "@palka/db",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -43,14 +43,14 @@
     "seed": "node scripts/with-env.mjs tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@falka/config": "workspace:*",
+    "@palka/config": "workspace:*",
     "@prisma/client": "^6.19.3",
     "prisma": "^6.19.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "argon2": "^0.44.0",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.4",

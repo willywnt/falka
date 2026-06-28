@@ -64,7 +64,7 @@ export function OpnameAddItem({
   const upsert = useUpsertOpnameItemMutation(opnameId);
 
   const [scannerOpen, setScannerOpen] = useState(false);
-  const { soundOn, toggleSound } = useScanSoundPref('falka-opname-scan-sound');
+  const { soundOn, toggleSound } = useScanSoundPref('palka-opname-scan-sound');
   useSoundUnlock();
   // Phone scan-to-count: a paired phone scans a product label → tally +1.
   const { scannerEnabled, status } = useOpnameScanner({ opnameId, soundEnabled: soundOn });

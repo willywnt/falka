@@ -46,7 +46,7 @@ function buildRecapText(summary: ProfitMetrics, topSku: ProfitBySku | undefined)
     `Margin kotor: ${formatPct(summary.grossMarginPct)}`,
   ];
   if (topSku) lines.push(`SKU teratas: ${topSku.name}`);
-  lines.push('— dikirim dari Falka');
+  lines.push('— dikirim dari Palka');
   return lines.join('\n');
 }
 

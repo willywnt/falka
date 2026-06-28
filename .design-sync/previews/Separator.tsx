@@ -1,4 +1,4 @@
-import { Separator } from '@falka/web';
+import { Separator } from '@palka/web';
 
 export function Horizontal() {
   return (

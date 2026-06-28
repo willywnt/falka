@@ -1,7 +1,7 @@
 # Keuangan / True Net P&L — status & roadmap
 
 > Companion to [`backlog.md`](./backlog.md). The finance module completes the profit story:
-> Falka tracked gross profit (revenue − COGS); now it tracks **operating expenses** too, so
+> Palka tracked gross profit (revenue − COGS); now it tracks **operating expenses** too, so
 > **net profit = gross profit − Σ opex** — whether the shop is actually making money.
 
 ## ✅ Phase 1 — SHIPPED 2026-06-26 (branch `session/2026-06-26-finance-net-pl`)

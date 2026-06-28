@@ -1,6 +1,6 @@
-import { getServerEnv } from '@falka/config/env.server';
-import { decrypt } from '@falka/utils/crypto';
-import { logger } from '@falka/utils/logger';
+import { getServerEnv } from '@palka/config/env.server';
+import { decrypt } from '@palka/utils/crypto';
+import { logger } from '@palka/utils/logger';
 
 import {
   computeStockDrift,
@@ -100,7 +100,7 @@ export async function processReconcileMarketplaceDriftJob(
         continue;
       }
 
-      // Falka owns ONE warehouse: compare internal available against the sync warehouse's own
+      // Palka owns ONE warehouse: compare internal available against the sync warehouse's own
       // sellable (when configured), not the cross-warehouse sum.
       const resolvedExternal = external.map((listing) => ({
         externalProductId: listing.externalProductId,

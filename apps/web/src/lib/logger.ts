@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createLogger } from '@falka/logger/server';
+import { createLogger } from '@palka/logger/server';
 
 export {
   createLogger,
@@ -8,6 +8,6 @@ export {
   logger,
   type LogContext,
   type Logger,
-} from '@falka/logger/server';
+} from '@palka/logger/server';
 
 export const appLogger = createLogger({ component: 'web' });

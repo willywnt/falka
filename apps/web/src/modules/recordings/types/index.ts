@@ -136,8 +136,8 @@ export type PublicShareView = {
 };
 
 export const RECORDING_MODULE_CONFIG = {
-  tabLockKey: 'falka-recording-lock',
-  tabLockChannel: 'falka-recording-lock',
+  tabLockKey: 'palka-recording-lock',
+  tabLockChannel: 'palka-recording-lock',
   tabLockStaleMs: 5 * 60 * 1000,
 } as const;
 

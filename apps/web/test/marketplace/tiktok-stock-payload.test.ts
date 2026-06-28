@@ -1,4 +1,4 @@
-import { buildTikTokInventoryUpdateBody } from '@falka/marketplace-providers';
+import { buildTikTokInventoryUpdateBody } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { NumberInput, Label } from '@falka/web';
+import { NumberInput, Label } from '@palka/web';
 
 export function Default() {
   const [qty, setQty] = React.useState(24);

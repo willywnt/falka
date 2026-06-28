@@ -4,7 +4,7 @@ import {
   ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 
 import type { ObjectStorageConfig, ObjectStorageProvider } from './types.js';
 

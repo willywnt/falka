@@ -1,4 +1,4 @@
-import { TrackBar } from '@falka/web';
+import { TrackBar } from '@palka/web';
 
 export function ShareCells() {
   return (

@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { buildPaginatedResult, prisma, type PaginatedResult } from '@falka/db';
-import { buildManualRetryEventId, enqueuePropagateInventoryStock } from '@falka/queue';
+import { buildPaginatedResult, prisma, type PaginatedResult } from '@palka/db';
+import { buildManualRetryEventId, enqueuePropagateInventoryStock } from '@palka/queue';
 import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

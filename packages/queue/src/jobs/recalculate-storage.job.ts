@@ -1,4 +1,4 @@
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import { RecordingStatus } from '@prisma/client';
 
 import {

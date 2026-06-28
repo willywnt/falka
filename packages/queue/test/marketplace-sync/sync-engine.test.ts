@@ -51,11 +51,11 @@ vi.mock('../../src/marketplace-sync/stock-normalizer.js', () => ({
     syncWarehouseCode: input.syncWarehouseCode,
   }),
 }));
-vi.mock('@falka/config/env.server', () => ({
+vi.mock('@palka/config/env.server', () => ({
   getServerEnv: () => ({ MARKETPLACE_ENCRYPTION_SECRET: 'secret' }),
 }));
-vi.mock('@falka/utils/crypto', () => cryptoMock);
-vi.mock('@falka/utils/logger', () => ({
+vi.mock('@palka/utils/crypto', () => cryptoMock);
+vi.mock('@palka/utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 

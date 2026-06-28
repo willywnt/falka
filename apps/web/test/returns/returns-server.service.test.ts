@@ -35,8 +35,8 @@ const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock }));
-vi.mock('@falka/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
+vi.mock('@palka/db', () => ({ prisma: prismaMock }));
+vi.mock('@palka/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));

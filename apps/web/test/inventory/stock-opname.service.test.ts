@@ -53,14 +53,14 @@ const { prismaMock, txMock, enqueueMock, inventoryMock } = vi.hoisted(() => {
   };
 });
 
-vi.mock('@falka/db', () => ({
+vi.mock('@palka/db', () => ({
   prisma: prismaMock,
   buildPaginatedResult: (items: unknown[], total: number, page: number, pageSize: number) => ({
     items,
     meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
   }),
 }));
-vi.mock('@falka/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
+vi.mock('@palka/queue', () => ({ enqueuePropagateInventoryStock: enqueueMock }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));

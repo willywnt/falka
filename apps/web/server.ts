@@ -39,7 +39,7 @@ async function createNodeServer(useHttps: boolean): Promise<HttpServerInstance> 
   }
 
   // selfsigned v5+ generates asynchronously; validity defaults to 365 days.
-  const cert = await selfsigned.generate([{ name: 'commonName', value: 'falka-local-dev' }], {
+  const cert = await selfsigned.generate([{ name: 'commonName', value: 'palka-local-dev' }], {
     keySize: 2048,
   });
 

@@ -1,5 +1,5 @@
 {
-  "name": "@falka/redis",
+  "name": "@palka/redis",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     "ioredis": "^5.11.1"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3"

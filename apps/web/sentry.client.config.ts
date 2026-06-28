@@ -1,8 +1,8 @@
 import * as Sentry from '@sentry/nextjs';
 
-import { sanitizeForLogging } from '@falka/logger/sanitize';
+import { sanitizeForLogging } from '@palka/logger/sanitize';
 
-import { isClientSentryEnabled } from '@falka/config/sentry';
+import { isClientSentryEnabled } from '@palka/config/sentry';
 
 if (isClientSentryEnabled()) {
   Sentry.init({

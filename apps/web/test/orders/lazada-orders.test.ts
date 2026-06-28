@@ -1,5 +1,5 @@
-import { fetchLazadaOrders } from '@falka/marketplace-providers';
-import type { LazadaClient, LazadaCallOptions } from '@falka/marketplace-providers';
+import { fetchLazadaOrders } from '@palka/marketplace-providers';
+import type { LazadaClient, LazadaCallOptions } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 import { reduceLazadaStatuses } from '@/modules/orders/adapters/lazada-order-adapter';

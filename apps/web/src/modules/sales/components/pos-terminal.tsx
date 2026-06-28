@@ -42,7 +42,7 @@ import { PosProductBrowser } from './pos-product-browser';
 
 export { PAYMENT_OPTIONS, paymentMethodLabel };
 
-const SCAN_SOUND_STORAGE_KEY = 'falka-pos-scan-sound';
+const SCAN_SOUND_STORAGE_KEY = 'palka-pos-scan-sound';
 
 /** Fetch a bundle's components on demand (Bundling-tab "Add" needs the full composition). */
 function useResolveBundleDetail() {

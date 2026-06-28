@@ -71,7 +71,7 @@ JSON-vs-XML payload, id field names, token TTL) are **per-provider files**, not 
 
 ## 2. The contract a new provider must satisfy (from the codebase)
 
-Falka has **two independent adapter abstractions** plus an **OAuth lifecycle service** (the OAuth
+Palka has **two independent adapter abstractions** plus an **OAuth lifecycle service** (the OAuth
 part is _not_ in either interface). Lazada is the template for all of it.
 
 ### (A) Worker stock adapter — `MarketplaceStockProviderAdapter`
@@ -119,7 +119,7 @@ export interface MarketplaceImportAdapter {
 //   externalProductName, externalVariantName|null, stock, warehouses?[], status, raw }
 ```
 
-Both adapters should **delegate parsing to one shared fetcher** in `@falka/marketplace-providers`
+Both adapters should **delegate parsing to one shared fetcher** in `@palka/marketplace-providers`
 (Lazada does: `fetchLazadaListings` / `fetchLazadaItemsStock` are single-sourced and reused by both
 the worker stock provider and the web import adapter).
 
@@ -127,7 +127,7 @@ the worker stock provider and the web import adapter).
 
 `apps/web/src/modules/marketplace/services/lazada-oauth.service.ts`: `buildAuthorizeUrl`,
 `handleCallback`, `refreshConnection`, `testConnection`. Low-level `exchange*Code` / `refresh*Token`
-live in `@falka/marketplace-providers`. Reuse `encodeOAuthState`/`decodeOAuthState`
+live in `@palka/marketplace-providers`. Reuse `encodeOAuthState`/`decodeOAuthState`
 (`utils/oauth-state.ts`, sealed with `MARKETPLACE_ENCRYPTION_SECRET`, 15-min TTL) verbatim.
 
 ### What is already generic (no per-provider work)
@@ -285,7 +285,7 @@ Add a Tokopedia/TikTok bucket in `rate-limit.ts` (verify TikTok's per-app QPS; s
 5. **Keep the enum + connection model as-is.** Don't invent provider-specific tables. Store the
    `shop_cipher` (TikTok) and any provider quirks in `rawPayload` or a single nullable column if
    truly needed (decision in §9).
-6. **Single-source the parser.** Put the listing/stock parsing in `@falka/marketplace-providers` so
+6. **Single-source the parser.** Put the listing/stock parsing in `@palka/marketplace-providers` so
    the worker stock adapter and the web import adapter never diverge (Lazada pattern).
 7. **Mirror the Lazada file layout exactly** (§8 checklist) so the diff is mechanical and reviewable.
 
@@ -357,7 +357,7 @@ Design (do this when wiring Shopee, not after):
    `provider: 'LAZADA'` filter) and branch the refresh call by provider in
    `refresh-marketplace-tokens.job.ts`. Keep daily as the _backstop_; lazy refresh handles the hot
    path.
-3. **Per-provider refresh fns** in `@falka/marketplace-providers`: `refreshShopeeToken`,
+3. **Per-provider refresh fns** in `@palka/marketplace-providers`: `refreshShopeeToken`,
    `refreshTokopediaToken` (mirror `refreshLazadaToken`).
 4. Token storage is unchanged — reuse `encryptedAccessToken`/`encryptedRefreshToken`/
    `tokenExpiresAt` + AES-256-GCM.

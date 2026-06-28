@@ -1,8 +1,8 @@
-import { generateId } from '@falka/utils/crypto';
+import { generateId } from '@palka/utils/crypto';
 
-// Org/pending key predicates are shared infra — re-exported from @falka/storage so the
+// Org/pending key predicates are shared infra — re-exported from @palka/storage so the
 // web app and the worker validate keys identically (see packages/storage/src/keys.ts).
-export { isOrgStorageKey, isPendingStorageKey } from '@falka/storage';
+export { isOrgStorageKey, isPendingStorageKey } from '@palka/storage';
 
 /**
  * Generates a unique recording filename.

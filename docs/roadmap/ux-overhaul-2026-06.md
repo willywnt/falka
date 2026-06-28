@@ -25,12 +25,12 @@ Dealpos + Shopify, Zoho, Cin7, Katana, Square, Lightspeed)
 
 | Konvensi genre                                                                                        | Celah yang dieksploitasi                                          |
 | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Dashboard default = KPI pasif + filter tanggal                                                        | Hanya Shopify yang task-oriented; **Falka: antrian kerja**        |
-| Sidebar kata-benda (Produk/Pesanan/Gudang) di 12 dari 13 produk                                       | Hanya Katana pakai kata-kerja; **Falka: grup berbasis pekerjaan** |
-| Landing page ID **tidak pernah menampilkan produk** (nol screenshot di Jubelio/BigSeller/Olsera/Moka) | **Falka: UI asli sebagai bukti** (mock dari primitif nyata)       |
-| Bukti = logo wall + statistik agregat                                                                 | **Falka: bukti-bukan-klaim** (ledger trail + video sengketa)      |
-| Tooling fisik dijual sebagai hardware (Square Terminal, Dealpos)                                      | **Falka: "gudang tanpa alat mahal"** (HP-jadi-scanner)            |
-| Navigasi makin dalam = backlash (kasus redesign Square: 3–5 klik, favorit dihapus)                    | **Falka: command palette + aksi panas ≤2 klik**                   |
+| Dashboard default = KPI pasif + filter tanggal                                                        | Hanya Shopify yang task-oriented; **Palka: antrian kerja**        |
+| Sidebar kata-benda (Produk/Pesanan/Gudang) di 12 dari 13 produk                                       | Hanya Katana pakai kata-kerja; **Palka: grup berbasis pekerjaan** |
+| Landing page ID **tidak pernah menampilkan produk** (nol screenshot di Jubelio/BigSeller/Olsera/Moka) | **Palka: UI asli sebagai bukti** (mock dari primitif nyata)       |
+| Bukti = logo wall + statistik agregat                                                                 | **Palka: bukti-bukan-klaim** (ledger trail + video sengketa)      |
+| Tooling fisik dijual sebagai hardware (Square Terminal, Dealpos)                                      | **Palka: "gudang tanpa alat mahal"** (HP-jadi-scanner)            |
+| Navigasi makin dalam = backlash (kasus redesign Square: 3–5 klik, favorit dihapus)                    | **Palka: command palette + aksi panas ≤2 klik**                   |
 | Belum ada asisten apa pun di kompetitor ID; global = AI hype                                          | **Pandu jujur ("Pratinjau", deterministik)** tampil lebih luas    |
 
 ### Pola segar lintas-genre yang diadopsi
@@ -41,7 +41,7 @@ Dealpos + Shopify, Zoho, Cin7, Katana, Square, Lightspeed)
 - **Status ambient / calm-tech**: hitungan hidup di pinggiran (badge nav), eskalasi amber suar
   hanya saat butuh manusia.
 - **Interactive demo di landing** (Navattic/Arcade: penonton demo konversi ~4×): versi jujur
-  Falka = mock UI nyata dari primitif design-system (tanpa backend), bukan screenshot.
+  Palka = mock UI nyata dari primitif design-system (tanpa backend), bukan screenshot.
 
 ---
 
@@ -62,7 +62,7 @@ Dealpos + Shopify, Zoho, Cin7, Katana, Square, Lightspeed)
    PENDING, restok URGENT) dari query yang SUDAH ada (meta.total @ pageSize 1) — amber suar
    hanya untuk restok mendesak.
 5. **Landing naratif yang menampilkan produk**: hero dua kolom dengan mock Anjungan nyata;
-   "Satu hari bersama Falka" (Pagi/Siang/Sore/Malam); "Bukti, bukan klaim" (ledger trail +
+   "Satu hari bersama Palka" (Pagi/Siang/Sore/Malam); "Bukti, bukan klaim" (ledger trail +
    penyelesaian sengketa via video); "Gudang tanpa alat mahal"; 6 kartu fitur lama dipertahankan;
    teaser Pandu jujur tetap. Tanpa testimoni/harga/statistik karangan.
 6. **Panel auth** berhenti mengulang kartu fitur landing → vignette antrian kerja di permukaan
@@ -105,7 +105,7 @@ dua happy-flow — tidak tersentuh.
 | Command palette ID informal + router Pandu                    | Tidak ada di 13 produk benchmark                         | Linear/Superhuman/Retool; "palette = search box" utk non-teknis |
 | Badge denyut operasional di nav                               | Trading terminal punya; inventory SaaS UMKM tidak        | Calm-tech: pinggiran tenang, amber hanya saat perlu manusia     |
 | Landing yang menampilkan UI asli (bukan screenshot/stock art) | Nol kompetitor ID menampilkan produknya                  | Interactive-demo research (konversi ~4×), versi statis-jujur    |
-| "Bukti, bukan klaim" (ledger + video sengketa di marketing)   | Unik — packing-video tidak dipasarkan siapa pun          | Genre proof = logo wall; Falka punya artefak bukti nyata        |
+| "Bukti, bukan klaim" (ledger + video sengketa di marketing)   | Unik — packing-video tidak dipasarkan siapa pun          | Genre proof = logo wall; Palka punya artefak bukti nyata        |
 
 ---
 

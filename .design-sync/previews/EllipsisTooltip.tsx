@@ -1,4 +1,4 @@
-import { TooltipProvider, EllipsisTooltip } from '@falka/web';
+import { TooltipProvider, EllipsisTooltip } from '@palka/web';
 
 // EllipsisTooltip truncates overflowing text and reveals the full string on hover/focus.
 // A static capture can't trigger hover, so we render it inside a narrow fixed-width box

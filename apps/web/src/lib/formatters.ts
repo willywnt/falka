@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-import { formatBytes, formatDate, formatDuration } from '@falka/utils/date';
+import { formatBytes, formatDate, formatDuration } from '@palka/utils/date';
 
 export { formatDate, formatDuration, formatBytes as formatFileSize };
 

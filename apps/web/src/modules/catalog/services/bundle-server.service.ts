@@ -5,7 +5,7 @@ import {
   prisma,
   type PaginatedResult,
   type TransactionClient,
-} from '@falka/db';
+} from '@palka/db';
 import type { Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { prisma } from '@falka/db';
+import { prisma } from '@palka/db';
 import type { MarketplaceProvider, MarketplaceConnection } from '@prisma/client';
 
 import { MarketplaceError } from '../errors/marketplace-errors';
@@ -351,7 +351,7 @@ export class MarketplaceServerService {
   }
 
   /**
-   * Set (or clear) the connection's Lazada sync warehouse — the ONE warehouse Falka owns. Stock
+   * Set (or clear) the connection's Lazada sync warehouse — the ONE warehouse Palka owns. Stock
    * push then targets only this warehouseCode and leaves the others untouched (non-destructive);
    * null reverts to the single-warehouse bare path. Owner-facing config, not a token/secret.
    */

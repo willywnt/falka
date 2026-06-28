@@ -8,7 +8,7 @@ import {
   Button,
   Input,
   Label,
-} from '@falka/web';
+} from '@palka/web';
 
 export function EditProduct() {
   return (

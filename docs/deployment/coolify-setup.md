@@ -7,7 +7,7 @@
 > bugs — revisit only if RAM becomes a measured constraint or go-live slips past Q4 2026).
 >
 > This runbook covers: the staged box plan, post-purchase hardening, installing + configuring
-> Coolify, deploying Falka (web + worker + migrate from a CI-built GHCR image), managed
+> Coolify, deploying Palka (web + worker + migrate from a CI-built GHCR image), managed
 > Postgres/Redis + R2 backups, log monitoring, the known warts + mitigations, and the
 > Cloudflare-in-Indonesia resilience fallback. Cost ladder: [`vps-cost-packages.md`](./vps-cost-packages.md).
 > The under-the-hood plain-compose reference is [`vps-setup.md`](./vps-setup.md).
@@ -48,7 +48,7 @@ install, so the ufw-docker fix comes last).
 ### 1.1 Base
 
 ```bash
-hostnamectl set-hostname falka-prod
+hostnamectl set-hostname palka-prod
 timedatectl set-timezone Asia/Jakarta
 apt update && apt -y full-upgrade && apt -y autoremove
 apt -y install curl ca-certificates ufw fail2ban unattended-upgrades
@@ -66,7 +66,7 @@ printf 'vm.swappiness=10\nvm.vfs_cache_pressure=50\n' > /etc/sysctl.d/99-swap.co
 
 ```bash
 adduser deploy && usermod -aG sudo deploy
-# from your laptop: ssh-keygen -t ed25519 -C falka-deploy ; ssh-copy-id deploy@<ip>
+# from your laptop: ssh-keygen -t ed25519 -C palka-deploy ; ssh-copy-id deploy@<ip>
 ```
 
 **Confirm `ssh deploy@<ip>` + `sudo -v` work in a second terminal before touching sshd.**
@@ -156,7 +156,7 @@ passes Socket.IO WebSocket upgrades out of the box for a single replica.
 This is the decisive 4 GB rule. `next build` peaks ~2 GB; building on-box next to Coolify + Postgres
 OOMs. Instead:
 
-1. **GitHub Actions** builds the monorepo image, pushes `ghcr.io/willywnt/falka:<sha>` + `:prod`.
+1. **GitHub Actions** builds the monorepo image, pushes `ghcr.io/willywnt/palka:<sha>` + `:prod`.
 2. The compose resource references the **GHCR image** for web/worker → Coolify **pulls**, never compiles.
 3. After push, trigger Coolify via its resource webhook:
    ```bash
@@ -169,7 +169,7 @@ Connect Git via the **GitHub App** (auto webhooks + private-repo access).
 
 ---
 
-## 4. Deploy Falka — the compose-resource shape
+## 4. Deploy Palka — the compose-resource shape
 
 Deploy as **ONE Docker Compose resource = `web` + `worker` + `migrate`** (keep Postgres/Redis as
 managed resources, §5). This preserves the single Dockerfile, the one-shot migrate, and the least churn.
@@ -227,7 +227,7 @@ connection strings into **web AND worker**; leave "Publicly Accessible" OFF.
 
 **Notifications:** Profile → Notifications → Telegram/Discord → subscribe **Deployment Failure, Backup
 Failure, Server Disk Usage** (the 60 GB SSD is the squeeze — `docker system prune` periodically),
-**Server Unreachable**. This is Falka's first real alerting.
+**Server Unreachable**. This is Palka's first real alerting.
 
 ---
 
@@ -270,7 +270,7 @@ collector — **never bolt `pino-loki` into `server.ts`**.
 ## 8. Resilience: Cloudflare-in-Indonesia fallback
 
 Indonesian enforcement (Komdigi anti-judol) has threatened Cloudflare (Nov 2025) but **not actually
-blocked it** as of mid-2026 — this is a "have a fallback," not "redesign now." Falka's exposure is low
+blocked it** as of mid-2026 — this is a "have a fallback," not "redesign now." Palka's exposure is low
 (the app is a direct Jakarta origin, **not** behind Cloudflare's orange-cloud proxy). The architecture
 is already Cloudflare-OPTIONAL — see [`cloudflare-fallback.md`](./cloudflare-fallback.md) for the full
 runbook. Cheap insurance to set up now:
@@ -289,7 +289,7 @@ besar — penting buat solo dev yang pegang uang seller). **Tahap sekarang (dev/
 ~Rp139rb) + Coolify dari hari pertama, satu environment saja.** Naik ke 8 GB (prod+staging) saat go-live.
 
 Kunci di box 4 GB: **build image di GitHub Actions (CI), jangan di box** (biar nggak OOM), tambah swap,
-satu environment dulu. Deploy Falka sebagai **satu Docker Compose resource = web+worker+migrate** dari image
+satu environment dulu. Deploy Palka sebagai **satu Docker Compose resource = web+worker+migrate** dari image
 GHCR; **Postgres + Redis dijalankan sebagai resource Coolify terpisah** (backup andal + hindari kebocoran
 env). Backup DB terjadwal ke R2 (verifikasi object beneran masuk). Worker harus **exit non-zero saat fatal**
 karena Coolify nggak auto-restart container unhealthy. Matikan auto-update Coolify (proxy sering rusak).

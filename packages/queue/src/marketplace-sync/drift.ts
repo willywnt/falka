@@ -21,7 +21,7 @@ export type DriftExternalInput = {
 };
 
 /**
- * Resolves the external stock to compare against internal available. Falka owns exactly ONE
+ * Resolves the external stock to compare against internal available. Palka owns exactly ONE
  * marketplace warehouse: when a `syncWarehouseCode` is configured, drift must compare against
  * that warehouse's OWN sellable (0 when the SKU doesn't carry it), NOT the cross-warehouse sum
  * — otherwise other warehouses' stock would always read as drift. Without a sync warehouse (or

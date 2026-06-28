@@ -15,7 +15,7 @@ org-level toggle (default off, one implicit backfilled warehouse = today's behav
 byte-for-byte).
 
 **Explicitly OUT:** bins/shelves/racks, directed put-away, pick paths, wave/zone picking,
-pack stations, RF scan-_enforcement_, lots/serials/expiry/FEFO. Those are a separate "Falka
+pack stations, RF scan-_enforcement_, lots/serials/expiry/FEFO. Those are a separate "Palka
 WMS" axis to defer until a segment crosses ~1,000 orders/month (most SMB sellers outsource
 that to a 3PL).
 
@@ -36,7 +36,7 @@ itself justify the internal multi-location build — confirm physical need first
 | Scan          | scan-to-count / scan-to-transfer (optional)             | scan-**enforcement** (refuses txn w/o the right bin)           |
 | Audience      | SMB with ≥2 places                                      | ops at ≥1,000–3,000 orders/mo                                  |
 
-The sharp boundary is **the bin + rule-driven task direction**. For Falka's SMB audience the
+The sharp boundary is **the bin + rule-driven task direction**. For Palka's SMB audience the
 answer to "do we direct physical floor work?" is **no**.
 
 ## Competitor landscape
@@ -47,13 +47,13 @@ never per-order.
 
 - **Indonesia/SEA** — _iSeller_: multi-location (≤30 warehouses, outlet→Shopee-warehouse
   mapping w/ % allocation + nearest-routing) in the **core** POS product, no WMS — the closest
-  analog to Falka's target. _Olsera_: multi-outlet + Stok Masuk/Keluar transfer in base.
+  analog to Palka's target. _Olsera_: multi-outlet + Stok Masuk/Keluar transfer in base.
   _Majoo_: multi-cabang/gudang + inter-branch mutation in standard tiers; rack/batch gated to
   Prime+. _Jubelio_: full WMS (bins/FEFO/pick-pack/mobile app) **bundled into the per-order
   base plan** (the separate service is Jubelio Shipment 3PL — _not_ the WMS). _Ginee
   WMS-Fulfillment_: a **separately-activated module**, geo-gated to local ID warehouses.
   _SIRCLO/Crewdible/Jet Commerce_: WMS exists only **inside an outsourced 3PL** (Crewdible
-  170+ partner warehouses) — many SMB sellers **outsource the WMS entirely**, lowering Falka's
+  170+ partner warehouses) — many SMB sellers **outsource the WMS entirely**, lowering Palka's
   urgency to build one.
 - **Global** — _Shopify_: multi-location native/core (count-gated 2→10→200 by plan), deep WMS
   pushed to 3rd-party apps. _Zoho_: multi-location count-laddered + ~$10/location; bin-level
@@ -69,7 +69,7 @@ never per-order.
 > **multi-location = core / count-gated; full WMS = separately-activated module or higher
 > tier**, with packaging varying by vendor.
 
-## Recommended scope for Falka — v1 ("Multi-lokasi")
+## Recommended scope for Palka — v1 ("Multi-lokasi")
 
 **IN:**
 
@@ -136,10 +136,10 @@ into the sync layer. The module boundary holds — marketplace consumes a new in
   compute the rollup before enqueue. Published value = `clamp(sum − buffer, 0)` (buffer
   deferred, seam kept).
 - **Allocation (which location fulfills) — keep it dead simple for v1:** marketplace orders
-  ship from the **marketplace's own** warehouse (Falka doesn't route those), so the fulfilling
+  ship from the **marketplace's own** warehouse (Palka doesn't route those), so the fulfilling
   internal location is simply the connection-mapped location. POS sells from the terminal's
   location. PO receives into the PO's destination location. No ranked-routing engine until
-  Falka self-fulfills.
+  Palka self-fulfills.
 - **Per-location lifecycle:** every Tx method in `inventory-server.service.ts` gains a
   `locationId` param; each call site injects it — order reserve/ship/release
   (`applyOrderReserveTx/ShipTx/ReleaseTx`), POS (`applyOfflineSaleTx/Reversal`), PO receive
@@ -194,7 +194,7 @@ Mirror the **SMB-inventory** norm, not the WMS norm:
    location sellers never see warehouses/transfers/location pickers until they opt in.
 2. If monetized, gate by **location count** (Zoho 2/4/6/10 + ~$10/location; Shopify count
    caps), **never per-order**. Clean model: base = 1 location, paid tier unlocks N.
-3. Reserve any true **bin/pick/pack WMS** as a **separate, clearly-bounded "Falka WMS"
+3. Reserve any true **bin/pick/pack WMS** as a **separate, clearly-bounded "Palka WMS"
    module/tier** — build only on real demand (≥~1,000 orders/mo).
 4. The **Lazada per-connection mapping is plumbing, not a paid feature** — it should work on
    any tier so multi-warehouse Lazada SKUs reconcile regardless.

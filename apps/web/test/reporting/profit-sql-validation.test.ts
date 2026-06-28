@@ -12,8 +12,8 @@ import type { ProfitReportQuery } from '@/modules/reporting/validators/profit-re
  * Because it compares JS vs SQL, it passes on ANY local data (even none) — it fails only if
  * the two aggregations disagree, which is exactly the regression it guards.
  *
- * Run: pnpm --filter @falka/db exec node scripts/with-env.mjs \
- *        pnpm --filter @falka/web exec vitest run test/reporting/profit-sql-validation.test.ts
+ * Run: pnpm --filter @palka/db exec node scripts/with-env.mjs \
+ *        pnpm --filter @palka/web exec vitest run test/reporting/profit-sql-validation.test.ts
  */
 const RUN = Boolean(process.env.DATABASE_URL?.includes('localhost'));
 const ORG = 'cmqi8bhnd0000u704ipqvisun';

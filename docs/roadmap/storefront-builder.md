@@ -24,7 +24,7 @@
 | 4   | Custom domain = **premium**, via seller **CNAME** + Caddy on-demand TLS                       | **YES**                                                    |
 | 5   | v1 theming = **fixed theme set (2–3) + config tokens**, NO custom CSS/free fonts              | **YES**                                                    |
 | 6   | Payment gateway (when added) = **Xendit Invoice** default, **Midtrans Snap** as a 2nd adapter | **YES**                                                    |
-| 7   | Settlement = **seller-brings-own-key** (funds go to the seller; Falka never holds money)      | **YES**                                                    |
+| 7   | Settlement = **seller-brings-own-key** (funds go to the seller; Palka never holds money)      | **YES**                                                    |
 | 8   | Base domain `palka.app` for `*.palka.app`                                                     | **owner call** — pending the Palka rebrand legal clearance |
 
 ---
@@ -38,11 +38,11 @@ the seller "like a web builder". Premium feature.
 **Moat reframe (research CORRECTED a first-pass thesis error):** the edge is **NOT** "competitors
 lack a storefront." **Desty Store** and **Jubelio Store** already ship free branded, custom-domain
 storefronts wired to synced stock; **SIRCLO Store** (~IDR 375k/mo) and **Lynk.id** validate the
-theme-first / link-in-bio model. Falka's real differentiator is:
+theme-first / link-in-bio model. Palka's real differentiator is:
 
 - **Correctness — no oversell.** The append-only `StockLedger` + per-variant advisory lock means a
   web sale, a POS sale, and a Lazada order all serialize on ONE source of truth. Channel-sync tools
-  reconcile _after the fact_; Falka prevents the oversell _at write time_.
+  reconcile _after the fact_; Palka prevents the oversell _at write time_.
 - **Depth** — POS + packing-video dispute evidence + real Lazada order pull, in one system.
 - **UMKM pricing/UX** in Bahasa.
 
@@ -71,7 +71,7 @@ Two layers: the invisible **shared spine** (the hard part) + the visible **theme
 **Layer A — the shared spine (build FIRST; reused by WhatsApp):**
 
 - A `withPublicRoute` sibling to `withApiRoute` for **unauthenticated** requests: resolves the org
-  **by host**, applies per-IP rate-limiting (`@falka/rate-limit`), and gates a submit-time captcha.
+  **by host**, applies per-IP rate-limiting (`@palka/rate-limit`), and gates a submit-time captcha.
 - `Order` schema migration so an order can exist **without** a marketplace (see §5) + a new
   **`channel = STOREFRONT`** discriminator and an order **`source`** value `STOREFRONT`.
 - **Anonymous reserve-on-PAID** through the existing inventory service advisory-lock path — never a
@@ -213,7 +213,7 @@ tenant routing; do **not** override it.
 
 ---
 
-## 4. Architecture — how it plugs into Falka
+## 4. Architecture — how it plugs into Palka
 
 - **Separate `apps/storefront` app (recommend).** The storefront is anonymous/public/SEO-driven — the
   opposite of the authed, Socket.IO-bearing dashboard. A separate app keeps the dashboard's auth
@@ -223,7 +223,7 @@ tenant routing; do **not** override it.
   data/logic via workspace imports — **zero data-model duplication**.
 - **Cross-app import caveat (UNPROVEN — needs a spike):** `@/*` maps only to `apps/web/src/*`, so the
   storefront can't raw-import `@/modules/*`. Either add a storefront-local alias or **lift the read
-  methods it needs into `@falka/*` packages**, and verify each `*-server.service.ts` is import-safe in
+  methods it needs into `@palka/*` packages**, and verify each `*-server.service.ts` is import-safe in
   an anonymous context (many start `import 'server-only'`; any that transitively pull
   `next/headers` / auth / `resolveOrgContext` need care). Most already take an explicit
   `organizationId`, which is the right shape.
@@ -242,12 +242,12 @@ tenant routing; do **not** override it.
   `applyOrderReserveTx` then propagates with `excludeConnectionId = null` so a web sale also shrinks
   Lazada). **Reuse the order lifecycle (reserve-on-PAID / PENDING→cancel→release), not the POS `Sale`
   model.**
-- **Per-tenant cache invalidation** — use `unstable_cache({ tags }) + revalidateTag` (Falka pins Next
+- **Per-tenant cache invalidation** — use `unstable_cache({ tags }) + revalidateTag` (Palka pins Next
   `^15.5.x`; the stable `use cache` / `cacheComponents` is Next 16, owner-deferred). Tag reads
   `org:<id>:catalog` / `variant:<id>`; call `revalidateTag` at the SAME post-tx spot that already
   enqueues `propagate-inventory-stock`. For live stock without staleness, cache the product **shell**
   and render the stock badge in a non-cached child server component. Multi-instance later needs a
-  Redis-backed cache handler (Falka already runs Redis). **Not a v1 blocker — a v1.1 perf item.**
+  Redis-backed cache handler (Palka already runs Redis). **Not a v1 blocker — a v1.1 perf item.**
 
 ---
 
@@ -273,7 +273,7 @@ tenant routing; do **not** override it.
    PENDING→PAID via the advisory-locked path, mirroring the marketplace/orders lifecycle. (DECREMENT
    is POS-style / goods-in-hand — wrong for a remote anonymous buyer.) A deliberate trade-off, not a
    universal law: it accepts a tiny oversell window (two buyers both reaching pay for the last unit)
-   in exchange for zero abandoned-cart locking — consistent with how Falka already reserves on PAID.
+   in exchange for zero abandoned-cart locking — consistent with how Palka already reserves on PAID.
 2. **Gateway + is paid checkout required for v1 → NOT required.** Ship manual-pay + seller-marks-paid
    first. v1.1 = **Xendit Invoice** default + **Midtrans Snap** behind the same interface (see §2.1).
 3. **Custom domain → PREMIUM-only, CNAME + Caddy On-Demand TLS** (NOT nameserver delegation).
@@ -295,7 +295,7 @@ tenant routing; do **not** override it.
 ## 7. Risks + mitigations
 
 - **Anonymous attack surface (NEW — the system only ever served authed members).** → `withPublicRoute`
-  with per-IP sliding-window limits (`@falka/rate-limit`, e.g. 5 orders/IP/10min), Cloudflare in front
+  with per-IP sliding-window limits (`@palka/rate-limit`, e.g. 5 orders/IP/10min), Cloudflare in front
   (L3/L4 + bot-fight + WAF), a Turnstile/hCaptcha challenge on **order-submit** (not browse), per-order
   qty caps, cached/ISR public reads so scraping doesn't hit Postgres, and never exposing cost/HPP.
   **Security review precedes exposure, not follows it.**
@@ -306,9 +306,9 @@ tenant routing; do **not** override it.
   `release-stale-reservation` job for the reserved/paid-but-unshipped window + lazy expiry at read
   time. When a gateway lands, its per-tx expiry is the single timer.
 - **Payment settlement / who-gets-paid.** → v1.1 = **seller-brings-own-key** (buyer pays the seller
-  directly; Falka never touches funds). Viable but real per-seller KYC friction (Midtrans/Xendit allow
+  directly; Palka never touches funds). Viable but real per-seller KYC friction (Midtrans/Xendit allow
   perorangan UMKM: KTP + NPWP + bank). Defer Xendit **xenPlatform** sub-accounts/split/payout (and its
-  support-enablement + fees) until Falka wants a cut.
+  support-enablement + fees) until Palka wants a cut.
 - **Over-engineering the builder.** → themes-first ships the hard shared spine without the editor;
   Puck is Phase 2, premium, additive (reuses the whole block library + spine).
 
@@ -331,7 +331,7 @@ tenant routing; do **not** override it.
 
 ## Ringkasan (Bahasa Indonesia)
 
-Tiap seller dapat **website toko sendiri** (`tokoanu.palka.app`) yang nyambung ke stok asli Falka —
+Tiap seller dapat **website toko sendiri** (`tokoanu.palka.app`) yang nyambung ke stok asli Palka —
 jadi jualan di web, POS, dan Lazada nggak akan oversell. Fitur premium.
 
 **Urutan pembangunan:**

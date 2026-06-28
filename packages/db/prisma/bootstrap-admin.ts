@@ -11,7 +11,7 @@ import { ensureOwnOrganization, hashPassword } from './account-helpers';
  * shop org + owner. Idempotent and non-destructive: an existing account is never overwritten.
  *
  *   BOOTSTRAP_ADMIN_EMAIL=ops@yourco.com BOOTSTRAP_ADMIN_PASSWORD='<strong>' \
- *     pnpm --filter @falka/db db:bootstrap-admin
+ *     pnpm --filter @palka/db db:bootstrap-admin
  */
 
 const prisma = new PrismaClient();
@@ -27,7 +27,7 @@ const WEAK_PASSWORDS = new Set([
   'password1',
   'changeme',
   'changeme123',
-  'falka123!',
+  'palka123!',
   'qwerty123',
 ]);
 

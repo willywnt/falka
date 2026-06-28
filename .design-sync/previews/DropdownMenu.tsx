@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   Button,
-} from '@falka/web';
+} from '@palka/web';
 import { MoreHorizontal, Pencil, QrCode, PackagePlus, Trash2 } from 'lucide-react';
 
 export function RowActions() {

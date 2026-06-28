@@ -1,4 +1,4 @@
-import { closeOptionalRedis, withOptionalRedis } from '@falka/redis';
+import { closeOptionalRedis, withOptionalRedis } from '@palka/redis';
 
 export { closeOptionalRedis as closeRateLimitRedis };
 

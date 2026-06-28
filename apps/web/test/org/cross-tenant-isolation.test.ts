@@ -26,11 +26,11 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock, buildPaginatedResult: vi.fn() }));
-vi.mock('@falka/config/env.server', () => ({
+vi.mock('@palka/db', () => ({ prisma: prismaMock, buildPaginatedResult: vi.fn() }));
+vi.mock('@palka/config/env.server', () => ({
   getServerEnv: () => ({ R2_RECORDINGS_BUCKET_NAME: 'test-bucket' }),
 }));
-vi.mock('@falka/queue', () => ({ enqueuePropagateInventoryStock: vi.fn() }));
+vi.mock('@palka/queue', () => ({ enqueuePropagateInventoryStock: vi.fn() }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));

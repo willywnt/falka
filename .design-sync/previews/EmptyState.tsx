@@ -1,4 +1,4 @@
-import { EmptyState, Button } from '@falka/web';
+import { EmptyState, Button } from '@palka/web';
 import { PackageSearch, Inbox, Plus } from 'lucide-react';
 
 export function NoResults() {

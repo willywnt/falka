@@ -1,4 +1,4 @@
-import { NumberDelta } from '@falka/web';
+import { NumberDelta } from '@palka/web';
 
 export function Signs() {
   return (

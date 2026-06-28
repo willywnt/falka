@@ -1,5 +1,5 @@
 {
-  "name": "@falka/health",
+  "name": "@palka/health",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,13 +16,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@falka/db": "workspace:*",
-    "@falka/storage": "workspace:*",
+    "@palka/db": "workspace:*",
+    "@palka/storage": "workspace:*",
     "ioredis": "^5.11.1"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3"
   }

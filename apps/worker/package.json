@@ -1,5 +1,5 @@
 {
-  "name": "@falka/worker",
+  "name": "@palka/worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,22 +7,22 @@
     "build": "tsc",
     "dev": "node scripts/with-env.mjs tsx watch src/index.ts",
     "start": "node scripts/with-env.mjs node dist/index.js",
-    "enqueue": "pnpm --filter @falka/queue build && node scripts/with-env.mjs node scripts/enqueue-test.mjs",
+    "enqueue": "pnpm --filter @palka/queue build && node scripts/with-env.mjs node scripts/enqueue-test.mjs",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@falka/config": "workspace:*",
-    "@falka/db": "workspace:*",
-    "@falka/logger": "workspace:*",
-    "@falka/queue": "workspace:*",
-    "@falka/utils": "workspace:*",
+    "@palka/config": "workspace:*",
+    "@palka/db": "workspace:*",
+    "@palka/logger": "workspace:*",
+    "@palka/queue": "workspace:*",
+    "@palka/utils": "workspace:*",
     "@sentry/node": "^10.59.0",
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "eslint": "^9.39.4",
     "tsx": "^4.22.4",

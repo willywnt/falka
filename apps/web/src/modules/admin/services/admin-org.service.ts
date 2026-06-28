@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { DEFAULT_STORAGE_QUOTA_BYTES } from '@falka/config/limits';
-import { prisma } from '@falka/db';
+import { DEFAULT_STORAGE_QUOTA_BYTES } from '@palka/config/limits';
+import { prisma } from '@palka/db';
 
 import { auditService } from '@/modules/audit/services/audit.service';
 import { hashPassword } from '@/modules/auth/utils/password';

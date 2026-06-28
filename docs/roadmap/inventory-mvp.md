@@ -204,7 +204,7 @@ stock change = one ledger row + one `Inventory` update inside a single transacti
 - `apps/web/src/modules/recordings` _(existing)_ — now order-aware (pack view, by-resi evidence).
 - `packages/queue/src/marketplace-sync` — the sync engine (worker-side), ported from `dist`.
 - **Boundary watch:** token decryption currently lives in the web `marketplace` module, but
-  the worker needs it for sync. Lift the token-crypto into a shared `@falka/*` package
+  the worker needs it for sync. Lift the token-crypto into a shared `@palka/*` package
   rather than cross-importing web internals into the worker (the reverted design kept a
   queue-local copy — prefer a shared package). Flag as its own change.
 

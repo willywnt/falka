@@ -1,5 +1,5 @@
-import { fetchLazadaListings } from '@falka/marketplace-providers';
-import type { LazadaClient } from '@falka/marketplace-providers';
+import { fetchLazadaListings } from '@palka/marketplace-providers';
+import type { LazadaClient } from '@palka/marketplace-providers';
 import { describe, expect, it } from 'vitest';
 
 /**

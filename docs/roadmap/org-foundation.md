@@ -6,7 +6,7 @@
 
 ## Why
 
-Falka was strictly one user per account (`userId` on every domain row). To let a shop owner bring
+Palka was strictly one user per account (`userId` on every domain row). To let a shop owner bring
 in a manager/cashier/packer with bounded permissions — and to light up the long-stubbed Settings
 "Tim" + "Riwayat aktivitas" tabs — every piece of shop data had to belong to an **Organization**
 the team shares, with role-based access on top.
@@ -43,7 +43,7 @@ team`, hooks `use-team`/`use-org`, routes `org` + `org/members[/:id]` + `org/inv
   `GET /api/v1/audit`, write points across sensitive actions + login + team events.
 - **UI**: Settings Tim + Riwayat aktivitas tabs (role-gated), org rename, register invite field,
   nav `minRole` gating, STAFF action hiding.
-- **Seed**: `staff@falka.local` is a STAFF member of the demo org (RBAC testable out of the box).
+- **Seed**: `staff@palka.local` is a STAFF member of the demo org (RBAC testable out of the box).
 
 ## Verification done
 
@@ -53,7 +53,7 @@ owner-immutability, all three registration paths, audit best-effort.
 
 ## Still manual-QA-pending (run the dev server)
 
-1. Log in `staff@falka.local` / `Staff123!`: no Laporan/admin Settings tabs; direct-nav to a
+1. Log in `staff@palka.local` / `Staff123!`: no Laporan/admin Settings tabs; direct-nav to a
    report page redirects; a guarded API call (e.g. refund) returns 403.
 2. As demo OWNER, create an invite → register a new account with the code → lands in the demo org
    with the invite's role; reusing the code fails; revoke blocks an unused code.
@@ -88,7 +88,7 @@ Three commits on `feat/org-foundation` (all gates green: typecheck · lint · 32
   editor shows only for OWNER.
 - **Platform admin-ops is confined to `/admin`**: login routes a `UserRole.ADMIN` there, and the
   `authorized` callback + `(dashboard)` layout bounce them out of the shop dashboard entirely. The
-  seed `admin@falka.local` is therefore a pure operator (its own org is unused).
+  seed `admin@palka.local` is therefore a pure operator (its own org is unused).
 - **STAFF can see Penyimpanan**: the read-only storage/quota Settings tab is visible to all roles.
 
 **Still manual-QA-pending**: as OWNER edit the matrix → a STAFF gains/loses a menu+action (API

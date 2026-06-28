@@ -1,4 +1,4 @@
-import { LowStockBadge } from '@falka/web';
+import { LowStockBadge } from '@palka/web';
 
 export function Default() {
   return (

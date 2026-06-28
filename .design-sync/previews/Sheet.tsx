@@ -7,7 +7,7 @@ import {
   SheetFooter,
   Button,
   StatusBadge,
-} from '@falka/web';
+} from '@palka/web';
 
 export function OrderPeek() {
   return (

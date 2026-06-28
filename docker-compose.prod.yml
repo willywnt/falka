@@ -7,9 +7,9 @@
 #
 #   docker network create edge                                    # once, ever
 #   docker compose -f docker-compose.proxy.yml --env-file .env.proxy up -d
-#   # in ~/apps/palka-prod    (its .env.production has WEB_ALIAS=palka-prod-web,    APP_IMAGE=falka-app:prod)
+#   # in ~/apps/palka-prod    (its .env.production has WEB_ALIAS=palka-prod-web,    APP_IMAGE=palka-app:prod)
 #   docker compose -p palka-prod    --env-file .env.production up -d --build
-#   # in ~/apps/palka-staging (its .env.production has WEB_ALIAS=palka-staging-web, APP_IMAGE=falka-app:staging)
+#   # in ~/apps/palka-staging (its .env.production has WEB_ALIAS=palka-staging-web, APP_IMAGE=palka-app:staging)
 #   docker compose -p palka-staging --env-file .env.production up -d --build
 #
 # Uploaded files live on Cloudflare R2 (this host never stores them). The repo's
@@ -24,10 +24,10 @@ x-app: &app
     args:
       # NEXT_PUBLIC_* are inlined at BUILD time (per-env URL ⇒ per-env image, see APP_IMAGE).
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Falka}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Palka}
       NEXT_PUBLIC_ENABLE_MOBILE_SCANNER: ${NEXT_PUBLIC_ENABLE_MOBILE_SCANNER:-true}
       DATABASE_URL: ${DATABASE_URL}
-  image: ${APP_IMAGE:-falka-app:latest}
+  image: ${APP_IMAGE:-palka-app:latest}
   env_file: [.env.production]
   restart: unless-stopped
 
@@ -36,7 +36,7 @@ services:
   migrate:
     <<: *app
     restart: 'no'
-    command: ['pnpm', '--filter', '@falka/db', 'db:migrate:deploy']
+    command: ['pnpm', '--filter', '@palka/db', 'db:migrate:deploy']
     depends_on:
       postgres: { condition: service_healthy }
 
@@ -71,7 +71,7 @@ services:
 
   worker:
     <<: *app
-    command: ['pnpm', '--filter', '@falka/worker', 'start']
+    command: ['pnpm', '--filter', '@palka/worker', 'start']
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

@@ -1,4 +1,4 @@
-import { ChartLegend } from '@falka/web';
+import { ChartLegend } from '@palka/web';
 
 export function ChannelSeries() {
   return (

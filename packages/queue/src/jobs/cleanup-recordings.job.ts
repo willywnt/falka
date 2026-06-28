@@ -1,7 +1,7 @@
-import { prisma } from '@falka/db';
-import { RECORDING_RETENTION_DAYS } from '@falka/config/limits';
+import { prisma } from '@palka/db';
+import { RECORDING_RETENTION_DAYS } from '@palka/config/limits';
 import { RecordingStatus } from '@prisma/client';
-import { getObjectStorageProvider, isOrgStorageKey, isPendingStorageKey } from '@falka/storage';
+import { getObjectStorageProvider, isOrgStorageKey, isPendingStorageKey } from '@palka/storage';
 
 import {
   cleanupRecordingsJobSchema,

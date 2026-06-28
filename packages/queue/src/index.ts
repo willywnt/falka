@@ -1,5 +1,5 @@
-import { disconnectDb, healthCheckDb } from '@falka/db';
-import { logger } from '@falka/utils/logger';
+import { disconnectDb, healthCheckDb } from '@palka/db';
+import { logger } from '@palka/utils/logger';
 
 import { closeSharedRedisConnection, pingRedis } from './connection/index.js';
 import { closeAllQueues } from './queues/create-queue.js';

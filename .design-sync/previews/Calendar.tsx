@@ -1,4 +1,4 @@
-import { Calendar } from '@falka/web';
+import { Calendar } from '@palka/web';
 
 const selected = new Date(2026, 5, 15);
 

@@ -1,5 +1,5 @@
 {
-  "name": "@falka/queue",
+  "name": "@palka/queue",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,20 +17,20 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@falka/config": "workspace:*",
-    "@falka/db": "workspace:*",
-    "@falka/logger": "workspace:*",
-    "@falka/marketplace-providers": "workspace:*",
-    "@falka/metrics": "workspace:*",
-    "@falka/storage": "workspace:*",
-    "@falka/utils": "workspace:*",
+    "@palka/config": "workspace:*",
+    "@palka/db": "workspace:*",
+    "@palka/logger": "workspace:*",
+    "@palka/marketplace-providers": "workspace:*",
+    "@palka/metrics": "workspace:*",
+    "@palka/storage": "workspace:*",
+    "@palka/utils": "workspace:*",
     "bullmq": "^5.79.0",
     "ioredis": "^5.11.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@falka/eslint-config": "workspace:*",
-    "@falka/typescript-config": "workspace:*",
+    "@palka/eslint-config": "workspace:*",
+    "@palka/typescript-config": "workspace:*",
     "@types/node": "^26.0.0",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3",

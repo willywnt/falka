@@ -5,8 +5,8 @@ import {
   prisma,
   type PaginatedResult,
   type TransactionClient,
-} from '@falka/db';
-import { enqueuePropagateInventoryStock } from '@falka/queue';
+} from '@palka/db';
+import { enqueuePropagateInventoryStock } from '@palka/queue';
 import type { MarketplaceConnection, MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

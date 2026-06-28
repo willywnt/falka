@@ -1,5 +1,5 @@
 {
-  "name": "@falka/eslint-config",
+  "name": "@palka/eslint-config",
   "version": "0.0.0",
   "private": true,
   "type": "module",

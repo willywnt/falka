@@ -4,7 +4,7 @@ import {
   RECORDING_HEIGHT,
   RECORDING_MIME_TYPE,
   RECORDING_WIDTH,
-} from '@falka/config/limits';
+} from '@palka/config/limits';
 
 const MIME_CANDIDATES = [
   'video/webm;codecs=vp9',

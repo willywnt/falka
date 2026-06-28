@@ -1,4 +1,4 @@
-import { ChannelDonutChart } from '@falka/web';
+import { ChannelDonutChart } from '@palka/web';
 
 export function RevenueShare() {
   return (

@@ -1,11 +1,11 @@
-# design-sync NOTES — @falka/web → "Palka Design System"
+# design-sync NOTES — @palka/web → "Palka Design System"
 
 Repo-specific gotchas for future syncs. Read this BEFORE re-syncing.
 
 ## Shape & build model (non-obvious)
 
 - The design system is the **Next.js app's component library** (`apps/web/src/components/**`),
-  NOT the `@falka/ui` stub package (which is only Button + Card). `cfg.pkg = "@falka/web"`,
+  NOT the `@palka/ui` stub package (which is only Button + Card). `cfg.pkg = "@palka/web"`,
   `globalName = "Palka"`.
 - There is **no shipped `dist/`** for these components. `.design-sync/build-inputs.mjs` (committed,
   durable) builds all sync inputs deterministically and is `cfg.buildCmd`. It generates, under

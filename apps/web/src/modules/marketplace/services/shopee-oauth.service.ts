@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { getServerEnv } from '@falka/config/env.server';
+import { getServerEnv } from '@palka/config/env.server';
 import {
   buildShopeeAuthUrl,
   createShopeeClient,
   exchangeShopeeCode,
   isShopeeSuccess,
   refreshShopeeToken,
-} from '@falka/marketplace-providers';
+} from '@palka/marketplace-providers';
 import { MarketplaceProvider } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';

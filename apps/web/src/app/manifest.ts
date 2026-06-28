@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Falka',
-    short_name: 'Falka',
+    name: 'Palka',
+    short_name: 'Palka',
     description: 'Stok akurat di semua channel, kasir, dan bukti packing untuk pedagang online.',
     start_url: '/',
     display: 'standalone',

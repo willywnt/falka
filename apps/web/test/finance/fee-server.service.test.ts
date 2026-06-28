@@ -12,7 +12,7 @@ const { prismaMock, salesMock, ordersMock, marketplaceMock, auditMock } = vi.hoi
   auditMock: { log: vi.fn() },
 }));
 
-vi.mock('@falka/db', () => ({ prisma: prismaMock }));
+vi.mock('@palka/db', () => ({ prisma: prismaMock }));
 vi.mock('@/lib/logger', () => ({
   appLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));

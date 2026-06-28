@@ -1,7 +1,7 @@
 {
   "projectId": "8979db6a-c8ed-4248-9ff0-241826f79e30",
   "shape": "package",
-  "pkg": "@falka/web",
+  "pkg": "@palka/web",
   "globalName": "Palka",
   "entry": "apps/web/.ds-entry.tsx",
   "tsconfig": "tsconfig.ds-bundle.json",

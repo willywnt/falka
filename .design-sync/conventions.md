@@ -1,4 +1,4 @@
-# Palka (Falka) — building with this design system
+# Palka (Palka) — building with this design system
 
 These are the real React components of an Indonesian inventory / POS / e-commerce app, on
 `window.Palka` (the bundle is loaded for you). Import a component as its `.prompt.md` shows; **no

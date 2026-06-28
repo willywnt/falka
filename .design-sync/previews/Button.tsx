@@ -1,4 +1,4 @@
-import { Button } from '@falka/web';
+import { Button } from '@palka/web';
 
 export function Variants() {
   return (

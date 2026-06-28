@@ -1,7 +1,7 @@
-import { connectDb } from '@falka/db';
-import { validateServerEnvOnStartup } from '@falka/config/env.server';
-import { shutdownWorkerInfrastructure, startWorkerInfrastructure } from '@falka/queue';
-import { logger } from '@falka/logger/server';
+import { connectDb } from '@palka/db';
+import { validateServerEnvOnStartup } from '@palka/config/env.server';
+import { shutdownWorkerInfrastructure, startWorkerInfrastructure } from '@palka/queue';
+import { logger } from '@palka/logger/server';
 
 import { startHealthServer } from './health-server.js';
 import { captureWorkerException, flushWorkerSentry, initWorkerSentry } from './sentry.js';

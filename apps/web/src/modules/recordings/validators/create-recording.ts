@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_SIZE_BYTES } from '@falka/config/limits';
+import { MAX_UPLOAD_SIZE_BYTES } from '@palka/config/limits';
 import { z } from 'zod';
 
 import { webmMimeTypeSchema } from '@/modules/storage/validators/mime-type';

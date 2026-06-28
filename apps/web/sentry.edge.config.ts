@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 
-import { isServerSentryEnabled } from '@falka/config/sentry';
+import { isServerSentryEnabled } from '@palka/config/sentry';
 
 if (isServerSentryEnabled()) {
   Sentry.init({

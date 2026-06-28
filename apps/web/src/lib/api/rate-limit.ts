@@ -7,13 +7,13 @@ import {
   LOGIN_RATE_LIMIT_WINDOW_SECONDS,
   RECORDING_RATE_LIMIT_PER_MINUTE,
   UPLOAD_RATE_LIMIT_PER_MINUTE,
-} from '@falka/config/limits';
+} from '@palka/config/limits';
 import {
   buildIpRateLimitKey,
   buildUserRateLimitKey,
   checkRateLimit,
   type RateLimitResult,
-} from '@falka/rate-limit';
+} from '@palka/rate-limit';
 
 import { AppError } from '@/lib/errors';
 

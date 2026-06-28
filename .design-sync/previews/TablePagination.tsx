@@ -1,4 +1,4 @@
-import { TablePagination } from '@falka/web';
+import { TablePagination } from '@palka/web';
 
 export function MidRange() {
   return (

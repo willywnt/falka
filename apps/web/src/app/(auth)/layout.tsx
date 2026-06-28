@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { APP_NAME } from '@falka/config/constants';
+import { APP_NAME } from '@palka/config/constants';
 
 import { BrandBadge } from '@/components/brand-mark';
 import { WaveHairline } from '@/components/maritime-art';
