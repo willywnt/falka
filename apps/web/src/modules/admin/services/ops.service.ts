@@ -20,7 +20,7 @@ export async function getFailedUploadsReport(limit = 50) {
       userId: true,
       status: true,
       storageKey: true,
-      noResi: true,
+      trackingNumber: true,
       updatedAt: true,
       createdAt: true,
     },

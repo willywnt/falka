@@ -30,7 +30,7 @@ export function useDesktopStationRecordingSync(pairingId: string | null): void {
   const countdownOpen = useScannerPairingStore((s) => s.countdownOpen);
   const countdownBarcode = useScannerPairingStore((s) => s.countdownBarcode);
   const status = useRecordingStore((s) => s.status);
-  const noResi = useRecordingStore((s) => s.noResi);
+  const trackingNumber = useRecordingStore((s) => s.trackingNumber);
   const isBusy = useRecordingStore(selectIsRecordingBusy);
   const isRetryingUpload = useRecordingReliabilityStore((s) => s.isRetryingUpload);
   const anotherTabRecording = useAnotherTabRecording();
@@ -42,7 +42,7 @@ export function useDesktopStationRecordingSync(pairingId: string | null): void {
 
     const phase = resolveStationPhase(countdownOpen, status, isBusy, isRetryingUpload);
     const barcode =
-      phase === 'idle' ? undefined : (countdownBarcode ?? (noResi.trim() || undefined));
+      phase === 'idle' ? undefined : (countdownBarcode ?? (trackingNumber.trim() || undefined));
 
     const signature = `${phase}:${barcode ?? ''}`;
     if (lastSentRef.current === signature) return;
@@ -64,7 +64,7 @@ export function useDesktopStationRecordingSync(pairingId: string | null): void {
     countdownOpen,
     isBusy,
     isRetryingUpload,
-    noResi,
+    trackingNumber,
     pairingId,
     status,
   ]);

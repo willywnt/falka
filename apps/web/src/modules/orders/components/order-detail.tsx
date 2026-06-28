@@ -54,7 +54,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
     isLoading: isPackingVideosLoading,
     error: packingVideosError,
     refetch: refetchPackingVideos,
-  } = useRecordingsByResiQuery(data?.noResi ?? null);
+  } = useRecordingsByResiQuery(data?.trackingNumber ?? null);
   const [mapTarget, setMapTarget] = useState<{ id: string; label: string } | null>(null);
 
   async function handleCreateReturn() {
@@ -350,7 +350,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">No. resi</span>
-                <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
+                <span className="num truncate text-right font-medium">
+                  {data.trackingNumber ?? '—'}
+                </span>
               </div>
               <OrderMetaLine label="Metode bayar" value={data.marketplace.paymentMethod} />
               <OrderMetaLine
@@ -387,7 +389,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
             </CardContent>
           </Card>
 
-          {data.noResi ? (
+          {data.trackingNumber ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Video packing</CardTitle>
@@ -408,7 +410,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                     </p>
                     <Button variant="outline" size="sm" asChild className="w-full">
                       <Link
-                        href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}
+                        href={`/dashboard/recordings?search=${encodeURIComponent(data.trackingNumber)}`}
                       >
                         <Video className="size-4" />
                         Lihat video packing
@@ -423,7 +425,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
                     </p>
                     {data.status !== 'CANCELLED' ? (
                       <Button variant="outline" size="sm" asChild className="w-full">
-                        <Link href={`/recordings?resi=${encodeURIComponent(data.noResi)}`}>
+                        <Link href={`/recordings?resi=${encodeURIComponent(data.trackingNumber)}`}>
                           <Video className="size-4" />
                           Rekam di station
                         </Link>

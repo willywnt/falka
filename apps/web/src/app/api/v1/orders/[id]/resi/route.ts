@@ -22,7 +22,7 @@ export const POST = withApiRoute<RouteParams>(
     const result = await ordersServerService.setOrderResi(
       org.id,
       parsedParams.data.id,
-      parsed.data.noResi,
+      parsed.data.trackingNumber,
     );
     return apiSuccess(result);
   },

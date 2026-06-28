@@ -5,16 +5,16 @@ import { ordersServerService } from '@/modules/orders/services/orders-server.ser
 import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
-const querySchema = z.object({ noResi: z.string().trim().min(1).max(64) });
+const querySchema = z.object({ trackingNumber: z.string().trim().min(1).max(64) });
 
 export const GET = withApiRoute(
   async (request, { org }) => {
     const parsed = querySchema.safeParse({
-      noResi: new URL(request.url).searchParams.get('noResi') ?? '',
+      trackingNumber: new URL(request.url).searchParams.get('trackingNumber') ?? '',
     });
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const data = await ordersServerService.findByResi(org.id, parsed.data.noResi);
+    const data = await ordersServerService.findByResi(org.id, parsed.data.trackingNumber);
     return apiSuccess(data);
   },
   { requireAuth: true },

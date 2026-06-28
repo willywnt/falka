@@ -12,13 +12,13 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function RecordingDeleteDialog({
-  noResi,
+  trackingNumber,
   open,
   onOpenChange,
   onConfirm,
   isDeleting,
 }: {
-  noResi: string;
+  trackingNumber: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -30,8 +30,8 @@ export function RecordingDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Hapus rekaman?</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="font-medium">{noResi}</span> bakal dihapus dari daftar rekaman kamu.
-            File aslinya masih disimpan dulu dan bisa dibersihkan nanti.
+            <span className="font-medium">{trackingNumber}</span> bakal dihapus dari daftar rekaman
+            kamu. File aslinya masih disimpan dulu dan bisa dibersihkan nanti.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

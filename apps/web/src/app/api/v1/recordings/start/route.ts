@@ -16,14 +16,14 @@ export const POST = withApiRoute(
     const started = await recordingServerService.startRecording(
       org.id,
       user.id,
-      parsed.data.noResi,
+      parsed.data.trackingNumber,
     );
 
     appLogger.info('recording.started', {
       userId: user.id,
       organizationId: org.id,
       recordingId: started.recordingId,
-      noResi: started.noResi,
+      trackingNumber: started.trackingNumber,
     });
 
     return apiSuccess(started, 201);

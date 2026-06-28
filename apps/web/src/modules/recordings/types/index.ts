@@ -14,13 +14,13 @@ export type RecordingLifecycleStatus =
 
 export type ActiveRecordingSession = {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   startedAt: string;
 };
 
 export type CompletedRecordingSummary = {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   publicUrl: string;
   storageKey: string;
   fileSizeBytes: number;
@@ -29,7 +29,7 @@ export type CompletedRecordingSummary = {
 
 export type RecordingDetail = {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   status: PrismaRecordingStatus;
   durationSeconds: number;
   fileSizeBytes: number;
@@ -48,7 +48,7 @@ export type RecordingDetail = {
 
 export type RecordingListItem = {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   status: PrismaRecordingStatus;
   durationSeconds: number;
   fileSizeBytes: number;
@@ -85,13 +85,13 @@ export type RecordingPlaybackResponse = {
 
 export type StartRecordingResponse = {
   recordingId: string;
-  noResi: string;
+  trackingNumber: string;
   startedAt: string;
 };
 
 export type SaveRecordingMetadataPayload = {
   recordingId: string;
-  noResi: string;
+  trackingNumber: string;
   storageKey: string;
   publicUrl: string;
   fileSizeBytes: number;
@@ -101,7 +101,7 @@ export type SaveRecordingMetadataPayload = {
 
 export type SaveRecordingMetadataResponse = {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   status: PrismaRecordingStatus;
   publicUrl: string;
   storageKey: string;
@@ -128,7 +128,7 @@ export type CreateShareLinkResponse = {
 
 /** Public (unauthenticated) viewer payload for a valid share token. */
 export type PublicShareView = {
-  noResi: string;
+  trackingNumber: string;
   durationSeconds: number;
   mimeType: string;
   playbackUrl: string;

@@ -1,7 +1,7 @@
-import { noResiSchema } from '@/modules/recordings/validators/no-resi';
+import { trackingNumberSchema } from '@/modules/recordings/validators/tracking-number';
 
 export type HardwareBarcodeScanResult = {
-  noResi: string;
+  trackingNumber: string;
 };
 
 /**
@@ -10,8 +10,8 @@ export type HardwareBarcodeScanResult = {
  * — the wedge feeds the recordings flow, where the resi format is the contract.
  */
 export function parseHardwareBarcodeScan(raw: string): HardwareBarcodeScanResult | null {
-  const parsed = noResiSchema.safeParse(raw.trim());
+  const parsed = trackingNumberSchema.safeParse(raw.trim());
   if (!parsed.success) return null;
 
-  return { noResi: parsed.data };
+  return { trackingNumber: parsed.data };
 }

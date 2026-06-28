@@ -56,7 +56,7 @@ export const POST = withApiRoute(
     // A completed packing video fulfills the matching order(s) (best-effort —
     // never fail the recording save if there's no order or the update errors).
     try {
-      await ordersServerService.markFulfilledByResi(org.id, saved.noResi);
+      await ordersServerService.markFulfilledByResi(org.id, saved.trackingNumber);
     } catch (error) {
       appLogger.warn('recording.fulfill.failed', {
         organizationId: org.id,

@@ -187,7 +187,7 @@ export function PendingUploadsSection({
                 <article key={recording.id} className="bg-muted/20 space-y-3 rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1.5">
-                      <p className="num truncate font-medium">{recording.noResi}</p>
+                      <p className="num truncate font-medium">{recording.trackingNumber}</p>
                       <OperationalStatusBadge status={status} />
                     </div>
                     <PendingRowControls
@@ -258,7 +258,7 @@ export function PendingUploadsSection({
 
                   return (
                     <TableRow key={recording.id} className="bg-muted/20">
-                      <TableCell className="num font-medium">{recording.noResi}</TableCell>
+                      <TableCell className="num font-medium">{recording.trackingNumber}</TableCell>
                       <TableCell>
                         <OperationalStatusBadge status={status} />
                       </TableCell>

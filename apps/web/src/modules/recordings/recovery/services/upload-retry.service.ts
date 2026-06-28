@@ -14,7 +14,7 @@ export type UploadRetryCallbacks = {
   markUploading?: (recordingId: string) => Promise<unknown>;
   saveMetadata: (payload: {
     recordingId: string;
-    noResi: string;
+    trackingNumber: string;
     storageKey: string;
     publicUrl: string;
     fileSizeBytes: number;
@@ -78,7 +78,7 @@ export async function retryTemporaryRecordingUpload(
 
     await callbacks.saveMetadata({
       recordingId,
-      noResi: record.noResi,
+      trackingNumber: record.trackingNumber,
       storageKey: uploadResult.storageKey,
       publicUrl: uploadResult.publicUrl,
       fileSizeBytes: file.size,

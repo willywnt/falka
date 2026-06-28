@@ -13,7 +13,7 @@ const FILLED = new Blob(['recorded-bytes']);
 function ctx(blob: Blob | null) {
   return {
     recordingId: 'rec-1',
-    noResi: 'RESI123',
+    trackingNumber: 'RESI123',
     durationSeconds: 12,
     blob,
     mimeType: 'video/webm',

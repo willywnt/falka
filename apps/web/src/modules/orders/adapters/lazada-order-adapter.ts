@@ -132,7 +132,7 @@ function parseAmount(value: string | null): number | null {
 function toNormalizedOrder(record: LazadaOrderRecord): NormalizedOrder {
   const statusTokens =
     record.statuses.length > 0 ? record.statuses : record.lines.flatMap((line) => line.statuses);
-  const noResi = record.lines.find((line) => line.trackingCode)?.trackingCode ?? null;
+  const trackingNumber = record.lines.find((line) => line.trackingCode)?.trackingCode ?? null;
   const buyerName =
     [record.buyerFirstName, record.buyerLastName]
       .filter((part): part is string => Boolean(part && part.trim()))
@@ -158,7 +158,7 @@ function toNormalizedOrder(record: LazadaOrderRecord): NormalizedOrder {
   return {
     externalOrderId: record.orderId,
     status: reduceLazadaStatuses(statusTokens),
-    noResi,
+    trackingNumber,
     buyerName,
     totalAmount: parseAmount(record.price),
     currency: record.currency,

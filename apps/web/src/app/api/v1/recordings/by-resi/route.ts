@@ -6,18 +6,18 @@ import { apiSuccess, apiValidationError } from '@/lib/api-response';
 import { withApiRoute } from '@/lib/api/with-api-route';
 
 const byResiQuerySchema = z.object({
-  noResi: z.string().trim().min(1).max(64),
+  trackingNumber: z.string().trim().min(1).max(64),
 });
 
 export const GET = withApiRoute(
   async (request, { org }) => {
     const parsed = byResiQuerySchema.safeParse({
-      noResi: new URL(request.url).searchParams.get('noResi') ?? '',
+      trackingNumber: new URL(request.url).searchParams.get('trackingNumber') ?? '',
     });
 
     if (!parsed.success) return apiValidationError(parsed.error);
 
-    const recordings = await recordingServerService.findByResi(org.id, parsed.data.noResi);
+    const recordings = await recordingServerService.findByResi(org.id, parsed.data.trackingNumber);
     return apiSuccess(recordings);
   },
   { requireAuth: true },

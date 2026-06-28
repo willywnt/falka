@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const noResiSchema = z
+export const trackingNumberSchema = z
   .string()
   .trim()
   .min(3, 'Resi number must be at least 3 characters')
@@ -10,4 +10,4 @@ export const noResiSchema = z
     'Resi number can only contain letters, numbers, dashes, and underscores',
   );
 
-export type NoResiInput = z.infer<typeof noResiSchema>;
+export type TrackingNumberInput = z.infer<typeof trackingNumberSchema>;

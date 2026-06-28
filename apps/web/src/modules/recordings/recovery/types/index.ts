@@ -6,7 +6,7 @@ export type RecoveryUploadStatus = 'PENDING' | 'UPLOADING' | 'FAILED' | 'COMPLET
 export type TemporaryRecording = {
   id: string;
   recordingId: string | null;
-  noResi: string;
+  trackingNumber: string;
   mimeType: string;
   durationSeconds: number;
   estimatedSizeBytes: number;
@@ -22,7 +22,7 @@ export type TemporaryRecording = {
 
 export type SaveTemporaryRecordingInput = {
   blob: Blob;
-  noResi: string;
+  trackingNumber: string;
   mimeType: string;
   durationSeconds: number;
   recordingId?: string | null;

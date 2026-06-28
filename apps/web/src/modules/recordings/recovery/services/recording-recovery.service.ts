@@ -98,7 +98,7 @@ function toTemporaryRecording(record: StoredTemporaryRecording): TemporaryRecord
   return {
     id: normalized.id,
     recordingId: normalized.recordingId,
-    noResi: normalized.noResi,
+    trackingNumber: normalized.trackingNumber,
     mimeType: normalized.mimeType,
     durationSeconds: normalized.durationSeconds,
     estimatedSizeBytes: normalized.estimatedSizeBytes,
@@ -155,7 +155,7 @@ export class RecordingRecoveryService {
     const record: StoredTemporaryRecording = {
       id: createId(),
       recordingId: input.recordingId ?? null,
-      noResi: input.noResi,
+      trackingNumber: input.trackingNumber,
       blob: input.blob,
       mimeType: input.mimeType,
       durationSeconds: input.durationSeconds,

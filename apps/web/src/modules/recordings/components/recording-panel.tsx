@@ -49,8 +49,8 @@ import { isMobileScannerEnabled } from '@/modules/scanner-pairing/config';
 export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
   const {
     status,
-    noResi,
-    setNoResi,
+    trackingNumber,
+    setTrackingNumber,
     durationSeconds,
     uploadProgress,
     uploadMetrics,
@@ -81,9 +81,9 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
   useEffect(() => {
     if (!seededResiRef.current && initialResi) {
       seededResiRef.current = true;
-      setNoResi(initialResi);
+      setTrackingNumber(initialResi);
     }
-  }, [initialResi, setNoResi]);
+  }, [initialResi, setTrackingNumber]);
 
   // Hidden in production until the realtime socket host is deployed.
   const scannerEnabled = isMobileScannerEnabled();
@@ -110,7 +110,7 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
     clearScannerDuplicateWarning,
     confirmScannerDuplicateAndCountdown,
   } = useScannerAutoRecording({
-    setNoResi,
+    setTrackingNumber,
     startRecording,
     canStart: canStart && !anotherTabRecording,
     soundEnabled: soundOn,
@@ -124,21 +124,21 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
   }, []);
 
   const runStartRecording = useCallback(async () => {
-    const trimmedNoResi = noResi.trim();
+    const trimmedTrackingNumber = trackingNumber.trim();
 
-    if (!trimmedNoResi) {
+    if (!trimmedTrackingNumber) {
       await startRecording();
       return;
     }
 
-    const isDuplicate = await checkDuplicate(trimmedNoResi);
+    const isDuplicate = await checkDuplicate(trimmedTrackingNumber);
     if (isDuplicate) {
       pendingStartRef.current = true;
       return;
     }
 
     await startRecording();
-  }, [checkDuplicate, noResi, startRecording]);
+  }, [checkDuplicate, trackingNumber, startRecording]);
 
   const isRecording = status === 'RECORDING';
   const isPermissionDenied = error?.toLowerCase().includes('permission');
@@ -183,18 +183,18 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="noResi">No. resi</Label>
+                  <Label htmlFor="trackingNumber">No. resi</Label>
                   <Input
-                    id="noResi"
+                    id="trackingNumber"
                     placeholder="Masukkan no. resi"
-                    value={noResi}
-                    onChange={(event) => setNoResi(event.target.value)}
+                    value={trackingNumber}
+                    onChange={(event) => setTrackingNumber(event.target.value)}
                     disabled={isBusy}
                     autoComplete="off"
                   />
                 </div>
 
-                <PackOrderPanel noResi={noResi} />
+                <PackOrderPanel trackingNumber={trackingNumber} />
 
                 {showCameraPicker ? (
                   <div className="space-y-2">
@@ -246,11 +246,11 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
                     <CheckCircle2 className="text-primary mt-0.5 size-4 shrink-0" />
                     <div>
                       <p className="font-medium">
-                        Rekaman tersimpan untuk {completedRecording.noResi}
+                        Rekaman tersimpan untuk {completedRecording.trackingNumber}
                       </p>
                       <Button variant="link" className="h-auto p-0" asChild>
                         <Link
-                          href={`/dashboard/recordings?search=${encodeURIComponent(completedRecording.noResi)}`}
+                          href={`/dashboard/recordings?search=${encodeURIComponent(completedRecording.trackingNumber)}`}
                         >
                           Lihat di daftar rekaman
                         </Link>
@@ -293,7 +293,8 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
             <AlertDialogDescription>
               {scannerDuplicateWarning ? (
                 <>
-                  No. resi <span className="num font-medium">{scannerDuplicateWarning.noResi}</span>{' '}
+                  No. resi{' '}
+                  <span className="num font-medium">{scannerDuplicateWarning.trackingNumber}</span>{' '}
                   dari hasil scan sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?
                 </>
               ) : null}
@@ -318,7 +319,8 @@ export function RecordingPanel({ initialResi }: { initialResi?: string } = {}) {
             <AlertDialogDescription>
               {duplicateWarning ? (
                 <>
-                  No. resi <span className="num font-medium">{duplicateWarning.noResi}</span> yang
+                  No. resi{' '}
+                  <span className="num font-medium">{duplicateWarning.trackingNumber}</span> yang
                   kamu masukkan sudah direkam dalam 24 jam terakhir. Tetap mulai rekam?
                 </>
               ) : null}

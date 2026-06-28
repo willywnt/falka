@@ -174,7 +174,7 @@ async function main() {
   console.log(`Staff user: ${staffUser.email} (STAFF of ${demoOrg.name})`);
 
   const existingRecording = await prisma.recording.findFirst({
-    where: { organizationId: demoOrg.id, noResi: 'SEED-RESI-001' },
+    where: { organizationId: demoOrg.id, trackingNumber: 'SEED-RESI-001' },
   });
 
   if (!existingRecording) {
@@ -182,7 +182,7 @@ async function main() {
       data: {
         userId: demoUser.id,
         organizationId: demoOrg.id,
-        noResi: 'SEED-RESI-001',
+        trackingNumber: 'SEED-RESI-001',
         generatedFilename: 'seed-recording-001.webm',
         storageProvider: 'cloudflare-r2',
         storageBucket: 'palka-recordings',
@@ -199,7 +199,7 @@ async function main() {
       },
     });
 
-    console.log(`Sample recording: ${recording.noResi} (${recording.status})`);
+    console.log(`Sample recording: ${recording.trackingNumber} (${recording.status})`);
   }
 
   const connection =

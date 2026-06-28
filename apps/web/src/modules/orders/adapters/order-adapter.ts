@@ -23,7 +23,7 @@ export type NormalizedOrderItem = {
 export type NormalizedOrder = {
   externalOrderId: string;
   status: NormalizedOrderStatus;
-  noResi: string | null;
+  trackingNumber: string | null;
   buyerName: string | null;
   totalAmount: number | null;
   currency: string | null;
@@ -113,7 +113,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       {
         externalOrderId: `${s}-RESERVE`,
         status: 'PAID',
-        noResi: `RESI-${s}-RESERVE`,
+        trackingNumber: `RESI-${s}-RESERVE`,
         buyerName: 'Budi (reserve)',
         totalAmount: 200_000,
         currency: 'IDR',
@@ -124,7 +124,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       {
         externalOrderId: `${s}-SHIP`,
         status: shipStatus,
-        noResi: `RESI-${s}-SHIP`,
+        trackingNumber: `RESI-${s}-SHIP`,
         buyerName: 'Sari (ship)',
         totalAmount: 300_000,
         currency: 'IDR',
@@ -135,7 +135,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       {
         externalOrderId: `${s}-RELEASE`,
         status: releaseStatus,
-        noResi: releaseStatus === 'PAID' ? `RESI-${s}-RELEASE` : null,
+        trackingNumber: releaseStatus === 'PAID' ? `RESI-${s}-RELEASE` : null,
         buyerName: 'Andi (release)',
         totalAmount: 150_000,
         currency: 'IDR',
@@ -146,7 +146,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       {
         externalOrderId: `${s}-RETURN`,
         status: returnStatus,
-        noResi: `RESI-${s}-RETURN`,
+        trackingNumber: `RESI-${s}-RETURN`,
         buyerName: 'Citra (return)',
         totalAmount: 120_000,
         currency: 'IDR',
@@ -157,7 +157,7 @@ export class StubMarketplaceOrderAdapter implements MarketplaceOrderAdapter {
       {
         externalOrderId: `${s}-PENDING`,
         status: 'PENDING',
-        noResi: null,
+        trackingNumber: null,
         buyerName: 'Dewi (pending)',
         totalAmount: 100_000,
         currency: 'IDR',

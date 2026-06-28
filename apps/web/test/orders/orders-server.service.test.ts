@@ -92,7 +92,7 @@ function orderFromAdapter(status: string) {
   return {
     externalOrderId: 'EXT-1',
     status,
-    noResi: 'RESI-1',
+    trackingNumber: 'RESI-1',
     buyerName: 'Budi',
     totalAmount: 200_000,
     currency: 'IDR',
@@ -304,7 +304,7 @@ describe('pullFromConnections — per-line cancel within a shipped order', () =>
       {
         externalOrderId: 'EXT-1',
         status: 'SHIPPED',
-        noResi: 'RESI-1',
+        trackingNumber: 'RESI-1',
         buyerName: 'Budi',
         totalAmount: 2,
         currency: 'IDR',
@@ -511,14 +511,14 @@ describe('findByResi / markFulfilledByResi (fulfillment)', () => {
     const args = prismaMock.order.updateMany.mock.calls[0]?.[0] as {
       where: {
         organizationId: string;
-        noResi: { equals: string; mode: string };
+        trackingNumber: { equals: string; mode: string };
         fulfilledAt: null;
       };
       data: { fulfilledAt: Date };
     };
     expect(args.where).toMatchObject({
       organizationId: ORG,
-      noResi: { equals: 'RESI-1', mode: 'insensitive' },
+      trackingNumber: { equals: 'RESI-1', mode: 'insensitive' },
       fulfilledAt: null,
     });
     expect(args.data.fulfilledAt).toBeInstanceOf(Date);
@@ -532,7 +532,7 @@ function persistedOrder(overrides: Record<string, unknown>) {
     externalOrderId: 'EXT-1',
     marketplaceConnectionId: CONN_ID,
     status: 'PAID',
-    noResi: 'RESI-1',
+    trackingNumber: 'RESI-1',
     inventoryAppliedAt: APPLIED_AT,
     inventoryShippedAt: null,
     inventoryRevertedAt: null,
@@ -549,7 +549,7 @@ describe('markOrderShipped (manual)', () => {
       .spyOn(service, 'getOrder')
       .mockResolvedValue({ id: 'o1' } as Awaited<ReturnType<typeof service.getOrder>>);
 
-    await service.markOrderShipped(ORG, USER, 'o1', { noResi: 'NEW-RESI' });
+    await service.markOrderShipped(ORG, USER, 'o1', { trackingNumber: 'NEW-RESI' });
 
     expect(inventoryMock.applyOrderShipTx).toHaveBeenCalledWith(
       txMock,
@@ -557,7 +557,7 @@ describe('markOrderShipped (manual)', () => {
     );
     expect(txMock.order.update.mock.calls[0]?.[0]).toMatchObject({
       where: { id: 'o1' },
-      data: expect.objectContaining({ status: 'SHIPPED', noResi: 'NEW-RESI' }),
+      data: expect.objectContaining({ status: 'SHIPPED', trackingNumber: 'NEW-RESI' }),
     });
     getOrderSpy.mockRestore();
   });

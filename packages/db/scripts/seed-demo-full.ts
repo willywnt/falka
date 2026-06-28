@@ -757,7 +757,7 @@ async function main() {
     lines: SaleLine[];
     daysBack: number;
     buyer: string;
-    noResi?: string;
+    trackingNumber?: string;
   };
   const orderSeeds: OrderSeed[] = [
     {
@@ -780,7 +780,7 @@ async function main() {
       lines: [{ sku: 'HOODIE-ABU-M', qty: 1 }],
       daysBack: 7,
       buyer: 'Sari',
-      noResi: 'JNE-DEMO-1001',
+      trackingNumber: 'JNE-DEMO-1001',
     },
     {
       channel: 'shopee',
@@ -788,7 +788,7 @@ async function main() {
       lines: [{ sku: 'TOPI-HTM', qty: 2 }],
       daysBack: 6,
       buyer: 'Andi',
-      noResi: 'SICEPAT-DEMO-1002',
+      trackingNumber: 'SICEPAT-DEMO-1002',
     },
     {
       channel: 'lazada',
@@ -799,7 +799,7 @@ async function main() {
       ],
       daysBack: 14,
       buyer: 'Maya',
-      noResi: 'JNT-DEMO-1003',
+      trackingNumber: 'JNT-DEMO-1003',
     },
     {
       channel: 'shopee',
@@ -807,7 +807,7 @@ async function main() {
       lines: [{ sku: 'TOTE-NAT', qty: 2 }],
       daysBack: 12,
       buyer: 'Dewi',
-      noResi: 'JNE-DEMO-1004',
+      trackingNumber: 'JNE-DEMO-1004',
     },
     {
       channel: 'lazada',
@@ -818,7 +818,7 @@ async function main() {
     },
   ];
 
-  const completedOrders: { id: string; lines: SaleLine[]; noResi: string }[] = [];
+  const completedOrders: { id: string; lines: SaleLine[]; trackingNumber: string }[] = [];
   for (const seed of orderSeeds) {
     orderSeq += 1;
     const conn = connections[seed.channel]!;
@@ -838,7 +838,7 @@ async function main() {
         provider: conn.provider,
         externalOrderId: `${conn.shopId}-ORD-${orderSeq}`,
         status: seed.status,
-        noResi: seed.noResi ?? null,
+        trackingNumber: seed.trackingNumber ?? null,
         buyerName: seed.buyer,
         totalAmount: rp(totalAmount),
         currency: 'IDR',
@@ -846,7 +846,7 @@ async function main() {
         inventoryAppliedAt: at,
         inventoryShippedAt: shipped ? at : null,
         inventoryRevertedAt: seed.status === OrderStatus.CANCELLED ? at : null,
-        fulfilledAt: shipped && seed.noResi ? at : null,
+        fulfilledAt: shipped && seed.trackingNumber ? at : null,
         items: {
           create: priced.map((l) => ({
             externalProductId: `${conn.shopId}-P?`,
@@ -885,8 +885,12 @@ async function main() {
         });
       }
     }
-    if (seed.status === OrderStatus.COMPLETED && seed.noResi) {
-      completedOrders.push({ id: order.id, lines: seed.lines, noResi: seed.noResi });
+    if (seed.status === OrderStatus.COMPLETED && seed.trackingNumber) {
+      completedOrders.push({
+        id: order.id,
+        lines: seed.lines,
+        trackingNumber: seed.trackingNumber,
+      });
     }
   }
   console.log(`Orders: ${orderSeq} across PAID/SHIPPED/COMPLETED/CANCELLED.`);
@@ -908,7 +912,7 @@ async function main() {
         orderId: returnTarget.id,
         status: ReturnStatus.RECEIVED,
         reason: 'Ukuran tidak sesuai',
-        noResi: returnTarget.noResi,
+        trackingNumber: returnTarget.trackingNumber,
         processedAt: at,
         items: {
           create: [
@@ -1060,7 +1064,7 @@ async function main() {
       data: {
         userId: staffUser.id,
         organizationId,
-        noResi: resi,
+        trackingNumber: resi,
         generatedFilename: `demo-pack-${i + 1}.webm`,
         storageProvider: 'cloudflare-r2',
         storageBucket: 'palka-recordings',

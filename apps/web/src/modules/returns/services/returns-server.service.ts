@@ -66,7 +66,7 @@ function mapDetail(row: ReturnRow): ReturnDetail {
     provider: row.order.provider,
     shopName: row.order.connection.shopName,
     status: row.status,
-    noResi: row.noResi,
+    trackingNumber: row.trackingNumber,
     reason: row.reason,
     autoDetected: row.autoDetected,
     itemCount: row.items.length,
@@ -119,7 +119,7 @@ export class ReturnsServerService {
       provider: row.order.provider,
       shopName: row.order.connection.shopName,
       status: row.status,
-      noResi: row.noResi,
+      trackingNumber: row.trackingNumber,
       reason: row.reason,
       autoDetected: row.autoDetected,
       itemCount: row._count.items,
@@ -174,7 +174,7 @@ export class ReturnsServerService {
         orderId,
         reason: opts.reason ?? null,
         autoDetected: opts.autoDetected ?? false,
-        noResi: order.noResi,
+        trackingNumber: order.trackingNumber,
         items: {
           create: resolvedItems.map((item) => ({
             orderItemId: item.id,

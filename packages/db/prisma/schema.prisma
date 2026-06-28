@@ -244,7 +244,7 @@ model Recording {
   user              User            @relation(fields: [userId], references: [id])
   organizationId    String
   organization      Organization    @relation(fields: [organizationId], references: [id])
-  noResi            String
+  trackingNumber    String
   generatedFilename String
   storageProvider   String
   storageBucket     String
@@ -266,7 +266,7 @@ model Recording {
   shareLinks RecordingShareLink[]
 
   @@index([organizationId])
-  @@index([organizationId, noResi])
+  @@index([organizationId, trackingNumber])
   @@index([status])
   @@map("recordings")
 }
@@ -695,7 +695,7 @@ model Order {
   provider                MarketplaceProvider
   externalOrderId         String
   status                  OrderStatus
-  noResi                  String?
+  trackingNumber          String?
   buyerName               String?
   totalAmount             Decimal?              @db.Decimal(14, 2)
   currency                String?
@@ -723,8 +723,8 @@ model Order {
    */
   inventoryShippedAt      DateTime?
   /**
-   * Set when a packing video (a Recording with the same noResi) completes — the
-   * order has been packed + recorded. Matched by noResi (no FK).
+   * Set when a packing video (a Recording with the same trackingNumber) completes — the
+   * order has been packed + recorded. Matched by trackingNumber (no FK).
    */
   fulfilledAt             DateTime?
   /**
@@ -801,9 +801,9 @@ model Return {
    */
   autoDetected   Boolean      @default(false)
   /**
-   * Copied from the order for packing-video evidence lookup (matched by noResi).
+   * Copied from the order for packing-video evidence lookup (matched by trackingNumber).
    */
-  noResi         String?
+  trackingNumber String?
   processedAt    DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -1304,13 +1304,13 @@ enum ExpenseCategory {
 /// positive rupiah; a correction is a delete + re-add. `date` is when the expense was
 /// incurred (drives the report's date range, distinct from createdAt).
 model Expense {
-  id             String          @id @default(cuid())
+  id             String           @id @default(cuid())
   userId         String
-  user           User            @relation(fields: [userId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
   organizationId String
-  organization   Organization    @relation(fields: [organizationId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id])
   category       ExpenseCategory
-  amount         Decimal         @db.Decimal(14, 2)
+  amount         Decimal          @db.Decimal(14, 2)
   date           DateTime
   note           String?
   /// Set when this row was generated from a recurring ExpenseTemplate (null = entered manually).
@@ -1324,8 +1324,8 @@ model Expense {
   /// index on (organizationId, autoSourceKey) WHERE … (migration only) gives one live derived row
   /// per (org, key) so "Hitung fee bulan ini" UPSERTS the month's estimate instead of duplicating.
   autoSourceKey  String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
 
   @@index([organizationId])
@@ -1362,7 +1362,7 @@ model ExpenseTemplate {
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
 
-  expenses       Expense[]
+  expenses Expense[]
 
   @@index([organizationId])
   @@map("expense_templates")

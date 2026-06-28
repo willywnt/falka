@@ -49,7 +49,7 @@ type ActiveDialog = 'ship' | 'resi' | 'cancel' | null;
  */
 export function OrderActionsMenu({ order }: { order: OrderDetail }) {
   const [dialog, setDialog] = useState<ActiveDialog>(null);
-  const [resi, setResi] = useState(order.noResi ?? '');
+  const [resi, setResi] = useState(order.trackingNumber ?? '');
   const [reason, setReason] = useState('');
 
   const markShipped = useMarkOrderShippedMutation(order.id);
@@ -71,7 +71,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
   async function handleShip() {
     try {
       const trimmed = resi.trim();
-      await markShipped.mutateAsync(trimmed ? { noResi: trimmed } : {});
+      await markShipped.mutateAsync(trimmed ? { trackingNumber: trimmed } : {});
       toast.success('Pesanan ditandai terkirim', {
         description: 'Stok yang dipesan langsung tersinkronisasi.',
       });
@@ -85,7 +85,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
 
   async function handleSaveResi() {
     try {
-      await setOrderResi.mutateAsync({ noResi: resi.trim() });
+      await setOrderResi.mutateAsync({ trackingNumber: resi.trim() });
       toast.success('No. resi diperbarui');
       close();
     } catch (error) {
@@ -121,7 +121,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           {canShip ? (
             <DropdownMenuItem
               onSelect={() => {
-                setResi(order.noResi ?? '');
+                setResi(order.trackingNumber ?? '');
                 setDialog('ship');
               }}
             >
@@ -132,7 +132,7 @@ export function OrderActionsMenu({ order }: { order: OrderDetail }) {
           {canEditResi ? (
             <DropdownMenuItem
               onSelect={() => {
-                setResi(order.noResi ?? '');
+                setResi(order.trackingNumber ?? '');
                 setDialog('resi');
               }}
             >

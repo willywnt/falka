@@ -45,7 +45,7 @@ import { useRecordingStore } from '../store/recording.store';
 import { estimateRecordingFileSizeBytes } from '../utils/media-recorder';
 import { clearRecordingSession, setRecordingSession } from '../utils/recording-session';
 import { isAnotherTabRecording } from '../utils/tab-lock';
-import { noResiSchema } from '../validators/no-resi';
+import { trackingNumberSchema } from '../validators/tracking-number';
 import { mapRecordingErrorToFailureMetadata } from '../utils/recording-failure';
 import {
   classifyStopRecordingFailure,
@@ -79,7 +79,7 @@ export function useRecording() {
   const handleWebcamDisconnectRef = useRef<() => Promise<void>>(async () => {});
 
   const status = useRecordingStore((state) => state.status);
-  const noResi = useRecordingStore((state) => state.noResi);
+  const trackingNumber = useRecordingStore((state) => state.trackingNumber);
   const activeRecording = useRecordingStore((state) => state.activeRecording);
   const durationSeconds = useRecordingStore((state) => state.durationSeconds);
   const uploadProgress = useRecordingStore((state) => state.uploadProgress);
@@ -89,7 +89,7 @@ export function useRecording() {
   const completedRecording = useRecordingStore((state) => state.completedRecording);
 
   const setStatus = useRecordingStore((state) => state.setStatus);
-  const setNoResi = useRecordingStore((state) => state.setNoResi);
+  const setTrackingNumber = useRecordingStore((state) => state.setTrackingNumber);
   const setActiveRecording = useRecordingStore((state) => state.setActiveRecording);
   const setDurationSeconds = useRecordingStore((state) => state.setDurationSeconds);
   const setUploadProgress = useRecordingStore((state) => state.setUploadProgress);
@@ -125,7 +125,7 @@ export function useRecording() {
   /** Clears the form for the next recording while keeping optional success/error summary visible. */
   const resetSessionForNextRecording = useCallback(
     async (options?: { preserveError?: { message: string; code: string } }) => {
-      setNoResi('');
+      setTrackingNumber('');
       setActiveRecording(null);
       setDurationSeconds(0);
       setUploadProgress(0);
@@ -146,7 +146,7 @@ export function useRecording() {
       setDurationSeconds,
       setError,
       setEstimatedFileSizeBytes,
-      setNoResi,
+      setTrackingNumber,
       setStatus,
       setUploadProgress,
     ],
@@ -200,7 +200,7 @@ export function useRecording() {
         blob: params.blob,
         mimeType: params.mimeType,
         recordingId: params.recordingId,
-        noResi: params.noResi,
+        trackingNumber: params.trackingNumber,
         durationSeconds: params.durationSeconds,
         uploadStatus: 'PENDING',
         failureCode: failure.failureCode,
@@ -287,7 +287,7 @@ export function useRecording() {
         blob,
         mimeType,
         recordingId: currentActive.id,
-        noResi: currentActive.noResi,
+        trackingNumber: currentActive.trackingNumber,
         durationSeconds: useRecordingStore.getState().durationSeconds,
         message: 'Camera disconnected',
         errorCode: 'CAMERA_DISCONNECTED',
@@ -312,11 +312,11 @@ export function useRecording() {
   }, [clearTimer, setDurationSeconds, setEstimatedFileSizeBytes]);
 
   const beginRecordingSession = useCallback(
-    async (parsedNoResi: string) => {
-      const started = await startRecordingMutation.mutateAsync(parsedNoResi);
+    async (parsedTrackingNumber: string) => {
+      const started = await startRecordingMutation.mutateAsync(parsedTrackingNumber);
       setActiveRecording({
         id: started.recordingId,
-        noResi: started.noResi,
+        trackingNumber: started.trackingNumber,
         startedAt: started.startedAt,
       });
       setRecordingSession(started.recordingId);
@@ -337,14 +337,16 @@ export function useRecording() {
   );
 
   const startRecording = useCallback(
-    async (noResiOverride?: string) => {
-      if (noResiOverride) {
-        setNoResi(noResiOverride);
+    async (trackingNumberOverride?: string) => {
+      if (trackingNumberOverride) {
+        setTrackingNumber(trackingNumberOverride);
       }
 
-      const trimmedNoResi = (noResiOverride ?? useRecordingStore.getState().noResi).trim();
+      const trimmedTrackingNumber = (
+        trackingNumberOverride ?? useRecordingStore.getState().trackingNumber
+      ).trim();
 
-      if (!trimmedNoResi) {
+      if (!trimmedTrackingNumber) {
         setError('Enter a tracking number (resi) before starting.', 'VALIDATION_ERROR');
         toast.warning('Tracking number required', {
           description: 'Enter a resi number to start recording.',
@@ -352,10 +354,10 @@ export function useRecording() {
         return;
       }
 
-      const parsedNoResi = noResiSchema.safeParse(trimmedNoResi);
+      const parsedTrackingNumber = trackingNumberSchema.safeParse(trimmedTrackingNumber);
 
-      if (!parsedNoResi.success) {
-        const message = parsedNoResi.error.errors[0]?.message ?? 'Invalid resi number';
+      if (!parsedTrackingNumber.success) {
+        const message = parsedTrackingNumber.error.errors[0]?.message ?? 'Invalid resi number';
         setError(message, 'VALIDATION_ERROR');
         toast.warning('Invalid tracking number', { description: message });
         return;
@@ -384,7 +386,7 @@ export function useRecording() {
       setStatus('REQUESTING_PERMISSION');
 
       try {
-        await beginRecordingSession(parsedNoResi.data);
+        await beginRecordingSession(parsedTrackingNumber.data);
       } catch (unknownError) {
         const recordingError = RecordingError.fromUnknown(unknownError);
 
@@ -398,7 +400,7 @@ export function useRecording() {
               await cancelRecordingMutation.mutateAsync(activeResult.data.id);
             }
 
-            await beginRecordingSession(parsedNoResi.data);
+            await beginRecordingSession(parsedTrackingNumber.data);
             return;
           } catch {
             // Fall through to failure handling below.
@@ -422,7 +424,7 @@ export function useRecording() {
       setError,
       setEstimatedFileSizeBytes,
       setMediaStream,
-      setNoResi,
+      setTrackingNumber,
       setStatus,
       setUploadProgress,
       setWebcamDisconnected,
@@ -472,7 +474,7 @@ export function useRecording() {
 
       const saved = await saveMetadataMutation.mutateAsync({
         recordingId,
-        noResi: activeRecording.noResi,
+        trackingNumber: activeRecording.trackingNumber,
         storageKey: uploadResult.storageKey,
         publicUrl: uploadResult.publicUrl,
         fileSizeBytes: file.size,
@@ -482,7 +484,7 @@ export function useRecording() {
 
       setCompletedRecording({
         id: saved.id,
-        noResi: saved.noResi,
+        trackingNumber: saved.trackingNumber,
         publicUrl: saved.publicUrl,
         storageKey: saved.storageKey,
         fileSizeBytes: saved.fileSizeBytes,
@@ -494,7 +496,7 @@ export function useRecording() {
     } catch (unknownError) {
       const action = classifyStopRecordingFailure(unknownError, {
         recordingId,
-        noResi: activeRecording.noResi,
+        trackingNumber: activeRecording.trackingNumber,
         durationSeconds: useRecordingStore.getState().durationSeconds,
         blob: capturedBlob,
         mimeType: capturedMimeType,
@@ -582,8 +584,8 @@ export function useRecording() {
 
   return {
     status,
-    noResi,
-    setNoResi,
+    trackingNumber,
+    setTrackingNumber,
     activeRecording,
     durationSeconds,
     uploadProgress,

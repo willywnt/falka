@@ -13,8 +13,8 @@ import { useOrderByResiQuery } from '@/modules/orders/hooks/use-orders';
  * Purely additive — it does NOT touch the recording lifecycle, and shows nothing for an
  * ad-hoc resi with no matching order.
  */
-export function PackOrderPanel({ noResi }: { noResi: string }) {
-  const debounced = useDebouncedValue(noResi.trim(), 400);
+export function PackOrderPanel({ trackingNumber }: { trackingNumber: string }) {
+  const debounced = useDebouncedValue(trackingNumber.trim(), 400);
   const enabled = debounced.length >= 3;
   const { data: order, isLoading } = useOrderByResiQuery(enabled ? debounced : null);
 

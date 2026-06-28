@@ -98,8 +98,14 @@ function PeekItemRow({
 }
 
 /** Packing-video evidence for the order's resi — count + jump to the library, or record. */
-function PeekPackingVideos({ noResi, canRecord }: { noResi: string; canRecord: boolean }) {
-  const { data, isLoading, error, refetch } = useRecordingsByResiQuery(noResi);
+function PeekPackingVideos({
+  trackingNumber,
+  canRecord,
+}: {
+  trackingNumber: string;
+  canRecord: boolean;
+}) {
+  const { data, isLoading, error, refetch } = useRecordingsByResiQuery(trackingNumber);
 
   return (
     <section className="space-y-2 border-t pt-4">
@@ -118,7 +124,7 @@ function PeekPackingVideos({ noResi, canRecord }: { noResi: string; canRecord: b
             <span className="num">{data.length}</span> rekaman untuk resi ini — bukti sengketa.
           </p>
           <Button variant="outline" size="sm" asChild className="w-full">
-            <Link href={`/dashboard/recordings?search=${encodeURIComponent(noResi)}`}>
+            <Link href={`/dashboard/recordings?search=${encodeURIComponent(trackingNumber)}`}>
               <Video className="size-4" />
               Lihat video packing
             </Link>
@@ -129,7 +135,7 @@ function PeekPackingVideos({ noResi, canRecord }: { noResi: string; canRecord: b
           <p className="text-muted-foreground text-xs">Belum ada video packing untuk resi ini.</p>
           {canRecord ? (
             <Button variant="outline" size="sm" asChild className="w-full">
-              <Link href={`/recordings?resi=${encodeURIComponent(noResi)}`}>
+              <Link href={`/recordings?resi=${encodeURIComponent(trackingNumber)}`}>
                 <Video className="size-4" />
                 Rekam di station
               </Link>
@@ -256,7 +262,9 @@ export function OrderPeek({
                 </span>
               </MetaRow>
               <MetaRow label="No. resi">
-                <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
+                <span className="num truncate text-right font-medium">
+                  {data.trackingNumber ?? '—'}
+                </span>
               </MetaRow>
               {data.marketplace.courier ? (
                 <MetaRow label="Kurir">
@@ -305,8 +313,11 @@ export function OrderPeek({
               </ul>
             </section>
 
-            {data.noResi ? (
-              <PeekPackingVideos noResi={data.noResi} canRecord={data.status !== 'CANCELLED'} />
+            {data.trackingNumber ? (
+              <PeekPackingVideos
+                trackingNumber={data.trackingNumber}
+                canRecord={data.status !== 'CANCELLED'}
+              />
             ) : null}
           </div>
         )}

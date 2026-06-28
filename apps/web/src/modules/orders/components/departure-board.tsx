@@ -52,7 +52,7 @@ function BoardRow({ order, departed = false }: { order: OrderListItem; departed?
   return (
     <TableRow>
       <TableCell className="num font-medium">
-        {order.noResi ?? <span className="text-muted-foreground">— belum ada resi</span>}
+        {order.trackingNumber ?? <span className="text-muted-foreground">— belum ada resi</span>}
       </TableCell>
       <TableCell>{order.shopName}</TableCell>
       <TableCell>{order.buyerName ?? '—'}</TableCell>

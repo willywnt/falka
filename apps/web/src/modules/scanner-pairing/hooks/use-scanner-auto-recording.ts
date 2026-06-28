@@ -19,15 +19,15 @@ import type { BarcodeScannedServerPayload } from '../services/socket-client.serv
 import { useScannerPairingStore } from '../store/scanner-pairing.store';
 
 type UseScannerAutoRecordingOptions = {
-  setNoResi: (value: string) => void;
-  startRecording: (noResiOverride?: string) => Promise<void>;
+  setTrackingNumber: (value: string) => void;
+  startRecording: (trackingNumberOverride?: string) => Promise<void>;
   canStart: boolean;
   /** When false, the scan/countdown beeps are muted (toasts still show). */
   soundEnabled: boolean;
 };
 
 export function useScannerAutoRecording({
-  setNoResi,
+  setTrackingNumber,
   startRecording,
   canStart,
   soundEnabled,
@@ -144,7 +144,7 @@ export function useScannerAutoRecording({
   const handleBarcodeScanned = useCallback(
     async (payload: BarcodeScannedServerPayload) => {
       const barcode = payload.barcode.trim();
-      setNoResi(barcode);
+      setTrackingNumber(barcode);
 
       // Confirm the scan on the desktop regardless of what happens next
       // (duplicate prompt or countdown) — sound is mute-gated, the toast isn't.
@@ -161,7 +161,7 @@ export function useScannerAutoRecording({
 
       beginCountdownAfterChecks(barcode);
     },
-    [beginCountdownAfterChecks, checkDuplicate, setNoResi],
+    [beginCountdownAfterChecks, checkDuplicate, setTrackingNumber],
   );
 
   const cancelCountdown = useCallback(() => {
@@ -183,13 +183,13 @@ export function useScannerAutoRecording({
   }, [clearCountdownTimer, closeCountdown, startRecording]);
 
   const confirmScannerDuplicateAndCountdown = useCallback(() => {
-    const barcode = pendingCountdownBarcodeRef.current ?? duplicateWarning?.noResi ?? null;
+    const barcode = pendingCountdownBarcodeRef.current ?? duplicateWarning?.trackingNumber ?? null;
     clearDuplicateWarning();
     pendingCountdownBarcodeRef.current = null;
 
     if (!barcode) return;
     beginCountdownAfterChecks(barcode);
-  }, [beginCountdownAfterChecks, clearDuplicateWarning, duplicateWarning?.noResi]);
+  }, [beginCountdownAfterChecks, clearDuplicateWarning, duplicateWarning?.trackingNumber]);
 
   const clearScannerDuplicateWarning = useCallback(() => {
     pendingCountdownBarcodeRef.current = null;

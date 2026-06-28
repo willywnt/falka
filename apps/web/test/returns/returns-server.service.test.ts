@@ -66,7 +66,7 @@ describe('createReturn', () => {
   const shippedOrder = {
     id: 'o1',
     userId: USER,
-    noResi: 'RESI-1',
+    trackingNumber: 'RESI-1',
     inventoryShippedAt: new Date('2026-01-12T00:00:00.000Z'),
     items: [{ id: 'oi1', productVariantId: 'v1', quantity: 2 }],
   };
@@ -87,10 +87,10 @@ describe('createReturn', () => {
     await service.createReturn(ORG, USER, 'o1', { autoDetected: true });
 
     const createArgs = prismaMock.return.create.mock.calls[0]?.[0] as {
-      data: { autoDetected: boolean; noResi: string; items: { create: unknown[] } };
+      data: { autoDetected: boolean; trackingNumber: string; items: { create: unknown[] } };
     };
     expect(createArgs.data.autoDetected).toBe(true);
-    expect(createArgs.data.noResi).toBe('RESI-1');
+    expect(createArgs.data.trackingNumber).toBe('RESI-1');
     expect(createArgs.data.items.create).toHaveLength(1);
     expect(getReturnSpy).toHaveBeenCalled();
   });

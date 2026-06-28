@@ -27,7 +27,7 @@ export type OrderListItem = {
   shopName: string;
   status: OrderStatus;
   buyerName: string | null;
-  noResi: string | null;
+  trackingNumber: string | null;
   totalAmount: string | null;
   currency: string | null;
   itemCount: number;

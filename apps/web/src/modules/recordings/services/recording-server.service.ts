@@ -38,7 +38,7 @@ const DUPLICATE_RESI_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 /** Columns selected for a RecordingListItem (shared by list + duplicate lookup). */
 const RECORDING_LIST_ITEM_SELECT = {
   id: true,
-  noResi: true,
+  trackingNumber: true,
   status: true,
   durationSeconds: true,
   fileSizeBytes: true,
@@ -50,7 +50,7 @@ const RECORDING_LIST_ITEM_SELECT = {
 
 function mapListItem(recording: {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   status: RecordingStatus;
   durationSeconds: number;
   fileSizeBytes: bigint;
@@ -61,7 +61,7 @@ function mapListItem(recording: {
 }): RecordingListItem {
   return {
     id: recording.id,
-    noResi: recording.noResi,
+    trackingNumber: recording.trackingNumber,
     status: recording.status,
     durationSeconds: recording.durationSeconds,
     fileSizeBytes: Number(recording.fileSizeBytes),
@@ -74,7 +74,7 @@ function mapListItem(recording: {
 
 function mapDetail(recording: {
   id: string;
-  noResi: string;
+  trackingNumber: string;
   status: RecordingStatus;
   durationSeconds: number;
   fileSizeBytes: bigint;
@@ -92,7 +92,7 @@ function mapDetail(recording: {
 }): RecordingDetail {
   return {
     id: recording.id,
-    noResi: recording.noResi,
+    trackingNumber: recording.trackingNumber,
     status: recording.status,
     durationSeconds: recording.durationSeconds,
     fileSizeBytes: Number(recording.fileSizeBytes),
@@ -130,7 +130,7 @@ export class RecordingServerService {
     }
   }
 
-  async startRecording(organizationId: string, actorUserId: string, noResi: string) {
+  async startRecording(organizationId: string, actorUserId: string, trackingNumber: string) {
     await this.assertNoActiveRecording(organizationId);
 
     const snapshot = await quotaService.getQuotaSnapshot(organizationId);
@@ -145,7 +145,7 @@ export class RecordingServerService {
       data: {
         userId: actorUserId,
         organizationId,
-        noResi,
+        trackingNumber,
         generatedFilename: 'pending.webm',
         storageProvider: 'cloudflare-r2',
         storageBucket: env.R2_RECORDINGS_BUCKET_NAME,
@@ -161,7 +161,7 @@ export class RecordingServerService {
 
     return {
       recordingId: recording.id,
-      noResi: recording.noResi,
+      trackingNumber: recording.trackingNumber,
       startedAt: recording.startedAt.toISOString(),
     };
   }
@@ -212,7 +212,7 @@ export class RecordingServerService {
       throw RecordingError.validation('Recording is not in a valid state.');
     }
 
-    if (recording.noResi !== input.noResi) {
+    if (recording.trackingNumber !== input.trackingNumber) {
       throw RecordingError.validation('Resi number mismatch.');
     }
 
@@ -232,7 +232,7 @@ export class RecordingServerService {
       const saved = await tx.recording.update({
         where: { id: input.recordingId },
         data: {
-          noResi: input.noResi,
+          trackingNumber: input.trackingNumber,
           generatedFilename,
           storageKey: input.storageKey,
           publicUrl: input.publicUrl,
@@ -261,7 +261,7 @@ export class RecordingServerService {
 
     return {
       id: updated.id,
-      noResi: updated.noResi,
+      trackingNumber: updated.trackingNumber,
       status: updated.status,
       publicUrl: updated.publicUrl,
       storageKey: updated.storageKey,
@@ -314,7 +314,7 @@ export class RecordingServerService {
     }
 
     if (query.search) {
-      where.noResi = {
+      where.trackingNumber = {
         contains: query.search,
         mode: 'insensitive',
       };
@@ -355,7 +355,7 @@ export class RecordingServerService {
    */
   async findRecentDuplicateResi(
     organizationId: string,
-    noResi: string,
+    trackingNumber: string,
   ): Promise<RecordingListItem | null> {
     const since = new Date(Date.now() - DUPLICATE_RESI_LOOKBACK_MS);
 
@@ -364,7 +364,7 @@ export class RecordingServerService {
         organizationId,
         deletedAt: null,
         status: { notIn: [RecordingStatus.PENDING_DELETE] },
-        noResi: { equals: noResi, mode: 'insensitive' },
+        trackingNumber: { equals: trackingNumber, mode: 'insensitive' },
         createdAt: { gte: since },
       },
       orderBy: { createdAt: 'desc' },
@@ -378,13 +378,13 @@ export class RecordingServerService {
    * Completed packing videos for an EXACT tracking number — the order/return
    * dispute evidence. Newest first; excludes soft-deleted.
    */
-  async findByResi(organizationId: string, noResi: string): Promise<RecordingListItem[]> {
+  async findByResi(organizationId: string, trackingNumber: string): Promise<RecordingListItem[]> {
     const recordings = await prisma.recording.findMany({
       where: {
         organizationId,
         deletedAt: null,
         status: RecordingStatus.COMPLETED,
-        noResi: { equals: noResi, mode: 'insensitive' },
+        trackingNumber: { equals: trackingNumber, mode: 'insensitive' },
       },
       orderBy: { createdAt: 'desc' },
       select: RECORDING_LIST_ITEM_SELECT,
@@ -527,7 +527,7 @@ export class RecordingServerService {
           resource: 'recording',
           metadata: {
             recordingId,
-            noResi: recording.noResi,
+            trackingNumber: recording.trackingNumber,
             storageKey: recording.storageKey,
             fileSizeBytes: Number(recording.fileSizeBytes),
             storageObjectDeleted: shouldDeleteObject,

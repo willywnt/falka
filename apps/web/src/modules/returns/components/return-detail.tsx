@@ -61,7 +61,7 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
     isLoading: isPackingVideosLoading,
     error: packingVideosError,
     refetch: refetchPackingVideos,
-  } = useRecordingsByResiQuery(data?.noResi ?? null);
+  } = useRecordingsByResiQuery(data?.trackingNumber ?? null);
   // returnItemId → resellable? (true = RESTOCK, false = DAMAGED). Defaults to restock.
   const [resellable, setResellable] = useState<Record<string, boolean>>({});
 
@@ -328,9 +328,11 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">No. resi</span>
-                <span className="num truncate text-right font-medium">{data.noResi ?? '—'}</span>
+                <span className="num truncate text-right font-medium">
+                  {data.trackingNumber ?? '—'}
+                </span>
               </div>
-              {data.noResi ? (
+              {data.trackingNumber ? (
                 <>
                   {isPackingVideosLoading ? (
                     <p className="text-muted-foreground text-xs">Memuat video...</p>
@@ -348,7 +350,9 @@ export function ReturnDetail({ returnId }: { returnId: string }) {
                     </p>
                   )}
                   <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link href={`/dashboard/recordings?search=${encodeURIComponent(data.noResi)}`}>
+                    <Link
+                      href={`/dashboard/recordings?search=${encodeURIComponent(data.trackingNumber)}`}
+                    >
                       <Video className="size-4" />
                       Lihat video packing
                     </Link>

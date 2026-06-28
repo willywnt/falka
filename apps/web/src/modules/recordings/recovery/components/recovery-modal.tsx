@@ -101,7 +101,7 @@ export function RecoveryModal() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="num font-medium">{recording.noResi}</p>
+                      <p className="num font-medium">{recording.trackingNumber}</p>
                       <p className="text-muted-foreground num mt-1">
                         {formatRecoveryDate(recording.createdAt)} ·{' '}
                         {formatRecoveryDuration(recording.durationSeconds)} ·{' '}
@@ -168,7 +168,7 @@ export function RecoveryModal() {
       </Dialog>
 
       <PendingDiscardDialog
-        noResi={discardTarget?.noResi ?? null}
+        trackingNumber={discardTarget?.trackingNumber ?? null}
         open={Boolean(discardTarget)}
         onOpenChange={(open) => !open && setDiscardTarget(null)}
         onConfirm={() => void handleDiscardConfirm()}

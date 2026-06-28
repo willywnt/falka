@@ -19,6 +19,6 @@ export const recordingKeys = {
   list: (query: ListRecordingsQuery) => ['recordings', 'library', 'list', query] as const,
   detail: (id: string) => ['recordings', 'library', 'detail', id] as const,
   playback: (id: string) => ['recordings', 'library', 'playback', id] as const,
-  byResi: (noResi: string) => ['recordings', 'library', 'by-resi', noResi] as const,
+  byResi: (trackingNumber: string) => ['recordings', 'library', 'by-resi', trackingNumber] as const,
   shareLinks: (id: string) => ['recordings', 'library', 'share', id] as const,
 };

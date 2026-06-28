@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 const PLAYBACK_SPEEDS = [0.5, 1, 1.25, 1.5, 2] as const;
 
 export type RecordingPreviewMeta = {
-  noResi: string;
+  trackingNumber: string;
   status: OperationalRecordingStatus;
   durationSeconds: number;
   fileSizeBytes: number;
@@ -221,9 +221,9 @@ export function RecordingPreviewShell({
           '[&>button]:focus:ring-white/30',
         )}
       >
-        <DialogTitle className="sr-only">Pratinjau rekaman {meta.noResi}</DialogTitle>
+        <DialogTitle className="sr-only">Pratinjau rekaman {meta.trackingNumber}</DialogTitle>
         <DialogDescription className="sr-only">
-          Pratinjau video untuk no. resi {meta.noResi}
+          Pratinjau video untuk no. resi {meta.trackingNumber}
         </DialogDescription>
 
         {/* Video stage — grows on desktop; fixed share of viewport on mobile */}
@@ -306,7 +306,9 @@ export function RecordingPreviewShell({
         >
           <div className="shrink-0 space-y-0.5 border-b px-4 py-3 pr-12 sm:px-5 sm:py-4">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <h2 className="text-base font-semibold tracking-tight sm:text-lg">{meta.noResi}</h2>
+              <h2 className="text-base font-semibold tracking-tight sm:text-lg">
+                {meta.trackingNumber}
+              </h2>
               <OperationalStatusBadge status={meta.status} />
             </div>
             <p className="text-muted-foreground text-xs sm:text-sm">Pratinjau video packing</p>

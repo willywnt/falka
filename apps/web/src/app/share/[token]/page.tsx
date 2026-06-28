@@ -42,7 +42,7 @@ export default async function SharedRecordingPage({ params }: { params: Promise<
                 <PackageCheck className="size-4" />
                 Bukti packing
               </div>
-              <h1 className="mt-1 text-lg font-semibold">No. resi {view.noResi}</h1>
+              <h1 className="mt-1 text-lg font-semibold">No. resi {view.trackingNumber}</h1>
               <p className="text-muted-foreground text-sm">
                 Video packing terekam, durasi {formatDuration(view.durationSeconds)}.
               </p>

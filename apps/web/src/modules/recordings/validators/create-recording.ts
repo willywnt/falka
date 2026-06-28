@@ -3,15 +3,15 @@ import { z } from 'zod';
 
 import { webmMimeTypeSchema } from '@/modules/storage/validators/mime-type';
 
-import { noResiSchema } from './no-resi';
+import { trackingNumberSchema } from './tracking-number';
 
 export const startRecordingSchema = z.object({
-  noResi: noResiSchema,
+  trackingNumber: trackingNumberSchema,
 });
 
 export const saveRecordingMetadataSchema = z.object({
   recordingId: z.string().cuid(),
-  noResi: noResiSchema,
+  trackingNumber: trackingNumberSchema,
   storageKey: z.string().min(1).max(512),
   publicUrl: z.string().url(),
   fileSizeBytes: z

@@ -5,7 +5,7 @@ import { scannedCodeSchema } from '@/modules/scanner-pairing/validators/pairing'
 /**
  * The camera-scan gate is intentionally lenient — a SKU/barcode (or resi) is
  * relayed verbatim so it matches its stored value exactly. The strict resi
- * format is only enforced when a recording is created (`noResiSchema`).
+ * format is only enforced when a recording is created (`trackingNumberSchema`).
  */
 describe('scannedCodeSchema', () => {
   it('accepts a product SKU verbatim (case and dashes preserved)', () => {

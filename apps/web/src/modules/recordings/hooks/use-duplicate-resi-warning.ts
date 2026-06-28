@@ -8,21 +8,21 @@ import type { RecordingListItem } from '@/modules/recordings/types';
 
 export function useDuplicateResiWarning() {
   const [duplicateWarning, setDuplicateWarning] = useState<{
-    noResi: string;
+    trackingNumber: string;
     recentRecording: RecordingListItem;
   } | null>(null);
 
-  const checkDuplicate = useCallback(async (noResi: string): Promise<boolean> => {
+  const checkDuplicate = useCallback(async (trackingNumber: string): Promise<boolean> => {
     // The server does the exact-match, in-progress-aware, 24h-windowed lookup.
     const result = await apiFetch<RecordingListItem | null>(
-      `${apiRoutes.recordings}/duplicate?noResi=${encodeURIComponent(noResi)}`,
+      `${apiRoutes.recordings}/duplicate?trackingNumber=${encodeURIComponent(trackingNumber)}`,
     );
 
     if (!result.success || !result.data) {
       return false;
     }
 
-    setDuplicateWarning({ noResi, recentRecording: result.data });
+    setDuplicateWarning({ trackingNumber, recentRecording: result.data });
     return true;
   }, []);
 

@@ -100,7 +100,7 @@ export class RecordingShareService {
       include: {
         recording: {
           select: {
-            noResi: true,
+            trackingNumber: true,
             durationSeconds: true,
             mimeType: true,
             storageKey: true,
@@ -130,7 +130,7 @@ export class RecordingShareService {
       .catch(() => undefined);
 
     return {
-      noResi: recording.noResi,
+      trackingNumber: recording.trackingNumber,
       durationSeconds: recording.durationSeconds,
       mimeType: recording.mimeType,
       playbackUrl: access.url,

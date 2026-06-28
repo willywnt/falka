@@ -60,7 +60,7 @@ export class OrdersServerService {
         ? {
             OR: [
               { externalOrderId: { contains: query.search, mode: 'insensitive' } },
-              { noResi: { contains: query.search, mode: 'insensitive' } },
+              { trackingNumber: { contains: query.search, mode: 'insensitive' } },
               { buyerName: { contains: query.search, mode: 'insensitive' } },
             ],
           }
@@ -96,7 +96,7 @@ export class OrdersServerService {
       shopName: order.connection.shopName,
       status: order.status,
       buyerName: order.buyerName,
-      noResi: order.noResi,
+      trackingNumber: order.trackingNumber,
       totalAmount: order.totalAmount?.toString() ?? null,
       currency: order.currency,
       itemCount: order.items.length,
@@ -164,7 +164,7 @@ export class OrdersServerService {
       shopName: order.connection.shopName,
       status: order.status,
       buyerName: order.buyerName,
-      noResi: order.noResi,
+      trackingNumber: order.trackingNumber,
       totalAmount: order.totalAmount?.toString() ?? null,
       currency: order.currency,
       itemCount: items.length,
@@ -187,9 +187,9 @@ export class OrdersServerService {
    * view. Matched case-insensitively (resi/tracking numbers are case-insensitive;
    * the scanner uppercases while marketplaces may not).
    */
-  async findByResi(organizationId: string, noResi: string): Promise<OrderDetail | null> {
+  async findByResi(organizationId: string, trackingNumber: string): Promise<OrderDetail | null> {
     const order = await prisma.order.findFirst({
-      where: { organizationId, noResi: { equals: noResi, mode: 'insensitive' } },
+      where: { organizationId, trackingNumber: { equals: trackingNumber, mode: 'insensitive' } },
       orderBy: { placedAt: 'desc' },
       select: { id: true },
     });
@@ -203,16 +203,16 @@ export class OrdersServerService {
    * (see findByResi). Returns how many were stamped. Called best-effort after a
    * packing video completes.
    */
-  async markFulfilledByResi(organizationId: string, noResi: string): Promise<number> {
+  async markFulfilledByResi(organizationId: string, trackingNumber: string): Promise<number> {
     // An order is "fulfilled" only when a COMPLETED packing video actually exists for its resi.
     // Marking shipped / setting a resi must NOT fake fulfillment when no video was recorded —
     // it just retroactively links a video that already exists. (Fulfillment is the order↔
-    // recording noResi join; recordings already calls in here, so reading the Recording table
+    // recording trackingNumber join; recordings already calls in here, so reading the Recording table
     // here keeps that cross-cut in one place without a circular service dependency.)
     const videoCount = await prisma.recording.count({
       where: {
         organizationId,
-        noResi: { equals: noResi, mode: 'insensitive' },
+        trackingNumber: { equals: trackingNumber, mode: 'insensitive' },
         status: 'COMPLETED',
         deletedAt: null,
       },
@@ -220,11 +220,15 @@ export class OrdersServerService {
     if (videoCount === 0) return 0;
 
     const result = await prisma.order.updateMany({
-      where: { organizationId, noResi: { equals: noResi, mode: 'insensitive' }, fulfilledAt: null },
+      where: {
+        organizationId,
+        trackingNumber: { equals: trackingNumber, mode: 'insensitive' },
+        fulfilledAt: null,
+      },
       data: { fulfilledAt: new Date() },
     });
     if (result.count > 0) {
-      appLogger.info('orders.fulfilled', { organizationId, noResi, count: result.count });
+      appLogger.info('orders.fulfilled', { organizationId, trackingNumber, count: result.count });
     }
     return result.count;
   }
@@ -320,13 +324,13 @@ export class OrdersServerService {
    * Manually mark a PAID order as shipped: consume the reservation for every resolved
    * line (available unchanged) and stamp `inventoryShippedAt`, set status SHIPPED, and
    * optionally set/update the tracking number. Idempotent via `inventoryShippedAt`.
-   * Best-effort re-runs the noResi → packing-video fulfillment match afterwards.
+   * Best-effort re-runs the trackingNumber → packing-video fulfillment match afterwards.
    */
   async markOrderShipped(
     organizationId: string,
     actorUserId: string,
     orderId: string,
-    input: { noResi?: string } = {},
+    input: { trackingNumber?: string } = {},
   ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
       where: { id: orderId, organizationId },
@@ -345,7 +349,7 @@ export class OrdersServerService {
       );
     }
 
-    const noResi = input.noResi ?? order.noResi;
+    const trackingNumber = input.trackingNumber ?? order.trackingNumber;
 
     await prisma.$transaction(async (tx) => {
       for (const item of order.items) {
@@ -360,30 +364,30 @@ export class OrdersServerService {
       }
       await tx.order.update({
         where: { id: order.id },
-        data: { status: 'SHIPPED', inventoryShippedAt: new Date(), noResi },
+        data: { status: 'SHIPPED', inventoryShippedAt: new Date(), trackingNumber },
       });
     });
 
     // The order is packed-and-shipped now; stamp fulfillment if a video already exists.
-    if (noResi) await this.markFulfilledByResi(organizationId, noResi);
+    if (trackingNumber) await this.markFulfilledByResi(organizationId, trackingNumber);
     appLogger.info('orders.marked_shipped', {
       organizationId,
       actorUserId,
       orderId,
-      hasResi: Boolean(noResi),
+      hasResi: Boolean(trackingNumber),
     });
     return this.getOrder(organizationId, orderId);
   }
 
   /**
    * Set or update an order's tracking number (an offline shipment, or a missing resi),
-   * then re-run the noResi → packing-video fulfillment match. NOTE: a later marketplace
+   * then re-run the trackingNumber → packing-video fulfillment match. NOTE: a later marketplace
    * re-pull may overwrite this for a marketplace-sourced order.
    */
   async setOrderResi(
     organizationId: string,
     orderId: string,
-    noResi: string,
+    trackingNumber: string,
   ): Promise<OrderDetail> {
     const order = await prisma.order.findFirst({
       where: { id: orderId, organizationId },
@@ -391,8 +395,8 @@ export class OrdersServerService {
     });
     if (!order) throw OrderError.notFound();
 
-    await prisma.order.update({ where: { id: orderId }, data: { noResi } });
-    await this.markFulfilledByResi(organizationId, noResi);
+    await prisma.order.update({ where: { id: orderId }, data: { trackingNumber } });
+    await this.markFulfilledByResi(organizationId, trackingNumber);
     appLogger.info('orders.resi_updated', { organizationId, orderId });
     return this.getOrder(organizationId, orderId);
   }
@@ -750,7 +754,7 @@ export class OrdersServerService {
             provider: connection.provider,
             externalOrderId: order.externalOrderId,
             status: order.status,
-            noResi: order.noResi,
+            trackingNumber: order.trackingNumber,
             buyerName: order.buyerName,
             totalAmount: order.totalAmount,
             currency: order.currency,
@@ -760,7 +764,7 @@ export class OrdersServerService {
           },
           update: {
             status: order.status,
-            noResi: order.noResi,
+            trackingNumber: order.trackingNumber,
             buyerName: order.buyerName,
             totalAmount: order.totalAmount,
             currency: order.currency,
@@ -960,7 +964,7 @@ export class OrdersServerService {
           actorUserId,
           type: 'ORDER_SHIPPED',
           title: 'Pesanan dikirim',
-          body: `Pesanan ${order.externalOrderId} di ${connection.provider} sudah dikirim${order.noResi ? ` (resi ${order.noResi})` : ''}.`,
+          body: `Pesanan ${order.externalOrderId} di ${connection.provider} sudah dikirim${order.trackingNumber ? ` (resi ${order.trackingNumber})` : ''}.`,
           href: '/dashboard/orders',
           dedupeKey: `order-shipped:${saved.id}`,
           entityType: 'order',
@@ -968,7 +972,7 @@ export class OrdersServerService {
           data: {
             provider: connection.provider,
             externalOrderId: order.externalOrderId,
-            noResi: order.noResi,
+            trackingNumber: order.trackingNumber,
           },
         });
       } else if (saved.status === 'CANCELLED' && reservedNow && !wasShipped && !wasReleased) {

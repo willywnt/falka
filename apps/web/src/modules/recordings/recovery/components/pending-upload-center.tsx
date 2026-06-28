@@ -56,7 +56,7 @@ function PendingRecordingRow({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="num font-semibold tracking-tight">{recording.noResi}</p>
+            <p className="num font-semibold tracking-tight">{recording.trackingNumber}</p>
             <OperationalStatusBadge status={status} />
           </div>
           <p className="text-muted-foreground num text-xs">
@@ -285,7 +285,7 @@ export function PendingUploadProvider() {
       />
 
       <PendingDiscardDialog
-        noResi={discardTarget?.noResi ?? null}
+        trackingNumber={discardTarget?.trackingNumber ?? null}
         open={Boolean(discardTarget)}
         onOpenChange={(open) => !open && setDiscardTarget(null)}
         onConfirm={() => void handleDiscardConfirm()}

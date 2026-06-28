@@ -27,7 +27,7 @@ export function RecordingPlayerModal({ recording, open, onOpenChange }: Recordin
 
   const meta: RecordingPreviewMeta | null = recording
     ? {
-        noResi: recording.noResi,
+        trackingNumber: recording.trackingNumber,
         status: mapServerStatusToOperational(recording.status),
         durationSeconds: recording.durationSeconds,
         fileSizeBytes: recording.fileSizeBytes,

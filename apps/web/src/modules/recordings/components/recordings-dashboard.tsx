@@ -262,7 +262,9 @@ export function RecordingsDashboard() {
   const filteredPending = useMemo(() => {
     const term = searchInput.trim().toUpperCase();
     if (!term) return temporaryRecordings;
-    return temporaryRecordings.filter((recording) => recording.noResi.toUpperCase().includes(term));
+    return temporaryRecordings.filter((recording) =>
+      recording.trackingNumber.toUpperCase().includes(term),
+    );
   }, [searchInput, temporaryRecordings]);
 
   return (
@@ -340,7 +342,7 @@ export function RecordingsDashboard() {
                     <article key={recording.id} className="space-y-3 rounded-xl border p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1 space-y-1.5">
-                          <p className="num truncate font-medium">{recording.noResi}</p>
+                          <p className="num truncate font-medium">{recording.trackingNumber}</p>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <OperationalStatusBadge
                               status={mapServerStatusToOperational(recording.status)}
@@ -392,10 +394,10 @@ export function RecordingsDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead aria-sort={ariaSortFor('noResi')}>
+                      <TableHead aria-sort={ariaSortFor('trackingNumber')}>
                         <SortButton
                           label="No. resi"
-                          field="noResi"
+                          field="trackingNumber"
                           sortBy={query.sortBy}
                           sortOrder={query.sortOrder}
                           onSort={handleSort}
@@ -438,7 +440,9 @@ export function RecordingsDashboard() {
 
                       return (
                         <TableRow key={recording.id}>
-                          <TableCell className="num font-medium">{recording.noResi}</TableCell>
+                          <TableCell className="num font-medium">
+                            {recording.trackingNumber}
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col items-start gap-1">
                               <OperationalStatusBadge
@@ -515,7 +519,7 @@ export function RecordingsDashboard() {
       />
 
       <RecordingDeleteDialog
-        noResi={deleteTarget?.noResi ?? ''}
+        trackingNumber={deleteTarget?.trackingNumber ?? ''}
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
@@ -542,7 +546,7 @@ export function RecordingsDashboard() {
       />
 
       <PendingDiscardDialog
-        noResi={pendingDiscardTarget?.noResi ?? null}
+        trackingNumber={pendingDiscardTarget?.trackingNumber ?? null}
         open={Boolean(pendingDiscardTarget)}
         onOpenChange={(open) => !open && setPendingDiscardTarget(null)}
         onConfirm={() => void handlePendingDiscardConfirm()}

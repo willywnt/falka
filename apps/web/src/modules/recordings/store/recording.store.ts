@@ -8,7 +8,7 @@ import type {
 
 type RecordingStoreState = {
   status: RecordingLifecycleStatus;
-  noResi: string;
+  trackingNumber: string;
   activeRecording: ActiveRecordingSession | null;
   durationSeconds: number;
   uploadProgress: number;
@@ -21,7 +21,7 @@ type RecordingStoreState = {
 
 type RecordingStoreActions = {
   setStatus: (status: RecordingLifecycleStatus) => void;
-  setNoResi: (noResi: string) => void;
+  setTrackingNumber: (trackingNumber: string) => void;
   setActiveRecording: (activeRecording: ActiveRecordingSession | null) => void;
   setDurationSeconds: (durationSeconds: number) => void;
   setUploadProgress: (uploadProgress: number) => void;
@@ -36,7 +36,7 @@ export type RecordingStore = RecordingStoreState & RecordingStoreActions;
 
 const initialState: RecordingStoreState = {
   status: 'IDLE',
-  noResi: '',
+  trackingNumber: '',
   activeRecording: null,
   durationSeconds: 0,
   uploadProgress: 0,
@@ -50,7 +50,7 @@ const initialState: RecordingStoreState = {
 export const useRecordingStore = create<RecordingStore>((set) => ({
   ...initialState,
   setStatus: (status) => set({ status }),
-  setNoResi: (noResi) => set({ noResi }),
+  setTrackingNumber: (trackingNumber) => set({ trackingNumber }),
   setActiveRecording: (activeRecording) => set({ activeRecording }),
   setDurationSeconds: (durationSeconds) => set({ durationSeconds }),
   setUploadProgress: (uploadProgress) => set({ uploadProgress }),

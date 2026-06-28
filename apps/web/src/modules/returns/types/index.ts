@@ -23,7 +23,7 @@ export type ReturnListItem = {
   provider: MarketplaceProvider;
   shopName: string;
   status: ReturnStatus;
-  noResi: string | null;
+  trackingNumber: string | null;
   reason: string | null;
   autoDetected: boolean;
   itemCount: number;

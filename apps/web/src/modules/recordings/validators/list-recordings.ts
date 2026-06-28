@@ -15,7 +15,7 @@ export const RECORDING_SORT_FIELDS = [
   'createdAt',
   'durationSeconds',
   'fileSizeBytes',
-  'noResi',
+  'trackingNumber',
 ] as const;
 
 export type RecordingSortField = (typeof RECORDING_SORT_FIELDS)[number];

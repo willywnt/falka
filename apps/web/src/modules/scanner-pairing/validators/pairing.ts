@@ -6,7 +6,7 @@ export const pairingIdSchema = z.string().uuid('Invalid pairing session id');
  * A code from a camera/QR scan — a shipping resi OR a product SKU/barcode. Kept
  * deliberately lenient (verbatim, just trimmed) so a scan is never dropped for
  * casing or characters; the resi FORMAT is only enforced when a recording is
- * actually created (`noResiSchema`), and a product code is matched as-is.
+ * actually created (`trackingNumberSchema`), and a product code is matched as-is.
  */
 export const scannedCodeSchema = z
   .string()

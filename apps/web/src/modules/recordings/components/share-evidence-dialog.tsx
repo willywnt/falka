@@ -33,7 +33,13 @@ const STATUS_BADGE: Record<ShareLinkItem['status'], { label: string; tone: Statu
   revoked: { label: 'Dicabut', tone: 'danger' },
 };
 
-function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi: string }) {
+function ShareDialogBody({
+  recordingId,
+  trackingNumber,
+}: {
+  recordingId: string;
+  trackingNumber: string;
+}) {
   const [expiresInHours, setExpiresInHours] = useState<number>(DEFAULT_TTL_HOURS);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -130,7 +136,7 @@ function ShareDialogBody({ recordingId, noResi }: { recordingId: string; noResi:
       </div>
 
       <div className="space-y-2">
-        <p className="text-muted-foreground eyebrow">Link untuk resi {noResi}</p>
+        <p className="text-muted-foreground eyebrow">Link untuk resi {trackingNumber}</p>
         {linksQuery.isLoading ? (
           <p className="text-muted-foreground text-sm">Memuat…</p>
         ) : links.length === 0 ? (
@@ -193,7 +199,7 @@ export function ShareEvidenceDialog({ recording, open, onOpenChange }: ShareEvid
           </DialogDescription>
         </DialogHeader>
         {recording ? (
-          <ShareDialogBody recordingId={recording.id} noResi={recording.noResi} />
+          <ShareDialogBody recordingId={recording.id} trackingNumber={recording.trackingNumber} />
         ) : null}
       </DialogContent>
     </Dialog>

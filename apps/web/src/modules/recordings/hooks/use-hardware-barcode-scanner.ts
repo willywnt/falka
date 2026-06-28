@@ -7,7 +7,7 @@ export type { HardwareBarcodeScanResult };
 export type UseHardwareBarcodeScannerOptions = {
   /** Enable keyboard-wedge listener when the recording form is idle. */
   enabled: boolean;
-  /** Input element id for the resi field (default: `noResi`). */
+  /** Input element id for the resi field (default: `trackingNumber`). */
   resiInputId?: string;
   /**
    * Called when a valid 1D barcode scan is received.
@@ -23,7 +23,7 @@ export type UseHardwareBarcodeScannerOptions = {
  * ```tsx
  * useHardwareBarcodeScanner({
  *   enabled: canStart && !anotherTabRecording,
- *   onScan: ({ noResi }) => setNoResi(noResi),
+ *   onScan: ({ trackingNumber }) => setTrackingNumber(trackingNumber),
  * });
  * ```
  */

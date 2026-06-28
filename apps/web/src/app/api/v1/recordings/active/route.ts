@@ -14,7 +14,7 @@ export const GET = withApiRoute(
 
     return apiSuccess({
       id: active.id,
-      noResi: active.noResi,
+      trackingNumber: active.trackingNumber,
       startedAt: active.startedAt.toISOString(),
     });
   },

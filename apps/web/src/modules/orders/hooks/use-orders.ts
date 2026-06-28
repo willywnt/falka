@@ -101,13 +101,13 @@ export function useOrderQuery(id: string | null, enabled = true) {
 }
 
 /** Resolve the most recent order for a tracking number (the packing-station view). */
-export function useOrderByResiQuery(noResi: string | null, enabled = true) {
-  const trimmed = noResi?.trim() ?? '';
+export function useOrderByResiQuery(trackingNumber: string | null, enabled = true) {
+  const trimmed = trackingNumber?.trim() ?? '';
   return useQuery({
     queryKey: orderKeys.byResi(trimmed),
     queryFn: async () => {
       const result = await apiFetch<OrderDetail | null>(
-        `${apiRoutes.orders}/by-resi?noResi=${encodeURIComponent(trimmed)}`,
+        `${apiRoutes.orders}/by-resi?trackingNumber=${encodeURIComponent(trimmed)}`,
       );
       if (!result.success) throw new Error(formatApiErrorMessage(result.error));
       return result.data;

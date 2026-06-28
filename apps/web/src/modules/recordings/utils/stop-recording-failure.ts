@@ -12,7 +12,7 @@ export type RecoverableFailureParams = {
   blob: Blob;
   mimeType: string;
   recordingId: string;
-  noResi: string;
+  trackingNumber: string;
   durationSeconds: number;
   message: string;
   errorCode: string;
@@ -24,7 +24,7 @@ export type RecoverableFailureParams = {
 
 export type StopRecordingFailureContext = {
   recordingId: string;
-  noResi: string;
+  trackingNumber: string;
   durationSeconds: number;
   /** The captured recording, if `stopRecording` produced a non-empty blob. */
   blob: Blob | null;
@@ -48,8 +48,8 @@ export function classifyStopRecordingFailure(
   error: unknown,
   context: StopRecordingFailureContext,
 ): StopRecordingFailureAction {
-  const { recordingId, noResi, durationSeconds, blob, mimeType } = context;
-  const base = { blob: blob as Blob, mimeType, recordingId, noResi, durationSeconds };
+  const { recordingId, trackingNumber, durationSeconds, blob, mimeType } = context;
+  const base = { blob: blob as Blob, mimeType, recordingId, trackingNumber, durationSeconds };
 
   if (error instanceof DOMException && error.name === 'AbortError') {
     if (blob && blob.size > 0) {

@@ -19,10 +19,10 @@ export function useStartRecordingMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (noResi: string) => {
+    mutationFn: async (trackingNumber: string) => {
       const result = await apiFetch<StartRecordingResponse>(`${apiRoutes.recordings}/start`, {
         method: 'POST',
-        body: { noResi },
+        body: { trackingNumber },
       });
 
       if (!result.success) {

@@ -12,13 +12,13 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function PendingDiscardDialog({
-  noResi,
+  trackingNumber,
   open,
   onOpenChange,
   onConfirm,
   isDiscarding = false,
 }: {
-  noResi: string | null;
+  trackingNumber: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -30,10 +30,10 @@ export function PendingDiscardDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Buang rekaman dari perangkat ini?</AlertDialogTitle>
           <AlertDialogDescription>
-            {noResi ? (
+            {trackingNumber ? (
               <>
-                Rekaman untuk no. resi <span className="num font-medium">{noResi}</span> bakal
-                dihapus dari perangkat ini. Nggak bisa dibalikin lagi.
+                Rekaman untuk no. resi <span className="num font-medium">{trackingNumber}</span>{' '}
+                bakal dihapus dari perangkat ini. Nggak bisa dibalikin lagi.
               </>
             ) : (
               'Rekaman lokal ini bakal dihapus dari perangkat ini. Nggak bisa dibalikin lagi.'

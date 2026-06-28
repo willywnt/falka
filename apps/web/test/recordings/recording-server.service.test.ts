@@ -87,7 +87,7 @@ describe('startRecording', () => {
     prismaMock.recording.findFirst.mockResolvedValue(null);
     prismaMock.recording.create.mockResolvedValue({
       id: 'rec-1',
-      noResi: 'RESI123',
+      trackingNumber: 'RESI123',
       startedAt: new Date('2026-06-02T08:00:00.000Z'),
     });
 
@@ -95,7 +95,7 @@ describe('startRecording', () => {
 
     expect(result).toEqual({
       recordingId: 'rec-1',
-      noResi: 'RESI123',
+      trackingNumber: 'RESI123',
       startedAt: '2026-06-02T08:00:00.000Z',
     });
 
@@ -112,7 +112,7 @@ describe('startRecording', () => {
 describe('completeRecording', () => {
   const baseInput = {
     recordingId: 'rec-1',
-    noResi: 'RESI123',
+    trackingNumber: 'RESI123',
     storageKey: `${ORG}/2026/06/rec_x.webm`,
     publicUrl: 'https://cdn.example/rec_x.webm',
     mimeType: 'video/webm',
@@ -141,13 +141,13 @@ describe('completeRecording', () => {
   it('marks the recording COMPLETED and increments org storage in one transaction', async () => {
     prismaMock.recording.findFirst.mockResolvedValue({
       id: 'rec-1',
-      noResi: 'RESI123',
+      trackingNumber: 'RESI123',
       status: 'RECORDING',
     });
     prismaMock.recording.findUnique.mockResolvedValue(null);
     txMock.recording.update.mockResolvedValue({
       id: 'rec-1',
-      noResi: 'RESI123',
+      trackingNumber: 'RESI123',
       status: 'COMPLETED',
       publicUrl: baseInput.publicUrl,
       storageKey: baseInput.storageKey,
@@ -180,7 +180,7 @@ describe('findRecentDuplicateResi', () => {
   it('matches the exact resi, includes in-progress, and excludes deleted/PENDING_DELETE', async () => {
     prismaMock.recording.findFirst.mockResolvedValue({
       id: 'rec-1',
-      noResi: 'RESI123',
+      trackingNumber: 'RESI123',
       status: 'RECORDING',
       durationSeconds: 0,
       fileSizeBytes: BigInt(0),
@@ -199,14 +199,14 @@ describe('findRecentDuplicateResi', () => {
       where: {
         organizationId: string;
         deletedAt: null;
-        noResi: { equals: string; mode: string };
+        trackingNumber: { equals: string; mode: string };
         status: { notIn: string[] };
         createdAt: { gte: Date };
       };
     };
     expect(where.where.organizationId).toBe(ORG);
     expect(where.where.deletedAt).toBeNull();
-    expect(where.where.noResi).toEqual({ equals: 'resi123', mode: 'insensitive' });
+    expect(where.where.trackingNumber).toEqual({ equals: 'resi123', mode: 'insensitive' });
     expect(where.where.status).toEqual({ notIn: ['PENDING_DELETE'] });
     expect(where.where.createdAt.gte).toBeInstanceOf(Date);
   });

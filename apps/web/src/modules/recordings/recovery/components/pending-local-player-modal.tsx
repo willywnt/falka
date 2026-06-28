@@ -81,7 +81,7 @@ export function PendingLocalPlayerModal({
 
   const meta: RecordingPreviewMeta | null = recording
     ? {
-        noResi: recording.noResi,
+        trackingNumber: recording.trackingNumber,
         status: mapRecoveryUploadToOperational(recording.uploadStatus),
         durationSeconds: recording.durationSeconds,
         fileSizeBytes: recording.estimatedSizeBytes,

@@ -4,13 +4,13 @@ const trackingNumber = z.string().trim().min(1).max(64);
 
 /** Mark a paid order shipped; optionally set/update the tracking number at the same time. */
 export const markShippedSchema = z.object({
-  noResi: trackingNumber.optional(),
+  trackingNumber: trackingNumber.optional(),
 });
 export type MarkShippedInput = z.infer<typeof markShippedSchema>;
 
 /** Set or update an order's tracking number. */
 export const setResiSchema = z.object({
-  noResi: trackingNumber,
+  trackingNumber: trackingNumber,
 });
 export type SetResiInput = z.infer<typeof setResiSchema>;
 

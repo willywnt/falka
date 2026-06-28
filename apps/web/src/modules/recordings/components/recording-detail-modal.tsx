@@ -57,13 +57,13 @@ export function RecordingDetailModal({
     : null;
 
   // Reverse link: the order this packing video belongs to (matched by resi).
-  const { data: linkedOrder } = useOrderByResiQuery(recording?.noResi ?? null, open);
+  const { data: linkedOrder } = useOrderByResiQuery(recording?.trackingNumber ?? null, open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{recording?.noResi ?? 'Detail rekaman'}</DialogTitle>
+          <DialogTitle>{recording?.trackingNumber ?? 'Detail rekaman'}</DialogTitle>
           <DialogDescription>Detail video packing</DialogDescription>
         </DialogHeader>
 
@@ -84,7 +84,7 @@ export function RecordingDetailModal({
             <Separator />
 
             <div className="space-y-3">
-              <DetailRow label="No. resi" value={recording.noResi} numeric />
+              <DetailRow label="No. resi" value={recording.trackingNumber} numeric />
               {linkedOrder ? (
                 <div className="flex items-start justify-between gap-4 text-sm">
                   <span className="text-muted-foreground">Pesanan terkait</span>

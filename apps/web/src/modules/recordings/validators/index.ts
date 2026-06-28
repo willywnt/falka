@@ -1,4 +1,4 @@
-export { noResiSchema, type NoResiInput } from './no-resi';
+export { trackingNumberSchema, type TrackingNumberInput } from './tracking-number';
 export {
   startRecordingSchema,
   saveRecordingMetadataSchema,
