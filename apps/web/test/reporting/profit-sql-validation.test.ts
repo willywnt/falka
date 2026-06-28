@@ -15,7 +15,10 @@ import type { ProfitReportQuery } from '@/modules/reporting/validators/profit-re
  * Run: pnpm --filter @palka/db exec node scripts/with-env.mjs \
  *        pnpm --filter @palka/web exec vitest run test/reporting/profit-sql-validation.test.ts
  */
-const RUN = Boolean(process.env.DATABASE_URL?.includes('localhost'));
+// Opt-in for a LOCAL Postgres only. `&& !process.env.CI` is load-bearing: the CI `gates`
+// job sets a placeholder DATABASE_URL=...@localhost:5432/ci with NO real DB, which would
+// otherwise match the `localhost` heuristic and fail the suite (PrismaClientInitializationError).
+const RUN = Boolean(process.env.DATABASE_URL?.includes('localhost')) && !process.env.CI;
 const ORG = 'cmqi8bhnd0000u704ipqvisun';
 const GROUPINGS = ['day', 'week', 'month'] as const;
 const MONEY_FIELDS = ['grossRevenue', 'costKnownRevenue', 'cogs', 'grossProfit'] as const;
