@@ -68,6 +68,9 @@ const serverEnvSchema = z
     // Custom-server (VPS/dev) scheduled order-pull interval in ms; 0/unset = off (the default,
     // the custom server runs on the VPS host). e.g. 300000 = every 5 min.
     ORDERS_AUTO_PULL_INTERVAL_MS: z.coerce.number().int().nonnegative().optional(),
+    // Custom-server (VPS/dev) monthly finance auto-gen: 'true' fires recurring-opex generation +
+    // fee-derive for all orgs on the 1st of each month (UTC); unset/'false' = off (the default).
+    FINANCE_AUTOGEN_ENABLED: z.enum(['true', 'false']).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.REDIS_URL) {

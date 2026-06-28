@@ -97,6 +97,59 @@ function startScheduledOrderPull(useHttps: boolean): void {
   timer.unref();
 }
 
+/**
+ * Monthly finance auto-generation (VPS/self-hosted). On the 1st of each month (UTC) it hits the
+ * secret-gated internal endpoint, which for every org materializes this month's recurring opex +
+ * finalizes last month's auto-derived fees. Off unless FINANCE_AUTOGEN_ENABLED=true. Re-checks a
+ * few times a day (the work is idempotent) so a missed midnight or a daytime restart still runs it.
+ * Skipped under DEV_HTTPS — prod serves http behind a TLS proxy.
+ */
+function startScheduledFinanceAutogen(useHttps: boolean): void {
+  if (process.env.FINANCE_AUTOGEN_ENABLED !== 'true') return;
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    console.warn(
+      '> Finance auto-gen disabled: AUTH_SECRET is required to call the internal endpoint.',
+    );
+    return;
+  }
+  if (useHttps) {
+    console.warn('> Finance auto-gen skipped under DEV_HTTPS (intended for the http prod server).');
+    return;
+  }
+
+  const url = `http://127.0.0.1:${port}/api/v1/internal/finance-generate`;
+  const checkIntervalMs = 6 * 60 * 60 * 1000; // re-check every 6h; only fires on day 1
+  let lastRunMonth = '';
+  let running = false;
+
+  const tick = (): void => {
+    const now = new Date();
+    const monthKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}`;
+    if (now.getUTCDate() !== 1 || monthKey === lastRunMonth || running) return;
+    running = true;
+    fetch(url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(10 * 60_000),
+    })
+      .then((res) => {
+        if (res.ok) lastRunMonth = monthKey;
+        else console.warn(`> Finance auto-gen HTTP ${res.status}`);
+      })
+      .catch((error) => console.warn('> Finance auto-gen request failed', error))
+      .finally(() => {
+        running = false;
+      });
+  };
+
+  const timer = setInterval(tick, checkIntervalMs);
+  timer.unref();
+  tick(); // also check on boot (covers a restart that lands on the 1st)
+  console.log('> Finance auto-gen enabled (fires on the 1st of each month, UTC)');
+}
+
 app.prepare().then(async () => {
   // Next reloads apps/web/.env.local during prepare — read DEV_HTTPS after that.
   const useDevHttps = isDevHttpsEnabled();
@@ -164,6 +217,7 @@ app.prepare().then(async () => {
     }
 
     startScheduledOrderPull(useDevHttps);
+    startScheduledFinanceAutogen(useDevHttps);
 
     console.log('');
   });
