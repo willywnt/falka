@@ -128,10 +128,8 @@ Regions Indonesia (Bogor) + Singapore + London, same price all regions, **hourly
 
 ## Open items / next steps
 
-- Confirm **Coolify vs plain-compose** (HEMAT implies plain-compose for now).
-- Pick + register the domain (`palka.app` leading candidate). The codebase is now branded **Palka**
-  (renamed 2026-06-28); trademark clearance still in progress — see `docs/business/`.
-- Then: step-by-step deploy runbook, harden `docker-compose.prod.yml` (+ `pg_dump`→R2 backup cron),
-  `.env.production` checklist.
+✅ **DONE (2026-06-28):** Coolify chosen; domain `trypalka.com` registered; **deployed LIVE at
+`app.trypalka.com`**. Full runbook + real-deploy field notes in [`coolify-setup.md`](./coolify-setup.md).
+(Trademark clearance for "Palka" still in progress — see `docs/business/`.)
 
 Sources: [Biznet NEO Lite](https://www.biznetgio.com/product/neo-lite) · [Biznet NEO Lite Pro](https://www.biznetgio.com/product/neo-lite-pro) · [Biznet pricelist](https://www.biznetgio.com/pricelist) · [IDCloudHost pricing](https://idcloudhost.com/pricing/) · [VPS Indonesia 2026 comparison](https://cekipsaya.com/artikel/vps-indonesia-terbaik-2026/)

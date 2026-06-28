@@ -7,7 +7,7 @@
 # worker. Build once; compose tags it as `palka-app:latest`.
 #
 # NOTE: untested build scaffold — validate/tune at first deploy (native deps,
-# image size, build-time env). See docs/deployment/vps-setup.md.
+# image size, build-time env). See docs/deployment/coolify-setup.md.
 
 FROM node:20-slim AS base
 ENV PNPM_HOME=/pnpm \

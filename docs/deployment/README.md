@@ -3,7 +3,7 @@
 > **⚠️ DECOMMISSIONED (2026-06-28) — this doc is HISTORICAL.** Production is now the **self-hosted
 > Biznet VPS managed by Coolify**, LIVE at **`https://app.trypalka.com`** (the old Vercel + Neon stack
 > has been retired). The runbook is **[coolify-setup.md](./coolify-setup.md)** (+ its §9 field notes);
-> see also [vps-migration.md](./vps-migration.md), the plain-compose reference [vps-setup.md](./vps-setup.md),
+> see also [vps-migration.md](./vps-migration.md),
 > the cost ladder [vps-cost-packages.md](./vps-cost-packages.md), and the resilience plan
 > [cloudflare-fallback.md](./cloudflare-fallback.md). The Vercel/Neon content below is kept only for
 > historical reference.

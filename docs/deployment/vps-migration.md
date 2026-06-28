@@ -6,8 +6,7 @@ scanner, and (later) WhatsApp stay dormant there. The VPS unblocks all of it.
 
 > **UPDATE (2026-06-28): the chosen control plane is Coolify, staged from a 4 GB dev box.** The
 > step-by-step runbook is now [`coolify-setup.md`](./coolify-setup.md) (start on Biznet MS 4.2 + Coolify,
-> grow to 8 GB at go-live). The plain-`docker compose` runbook [`vps-setup.md`](./vps-setup.md) is the
-> under-the-hood reference. Cost ladder: [`vps-cost-packages.md`](./vps-cost-packages.md). Object-storage +
+> grow to 8 GB at go-live). Cost ladder: [`vps-cost-packages.md`](./vps-cost-packages.md). Object-storage +
 > DNS resilience fallback: [`cloudflare-fallback.md`](./cloudflare-fallback.md).
 
 This migration is a **clean start** — no data is carried over from Neon (no `pg_dump`/restore; Lazada is
@@ -40,7 +39,7 @@ Compose already used for local infra. Files stay on R2, so there's no object mig
 
 ## Cutover (clean start)
 
-1. Stand up the VPS per [`vps-setup.md`](./vps-setup.md): shared Caddy → prod app stack → bootstrap admin.
+1. Stand up the VPS per [`coolify-setup.md`](./coolify-setup.md): shared Caddy → prod app stack → bootstrap admin.
 2. Point DNS (`palka.app` A record) at the VPS; Caddy issues TLS.
 3. Re-register the **Lazada OAuth callback** at `https://<domain>/api/v1/marketplaces/lazada/oauth/callback`
    and re-authorize the shop.

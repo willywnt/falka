@@ -13,7 +13,7 @@
 > Coolify, deploying Palka (web + worker + migrate from a CI-built GHCR image), managed
 > Postgres/Redis + R2 backups, log monitoring, the known warts + mitigations, and the
 > Cloudflare-in-Indonesia resilience fallback. Cost ladder: [`vps-cost-packages.md`](./vps-cost-packages.md).
-> The under-the-hood plain-compose reference is [`vps-setup.md`](./vps-setup.md).
+> The validated deploy compose is [`../../docker-compose.coolify.yml`](../../docker-compose.coolify.yml).
 
 ---
 

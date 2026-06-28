@@ -47,9 +47,8 @@ docs/
   environment.md        # Env variable reference
   roadmap/              # Product roadmap + scoping
   deployment/           # Production deployment guides (Coolify VPS — live)
-docker-compose.yml      # Local PostgreSQL + Redis
-docker-compose.prod.yml # Self-hosted VPS stack (web + worker + PG + Redis + backup)
-docker-compose.proxy.yml# Shared Caddy reverse proxy (VPS)
+docker-compose.yml         # Local PostgreSQL + Redis
+docker-compose.coolify.yml # Coolify deploy resource (web + worker + migrate from GHCR)
 ```
 
 ## Quick start
@@ -106,8 +105,8 @@ Full guide: [docs/onboarding.md](docs/onboarding.md)
 
 > **Production = a self-hosted Biznet VPS managed by Coolify — LIVE at `https://app.trypalka.com`**
 > (since 2026-06-28). Runbook: [docs/deployment/coolify-setup.md](docs/deployment/coolify-setup.md)
-> (+ its §9 field notes; plain-compose reference: [vps-setup.md](docs/deployment/vps-setup.md);
-> resilience fallback: [cloudflare-fallback.md](docs/deployment/cloudflare-fallback.md)). The old
+> (+ its §9 field notes; resilience fallback:
+> [cloudflare-fallback.md](docs/deployment/cloudflare-fallback.md)). The old
 > **Vercel + Neon** stack is **decommissioned**. Staged: 4 GB now → 8 GB at go-live → split at scale.
 
 | Environment    | Hosting                                            | Database             | Storage       |
@@ -124,11 +123,10 @@ _(The previous **Vercel + Neon** production stack was decommissioned 2026-06-28.
 
 ## Environment variables
 
-| File                          | Purpose                                |
-| ----------------------------- | -------------------------------------- |
-| `.env.example`                | Local development template             |
-| `.env.production.vps.example` | Production reference (self-hosted VPS) |
-| `apps/web/.env.example`       | Public client variables                |
+| File                    | Purpose                    |
+| ----------------------- | -------------------------- |
+| `.env.example`          | Local development template |
+| `apps/web/.env.example` | Public client variables    |
 
 See [docs/environment.md](docs/environment.md).
 

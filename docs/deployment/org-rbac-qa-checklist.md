@@ -84,7 +84,7 @@ touch `org-B`'s resources **by id** — every one must 404/403, never return org
       a team change (invite/remove/role), and a **login** (credentials path).
 - [ ] (Known gap) a pairing-QR sign-in does NOT yet write a login audit row — credentials only.
 
-## Deploy-only rows (run on the real VPS, after `docs/deployment/vps-setup.md`)
+## Deploy-only rows (run on the real VPS, after `docs/deployment/coolify-setup.md`)
 
 - [ ] The stack boots: `docker compose ... ps` shows web/worker **healthy**, `migrate` Exited(0).
 - [ ] `db:bootstrap-admin` mints the first platform admin; `/admin` login works; provision the first

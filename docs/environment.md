@@ -101,10 +101,10 @@ openssl rand -base64 32
 
 ## Environment matrix
 
-> **Transitional.** The Preview/Production rows below describe the current Vercel +
-> Neon stopgap. The committed target is a self-hosted VPS (self-hosted Postgres +
-> Redis in Docker, keeping R2) — see [deployment/vps-migration.md](./deployment/vps-migration.md)
-> and the `.env.production.vps.example` reference.
+> **Production = self-hosted VPS + Coolify (LIVE 2026-06-28).** Self-hosted Postgres + Redis in
+> Docker, keeping R2; Vercel/Neon retired. Env is set in the Coolify resource — see
+> [deployment/coolify-setup.md](./deployment/coolify-setup.md). (The Preview/Production rows below
+> were the old Vercel/Neon stopgap — historical.)
 
 | Environment         | Database             | Redis              | Storage        | Hosting           |
 | ------------------- | -------------------- | ------------------ | -------------- | ----------------- |
