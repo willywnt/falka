@@ -1,8 +1,11 @@
 # Realtime (Socket.IO) deployment
 
-> **Legacy / stopgap.** This documents the current **Vercel + Neon** production setup. The committed direction is a **self-hosted single-host VPS** (Docker Compose: web + worker + Postgres + Redis, keeping Cloudflare R2) — see [vps-migration.md](./vps-migration.md) and [coolify-setup.md](./coolify-setup.md). On Vercel the worker + Socket.IO don't run, so marketplace sync / scheduled jobs / scanner are dormant in prod until cutover.
+> **Production = self-hosted Biznet VPS + Coolify — LIVE at `https://app.trypalka.com` (since 2026-06-28).**
+> Postgres 16 + Redis 7 self-hosted in Docker (Coolify-managed), Cloudflare R2 for files; web + worker + a
+> one-shot migrate service deploy from a CI-built GHCR image. Vercel + Neon are **retired**. Runbook + field
+> notes: [coolify-setup.md](./coolify-setup.md).
 
-## Root cause of the production "xhr poll error"
+## Root cause of the historical production "xhr poll error" (Vercel era — now resolved)
 
 The pairing realtime layer is a Socket.IO server attached to a **custom Node
 server** ([`apps/web/server.ts`](../../apps/web/server.ts) →
@@ -10,27 +13,38 @@ server** ([`apps/web/server.ts`](../../apps/web/server.ts) →
 `/api/socket` Engine.IO endpoint exists, and it is started only by the
 `dev`/`start` scripts (`tsx server.ts`).
 
-`apps/web/vercel.json` deploys the app with `framework: nextjs` (`next build`,
-output `.next`). **Vercel never runs `server.ts`** — it serves the `.next`
-output as serverless functions. There is no App Router handler at
-`app/api/socket`, so in production nothing answers the client's initial
-long-poll handshake and the browser reports `xhr poll error`.
+On the retired Vercel deploy the app was built with `framework: nextjs` (`next build`,
+output `.next`). **Vercel never ran `server.ts`** — it served the `.next`
+output as serverless functions. There was no App Router handler at
+`app/api/socket`, so in production nothing answered the client's initial
+long-poll handshake and the browser reported `xhr poll error`. (`apps/web/vercel.json`
+has since been deleted.)
 
-Forcing `transports: ['websocket']` is **not** a fix either: a serverless
+Forcing `transports: ['websocket']` was **not** a fix either: a serverless
 function cannot hold the persistent connection Engine.IO needs, and the
 heartbeat sweepers in `register-handlers.ts` cannot stay alive.
 
-This is an architecture/deploy mismatch, not a CORS/path/transport bug — the
-path (`/api/socket`), CORS, and transports are all correct.
+This was an architecture/deploy mismatch, not a CORS/path/transport bug — the
+path (`/api/socket`), CORS, and transports were all correct.
 
-## The fix: run the socket server as a separate always-on host
+## Current setup: same-origin on the VPS (and the optional future split)
+
+On the single-host VPS the **web container runs the custom Node server**
+(`apps/web/server.ts`, via `pnpm --filter @palka/web start`), so the Socket.IO
+server runs in production at the **same origin** as the app. Pairing works in
+prod today with **`NEXT_PUBLIC_SOCKET_URL` UNSET** — the client falls back to the
+same origin (`socket-client.service.ts`), and the app CSP already permits
+`https:` + `wss:` in `connect-src`.
+
+Splitting the socket onto its own always-on host remains **optional**, for future
+horizontal scaling:
 
 1. Deploy the custom Node server (`server.ts` + `socket-server/**`) to an
    always-on Node host (Railway, Render, Fly.io, or a VM). It must be reachable
    over HTTPS/WSS.
-2. Point the browser at it with the **`NEXT_PUBLIC_SOCKET_URL`** env var
+2. Point the browser at it by **setting `NEXT_PUBLIC_SOCKET_URL`**
    (already wired in `socket-client.service.ts`). When unset, the client falls
-   back to the same origin, so **local dev is unchanged**.
+   back to the same origin, so **the VPS same-origin path and local dev are unchanged**.
 3. The socket host needs the same `AUTH_SECRET`, `DATABASE_URL`, and
    `REDIS_URL` as the app (it validates the auth JWT and reads/writes pairing
    sessions).

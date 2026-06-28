@@ -1,17 +1,20 @@
 # Production readiness checklist
 
-> **Legacy / stopgap.** This documents the current **Vercel + Neon** production setup. The committed direction is a **self-hosted single-host VPS** (Docker Compose: web + worker + Postgres + Redis, keeping Cloudflare R2) — see [vps-migration.md](./vps-migration.md) and [coolify-setup.md](./coolify-setup.md). On Vercel the worker + Socket.IO don't run, so marketplace sync / scheduled jobs / scanner are dormant in prod until cutover.
+> **Production = self-hosted Biznet VPS + Coolify — LIVE at `https://app.trypalka.com` (since 2026-06-28).**
+> Postgres 16 + Redis 7 self-hosted in Docker (Coolify-managed), Cloudflare R2 for files; web + worker + a
+> one-shot migrate service deploy from a CI-built GHCR image. Vercel + Neon are **retired**. Runbook + field
+> notes: [coolify-setup.md](./coolify-setup.md).
 
 Use this checklist before and after every production deployment.
 
 ## Deployment
 
-- [ ] `DATABASE_URL` points to Neon production branch (not local Docker)
-- [ ] `REDIS_URL` configured (Upstash or managed Redis)
-- [ ] Worker service deployed separately from Vercel web app
+- [ ] `DATABASE_URL` points to the self-hosted Postgres (Coolify), not local Docker
+- [ ] `REDIS_URL` points to the self-hosted Redis 7 (Coolify)
+- [ ] Worker runs as its own container in the Coolify compose (separate from web)
 - [ ] Worker health check configured on `/health` port `3001`
 - [ ] Web health check configured on `/api/health` or `/api/v1/health`
-- [ ] Prisma migrations apply on deploy (automatic via Vercel build, or run `pnpm db:migrate:deploy` manually)
+- [ ] Prisma migrations apply via the one-shot migrate service in `docker-compose.coolify.yml` (runs `db:migrate:deploy` before web/worker start)
 - [ ] `APP_VERSION` or git SHA exposed in health response
 
 ## Environment
@@ -26,7 +29,7 @@ Use this checklist before and after every production deployment.
 
 ## Security
 
-- [ ] HTTPS enforced (Vercel default + HSTS header)
+- [ ] HTTPS enforced (Coolify/Traefik Let's Encrypt + HSTS header)
 - [ ] Secure session cookies enabled (`NODE_ENV=production`)
 - [ ] Login rate limiting active (Redis required)
 - [ ] Upload / recording rate limits active
@@ -52,7 +55,7 @@ Use this checklist before and after every production deployment.
 
 ## Disaster recovery
 
-- [ ] Neon PITR / backup retention verified
+- [ ] Coolify Postgres backup (`pg_dump` -> R2) retention verified
 - [ ] R2 lifecycle + backup strategy documented
 - [ ] Redis persistence expectations documented (see disaster-recovery.md)
 - [ ] Runbook for worker restart + queue drain tested
