@@ -26,12 +26,15 @@ FROM base AS build
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_APP_NAME=Palka
 ARG NEXT_PUBLIC_ENABLE_MOBILE_SCANNER=true
+# Client-side Sentry DSN (browser bundle). Empty default = client Sentry stays off until set.
+ARG NEXT_PUBLIC_SENTRY_DSN=
 # Placeholder keeps any build-time Prisma client instantiation happy; `next build`
 # never opens a real connection. The runtime DATABASE_URL comes from env at run time.
 ARG DATABASE_URL=postgresql://build:build@localhost:5432/build
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME \
     NEXT_PUBLIC_ENABLE_MOBILE_SCANNER=$NEXT_PUBLIC_ENABLE_MOBILE_SCANNER \
+    NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
     DATABASE_URL=$DATABASE_URL
 # Build-time-ONLY placeholders so the production env schema passes during `next build`
 # (it runs as NODE_ENV=production and the validated schema rejects missing required vars).
