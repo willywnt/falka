@@ -7,21 +7,21 @@ background worker for marketplace sync and scheduled jobs.
 
 ## Stack
 
-| Layer           | Technology                                                                                                 |
-| --------------- | ---------------------------------------------------------------------------------------------------------- |
-| Monorepo        | Turborepo + pnpm workspaces (pnpm@9, Node ≥20)                                                             |
-| Web app         | Next.js 15 (App Router) + React 19 + custom Node server                                                    |
-| Worker          | BullMQ background jobs (`apps/worker`)                                                                     |
-| Styling         | Tailwind CSS v4 + shadcn/ui                                                                                |
-| Server/UI state | TanStack Query v5 / Zustand v5                                                                             |
-| Database        | Prisma + PostgreSQL                                                                                        |
-| Cache/Queue     | Redis + BullMQ (marketplace sync, token refresh, cleanup)                                                  |
-| Realtime        | Socket.IO (scanner pairing) — dev/VPS only                                                                 |
-| Storage         | Cloudflare R2 (presigned uploads)                                                                          |
-| Auth            | Auth.js v5 (JWT) + multi-org RBAC (Organization + OrgRole + permission catalog)                            |
-| Logging         | Pino (structured JSON) via `@palka/logger`                                                                 |
-| Tests           | Vitest (unit/integration) + Playwright (E2E)                                                               |
-| Deployment      | Vercel + Neon today; **migrating to a self-hosted VPS** (see [docs/deployment](docs/deployment/README.md)) |
+| Layer           | Technology                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Monorepo        | Turborepo + pnpm workspaces (pnpm@9, Node ≥20)                                                                                        |
+| Web app         | Next.js 15 (App Router) + React 19 + custom Node server                                                                               |
+| Worker          | BullMQ background jobs (`apps/worker`)                                                                                                |
+| Styling         | Tailwind CSS v4 + shadcn/ui                                                                                                           |
+| Server/UI state | TanStack Query v5 / Zustand v5                                                                                                        |
+| Database        | Prisma + PostgreSQL                                                                                                                   |
+| Cache/Queue     | Redis + BullMQ (marketplace sync, token refresh, cleanup)                                                                             |
+| Realtime        | Socket.IO (scanner pairing) — dev/VPS only                                                                                            |
+| Storage         | Cloudflare R2 (presigned uploads)                                                                                                     |
+| Auth            | Auth.js v5 (JWT) + multi-org RBAC (Organization + OrgRole + permission catalog)                                                       |
+| Logging         | Pino (structured JSON) via `@palka/logger`                                                                                            |
+| Tests           | Vitest (unit/integration) + Playwright (E2E)                                                                                          |
+| Deployment      | **Self-hosted Biznet VPS + Coolify** (staged from a 4 GB box; see [docs/deployment](docs/deployment/README.md)) — leaving Vercel+Neon |
 
 ## Structure
 
@@ -104,18 +104,19 @@ Full guide: [docs/onboarding.md](docs/onboarding.md)
 
 ## Deployment
 
-> **Transitional.** Production runs on Vercel + Neon today, but the committed
-> direction is a **self-hosted single-host VPS** (Docker Compose: web + worker +
-> Postgres + Redis, keeping Cloudflare R2) — which unblocks the worker + Socket.IO
-> that don't run on Vercel. See [docs/deployment/vps-migration.md](docs/deployment/vps-migration.md)
-> and [vps-setup.md](docs/deployment/vps-setup.md); the Vercel/Neon guides are the
-> current stopgap.
+> **Direction (decided 2026-06-28): a self-hosted Biznet VPS managed by Coolify**,
+> staged from a 4 GB dev box → 8 GB at go-live → split tiers at scale. This unblocks
+> the BullMQ worker + Socket.IO that don't run on Vercel (marketplace sync, scheduled
+> jobs, scanner). Chosen runbook: [docs/deployment/coolify-setup.md](docs/deployment/coolify-setup.md)
+> (plain-compose reference: [vps-setup.md](docs/deployment/vps-setup.md); resilience
+> fallback: [cloudflare-fallback.md](docs/deployment/cloudflare-fallback.md)). Vercel +
+> Neon is the **legacy stopgap** being left.
 
-| Environment         | Hosting                  | Database             | Storage       |
-| ------------------- | ------------------------ | -------------------- | ------------- |
-| Local               | `pnpm dev`               | Docker Postgres      | Cloudflare R2 |
-| Production (today)  | Vercel                   | Neon PostgreSQL      | Cloudflare R2 |
-| Production (target) | Self-hosted VPS (Docker) | Self-hosted Postgres | Cloudflare R2 |
+| Environment         | Hosting                       | Database             | Storage       |
+| ------------------- | ----------------------------- | -------------------- | ------------- |
+| Local               | `pnpm dev`                    | Docker Postgres      | Cloudflare R2 |
+| Production (legacy) | Vercel                        | Neon PostgreSQL      | Cloudflare R2 |
+| Production (target) | Self-hosted VPS + **Coolify** | Self-hosted Postgres | Cloudflare R2 |
 
 - **On Vercel the custom server + worker do NOT run** → marketplace sync, scheduled
   jobs, and the scanner socket are dormant in prod until the VPS cutover.
