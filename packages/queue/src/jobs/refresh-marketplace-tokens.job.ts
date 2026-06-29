@@ -22,8 +22,8 @@ export function getDefaultRefreshMarketplaceTokensPayload(): RefreshMarketplaceT
 
 /**
  * Scheduled token refresh: renews access tokens that expire within the configured window,
- * before they lapse and break stock sync. Dispatches per provider (Lazada, Shopee); uses each
- * connection's stored refresh token and keeps the old one when the provider doesn't rotate it.
+ * before they lapse and break stock sync. Dispatches per provider (Lazada, Shopee, Tokopedia);
+ * uses each connection's stored refresh token and keeps the old one when the provider doesn't rotate it.
  * Best-effort per connection — a dead refresh token fails just that one (surfaced in the health
  * dashboard as expired). NOTE: Shopee tokens last only ~4h, so the sync engine ALSO refreshes
  * lazily before use ({@link ensureFreshAccessToken}); this daily cron is the backstop.
@@ -43,7 +43,11 @@ export async function processRefreshMarketplaceTokensJob(
     durationMs: 0,
   };
 
-  if (!canRefreshProvider('LAZADA') && !canRefreshProvider('SHOPEE')) {
+  if (
+    !canRefreshProvider('LAZADA') &&
+    !canRefreshProvider('SHOPEE') &&
+    !canRefreshProvider('TOKOPEDIA')
+  ) {
     logger.info('marketplace.token.refresh_skipped_unconfigured');
     stats.durationMs = Date.now() - startedAt;
     return stats;
