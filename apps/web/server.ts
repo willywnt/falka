@@ -53,10 +53,11 @@ function isSocketIoPath(pathname: string): boolean {
 /**
  * Bearer secret for the loopback-only internal endpoints (auto-pull, finance auto-gen). Prefers a
  * dedicated INTERNAL_API_SECRET; falls back to AUTH_SECRET so a deploy that hasn't set the
- * dedicated secret yet keeps working. Must match the route guard in lib/api/internal-request.ts.
+ * dedicated secret yet keeps working. Uses `||` (not `??`) so an empty-string env value falls back
+ * too — matching the route guard, whose Zod schema maps '' to undefined before the same fallback.
  */
 function internalEndpointSecret(): string | undefined {
-  return process.env.INTERNAL_API_SECRET ?? process.env.AUTH_SECRET;
+  return process.env.INTERNAL_API_SECRET || process.env.AUTH_SECRET;
 }
 
 /**

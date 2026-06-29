@@ -29,20 +29,26 @@ function hasValidSecret(request: Request): boolean {
 }
 
 /**
- * Guard for the internal, secret-gated endpoints. Rate-limits per caller IP FIRST — the legit
- * caller is server.ts on loopback (no forwarded IP, fires at most once per interval, far under the
- * ceiling), so this only bites an external flood / secret-guessing source reaching the app through
- * the proxy. Then verifies the bearer secret in constant time. Returns a Response to short-circuit,
- * or null when the request may proceed.
+ * Guard for the internal, secret-gated endpoints. Rate-limits ONLY proxied (external) callers per
+ * caller IP, FIRST, to cap a flood / secret-guessing source reaching the app through the proxy.
+ * The legit caller is server.ts on loopback: the TLS proxy (Traefik) always sets a forwarding
+ * header, so a request carrying NONE arrived directly in-process — that's our own timer (or someone
+ * already inside the box), exempt from the limiter. This stops an external caller spoofing
+ * `X-Forwarded-For: unknown` from sharing the loopback caller's bucket and 429-starving the cron.
+ * The bearer secret is then verified in constant time for every caller. Returns a Response to
+ * short-circuit, or null when the request may proceed.
  */
 export async function guardInternalRequest(request: Request): Promise<NextResponse | null> {
-  const rateLimit = await checkRateLimit({
-    key: buildIpRateLimitKey('internal', getRequestIp(request)),
-    limit: INTERNAL_RATE_LIMIT_PER_MINUTE,
-    windowSeconds: 60,
-  });
-  if (!rateLimit.allowed) {
-    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  const isProxied = request.headers.has('x-forwarded-for') || request.headers.has('x-real-ip');
+  if (isProxied) {
+    const rateLimit = await checkRateLimit({
+      key: buildIpRateLimitKey('internal', getRequestIp(request)),
+      limit: INTERNAL_RATE_LIMIT_PER_MINUTE,
+      windowSeconds: 60,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+    }
   }
 
   if (!hasValidSecret(request)) {
