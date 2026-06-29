@@ -23,7 +23,16 @@ function resolveSocketCorsOrigins(isDev: boolean): boolean | string[] {
     }
   }
 
-  return origins.size > 0 ? [...origins] : true;
+  // Fail CLOSED in production: never reflect-any-origin with credentials. An empty allow-list is a
+  // misconfiguration (missing app-URL env) that must fail loudly at boot, not silently allow any
+  // origin to open a credentialed socket.
+  if (origins.size === 0) {
+    throw new Error(
+      'Socket CORS allow-list is empty in production; set NEXT_PUBLIC_APP_URL / AUTH_URL.',
+    );
+  }
+
+  return [...origins];
 }
 
 export function initPairingSocketServer(httpServer: HttpServer): SocketIOServer {

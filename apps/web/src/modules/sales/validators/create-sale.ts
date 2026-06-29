@@ -6,7 +6,7 @@ const saleLineSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('variant'),
     variantId: z.string().cuid(),
-    quantity: z.number().int().positive(),
+    quantity: z.number().int().positive().max(100_000),
     unitPrice: z.number().nonnegative(),
   }),
   z.object({
@@ -19,7 +19,8 @@ const saleLineSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const createSaleSchema = z.object({
-  items: z.array(saleLineSchema).min(1),
+  // Cap the cart so one request can't build an arbitrarily large lock-holding tx (per-tenant DoS).
+  items: z.array(saleLineSchema).min(1).max(200),
   paymentMethod: z.nativeEnum(SalePaymentMethod),
   customerName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(500).optional(),

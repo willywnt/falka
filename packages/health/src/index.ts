@@ -91,7 +91,21 @@ function resolveOverallStatus(
   return 'degraded';
 }
 
+let cachedSnapshot: { at: number; snapshot: PlatformHealthSnapshot } | undefined;
+/** Collapse a flood of unauthenticated /api/health hits into ONE real dependency probe per window
+ *  (the snapshot fans out to Redis + R2 + the worker), removing the DoS-amplification surface. */
+const SNAPSHOT_TTL_MS = 5_000;
+
 export async function getPlatformHealthSnapshot(): Promise<PlatformHealthSnapshot> {
+  if (cachedSnapshot && Date.now() - cachedSnapshot.at < SNAPSHOT_TTL_MS) {
+    return cachedSnapshot.snapshot;
+  }
+  const snapshot = await computeHealthSnapshot();
+  cachedSnapshot = { at: Date.now(), snapshot };
+  return snapshot;
+}
+
+async function computeHealthSnapshot(): Promise<PlatformHealthSnapshot> {
   const [databaseHealthy, redis, storage, worker] = await Promise.all([
     healthCheckDb(),
     checkRedis(),

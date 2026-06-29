@@ -5,7 +5,7 @@ export const purchaseOrderLineSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('variant'),
     variantId: z.string().cuid(),
-    quantity: z.number().int().positive(),
+    quantity: z.number().int().positive().max(100_000),
     unitCost: z.number().nonnegative(),
   }),
   z.object({
@@ -23,7 +23,8 @@ export const purchaseOrderBodySchema = z.object({
   supplierId: z.string().cuid().optional(),
   supplierName: z.string().trim().max(120).optional(),
   note: z.string().trim().max(500).optional(),
-  items: z.array(purchaseOrderLineSchema).min(1),
+  // Cap the line count so one request can't build an arbitrarily large lock-holding tx (DoS).
+  items: z.array(purchaseOrderLineSchema).min(1).max(200),
 });
 
 export const createPurchaseOrderSchema = purchaseOrderBodySchema.extend({
