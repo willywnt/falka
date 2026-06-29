@@ -12,12 +12,17 @@ const HEADERS = [
   'Cost-unknown lines',
 ] as const;
 
-/** Quote a field only when it contains a comma, quote, or newline (RFC 4180). */
+/** Neutralize spreadsheet formula sigils (CSV injection) then RFC-4180-quote when needed. */
 function escapeCsv(value: string): string {
-  if (/["\n\r,]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // A leading = + - @ (or tab/CR) makes Excel/Sheets treat the cell as a formula on open; prefix a
+  // `'` so it renders literally. Plain (optionally-signed) numbers are exempt so numeric columns
+  // keep their sign. https://owasp.org/www-community/attacks/CSV_Injection
+  const isPlainNumber = /^-?\d+(\.\d+)?$/.test(value);
+  const safe = !isPlainNumber && /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/["\n\r,]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 /** Serialize per-SKU profit rows to CSV (CRLF line endings, for spreadsheet tools). */

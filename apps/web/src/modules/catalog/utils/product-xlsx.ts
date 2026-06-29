@@ -5,15 +5,22 @@ import { PRODUCT_CSV_HEADERS, PRODUCT_TEMPLATE_HEADERS } from './product-csv';
 
 const SHEET_NAME = 'Produk';
 
+/** Prefix a leading formula sigil with `'` so a spreadsheet shows the cell literally (CSV/XLSX
+ *  injection); plain (optionally-signed) numbers are exempt. */
+function safeText(value: string): string {
+  if (/^-?\d+(\.\d+)?$/.test(value)) return value;
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 function rowToCells(row: ProductExportRow): (string | number)[] {
   return [
-    row.productName,
-    row.category ?? '',
-    row.description ?? '',
-    row.variantGroup ?? '',
-    row.variantName,
-    row.sku,
-    row.barcode ?? '',
+    safeText(row.productName),
+    safeText(row.category ?? ''),
+    safeText(row.description ?? ''),
+    safeText(row.variantGroup ?? ''),
+    safeText(row.variantName),
+    safeText(row.sku),
+    safeText(row.barcode ?? ''),
     row.price,
     row.cost ?? '',
     row.stock,
