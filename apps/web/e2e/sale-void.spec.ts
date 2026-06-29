@@ -43,6 +43,9 @@ test('voiding a sale marks it cancelled', async ({ page }) => {
   }).toPass({ timeout: 20_000 });
   await dialog.getByRole('button', { name: 'Batalkan penjualan' }).click();
 
-  // 4. The sale now shows the cancelled badge.
-  await expect(page.getByText('Dibatalkan')).toBeVisible();
+  // 4. The sale now shows the cancelled status badge. Match it EXACTLY ('Dibatalkan') so the
+  //    locator doesn't also resolve to the transient void success toast ('Penjualan dibatalkan'),
+  //    which contains the same word — a substring match races the toast's lifetime (strict-mode
+  //    violation when both are on screen at once).
+  await expect(page.getByText('Dibatalkan', { exact: true })).toBeVisible();
 });
