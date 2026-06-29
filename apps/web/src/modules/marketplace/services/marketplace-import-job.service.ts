@@ -2,7 +2,7 @@ import 'server-only';
 
 import { prisma } from '@palka/db';
 import { enqueueImportMarketplaceListings } from '@palka/queue';
-import type { MarketplaceImportJob } from '@prisma/client';
+import { Prisma, type MarketplaceImportJob } from '@prisma/client';
 
 import { appLogger } from '@/lib/logger';
 
@@ -11,8 +11,14 @@ import { marketplaceImportService } from './marketplace-import.service';
 import type { MarketplaceImportJobDto } from '../types';
 
 /** A PENDING/PROCESSING job whose row hasn't advanced in this long is presumed dead (worker crash /
- *  lost job) so it never wedges new imports. The engine bumps `updatedAt` every page. */
-const STALE_IMPORT_MS = 10 * 60 * 1000;
+ *  lost job) so it never wedges new imports. The engine bumps `updatedAt` every page. Must exceed
+ *  the worst-case BullMQ inter-attempt backoff (~640s at attempt 8) so a deeply-throttled-but-alive
+ *  job isn't misjudged dead. The DB partial-unique index is the real guard against a true duplicate. */
+const STALE_IMPORT_MS = 20 * 60 * 1000;
+
+function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
 
 function toDto(job: MarketplaceImportJob): MarketplaceImportJobDto {
   return {
@@ -78,18 +84,29 @@ export class MarketplaceImportJobService {
 
     // Reuse a live job so a re-click (or two tabs) attaches instead of double-importing.
     const active = await this.findActiveJob(organizationId, connectionId);
-    if (active) return toDto(active);
+    if (active) return this.attachOrRefuse(active, full);
 
-    const job = await prisma.marketplaceImportJob.create({
-      data: {
-        organizationId,
-        connectionId,
-        provider: connection.provider,
-        actorUserId,
-        status: 'PENDING',
-        full,
-      },
-    });
+    let job: MarketplaceImportJob;
+    try {
+      job = await prisma.marketplaceImportJob.create({
+        data: {
+          organizationId,
+          connectionId,
+          provider: connection.provider,
+          actorUserId,
+          status: 'PENDING',
+          full,
+        },
+      });
+    } catch (error) {
+      // A concurrent request won the partial-unique-index race (one active import per connection) —
+      // attach to its job rather than double-importing.
+      if (isUniqueViolation(error)) {
+        const existing = await this.findActiveJob(organizationId, connectionId);
+        if (existing) return this.attachOrRefuse(existing, full);
+      }
+      throw error;
+    }
 
     try {
       await enqueueImportMarketplaceListings(job.id);
@@ -130,6 +147,17 @@ export class MarketplaceImportJobService {
     if (!job) return null;
     if (Date.now() - job.updatedAt.getTime() > STALE_IMPORT_MS) return null;
     return job;
+  }
+
+  /** Attach to a live job — but refuse (rather than silently downgrade) when the caller asked for a
+   *  FULL re-pull and the running job is only incremental. Retry the full import once it finishes. */
+  private attachOrRefuse(active: MarketplaceImportJob, full: boolean): MarketplaceImportJobDto {
+    if (full && !active.full) {
+      throw MarketplaceError.validation(
+        'Impor sedang berjalan. Coba "Impor ulang semua" lagi setelah impor ini selesai.',
+      );
+    }
+    return toDto(active);
   }
 }
 

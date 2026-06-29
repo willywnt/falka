@@ -725,6 +725,9 @@ model MarketplaceImportJob {
 
   @@index([organizationId])
   @@index([connectionId, status])
+  // A PARTIAL UNIQUE INDEX (raw SQL migration 20260630020000) enforces AT MOST ONE non-terminal
+  // (PENDING/PROCESSING) import per connection — the atomic guard against the check-then-create race
+  // (Prisma can't model partial uniques, like the finance auto-gen indexes).
   @@map("marketplace_import_jobs")
 }
 

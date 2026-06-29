@@ -323,55 +323,74 @@ export async function runMarketplaceImport(
       if (total !== undefined && offset >= total) break;
     }
   } catch (error) {
-    if (
-      error instanceof LazadaApiError &&
-      isTransientLazadaError(error.code, error.providerMessage)
-    ) {
-      await penalizeProvider('LAZADA', connection.shopId);
-      const lastError = `Lazada throttled (code ${error.code}); resuming from offset ${offset}.`;
-      if (opts.attemptNumber < opts.maxAttempts) {
-        await prisma.marketplaceImportJob.update({
-          where: { id: importJobId },
-          data: { lastError },
-        });
-        throw error; // let BullMQ retry — runMarketplaceImport resumes from offsetCheckpoint
-      }
-      const status = importedRows > 0 ? 'PARTIAL' : 'FAILED';
+    const lazadaThrottle =
+      error instanceof LazadaApiError && isTransientLazadaError(error.code, error.providerMessage);
+    // Resume from the checkpoint for BOTH a sustained Lazada throttle AND any infra/network blip
+    // (fetch timeout, 5xx, ECONNRESET, a DB/Redis hiccup) — those surface as plain Errors, not a
+    // LazadaApiError. Only a NON-transient LazadaApiError (e.g. auth/permission) is permanent.
+    const retryable = lazadaThrottle || !(error instanceof LazadaApiError);
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (lazadaThrottle) await penalizeProvider('LAZADA', connection.shopId);
+
+    if (retryable && opts.attemptNumber < opts.maxAttempts) {
+      const lastError = `${lazadaThrottle ? `Lazada throttled (code ${(error as LazadaApiError).code})` : `Import error (${message})`}; resuming from offset ${offset}.`;
       await prisma.marketplaceImportJob.update({
         where: { id: importJobId },
-        data: { status, lastError, completedAt: new Date() },
+        data: { lastError },
       });
-      await notifyImportFinished(ctx, importJobId, status, {
-        importedRows,
-        autoMappedCount: 0,
-        lastError,
-      });
-      return { status, importedRows, autoMappedCount: 0 };
+      throw error; // let BullMQ retry — runMarketplaceImport resumes from offsetCheckpoint
     }
-    const message = error instanceof Error ? error.message : String(error);
+
+    // Final attempt, or a permanent provider error: keep any partial progress (don't advance the
+    // watermark — PARTIAL/FAILED never do), surface the failure, notify.
+    const status = importedRows > 0 ? 'PARTIAL' : 'FAILED';
+    const lastError = lazadaThrottle
+      ? `Lazada throttled (code ${(error as LazadaApiError).code}).`
+      : message;
     await prisma.marketplaceImportJob.update({
       where: { id: importJobId },
-      data: { status: 'FAILED', lastError: message, completedAt: new Date() },
+      data: { status, lastError, completedAt: new Date() },
     });
     logger.warn('marketplace.import.failed', {
       importJobId,
       connectionId: connection.id,
-      error: message,
+      error: lastError,
     });
-    await notifyImportFinished(ctx, importJobId, 'FAILED', {
+    await notifyImportFinished(ctx, importJobId, status, {
       importedRows,
       autoMappedCount: 0,
-      lastError: message,
+      lastError,
     });
-    return { status: 'FAILED', importedRows, autoMappedCount: 0 };
+    return { status, importedRows, autoMappedCount: 0 };
   }
 
+  // Every paged row failed to persist (a DB-layer problem, not a provider one) — don't report
+  // success or advance the watermark; surface FAILED so the listings are retried, not skipped.
+  if (importedRows === 0 && errorCount > 0) {
+    const lastError = `${errorCount} listing gagal disimpan.`;
+    await prisma.marketplaceImportJob.update({
+      where: { id: importJobId },
+      data: { status: 'FAILED', lastError, completedAt: new Date() },
+    });
+    await notifyImportFinished(ctx, importJobId, 'FAILED', {
+      importedRows: 0,
+      autoMappedCount: 0,
+      lastError,
+    });
+    return { status: 'FAILED', importedRows: 0, autoMappedCount: 0 };
+  }
+
+  // Advance the incremental watermark ONLY when the run actually covered the whole window. A short
+  // count (a mutating catalog shrank the filtered set under the offset cursor) leaves it put so the
+  // next incremental re-pulls the un-covered tail instead of skipping it.
+  const reachedWholeWindow = total === undefined || processedProducts >= total;
   const autoMappedCount = await autoMapImported(ctx);
   await prisma.marketplaceConnection.update({
     where: { id: connection.id },
     data: {
       lastImportedAt: now,
-      listingsSyncedThrough: runStartedAt,
+      ...(reachedWholeWindow ? { listingsSyncedThrough: runStartedAt } : {}),
       ...(warehouseCodes.size > 0
         ? {
             knownWarehouseCodes: mergeWarehouseCodes(
