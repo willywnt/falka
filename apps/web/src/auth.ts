@@ -16,6 +16,7 @@ import { loginSchema } from '@/modules/auth/validators/login';
 import { PairingError } from '@/modules/scanner-pairing/errors/pairing-errors';
 import { pairingService } from '@/modules/scanner-pairing/services/pairing.service';
 import { pairingCodeSchema, pairingIdSchema } from '@/modules/scanner-pairing/validators/pairing';
+import { assertRateLimitAllowed, enforceRateLimit } from '@/lib/api/rate-limit';
 import { getRequestIp } from '@/lib/api/request-context';
 import { logger } from '@palka/logger/server';
 
@@ -78,6 +79,16 @@ export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
 
         const headerStore = await headers();
         const ip = getRequestIp(new Request('http://local', { headers: headerStore }));
+
+        // Throttle here too: the raw next-auth callback path doesn't run the loginAction's
+        // pre-check, so without this an attacker hitting /api/auth/callback/credentials directly
+        // would skip the per-IP login limiter (the per-account lockout below still applies).
+        try {
+          assertRateLimitAllowed(await enforceRateLimit('login', { ip }));
+        } catch {
+          logger.warn('auth.login.rate_limited', { ip });
+          return null;
+        }
 
         if (await isLoginBlocked(parsed.data.email, ip)) {
           logger.warn('auth.login.blocked', { email: parsed.data.email, ip });

@@ -8,8 +8,8 @@ import { NextResponse } from 'next/server';
 /**
  * Secret guarding the loopback-only internal endpoints (scheduled order pull, monthly finance
  * auto-gen) that server.ts triggers. Prefers a dedicated INTERNAL_API_SECRET so a leak there can't
- * also unlock sessions; falls back to AUTH_SECRET so a deploy that hasn't set the dedicated secret
- * yet keeps working (server.ts resolves the secret the same way).
+ * also unlock sessions; falls back to AUTH_SECRET ONLY in dev (see {@link guardInternalRequest},
+ * which refuses the fallback in prod).
  */
 function internalSecret(): string {
   const env = getServerEnv();
@@ -34,6 +34,15 @@ function hasValidSecret(request: Request): boolean {
  * by the constant-time bearer secret. Returns a Response to short-circuit, or null to proceed.
  */
 export function guardInternalRequest(request: Request): NextResponse | null {
+  const env = getServerEnv();
+  // In production a DEDICATED secret is mandatory — never authenticate the internal endpoints with
+  // AUTH_SECRET (which would couple them to session signing). If it's unset, refuse outright (the
+  // cron then fails visibly with a 503 until INTERNAL_API_SECRET is configured) rather than fall
+  // back. Dev keeps the AUTH_SECRET fallback (internalSecret) for convenience.
+  if (env.NODE_ENV === 'production' && !env.INTERNAL_API_SECRET) {
+    return NextResponse.json({ error: 'internal_secret_unset' }, { status: 503 });
+  }
+
   const isProxied = request.headers.has('x-forwarded-for') || request.headers.has('x-real-ip');
   if (isProxied) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });

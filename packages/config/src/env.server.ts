@@ -84,6 +84,10 @@ const serverEnvSchema = z
         path: ['REDIS_URL'],
       });
     }
+    // NOTE: INTERNAL_API_SECRET is NOT required here — env validation runs at BUILD time too
+    // (Next "collect page data"), where the build env has no runtime secrets, so requiring it would
+    // break `next build` / CI. The prod requirement is enforced at REQUEST time in
+    // lib/api/internal-request.ts (the endpoint refuses rather than falling back to AUTH_SECRET).
   });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
