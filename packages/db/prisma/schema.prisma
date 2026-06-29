@@ -83,6 +83,7 @@ model User {
   expenses                   Expense[]
   expenseTemplates           ExpenseTemplate[]
   budgets                    Budget[]
+  marketplaceImportJobs      MarketplaceImportJob[]
 
   @@map("users")
 }
@@ -146,6 +147,7 @@ model Organization {
   expenses                   Expense[]
   expenseTemplates           ExpenseTemplate[]
   budgets                    Budget[]
+  marketplaceImportJobs      MarketplaceImportJob[]
 
   @@map("organizations")
 }
@@ -332,6 +334,7 @@ model MarketplaceConnection {
   marketplaceProducts MarketplaceProduct[]
   productMappings     MarketplaceProductMapping[]
   syncJobs            MarketplaceSyncJob[]
+  importJobs          MarketplaceImportJob[]
   orders              Order[]
 
   @@index([organizationId])
@@ -674,6 +677,48 @@ model MarketplaceSyncJob {
   @@index([marketplaceProductMappingId])
   @@index([syncStatus])
   @@map("marketplace_sync_jobs")
+}
+
+enum MarketplaceImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED // full catalog imported
+  PARTIAL // stopped early on a persistent throttle — a re-run resumes from offsetCheckpoint
+  FAILED
+}
+
+/// One async catalog-import RUN for a connection (the background pull). Tracks progress for the
+/// polling UI + holds the paging checkpoint so a throttled run resumes instead of restarting.
+model MarketplaceImportJob {
+  id                String                  @id @default(cuid())
+  organizationId    String
+  organization      Organization            @relation(fields: [organizationId], references: [id])
+  connectionId      String
+  connection        MarketplaceConnection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  provider          MarketplaceProvider
+  /// Actor who triggered the import.
+  actorUserId       String
+  actor             User                    @relation(fields: [actorUserId], references: [id])
+  status            MarketplaceImportStatus @default(PENDING)
+  /// Total products Lazada reports (progress denominator); null until the first page returns.
+  totalProducts     Int?
+  /// Products paged so far (progress numerator).
+  processedProducts Int                     @default(0)
+  /// MarketplaceProduct rows upserted (SKU/variant grain — can exceed processedProducts).
+  importedRows      Int                     @default(0)
+  autoMappedCount   Int                     @default(0)
+  errorCount        Int                     @default(0)
+  /// Next page offset to resume from after a throttle-partial stop (0 = from the start).
+  offsetCheckpoint  Int                     @default(0)
+  lastError         String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([organizationId])
+  @@index([connectionId, status])
+  @@map("marketplace_import_jobs")
 }
 
 enum OrderStatus {
