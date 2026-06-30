@@ -46,3 +46,18 @@ export function isAuthShopeeError(code: string): boolean {
   const c = code.toLowerCase();
   return /auth|token|access_token|expired/.test(c) && !/rate/.test(c);
 }
+
+/**
+ * The listing/model this mapping points at is gone or no longer matches (deleted on Shopee, the
+ * item became a variation so a bare model_id 0 is rejected, etc.). These are NON-retryable AND
+ * unfixable by retry — the mapping itself must change. The caller raises MAPPING_INVALID so the
+ * sync engine auto-pauses the mapping instead of failing it forever on every event/drift push.
+ * Covers the envelope code/message and the per-model `failed_reason` from update_stock's
+ * `failure_list` (e.g. "model_id is mandatory if item is under model level …").
+ */
+export function isMappingInvalidShopeeError(code: string, message?: string): boolean {
+  const text = `${code} ${message ?? ''}`.toLowerCase();
+  return /not_found|not_exist|not exist|no_such|does not exist|item_not_found|model_not_found|model_id is mandatory|item is under model level|no longer|deleted|has been removed|invalid_item|item_invalid/.test(
+    text,
+  );
+}

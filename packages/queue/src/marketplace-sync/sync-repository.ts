@@ -235,6 +235,28 @@ export async function failSyncJob(params: {
   });
 }
 
+/**
+ * Pause a mapping whose marketplace listing is gone or no longer matches (MAPPING_INVALID): turn
+ * OFF syncEnabled and flag NEEDS_REVIEW so it stops re-enqueuing on every SoT change / drift push
+ * (which would otherwise fail forever), while keeping our internal data. A later re-import that
+ * re-confirms the mapping re-enables it. Surfaced to the user via the mapping's status + lastSyncError
+ * (marketplace health + connection detail read these).
+ */
+export async function pauseMappingForInvalidListing(params: {
+  mappingId: string;
+  reason: string;
+}): Promise<void> {
+  await prisma.marketplaceProductMapping.update({
+    where: { id: params.mappingId },
+    data: {
+      syncEnabled: false,
+      mappingStatus: 'NEEDS_REVIEW',
+      lastSyncStatus: 'FAILED',
+      lastSyncError: params.reason,
+    },
+  });
+}
+
 export async function disableSyncJob(params: { syncJobId: string; reason: string }): Promise<void> {
   await prisma.marketplaceSyncJob.update({
     where: { id: params.syncJobId },

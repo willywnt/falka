@@ -11,9 +11,10 @@ import {
   failSyncJob,
   loadSyncJobContext,
   markSyncJobProcessing,
+  pauseMappingForInvalidListing,
   type SyncJobContext,
 } from './sync-repository.js';
-import { MarketplaceSyncError } from './sync-errors.js';
+import { MarketplaceSyncError, SYNC_ERROR_CODES } from './sync-errors.js';
 import { applyRefreshedConnectionTokens } from './token-repository.js';
 import { canRefreshProvider, refreshProviderToken } from './token-refresh.js';
 
@@ -223,6 +224,19 @@ export async function executeStockSync(
       errorMessage: message,
       finalFailure,
     });
+
+    // The listing/model is gone or no longer matches → pause this mapping (syncEnabled off +
+    // NEEDS_REVIEW) so it stops re-enqueuing on every future SoT change / drift push and instead
+    // surfaces for re-mapping. Our internal data is untouched; a re-import that re-confirms the
+    // mapping re-enables it.
+    if (errorCode === SYNC_ERROR_CODES.MAPPING_INVALID) {
+      await pauseMappingForInvalidListing({ mappingId: context.mappingId, reason: message });
+      logger.warn('marketplace.stock.mapping_auto_paused', {
+        syncJobId,
+        provider: context.provider,
+        mappingId: context.mappingId,
+      });
+    }
 
     logger.warn('marketplace.stock.sync_failed', {
       syncJobId,

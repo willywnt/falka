@@ -5,6 +5,7 @@ import {
   fetchShopeeItemsStock,
   fetchShopeeListings,
   isAuthShopeeError,
+  isMappingInvalidShopeeError,
   isShopeeSuccess,
   isTransientShopeeError,
 } from '@palka/marketplace-providers';
@@ -56,6 +57,11 @@ function mapShopeeError(response: ShopeeResponse): MarketplaceSyncError {
   }
   if (isTransientShopeeError(code, response.message)) {
     return MarketplaceSyncError.syncFailed(message, true);
+  }
+  // The listing/model is gone or no longer matches (deleted on Shopee, item became a variation) →
+  // MAPPING_INVALID so the engine auto-pauses the mapping instead of failing every push forever.
+  if (isMappingInvalidShopeeError(code, response.message)) {
+    return MarketplaceSyncError.mappingInvalid(message);
   }
   return MarketplaceSyncError.syncFailed(message, false);
 }
@@ -114,12 +120,14 @@ export class ShopeeStockProvider implements MarketplaceStockProviderAdapter {
         .map((entry) => entry.failed_reason)
         .filter((value): value is string => Boolean(value && value.trim()))
         .join('; ');
-      // Usually a business reason (item not editable, invalid stock) → non-retryable; retry only
-      // when the reason text itself reads transient.
-      throw MarketplaceSyncError.syncFailed(
-        `Shopee update_stock rejected the model${reason ? ` (${reason})` : ''}.`,
-        isTransientShopeeError('', reason),
-      );
+      const detail = `Shopee update_stock rejected the model${reason ? ` (${reason})` : ''}.`;
+      // A transient reason (busy/server) → retry. A listing/model mismatch (model_id mandatory,
+      // model not found) → MAPPING_INVALID so the engine auto-pauses the mapping (it will fail every
+      // push until re-mapped). Anything else → a plain non-retryable failure.
+      if (isTransientShopeeError('', reason)) throw MarketplaceSyncError.syncFailed(detail, true);
+      if (isMappingInvalidShopeeError('', reason))
+        throw MarketplaceSyncError.mappingInvalid(detail);
+      throw MarketplaceSyncError.syncFailed(detail, false);
     }
 
     return {
