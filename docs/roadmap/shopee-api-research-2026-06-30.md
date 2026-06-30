@@ -16,6 +16,49 @@
 
 ---
 
+## 0. SANDBOX API HOST — live paired-test finding (2026-06-30) ⭐
+
+> Added after live sandbox onboarding. This is the single most load-bearing operational fact.
+
+Our sandbox app (App Category **Seller In House System**, Test Partner_id **1237107**, account region
+**SG**) is provisioned on Shopee's **newer sandbox family** `*.sandbox.test-stable.shopee.com`
+(console `open.sandbox.test-stable.shopee.com`, login `account.sandbox.test-stable.shopee.com`) — NOT
+the classic `partner.test-stable.shopeemobile.com`. The classic host returns `error_sign` for this
+app's key (the app isn't in that registry). The console-minted authorize link is OAuth2-style
+(`open.sandbox.test-stable.shopee.com/auth?…response_type=code`, **no HMAC**), which initially looked
+like a different protocol.
+
+**It is NOT a different protocol — only the API HOST differs.** The newer family still speaks classic
+Open Platform v2: same `/api/v2/...` paths, same HMAC-SHA256 over `partner_id + api_path + timestamp`
+(public) / `+ access_token + shop_id` (shop), same `shpk…`-prefixed partner_key used **verbatim** as
+the HMAC secret (no strip, no decode — confirmed: stripping/decoding all fail).
+
+**VERIFIED WORKING sandbox API host (HTTP 200, `error:""`):**
+
+```
+SHOPEE_API_BASE_URL=https://openplatform.sandbox.test-stable.shopee.sg
+```
+
+A signed `GET /api/v2/public/get_shops_by_partner` against that host returned the authorized shop
+`227699564` (region `ID`), proving key + HMAC + paths are all correct — the only fix needed is the
+**env host** (no code change; the adapter already reads `SHOPEE_API_BASE_URL`). The OAuth2 consent
+still yields a classic `code` + `shop_id` exchanged via the unchanged `/api/v2/auth/token/get` on the
+`openplatform.…` host.
+
+**Diagnosis trail (so we don't relearn it):** `error_sign` persisted across token/get + public APIs
+on `partner.test-stable.shopeemobile.com` despite a byte-correct sign and the exact console key →
+ruled out code/key/whitespace → the OAuth2 auth_link + region SG revealed the newer sandbox family →
+empirically probed hosts → `openplatform.sandbox.test-stable.shopee.sg` accepted the sign. Lead came
+from a real ISV backend (`developer-gilberto/shopixturbo-backend`) using
+`SHOPEE_AUTH_PARTNER_HOST=openplatform.sandbox.test-stable.shopee.sg` with unchanged v2 paths.
+
+**OPEN for GO-LIVE:** the LIVE API host is likely a regional `openplatform.*` (e.g. `openplatform.shopee.sg`
+/ region-specific), NOT necessarily `partner.shopeemobile.com` — `region: ID` shops were served via
+the `.sg` gateway in sandbox. **Confirm the exact live API host with Shopee before production**, and
+revisit `DEFAULT_BASE_URL` (currently `https://partner.shopeemobile.com`) at go-live.
+
+---
+
 ## 1. Executive answer — "in-house system" vs "third-party / ISV"
 
 **Question:** Does the Shopee Open Platform API differ between an "in-house system / Seller" app and
