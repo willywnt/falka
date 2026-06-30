@@ -45,13 +45,16 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # Liveness only — `/api/health/live` returns 200 without probing R2/Redis/DB/worker.
+    # (Pointing this at the deep `/api/health` snapshot billed one R2 ListObjectsV2 — a
+    # Class A op — every 30s ≈ 2,880/day on the recordings bucket with zero user traffic.)
     healthcheck:
       test:
         [
           'CMD',
           'node',
           '-e',
-          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

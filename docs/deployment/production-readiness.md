@@ -13,7 +13,7 @@ Use this checklist before and after every production deployment.
 - [ ] `REDIS_URL` points to the self-hosted Redis 7 (Coolify)
 - [ ] Worker runs as its own container in the Coolify compose (separate from web)
 - [ ] Worker health check configured on `/health` port `3001`
-- [ ] Web health check configured on `/api/health` or `/api/v1/health`
+- [ ] Web container/proxy health check configured on `/api/health/live` (dependency-free 200; the deep `/api/health` or `/api/v1/health` snapshot — which probes R2/Redis/DB/worker — is for on-demand readiness/ops, not a high-frequency probe)
 - [ ] Prisma migrations apply via the one-shot migrate service in `docker-compose.coolify.yml` (runs `db:migrate:deploy` before web/worker start)
 - [ ] `APP_VERSION` or git SHA exposed in health response
 

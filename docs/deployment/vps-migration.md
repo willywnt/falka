@@ -58,7 +58,7 @@ first, switch the DNS record, and keep Vercel as a fallback for ~48 h before tea
 
 - Pino logs → stdout → Coolify's built-in log viewer; **Dozzle + Sentry** as the day-one tier, Grafana
   Cloud later (see [`coolify-setup.md`](./coolify-setup.md) §6).
-- Uptime monitoring (Uptime Kuma / Better Stack) hitting `https://<domain>/api/health`; Coolify
+- Uptime monitoring (Uptime Kuma / Better Stack): liveness on `https://<domain>/api/health/live` (cheap, dependency-free) and/or the deep `https://<domain>/api/health` readiness snapshot (probes R2/Redis/DB/worker — heavier, don't poll it aggressively); Coolify
   notifications (Telegram/Discord) for deploy/backup/disk/reachability.
 - Sentry (optional) via `SENTRY_DSN`, in both web and worker.
 
