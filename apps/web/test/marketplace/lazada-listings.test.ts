@@ -111,12 +111,12 @@ function pagingClient(totalProducts: number): { client: LazadaClient; limits: nu
 }
 
 describe('fetchLazadaListings — paging & throttle handling', () => {
-  it('pages with limit=100 bounded by total_products (no silent truncation, no extra empty call)', async () => {
+  it('pages with limit=50 bounded by total_products (no silent truncation, no extra empty call)', async () => {
     const { client, limits } = pagingClient(150);
     const items = await fetchLazadaListings(client, { accessToken: 'tok' });
-    expect(items).toHaveLength(150); // all 150 captured across 2 pages
-    expect(limits[0]).toBe(100); // page size raised from the old 50 → 100
-    expect(limits).toHaveLength(2); // 100 + 50; total_products stops it (no 3rd empty page)
+    expect(items).toHaveLength(150); // all 150 captured across 3 pages
+    expect(limits[0]).toBe(50); // GetProducts caps `limit` at 50 (100+ → E019 Invalid Limit)
+    expect(limits).toHaveLength(3); // 50 + 50 + 50; total_products stops it (no 4th empty page)
   });
 
   it('recognizes the 901 gateway speed-limit (+ message variants) as a transient throttle', () => {

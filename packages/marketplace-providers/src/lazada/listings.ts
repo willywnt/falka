@@ -3,10 +3,11 @@ import { isTransientLazadaError, sleep } from './throttle.js';
 import type { LazadaClient } from './types.js';
 
 const PRODUCTS_GET_PATH = '/products/get';
-/** Products per page. Lazada's documented max is 500; 100 keeps payloads sane while cutting the
- *  call count ~5x vs the old 50. (limit/total are PRODUCT-level; a product fans out to N SKUs.) */
-const PAGE_LIMIT = 100;
-/** Hard safety cap so a paging bug / a mutating list can't loop forever (≈100k products at 100/page).
+/** Products per page. Lazada GetProducts caps `limit` at 50 — 100+ is rejected as "E019: Invalid
+ *  Limit" on a live shop (the API doc's higher max applies to other endpoints). (limit/total are
+ *  PRODUCT-level; a product fans out to N SKUs.) */
+const PAGE_LIMIT = 50;
+/** Hard safety cap so a paging bug / a mutating list can't loop forever (≈50k products at 50/page).
  *  The REAL stop is `total_products` or a short page — this is only a backstop, NOT a ~1000-row cap. */
 const MAX_PAGES = 1000;
 /** Gentle pacing between successful pages so a large catalog stays under flow control. */

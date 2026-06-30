@@ -16,7 +16,8 @@ import type { MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { acquireProviderToken, penalizeProvider } from './provider-rate-limit-redis.js';
 
-const IMPORT_PAGE_LIMIT = 100;
+// Lazada GetProducts caps `limit` at 50 (100+ → E019 Invalid Limit on a live shop).
+const IMPORT_PAGE_LIMIT = 50;
 const LAZADA_BASE_URL = 'https://api.lazada.co.id/rest';
 /** Re-pull overlap that absorbs clock skew + provider eventual consistency (upserts dedupe). */
 const OVERLAP_MS = 10 * 60 * 1000;
