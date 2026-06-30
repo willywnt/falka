@@ -215,14 +215,14 @@ export class LazadaOrderAdapter implements MarketplaceOrderAdapter {
         : new Date(Date.now() - BACKFILL_MS);
 
     try {
-      // Pace the pull through the shared per-shop/per-app Redis budget (coordinated across the
-      // import + sync + drift, multi-worker-safe). Coarse (one token before the paged pull) —
-      // matches the periodic, cooldown-gated cadence of order pulls.
-      await acquireProviderToken('LAZADA', params.shopId);
       const result = await fetchLazadaOrders(this.client, {
         accessToken: params.accessToken,
         updateAfter: formatLazadaWindow(windowStart),
         onThrottle: 'partial',
+        // Pace EVERY internal call (each header page + each item batch) through the shared
+        // per-shop/per-app Redis budget — coordinated across import + sync + drift, multi-worker
+        // safe. A big backfill makes many calls; ONE token before the whole pull would trip 901.
+        beforeCall: () => acquireProviderToken('LAZADA', params.shopId),
       });
       return { orders: result.records.map(toNormalizedOrder), complete: result.complete };
     } catch (error) {

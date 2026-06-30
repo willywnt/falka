@@ -189,6 +189,20 @@ describe('fetchLazadaOrders — header + item stitching and per-unit aggregation
       /updateAfter or createdAfter/,
     );
   });
+
+  it('paces every provider call via beforeCall (each header page + each item batch)', async () => {
+    let beforeCallCount = 0;
+    const client = fakeClient([ORDER_HEADER], [{ order_id: 100663397, order_items: [] }]);
+    await fetchLazadaOrders(client, {
+      accessToken: 'tok',
+      updateAfter: '2026-05-01T00:00:00+07:00',
+      beforeCall: async () => {
+        beforeCallCount += 1;
+      },
+    });
+    // 1 header page (a single short page) + 1 item batch (1 order id) = 2 paced calls.
+    expect(beforeCallCount).toBe(2);
+  });
 });
 
 describe('reduceLazadaStatuses — mixed per-item statuses → one normalized status', () => {

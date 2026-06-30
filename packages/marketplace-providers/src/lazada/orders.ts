@@ -240,7 +240,11 @@ async function callWithRetry<T>(
   params: Record<string, string | number | undefined>,
   maxRetries: number,
   delayMs: number,
+  beforeCall?: () => Promise<void>,
 ): Promise<LazadaResponse<T>> {
+  // Pace ONE token per logical call (the caller's rate limiter); retries below use their own
+  // exponential backoff, so they aren't separately token-gated.
+  await beforeCall?.();
   let response = await client.call<T>(path, { method: 'GET', accessToken, params });
   for (
     let attempt = 1;
@@ -260,6 +264,7 @@ async function fetchOrderItems(
   client: LazadaClient,
   accessToken: string,
   orderIds: string[],
+  beforeCall?: () => Promise<void>,
 ): Promise<Map<string, LazadaApiOrderItem[]>> {
   const byOrder = new Map<string, LazadaApiOrderItem[]>();
 
@@ -275,6 +280,7 @@ async function fetchOrderItems(
       { order_ids: orderIdsParam },
       MAX_ITEMS_RETRIES,
       ITEMS_DELAY_MS,
+      beforeCall,
     );
 
     if (!isLazadaSuccess(response)) {
@@ -318,6 +324,13 @@ export async function fetchLazadaOrders(
      * was collected so far — fine for the order pull, which upserts idempotently).
      */
     onThrottle?: 'throw' | 'partial';
+    /**
+     * Invoked before EACH provider call (every header page + every item batch) so the caller can
+     * pace the whole paged pull through its rate limiter — a big backfill makes many internal calls
+     * that the providers package can't see. Kept Redis/queue-agnostic so this package stays ignorant
+     * of HOW pacing is done (the caller injects `acquireProviderToken`).
+     */
+    beforeCall?: () => Promise<void>;
   },
 ): Promise<LazadaOrdersResult> {
   if (!params.updateAfter && !params.createdAfter) {
@@ -348,6 +361,7 @@ export async function fetchLazadaOrders(
       queryParams,
       MAX_PAGE_RETRIES,
       PAGE_DELAY_MS,
+      params.beforeCall,
     );
 
     if (!isLazadaSuccess(response)) {
@@ -381,7 +395,12 @@ export async function fetchLazadaOrders(
   const orderIds = headers
     .map((order) => readString(order.order_id))
     .filter((id): id is string => id !== null && id !== '');
-  const itemsByOrder = await fetchOrderItems(client, params.accessToken, orderIds);
+  const itemsByOrder = await fetchOrderItems(
+    client,
+    params.accessToken,
+    orderIds,
+    params.beforeCall,
+  );
 
   const records = headers.map((order) => {
     const orderId = readString(order.order_id) ?? '';
