@@ -67,13 +67,13 @@ Limit`. `PAGE_LIMIT`/`IMPORT_PAGE_LIMIT = 50`. (GetOrders is `limit 100`.)
 
 The order pull is ALREADY incremental (cursor + 30s cooldown + VPS auto-pull), so "many orders" only
 bites on the first 30-day backfill / a manual full re-sync. The apply is already per-order idempotent
+and re-pull-safe, so the real problem was pacing, not correctness.
 
-- re-pull-safe, so the real problem was pacing, not correctness.
-
-* **Phase A (DONE, `c94e42f`):** a `beforeCall` hook threaded through `fetchLazadaOrders` →
+- **Phase A (DONE, `c94e42f`):** a `beforeCall` hook threaded through `fetchLazadaOrders` →
   `callWithRetry` (one chokepoint covering every header page + every item batch) acquires a token;
   the adapter binds `acquireProviderToken('LAZADA', shopId)`. The old coarse "one token before the
   whole pull" tripped 901 on a big backfill.
+
 * **Phase B (DESIGNED, NOT built):** resumable backfill = a **WINDOWED backfill** — walk the 30-day
   window in completable 7-day slices, each a normal all-or-nothing `complete` pull, with a
   `backfillThrough` marker advanced only on a `complete` slice. Needs a Lazada upper-bound window
