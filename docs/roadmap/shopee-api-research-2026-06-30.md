@@ -270,54 +270,48 @@ until read from the console for this `partner_id`. The limiter's hard-coded fall
 
 ## 4. What to build / change in Palka (prioritized checklist)
 
-**P0 — correctness bugs (silent data loss / wrong behavior):**
+> **STATUS — sandbox wiring session 2026-06-30 → 07-01** (branch `session/2026-06-30-shopee-sandbox-wiring`,
+> 14 commits, gates green, live-validated on sandbox shop 227699564). [x] = shipped, [ ] = deferred.
 
-- [ ] **`shopee-stock-provider.ts` — inspect `failure_list`.** `updateStock` returns `success:true` on
-      an empty envelope `error` even if the model is in `failure_list`. Parse
-      `response.response.failure_list`; if the pushed `model_id` is present, throw a `MarketplaceSyncError`
-      (business → non-retryable, transient → retryable).
-- [ ] **`limits.ts` — tune `SHOPEE`** to `{ perShopQps: 6, perAppQps: 18, burst: 10 }`.
+**DONE — correctness:**
 
-**P0 — before scaling onboarding (governance, §1):**
+- [x] **`shopee-stock-provider.ts` `failure_list` check** — a per-model rejection (empty envelope ≠ success)
+      now throws; classified MAPPING_INVALID when the listing/model is gone (`model_id mandatory`).
+- [x] **No-variation stock from item-level `stock_info_v2`** (`listings.ts`) — was hardcoded 0; verified live.
+- [x] **`listings.ts` PAGE_SIZE 50→100** (live-confirmed accepted) + real `item_status` enum.
+- [x] **Auto-pause an invalid/gone mapping** (syncEnabled off + NEEDS_REVIEW + reason) instead of failing
+      forever; UI badge + "Putuskan kaitan" on the listings + drift tables (generic tooltip, no raw error).
 
-- [ ] **Re-register / convert the partner app to Third-party Partner Platform (ISV).** Confirm with
-      Shopee ID whether conversion is possible or a new `partner_id`/`partner_key` is required. Until then,
-      treat current creds as sandbox/own-shop only.
+**DONE — rate limits / token:**
 
-**P1 — listing import correctness:**
+- [x] **`limits.ts` `SHOPEE` → `{ 6, 18, 10 }`** + tiered throttle/auth classifiers in `shopee/throttle.ts`.
+- [x] **Unified token refresh-on-auth-failure** (proactive + reactive) across sync + import + drift (web +
+      daily job) + order pull — shared `marketplace-sync/token-access.ts` + web `connection-token.service.ts`;
+      added `isAuthLazadaError`. Self-heals a stored expiry that overstates the real token life (Shopee).
 
-- [ ] **`listings.ts` — raise `PAGE_SIZE` to 100; drop the inherited 50/E019 assumption** (verify 100
-      accepted live for shopee.co.id). `ID_BATCH = 50` stays.
-- [ ] **`listings.ts` — type `item_status` against the real enum**; keep import filter `[NORMAL]`.
-- [ ] **Make import async (BullMQ) + token-paced like Lazada `import-engine.ts`.** Route per-call
-      pacing through `acquireProviderToken('shopee', shopId)` instead of the fixed `sleep(250)`.
+**DONE — import + orders:**
 
-**P1 — rate-limit infra:**
+- [x] **Async import (BullMQ)** — generalized provider-agnostic `import-engine.ts` (`NormalizedImportListing` + `ImportPager`) + paged `fetchShopeeListingsPage` (beforeCall-paced); job service routes Shopee→async
+      when creds set (stub stays inline).
+- [x] **Real order pull** — `shopee/orders.ts fetchShopeeOrders` (cursor + ≤14d windows → get_order_detail ≤50
+      → logistics get_tracking_number) + `ShopeeOrderAdapter`; `order_sn` STRING; conservative status map.
+- [x] **Connect-by-code route** `POST /api/v1/marketplaces/shopee/connect-code` for the sandbox console flow.
 
-- [ ] **Add a per-APP daily-quota guard** (Redis day-key, UTC+8) in `provider-rate-limit-redis.ts`.
-- [ ] **`mapShopeeError`** — special-case `error_limit` (backoff to next UTC+8 midnight) +
-      `exceed_partner_api` (app-wide pause).
+**DEFERRED:**
 
-**P2 — order pull (adapter does not exist yet):**
+- [ ] **Register the partner app as Third-party Partner Platform (ISV)** — owner, non-code (10–12d audit,
+      type is PERMANENT). Treat current creds as sandbox/own-shop only until then.
+- [ ] **Per-APP daily-quota guard** (Redis day-key, UTC+8) for `error_limit` — currently classified
+      transient (retries) but not paused to next midnight; + special-case `exceed_partner_api` (app-wide pause).
+- [ ] **Push/webhook** (`set_app_push_config`, codes 3/4/2/12) — the real order-scale lever; confirm the push
+      signature (`url|rawBody` vs body-only) live first.
+- [ ] **365-day auth-expiry handling** (push code 12 + deauth code 2 → mark connection stale).
+- [ ] **GO-LIVE API host** — confirm with Shopee (likely regional `openplatform.*`, not partner.shopeemobile.com);
+      revisit `DEFAULT_BASE_URL` constants.
 
-- [ ] **Build `shopee-order-adapter.ts`** mirroring the Lazada order adapter: `get_order_list` (cursor
-  - `more`, `update_time`, ≤15-day windows), batch `get_order_detail` (≤50 `order_sn`,
-    `response_optional_fields`), then `get_tracking_number` per shipped order.
-- [ ] Store `order_sn` as a **string**; cursor in `MarketplaceConnection.ordersSyncedThrough`; advance
-      only on a COMPLETE pull. Status map: `READY_TO_SHIP`/`PROCESSED` ≈ paid-reserve,
-      `SHIPPED`/`COMPLETED` ≈ ship, `CANCELLED` ≈ release/return; handle `IN_CANCEL`/`INVOICE_PENDING`.
-
-**P2 — push/webhook (scale lever) + auth expiry:**
-
-- [ ] **Add `set_app_push_config`** registration + a webhook route verifying the push signature
-      (confirm `url|rawBody` vs body-only first). Subscribe to codes 3/4/2/12 (+8).
-- [ ] **Handle 365-day auth expiry** (push code 12 + code 2 deauth → mark connection stale).
-
-**Already CORRECT (no work):** `sign.ts`; `oauth.ts` / `shopee-oauth.service.ts` (auth URL,
-exchange/refresh, top-level token fields, refresh rotation persistence, 4h/30d TTLs, lazy
-refresh-before-use); `client.ts` envelope + `isShopeeSuccess`; `stock-payload.ts` body shape /
-`model_id:0` / `seller_stock` (multi-location omit semantics UNVERIFIED); `get_shop_info` probe;
-two-tier Redis token bucket shape + fail-open + cooldown (needs the daily-quota third tier).
+**Already CORRECT (no work):** `sign.ts`; `oauth.ts` / `shopee-oauth.service.ts`; `client.ts` envelope +
+`isShopeeSuccess`; `stock-payload.ts` (`model_id:0` / `seller_stock`; multi-location omit semantics still
+UNVERIFIED); `get_shop_info` probe; the two-tier Redis token bucket (still owes the daily-quota third tier).
 
 ---
 
