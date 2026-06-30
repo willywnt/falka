@@ -3,7 +3,10 @@ import { decrypt, encrypt } from '@palka/utils/crypto';
 import { logger } from '@palka/utils/logger';
 
 import { acquireProviderToken } from './provider-rate-limit-redis.js';
-import { normalizeStockUpdateRequest } from './stock-normalizer.js';
+import {
+  normalizeStockUpdateRequest,
+  type NormalizedStockUpdateResponse,
+} from './stock-normalizer.js';
 import { getMarketplaceStockProvider } from './stock-provider.registry.js';
 import {
   completeSyncJobSuccess,
@@ -45,45 +48,27 @@ function isTokenExpiringSoon(expiresAt: Date | null, now: Date = new Date()): bo
 }
 
 /**
- * Returns a usable access token for the connection, refreshing it first when it's expired or
- * about to expire AND the provider can be refreshed. A successful refresh persists the new
- * tokens so the next job reuses them. Best-effort: if the refresh fails we return the existing
- * (decrypted) token and let the expiry gate in {@link executeStockSync} fail the job cleanly.
- * Lazada tokens last ~30 days, so this is a no-op for them on the hot path (the daily cron
- * handles those); it exists for short-TTL providers like Shopee (~4h).
+ * Refresh the connection's token via its stored refresh token and persist the result, returning the
+ * new access token (or null when there's no refresh token / the provider can't refresh / it failed).
+ * Shared by the PROACTIVE refresh-before-use ({@link ensureFreshAccessToken}) and the REACTIVE
+ * refresh-on-auth-failure in {@link executeStockSync}. The reactive path is load-bearing because a
+ * provider's stored `tokenExpiresAt` can OVERSTATE the real token life (observed on Shopee sandbox:
+ * the token dies well before its recorded expiry), so the proactive window never fires and the push
+ * would otherwise fail with INVALID_TOKEN until a manual re-auth.
  */
-async function ensureFreshAccessToken(
+async function refreshAndPersistToken(
   context: SyncJobContext,
-): Promise<{ accessToken: string; tokenExpiresAt: Date | null }> {
-  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
-
-  let accessToken = '';
-  try {
-    accessToken = decrypt(context.encryptedAccessToken, secret);
-  } catch {
-    // Seeded/stub connections store a non-cipher placeholder — the Dev stub ignores the token,
-    // and a real adapter surfaces its own auth error rather than failing every job here.
-    logger.warn('marketplace.stock.token_decrypt_failed', {
-      connectionId: context.connectionId,
-      provider: context.provider,
-    });
-  }
-
-  if (
-    !isTokenExpiringSoon(context.tokenExpiresAt) ||
-    !context.encryptedRefreshToken ||
-    !canRefreshProvider(context.provider)
-  ) {
-    return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
-  }
+  secret: string,
+): Promise<{ accessToken: string; tokenExpiresAt: Date | null } | null> {
+  if (!context.encryptedRefreshToken || !canRefreshProvider(context.provider)) return null;
 
   let refreshToken = '';
   try {
     refreshToken = decrypt(context.encryptedRefreshToken, secret);
   } catch {
-    return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+    return null;
   }
-  if (!refreshToken) return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
+  if (!refreshToken) return null;
 
   try {
     const refreshed = await refreshProviderToken({
@@ -105,20 +90,52 @@ async function ensureFreshAccessToken(
       tokenExpiresAt,
     });
 
-    logger.info('marketplace.stock.token_lazy_refreshed', {
+    logger.info('marketplace.stock.token_refreshed', {
       connectionId: context.connectionId,
       provider: context.provider,
     });
 
     return { accessToken: refreshed.accessToken, tokenExpiresAt };
   } catch (error) {
-    logger.warn('marketplace.stock.token_lazy_refresh_failed', {
+    logger.warn('marketplace.stock.token_refresh_failed', {
       connectionId: context.connectionId,
       provider: context.provider,
       error: error instanceof Error ? error.message : String(error),
     });
+    return null;
+  }
+}
+
+/**
+ * Returns a usable access token for the connection, PROACTIVELY refreshing it first when it's
+ * expired or about to expire (within {@link TOKEN_REFRESH_SAFETY_MS}). Best-effort: a failed/absent
+ * refresh returns the existing (decrypted) token, and the expiry gate + REACTIVE refresh in
+ * {@link executeStockSync} handle the rest. Lazada (~30d) is a no-op on the hot path; this exists for
+ * short-TTL providers like Shopee.
+ */
+async function ensureFreshAccessToken(
+  context: SyncJobContext,
+): Promise<{ accessToken: string; tokenExpiresAt: Date | null }> {
+  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
+
+  let accessToken = '';
+  try {
+    accessToken = decrypt(context.encryptedAccessToken, secret);
+  } catch {
+    // Seeded/stub connections store a non-cipher placeholder — the Dev stub ignores the token,
+    // and a real adapter surfaces its own auth error rather than failing every job here.
+    logger.warn('marketplace.stock.token_decrypt_failed', {
+      connectionId: context.connectionId,
+      provider: context.provider,
+    });
+  }
+
+  if (!isTokenExpiringSoon(context.tokenExpiresAt)) {
     return { accessToken, tokenExpiresAt: context.tokenExpiresAt };
   }
+
+  const refreshed = await refreshAndPersistToken(context, secret);
+  return refreshed ?? { accessToken, tokenExpiresAt: context.tokenExpiresAt };
 }
 
 /**
@@ -171,26 +188,51 @@ export async function executeStockSync(
 
   await markSyncJobProcessing(syncJobId);
 
-  try {
+  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
+  const adapter = getMarketplaceStockProvider(context.provider);
+  const request = normalizeStockUpdateRequest({
+    externalProductId: context.externalProductId,
+    externalVariantId: context.externalVariantId,
+    externalSku: context.externalSku,
+    availableStock: context.availableStock,
+    syncWarehouseCode: context.syncWarehouseCode,
+  });
+
+  // Push the latest available stock for `token`, pacing the provider call through the shared
+  // per-shop/per-app Redis budget. Stub adapters ignore the token; shop-scoped providers (Shopee)
+  // need shop_id (+ shopCipher for TikTok/Tokopedia).
+  let accessToken = fresh.accessToken;
+  const pushStock = async (token: string): Promise<NormalizedStockUpdateResponse> => {
     await acquireProviderToken(context.provider, context.shopId);
-
-    const adapter = getMarketplaceStockProvider(context.provider);
-    const request = normalizeStockUpdateRequest({
-      externalProductId: context.externalProductId,
-      externalVariantId: context.externalVariantId,
-      externalSku: context.externalSku,
-      availableStock: context.availableStock,
-      syncWarehouseCode: context.syncWarehouseCode,
-    });
-
-    // The (possibly just-refreshed) token comes from ensureFreshAccessToken above; stub
-    // adapters ignore it. The shop id is required by shop-scoped providers (Shopee).
-    const response = await adapter.updateStock({
+    return adapter.updateStock({
       ...request,
-      accessToken: fresh.accessToken,
+      accessToken: token,
       shopId: context.shopId,
       shopCipher: context.shopCipher,
     });
+  };
+
+  try {
+    let response: NormalizedStockUpdateResponse;
+    try {
+      response = await pushStock(accessToken);
+    } catch (error) {
+      // REACTIVE refresh-on-auth-failure: the stored tokenExpiresAt can overstate the real token
+      // life (Shopee sandbox), so ensureFreshAccessToken may not have refreshed. On an INVALID_TOKEN
+      // rejection, refresh once and retry — self-healing instead of failing until a manual re-auth.
+      if (error instanceof MarketplaceSyncError && error.code === SYNC_ERROR_CODES.INVALID_TOKEN) {
+        const reAuthed = await refreshAndPersistToken(context, secret);
+        if (!reAuthed) throw error;
+        accessToken = reAuthed.accessToken;
+        logger.info('marketplace.stock.token_reactive_refreshed', {
+          syncJobId,
+          provider: context.provider,
+        });
+        response = await pushStock(accessToken);
+      } else {
+        throw error;
+      }
+    }
 
     if (!response.success) {
       throw MarketplaceSyncError.syncFailed('Provider rejected the stock update.');

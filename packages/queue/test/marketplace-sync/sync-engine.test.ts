@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import type { SyncJobContext } from '../../src/marketplace-sync/sync-repository.js';
+import { MarketplaceSyncError } from '../../src/marketplace-sync/sync-errors.js';
 
 /**
  * executeStockSync is the live stock-write path to Lazada/Shopee/Tokopedia. These
@@ -20,6 +21,7 @@ const { repo, providerMock, tokenRefreshMock, tokenRepoMock, cryptoMock } = vi.h
     failSyncJob: vi.fn(),
     markSyncJobProcessing: vi.fn(),
     completeSyncJobSuccess: vi.fn(),
+    pauseMappingForInvalidListing: vi.fn(),
   },
   providerMock: { updateStock: vi.fn() },
   tokenRefreshMock: { canRefreshProvider: vi.fn(() => false), refreshProviderToken: vi.fn() },
@@ -165,6 +167,51 @@ describe('executeStockSync', () => {
 
     expect(result).toMatchObject({ success: false, retryable: true });
     expect(repo.failSyncJob).toHaveBeenCalledWith(expect.objectContaining({ finalFailure: true }));
+  });
+
+  it('REACTIVELY refreshes + retries once when the push is rejected with INVALID_TOKEN', async () => {
+    // Stored expiry says "valid" (null) so the proactive refresh never fires — but the provider
+    // rejects the token anyway (a too-long recorded expiry, as seen on Shopee sandbox).
+    repo.loadSyncJobContext.mockResolvedValue(
+      makeContext({ tokenExpiresAt: null, encryptedRefreshToken: 'enc-refresh' }),
+    );
+    tokenRefreshMock.canRefreshProvider.mockReturnValue(true);
+    tokenRefreshMock.refreshProviderToken.mockResolvedValue({
+      accessToken: 'reauth-access',
+      refreshToken: 'r2',
+      expiresInSeconds: 3_600,
+    });
+    providerMock.updateStock
+      .mockRejectedValueOnce(MarketplaceSyncError.tokenExpired())
+      .mockResolvedValueOnce({ success: true, externalStock: 7, raw: {} });
+
+    const result = await executeStockSync('job-1', 1, 3);
+
+    expect(result).toEqual({ success: true });
+    expect(providerMock.updateStock).toHaveBeenCalledTimes(2);
+    expect(providerMock.updateStock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ accessToken: 'reauth-access' }),
+    );
+    expect(tokenRefreshMock.refreshProviderToken).toHaveBeenCalledTimes(1);
+    expect(repo.completeSyncJobSuccess).toHaveBeenCalledTimes(1);
+    expect(repo.failSyncJob).not.toHaveBeenCalled();
+  });
+
+  it('auto-pauses the mapping (NEEDS_REVIEW) on a MAPPING_INVALID rejection (listing gone)', async () => {
+    repo.loadSyncJobContext.mockResolvedValue(makeContext());
+    providerMock.updateStock.mockRejectedValue(
+      MarketplaceSyncError.mappingInvalid(
+        'Shopee update_stock rejected the model (model_id mandatory).',
+      ),
+    );
+
+    const result = await executeStockSync('job-1', 1, 3);
+
+    expect(result).toMatchObject({ success: false, retryable: false });
+    expect(repo.failSyncJob).toHaveBeenCalledWith(expect.objectContaining({ finalFailure: true }));
+    expect(repo.pauseMappingForInvalidListing).toHaveBeenCalledWith(
+      expect.objectContaining({ mappingId: 'map-1' }),
+    );
   });
 
   it('lazily refreshes + persists an expiring token, then pushes with the fresh one', async () => {
