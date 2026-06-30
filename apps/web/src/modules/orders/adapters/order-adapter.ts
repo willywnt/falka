@@ -2,6 +2,7 @@ import { getServerEnv } from '@palka/config/env.server';
 import type { MarketplaceProvider } from '@prisma/client';
 
 import { LazadaOrderAdapter } from './lazada-order-adapter';
+import { ShopeeOrderAdapter } from './shopee-order-adapter';
 
 export type NormalizedOrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
 
@@ -186,8 +187,12 @@ function createOrderAdapter(provider: MarketplaceProvider): MarketplaceOrderAdap
     return new LazadaOrderAdapter();
   }
 
-  // Shopee + Tokopedia order adapters are not built yet — they fall back to the stub
-  // timeline (their stock/listing adapters are real, but order pull stays simulated).
+  if (provider === 'SHOPEE' && env.SHOPEE_PARTNER_ID && env.SHOPEE_PARTNER_KEY) {
+    return new ShopeeOrderAdapter();
+  }
+
+  // The Tokopedia order adapter is not built yet — it falls back to the stub timeline (its
+  // stock/listing adapters are real, but order pull stays simulated until wired).
   return new StubMarketplaceOrderAdapter(provider);
 }
 
