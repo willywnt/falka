@@ -35,54 +35,76 @@ export type ImportEngineResult = {
   autoMappedCount: number;
 };
 
-/** Upsert one page of listings into MarketplaceProduct (one row per SKU). A malformed row is
- *  skipped (counted) so the rest of the page still lands. Returns the write count + warehouse codes. */
+/** The upsert for ONE listing — built (not awaited) so a whole page can run in one transaction. */
+function buildListingUpsert(ctx: ImportContext, item: LazadaListingItem, now: Date) {
+  return prisma.marketplaceProduct.upsert({
+    where: {
+      marketplaceConnectionId_externalProductId_externalVariantId: {
+        marketplaceConnectionId: ctx.connectionId,
+        externalProductId: item.itemId,
+        externalVariantId: item.skuId,
+      },
+    },
+    create: {
+      userId: ctx.actorUserId,
+      organizationId: ctx.organizationId,
+      marketplaceConnectionId: ctx.connectionId,
+      provider: ctx.provider,
+      externalProductId: item.itemId,
+      externalVariantId: item.skuId,
+      externalSku: item.sellerSku,
+      externalProductName: item.productName,
+      externalVariantName: item.variantName,
+      stock: item.quantity,
+      status: item.status,
+      rawPayload: item.raw as Prisma.InputJsonValue,
+      lastImportedAt: now,
+    },
+    update: {
+      externalSku: item.sellerSku,
+      externalProductName: item.productName,
+      externalVariantName: item.variantName,
+      stock: item.quantity,
+      status: item.status,
+      rawPayload: item.raw as Prisma.InputJsonValue,
+      lastImportedAt: now,
+      deletedAt: null,
+    },
+  });
+}
+
+/**
+ * Upsert one page of listings into MarketplaceProduct (one row per SKU). FAST PATH: the whole page
+ * in ONE batched transaction (cuts client↔engine round-trips ~Nx). If the batch throws (e.g. a
+ * malformed row), FALL BACK to per-row upserts so a single bad row doesn't sink the page — the rest
+ * still land. (A real DB outage instead surfaces on the next checkpoint write → BullMQ retry.)
+ * Returns the write count + warehouse codes.
+ */
 async function upsertPage(
   ctx: ImportContext,
   items: LazadaListingItem[],
   now: Date,
 ): Promise<{ imported: number; errors: number; warehouseCodes: string[] }> {
+  const warehouseCodes = new Set<string>();
+  for (const item of items) for (const wh of item.warehouses) warehouseCodes.add(wh.code);
+  if (items.length === 0) return { imported: 0, errors: 0, warehouseCodes: [] };
+
+  try {
+    await prisma.$transaction(items.map((item) => buildListingUpsert(ctx, item, now)));
+    return { imported: items.length, errors: 0, warehouseCodes: [...warehouseCodes] };
+  } catch (batchError) {
+    logger.warn('marketplace.import.batch_fallback', {
+      connectionId: ctx.connectionId,
+      pageSize: items.length,
+      error: batchError instanceof Error ? batchError.message : String(batchError),
+    });
+  }
+
   let imported = 0;
   let errors = 0;
-  const warehouseCodes = new Set<string>();
-
   for (const item of items) {
-    for (const wh of item.warehouses) warehouseCodes.add(wh.code);
     try {
-      await prisma.marketplaceProduct.upsert({
-        where: {
-          marketplaceConnectionId_externalProductId_externalVariantId: {
-            marketplaceConnectionId: ctx.connectionId,
-            externalProductId: item.itemId,
-            externalVariantId: item.skuId,
-          },
-        },
-        create: {
-          userId: ctx.actorUserId,
-          organizationId: ctx.organizationId,
-          marketplaceConnectionId: ctx.connectionId,
-          provider: ctx.provider,
-          externalProductId: item.itemId,
-          externalVariantId: item.skuId,
-          externalSku: item.sellerSku,
-          externalProductName: item.productName,
-          externalVariantName: item.variantName,
-          stock: item.quantity,
-          status: item.status,
-          rawPayload: item.raw as Prisma.InputJsonValue,
-          lastImportedAt: now,
-        },
-        update: {
-          externalSku: item.sellerSku,
-          externalProductName: item.productName,
-          externalVariantName: item.variantName,
-          stock: item.quantity,
-          status: item.status,
-          rawPayload: item.raw as Prisma.InputJsonValue,
-          lastImportedAt: now,
-          deletedAt: null,
-        },
-      });
+      await buildListingUpsert(ctx, item, now);
       imported += 1;
     } catch (error) {
       errors += 1;
@@ -93,6 +115,13 @@ async function upsertPage(
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  // The ENTIRE page failed in the fallback too — almost certainly an infra blip (deadlock / pool /
+  // tx timeout), not 50 simultaneously-bad rows. Surface it so the engine retries from the checkpoint
+  // instead of counting it as skippable and advancing past unpersisted listings.
+  if (imported === 0 && items.length > 0) {
+    throw new Error(`marketplace import: all ${items.length} listings in a page failed to persist`);
   }
 
   return { imported, errors, warehouseCodes: [...warehouseCodes] };
@@ -385,7 +414,10 @@ export async function runMarketplaceImport(
   // Advance the incremental watermark ONLY when the run actually covered the whole window. A short
   // count (a mutating catalog shrank the filtered set under the offset cursor) leaves it put so the
   // next incremental re-pulls the un-covered tail instead of skipping it.
-  const reachedWholeWindow = total === undefined || processedProducts >= total;
+  // Also require a CLEAN run (no per-row skips): a counted error means a listing didn't persist, so
+  // hold the watermark and let the next incremental re-cover it (idempotent upsert re-lands it).
+  const reachedWholeWindow =
+    (total === undefined || processedProducts >= total) && errorCount === 0;
   const autoMappedCount = await autoMapImported(ctx);
   await prisma.marketplaceConnection.update({
     where: { id: connection.id },
