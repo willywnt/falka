@@ -4,7 +4,9 @@ import {
   createShopeeClient,
   fetchShopeeItemsStock,
   fetchShopeeListings,
+  isAuthShopeeError,
   isShopeeSuccess,
+  isTransientShopeeError,
 } from '@palka/marketplace-providers';
 import type { ShopeeClient, ShopeeResponse } from '@palka/marketplace-providers';
 import type { MarketplaceProvider } from '@prisma/client';
@@ -27,10 +29,21 @@ const SHOP_INFO_PATH = '/api/v2/shop/get_shop_info';
 const DEFAULT_BASE_URL = 'https://partner.shopeemobile.com';
 
 /**
+ * The per-model result Shopee returns from update_stock. A model can land in `failure_list`
+ * (with a `failed_reason`) even when the envelope `error` is empty — an empty envelope is NOT
+ * proof the stock write applied.
+ */
+type ShopeeUpdateStockResult = {
+  failure_list?: Array<{ model_id?: number | string; failed_reason?: string }>;
+};
+
+/**
  * Maps a Shopee error envelope to a sync error. Shopee error codes are strings
- * (e.g. `error_auth`, `error_param`, `error_sign`, `error_server`). Auth errors are
- * non-retryable (re-auth needed); server/throttle errors are transient → retry; the
- * rest are caller/business rejections → non-retryable so we don't burn retries.
+ * (e.g. `error_auth`, `error_param`, `error_sign`, `error_server`, `error_rate_limit`). Auth
+ * errors are non-retryable (re-auth needed); the tiered throttle codes (per-shop/per-app/per-API
+ * QPS + the daily `error_limit`) are transient → retry; the rest are caller/business rejections →
+ * non-retryable so we don't burn retries. Throttle/auth classification is single-sourced in
+ * `@palka/marketplace-providers` so the order pull + stock sync agree.
  */
 function mapShopeeError(response: ShopeeResponse): MarketplaceSyncError {
   const code = response.error;
@@ -38,10 +51,10 @@ function mapShopeeError(response: ShopeeResponse): MarketplaceSyncError {
     response.message ? `: ${response.message}` : ''
   }).`;
 
-  if (/auth|token/i.test(code)) {
+  if (isAuthShopeeError(code)) {
     return new MarketplaceSyncError(SYNC_ERROR_CODES.INVALID_TOKEN, message, { retryable: false });
   }
-  if (/server|busy|timeout|throttl|too_many|rate/i.test(code)) {
+  if (isTransientShopeeError(code, response.message)) {
     return MarketplaceSyncError.syncFailed(message, true);
   }
   return MarketplaceSyncError.syncFailed(message, false);
@@ -81,7 +94,7 @@ export class ShopeeStockProvider implements MarketplaceStockProviderAdapter {
   }
 
   async updateStock(params: StockProviderUpdateParams): Promise<NormalizedStockUpdateResponse> {
-    const response = await this.client.call(UPDATE_STOCK_PATH, {
+    const response = await this.client.call<ShopeeUpdateStockResult>(UPDATE_STOCK_PATH, {
       method: 'POST',
       accessToken: params.accessToken,
       shopId: params.shopId,
@@ -90,6 +103,23 @@ export class ShopeeStockProvider implements MarketplaceStockProviderAdapter {
 
     if (!isShopeeSuccess(response)) {
       throw mapShopeeError(response);
+    }
+
+    // Shopee can REJECT the model per-row in `failure_list` even on an empty envelope `error`.
+    // We push exactly one model, so any failure means this write did NOT apply — surface it (else
+    // a rejected push is silently recorded as synced and the next drift check flags phantom drift).
+    const failures = response.response?.failure_list ?? [];
+    if (failures.length > 0) {
+      const reason = failures
+        .map((entry) => entry.failed_reason)
+        .filter((value): value is string => Boolean(value && value.trim()))
+        .join('; ');
+      // Usually a business reason (item not editable, invalid stock) → non-retryable; retry only
+      // when the reason text itself reads transient.
+      throw MarketplaceSyncError.syncFailed(
+        `Shopee update_stock rejected the model${reason ? ` (${reason})` : ''}.`,
+        isTransientShopeeError('', reason),
+      );
     }
 
     return {
