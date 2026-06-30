@@ -78,6 +78,12 @@ vi.mock('@/modules/marketplace/services/marketplace-mapping.service', () => ({
 vi.mock('@/modules/orders/adapters/order-adapter', () => ({
   getMarketplaceOrderAdapter: () => ({ fetchOrders: fetchOrdersMock }),
 }));
+// The shared token wrapper (proactive/reactive refresh) is covered by the marketplace tests; here it
+// just hands the pull a token so the order-ingest assertions stay focused.
+vi.mock('@/modules/marketplace/services/connection-token.service', () => ({
+  runWithFreshConnectionToken: (_connection: unknown, run: (accessToken: string) => unknown) =>
+    run('test-access-token'),
+}));
 
 const { OrdersServerService } = await import('@/modules/orders/services/orders-server.service');
 

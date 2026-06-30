@@ -14,7 +14,7 @@ import { appLogger } from '@/lib/logger';
 import { getMarketplaceImportAdapter } from '../adapters/import-adapter';
 import { MarketplaceError } from '../errors/marketplace-errors';
 import type { MarketplaceDriftReport } from '../types';
-import { marketplaceEncryptionService } from './encryption.service';
+import { runWithFreshConnectionToken } from './connection-token.service';
 
 /**
  * On-demand drift reconciliation: pulls a connection's CURRENT external stock
@@ -81,34 +81,36 @@ export class MarketplaceReconciliationService {
    */
   private async fetchExternalStock(
     connection: {
+      id: string;
       provider: MarketplaceProvider;
       shopId: string;
       externalShopCipher: string | null;
       encryptedAccessToken: string;
+      encryptedRefreshToken: string | null;
+      tokenExpiresAt: Date | null;
       syncWarehouseCode: string | null;
     },
     mapped: { externalProductId: string }[],
   ): Promise<DriftExternalInput[]> {
     const adapter = getMarketplaceImportAdapter(connection.provider);
-    // Stub adapters ignore the token; seeded connections store a non-cipher placeholder,
-    // so decrypt leniently and let a real adapter fail its own auth.
-    const accessToken =
-      marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '';
     const externalProductIds = [...new Set(mapped.map((item) => item.externalProductId))];
 
-    const listings =
+    // Same proactive + reactive token refresh as sync/import — a near-expiry or already-dead token
+    // self-heals here too (stub adapters ignore the token).
+    const listings = await runWithFreshConnectionToken(connection, (accessToken) =>
       adapter.fetchListingsForItems && externalProductIds.length > 0
-        ? await adapter.fetchListingsForItems({
+        ? adapter.fetchListingsForItems({
             shopId: connection.shopId,
             shopCipher: connection.externalShopCipher,
             accessToken,
             externalProductIds,
           })
-        : await adapter.fetchListings({
+        : adapter.fetchListings({
             shopId: connection.shopId,
             shopCipher: connection.externalShopCipher,
             accessToken,
-          });
+          }),
+    );
 
     return listings.map((listing) => ({
       externalProductId: listing.externalProductId,

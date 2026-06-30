@@ -24,3 +24,17 @@ export function isTransientLazadaError(code: string, message: string | undefined
     )
   );
 }
+
+/**
+ * A Lazada access-token failure — the connection must be re-authorized / its token refreshed (e.g.
+ * `IllegalAccessToken`, `InvalidToken`, an expired access token). NON-retryable on its own; the
+ * caller refreshes the token and retries once. Excludes rate/throttle codes (those are transient,
+ * not auth). Matched on code + message since LazOP reports it both ways across endpoints.
+ */
+export function isAuthLazadaError(code: string, message: string | undefined): boolean {
+  const text = `${code} ${message ?? ''}`.toLowerCase();
+  if (/rate|limit|frequency|speed|busy|sentinel/.test(text)) return false;
+  return /illegalaccesstoken|invalid.?token|access.?token|auth.?expired|expired.?token|unauthorized|invalid_access_token|token.*(invalid|expired|missing)/.test(
+    text,
+  );
+}

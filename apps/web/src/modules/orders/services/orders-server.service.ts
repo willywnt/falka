@@ -11,7 +11,7 @@ import type { MarketplaceConnection, MarketplaceProvider, Prisma } from '@prisma
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
-import { marketplaceEncryptionService } from '@/modules/marketplace/services/encryption.service';
+import { runWithFreshConnectionToken } from '@/modules/marketplace/services/connection-token.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
 import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { returnsServerService } from '@/modules/returns/services/returns-server.service';
@@ -696,18 +696,18 @@ export class OrdersServerService {
     complete: boolean;
   }> {
     const adapter = getMarketplaceOrderAdapter(connection.provider);
-    const { orders, complete } = await adapter.fetchOrders({
-      shopId: connection.shopId,
-      shopCipher: connection.externalShopCipher,
-      // Stub adapters ignore these; a real adapter decrypts the connection token and pulls the
-      // window since this store's last pull (idempotent upserts make the overlap safe).
-      accessToken:
-        marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '',
-      // The incremental window comes from the dedicated cursor, not the cooldown timestamp.
-      // A full re-pull ignores the cursor and uses the adapter's backfill window instead.
-      since: full ? undefined : (connection.ordersSyncedThrough ?? undefined),
-      full,
-    });
+    // Same proactive + reactive token refresh as sync/import/drift — a near-expiry or already-dead
+    // token self-heals (stub adapters ignore the token). The incremental window comes from the
+    // dedicated cursor (not the cooldown); a full re-pull ignores it and uses the backfill window.
+    const { orders, complete } = await runWithFreshConnectionToken(connection, (accessToken) =>
+      adapter.fetchOrders({
+        shopId: connection.shopId,
+        shopCipher: connection.externalShopCipher,
+        accessToken,
+        since: full ? undefined : (connection.ordersSyncedThrough ?? undefined),
+        full,
+      }),
+    );
 
     let pulled = 0;
     let applied = 0;

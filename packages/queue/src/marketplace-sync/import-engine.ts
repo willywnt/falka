@@ -6,6 +6,8 @@ import {
   createShopeeClient,
   fetchLazadaListingsPage,
   fetchShopeeListingsPage,
+  isAuthLazadaError,
+  isAuthShopeeError,
   isTransientLazadaError,
   isTransientShopeeError,
   LazadaApiError,
@@ -14,11 +16,15 @@ import {
   type LazadaListingItem,
   type ShopeeListingItem,
 } from '@palka/marketplace-providers';
-import { decrypt } from '@palka/utils/crypto';
 import { logger } from '@palka/utils/logger';
 import type { MarketplaceConnection, MarketplaceProvider, Prisma } from '@prisma/client';
 
 import { acquireProviderToken, penalizeProvider } from './provider-rate-limit-redis.js';
+import {
+  decryptAccessToken,
+  isTokenExpiringSoon,
+  refreshAndPersistConnectionToken,
+} from './token-access.js';
 
 // Lazada GetProducts caps `limit` at 50 (100+ → E019 Invalid Limit on a live shop).
 const LAZADA_IMPORT_PAGE_LIMIT = 50;
@@ -323,6 +329,13 @@ function classifyImportError(error: unknown): {
   return { apiError: false, transient: false, code: null };
 }
 
+/** A provider auth/token rejection — the connection's token must be refreshed (then the call retried). */
+function isImportAuthError(error: unknown): boolean {
+  if (error instanceof LazadaApiError) return isAuthLazadaError(error.code, error.providerMessage);
+  if (error instanceof ShopeeApiError) return isAuthShopeeError(error.code);
+  return false;
+}
+
 /**
  * Best-effort in-app notification when an import reaches a terminal state — so the actor who left
  * the page sees the outcome on their next visit. Targeted to the actor, MARKETPLACE category,
@@ -451,14 +464,24 @@ export async function runMarketplaceImport(
     return { status: 'FAILED', importedRows: 0, autoMappedCount: 0 };
   }
 
-  let accessToken = '';
-  try {
-    accessToken = decrypt(
-      connection.encryptedAccessToken,
-      getServerEnv().MARKETPLACE_ENCRYPTION_SECRET,
+  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
+  let accessToken = decryptAccessToken(connection.encryptedAccessToken, secret, {
+    connectionId: connection.id,
+    provider: connection.provider,
+  });
+
+  // PROACTIVE refresh: renew a near-expiry token before paging starts (Shopee's short TTL).
+  if (isTokenExpiringSoon(connection.tokenExpiresAt)) {
+    const fresh = await refreshAndPersistConnectionToken(
+      {
+        provider: connection.provider,
+        connectionId: connection.id,
+        encryptedRefreshToken: connection.encryptedRefreshToken,
+        shopId: connection.shopId,
+      },
+      secret,
     );
-  } catch {
-    // Stub/seed connections store a non-cipher placeholder; a real call surfaces its own auth error.
+    if (fresh) accessToken = fresh.accessToken;
   }
 
   const now = new Date();
@@ -468,7 +491,8 @@ export async function runMarketplaceImport(
     !job.full && connection.listingsSyncedThrough
       ? new Date(connection.listingsSyncedThrough.getTime() - OVERLAP_MS)
       : undefined;
-  const pager = createImportPager(connection, accessToken, updatedAfter);
+  let pager = createImportPager(connection, accessToken, updatedAfter);
+  let reauthed = false;
   let offset = job.offsetCheckpoint;
   let importedRows = job.importedRows;
   let processedProducts = job.processedProducts;
@@ -478,7 +502,34 @@ export async function runMarketplaceImport(
 
   try {
     for (;;) {
-      const page = await pager.fetchPage(offset);
+      let page: ImportPage;
+      try {
+        page = await pager.fetchPage(offset);
+      } catch (error) {
+        // REACTIVE re-auth: the provider rejected the token (a stored expiry can overstate the real
+        // life). Refresh once + rebuild the pager + retry the SAME page; otherwise rethrow.
+        if (!reauthed && isImportAuthError(error)) {
+          const fresh = await refreshAndPersistConnectionToken(
+            {
+              provider: connection.provider,
+              connectionId: connection.id,
+              encryptedRefreshToken: connection.encryptedRefreshToken,
+              shopId: connection.shopId,
+            },
+            secret,
+          );
+          if (fresh) {
+            reauthed = true;
+            pager = createImportPager(connection, fresh.accessToken, updatedAfter);
+            logger.info('marketplace.import.token_reactive_refreshed', {
+              importJobId,
+              provider: connection.provider,
+            });
+            continue;
+          }
+        }
+        throw error;
+      }
       if (typeof page.total === 'number') total = page.total;
 
       const result = await upsertPage(ctx, page.items, now);
