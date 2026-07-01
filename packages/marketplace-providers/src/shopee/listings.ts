@@ -1,17 +1,34 @@
 import { isShopeeSuccess } from './client.js';
+import { sleep } from './throttle.js';
 import type { ShopeeClient } from './types.js';
 
 const ITEM_LIST_PATH = '/api/v2/product/get_item_list';
 const ITEM_BASE_INFO_PATH = '/api/v2/product/get_item_base_info';
 const MODEL_LIST_PATH = '/api/v2/product/get_model_list';
 
-const PAGE_SIZE = 50;
-/** Safety cap so a paging bug can't loop forever (≈2000 listings). */
+/** Shopee `get_item_list` page size — the documented max is 100 (the old 50/E019 cap was a Lazada
+ *  GetProducts rule, not Shopee's). 100 halves the number of list calls + conserves the daily quota. */
+const PAGE_SIZE = 100;
+/** Safety cap so a paging bug can't loop forever (≈4000 listings at PAGE_SIZE 100). */
 const MAX_PAGES = 40;
 /** get_item_base_info accepts up to 50 item_ids per call. */
 const ID_BATCH = 50;
 /** Gentle pacing so a large catalog stays under Shopee's per-shop QPS. */
 const CALL_DELAY_MS = 250;
+
+/** Shopee item_status enum (get_item_list `item_status` filter + get_item_base_info `item_status`). */
+export const SHOPEE_ITEM_STATUSES = [
+  'NORMAL',
+  'BANNED',
+  'UNLIST',
+  'REVIEWING',
+  'SELLER_DELETE',
+  'SHOPEE_DELETE',
+] as const;
+export type ShopeeItemStatus = (typeof SHOPEE_ITEM_STATUSES)[number];
+
+/** Only live, sellable listings are imported. */
+const IMPORT_ITEM_STATUS: ShopeeItemStatus = 'NORMAL';
 
 /** Postgres INT4 ceiling — our stock columns are 32-bit; clamp absurd provider values. */
 const INT32_MAX = 2_147_483_647;
@@ -19,10 +36,6 @@ const INT32_MAX = 2_147_483_647;
 function clampStock(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(INT32_MAX, Math.floor(value)));
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** One location's current sellable stock for a model (Shopee `seller_stock`). */
@@ -69,6 +82,18 @@ type ShopeeItemListData = {
   item?: { item_id?: number | string }[];
   has_next_page?: boolean;
   next_offset?: number;
+  total_count?: number;
+};
+
+type ShopeeSellerStock = { location_id?: string; stock?: number };
+/**
+ * The `stock_info_v2` object Shopee returns at BOTH grains: the ITEM level for a no-variation item
+ * (via get_item_base_info) and the MODEL level for a variation item (via get_model_list). Verified
+ * live: `{ seller_stock: [{ location_id, stock }], summary_info: { total_available_stock } }`.
+ */
+type ShopeeStockInfoV2 = {
+  seller_stock?: ShopeeSellerStock[];
+  summary_info?: { total_available_stock?: number };
 };
 
 type ShopeeBaseInfoItem = {
@@ -77,19 +102,18 @@ type ShopeeBaseInfoItem = {
   item_sku?: string;
   item_status?: string;
   has_model?: boolean;
+  /** Present for a NO-VARIATION item — the item-level sellable stock. A variation item's stock is
+   *  per-model in get_model_list instead. */
+  stock_info_v2?: ShopeeStockInfoV2;
 };
 
 type ShopeeBaseInfoData = { item_list?: ShopeeBaseInfoItem[] };
 
-type ShopeeSellerStock = { location_id?: string; stock?: number };
 type ShopeeModel = {
   model_id?: number | string;
   model_sku?: string;
   tier_index?: number[];
-  stock_info_v2?: {
-    seller_stock?: ShopeeSellerStock[];
-    summary_info?: { total_available_stock?: number };
-  };
+  stock_info_v2?: ShopeeStockInfoV2;
 };
 
 type ShopeeModelListData = {
@@ -97,21 +121,26 @@ type ShopeeModelListData = {
   model?: ShopeeModel[];
 };
 
-/** Per-location sellable for a model (blank location codes dropped). */
-function extractWarehouses(model: ShopeeModel): ShopeeWarehouseStock[] {
-  return (model.stock_info_v2?.seller_stock ?? []).flatMap((entry) => {
+/** Per-location sellable from a stock_info_v2 (blank location codes dropped). */
+function extractWarehouses(stock: ShopeeStockInfoV2 | undefined): ShopeeWarehouseStock[] {
+  return (stock?.seller_stock ?? []).flatMap((entry) => {
     const code = entry.location_id?.trim();
     return code ? [{ code, sellable: clampStock(entry.stock) }] : [];
   });
 }
 
-/** Total sellable for a model: Σ seller_stock, else the summary's total. */
-function extractModelQuantity(model: ShopeeModel): number {
-  const sellerStock = model.stock_info_v2?.seller_stock;
+/** Total sellable from a stock_info_v2: Σ seller_stock, else the summary's total. */
+function extractQuantity(stock: ShopeeStockInfoV2 | undefined): number {
+  const sellerStock = stock?.seller_stock;
   if (Array.isArray(sellerStock) && sellerStock.length > 0) {
     return clampStock(sellerStock.reduce((sum, entry) => sum + (entry.stock ?? 0), 0));
   }
-  return clampStock(model.stock_info_v2?.summary_info?.total_available_stock);
+  return clampStock(stock?.summary_info?.total_available_stock);
+}
+
+/** Empty/whitespace SKU → null so a blank Shopee SKU never poses as a real one to auto-map by. */
+function cleanSku(value: string | null | undefined): string | null {
+  return value && value.trim() !== '' ? value : null;
 }
 
 /** Build a variation label from a model's tier indices against the item's tier_variation. */
@@ -138,19 +167,21 @@ function mapItemModels(
   const status = base.item_status ?? 'NORMAL';
   const models = modelData.model ?? [];
 
-  // No-variation item: Shopee returns no models — represent it as a single model_id 0 row.
+  // No-variation item: get_model_list is empty — represent it as a single model_id 0 row, reading
+  // the ITEM-level stock from get_item_base_info's stock_info_v2 (NOT 0 — verified live: a
+  // no-variation item carries its sellable + per-location stock here, not in get_model_list).
   if (models.length === 0) {
     return [
       {
         itemId,
         modelId: '0',
-        modelSku: base.item_sku ?? null,
+        modelSku: cleanSku(base.item_sku),
         productName,
         variantName: null,
-        quantity: 0,
-        warehouses: [],
+        quantity: extractQuantity(base.stock_info_v2),
+        warehouses: extractWarehouses(base.stock_info_v2),
         status,
-        raw: { item_id: base.item_id, item_sku: base.item_sku },
+        raw: { item_id: base.item_id, item_sku: base.item_sku, stock_info_v2: base.stock_info_v2 },
       },
     ];
   }
@@ -162,11 +193,11 @@ function mapItemModels(
       {
         itemId,
         modelId,
-        modelSku: model.model_sku ?? base.item_sku ?? null,
+        modelSku: cleanSku(model.model_sku) ?? cleanSku(base.item_sku),
         productName,
         variantName: buildVariantName(model, modelData.tier_variation),
-        quantity: extractModelQuantity(model),
-        warehouses: extractWarehouses(model),
+        quantity: extractQuantity(model.stock_info_v2),
+        warehouses: extractWarehouses(model.stock_info_v2),
         status,
         raw: { item_id: base.item_id, ...model } as Record<string, unknown>,
       },
@@ -183,8 +214,9 @@ function chunk<T>(values: T[], size: number): T[][] {
 /** Fetch a model's per-location stock + tiers for one item (get_model_list). */
 async function fetchModelData(
   client: ShopeeClient,
-  params: { accessToken: string; shopId: string; itemId: string },
+  params: { accessToken: string; shopId: string; itemId: string; beforeCall?: () => Promise<void> },
 ): Promise<ShopeeModelListData> {
+  await params.beforeCall?.();
   const response = await client.call<ShopeeModelListData>(MODEL_LIST_PATH, {
     method: 'GET',
     accessToken: params.accessToken,
@@ -198,10 +230,16 @@ async function fetchModelData(
 /** Resolve base info (names, has_model, sku, status) for a batch of item ids. */
 async function fetchBaseInfo(
   client: ShopeeClient,
-  params: { accessToken: string; shopId: string; itemIds: string[] },
+  params: {
+    accessToken: string;
+    shopId: string;
+    itemIds: string[];
+    beforeCall?: () => Promise<void>;
+  },
 ): Promise<ShopeeBaseInfoItem[]> {
   const out: ShopeeBaseInfoItem[] = [];
   for (const batch of chunk(params.itemIds, ID_BATCH)) {
+    await params.beforeCall?.();
     const response = await client.call<ShopeeBaseInfoData>(ITEM_BASE_INFO_PATH, {
       method: 'GET',
       accessToken: params.accessToken,
@@ -210,7 +248,8 @@ async function fetchBaseInfo(
     });
     if (!isShopeeSuccess(response)) throw new ShopeeApiError(response.error, response.message);
     out.push(...(response.response?.item_list ?? []));
-    await sleep(CALL_DELAY_MS);
+    // When a rate limiter paces each call (beforeCall), the fixed sleep is redundant.
+    if (!params.beforeCall) await sleep(CALL_DELAY_MS);
   }
   return out;
 }
@@ -218,7 +257,12 @@ async function fetchBaseInfo(
 /** Flatten a set of items (base info + per-item model list) to per-model rows. */
 async function expandItems(
   client: ShopeeClient,
-  params: { accessToken: string; shopId: string; itemIds: string[] },
+  params: {
+    accessToken: string;
+    shopId: string;
+    itemIds: string[];
+    beforeCall?: () => Promise<void>;
+  },
 ): Promise<ShopeeListingItem[]> {
   const baseInfo = await fetchBaseInfo(client, params);
   const rows: ShopeeListingItem[] = [];
@@ -230,7 +274,7 @@ async function expandItems(
       ? await fetchModelData(client, { ...params, itemId })
       : { model: [] };
     rows.push(...mapItemModels(base, modelData));
-    await sleep(CALL_DELAY_MS);
+    if (!params.beforeCall) await sleep(CALL_DELAY_MS);
   }
 
   return rows;
@@ -253,7 +297,7 @@ export async function fetchShopeeListings(
       method: 'GET',
       accessToken: params.accessToken,
       shopId: params.shopId,
-      params: { offset: page * PAGE_SIZE, page_size: PAGE_SIZE, item_status: 'NORMAL' },
+      params: { offset: page * PAGE_SIZE, page_size: PAGE_SIZE, item_status: IMPORT_ITEM_STATUS },
     });
     if (!isShopeeSuccess(response)) throw new ShopeeApiError(response.error, response.message);
 
@@ -268,6 +312,60 @@ export async function fetchShopeeListings(
 
   if (itemIds.length === 0) return [];
   return expandItems(client, { ...params, itemIds });
+}
+
+export type ShopeeListingsPage = {
+  items: ShopeeListingItem[];
+  /** Total items (products) Shopee reports (get_item_list `total_count`); undefined when absent. */
+  total: number | undefined;
+  /** Items (products) on this page — `< page_size` means the catalog is exhausted. */
+  productCount: number;
+};
+
+/**
+ * Fetch ONE page of a shop's listings at `offset`: page `get_item_list`, then expand that page's
+ * items via base-info + model-list to per-model rows. Lets the caller drive the paging loop —
+ * pacing each provider call through `beforeCall` (a rate limiter), streaming each page to the DB,
+ * and checkpointing the offset to resume — instead of buffering the whole catalog. `beforeCall`
+ * runs before EVERY underlying call (the list page + each base-info batch + each model-list).
+ * Throws {@link ShopeeApiError} on a non-success envelope.
+ */
+export async function fetchShopeeListingsPage(
+  client: ShopeeClient,
+  params: {
+    accessToken: string;
+    shopId: string;
+    offset: number;
+    pageSize?: number;
+    beforeCall?: () => Promise<void>;
+  },
+): Promise<ShopeeListingsPage> {
+  const pageSize = params.pageSize ?? PAGE_SIZE;
+
+  await params.beforeCall?.();
+  const response = await client.call<ShopeeItemListData>(ITEM_LIST_PATH, {
+    method: 'GET',
+    accessToken: params.accessToken,
+    shopId: params.shopId,
+    params: { offset: params.offset, page_size: pageSize, item_status: IMPORT_ITEM_STATUS },
+  });
+  if (!isShopeeSuccess(response)) throw new ShopeeApiError(response.error, response.message);
+
+  const itemIds = (response.response?.item ?? []).flatMap((entry) => {
+    const id = String(entry.item_id ?? '');
+    return id ? [id] : [];
+  });
+  const items =
+    itemIds.length === 0
+      ? []
+      : await expandItems(client, {
+          accessToken: params.accessToken,
+          shopId: params.shopId,
+          itemIds,
+          beforeCall: params.beforeCall,
+        });
+
+  return { items, total: response.response?.total_count, productCount: itemIds.length };
 }
 
 /**

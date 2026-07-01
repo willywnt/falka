@@ -11,7 +11,7 @@ export {
   LazadaApiError,
 } from './listings.js';
 export type { LazadaListingItem, LazadaListingsPage, LazadaWarehouseStock } from './listings.js';
-export { isTransientLazadaError, sleep } from './throttle.js';
+export { isAuthLazadaError, isTransientLazadaError, sleep } from './throttle.js';
 export { fetchLazadaOrders } from './orders.js';
 export type { LazadaOrderLine, LazadaOrderRecord, LazadaOrdersResult } from './orders.js';
 export type {

@@ -9,8 +9,11 @@ import { signShopeeRequest } from './sign.js';
  * in the sign) — `shop_id`/`partner_id` travel in the JSON BODY, not the signature. The token
  * fields sit at the TOP LEVEL of the JSON (siblings of `error`), so we read from `response.raw`.
  *
- * ⚠ Shopee access tokens live only ~4 HOURS (`expire_in` ≈ 14400s); the refresh token ~30 days.
- * This is why the sync engine refreshes lazily before use (see the worker `ensureFreshToken`).
+ * ⚠ Shopee access tokens are SHORT-LIVED — the real TTL is whatever `expire_in` returns (docs say
+ * ~4h/14400s, but the sandbox has been observed to expire MUCH sooner than its recorded expiry, so
+ * never assume the stored value is exact); the refresh token lasts ~30 days. The sync engine both
+ * PROACTIVELY refreshes before use and REACTIVELY refreshes-and-retries on an INVALID_TOKEN
+ * rejection, so a too-long recorded expiry self-heals instead of failing until a manual re-auth.
  */
 
 const SHOP_AUTH_PATH = '/api/v2/shop/auth_partner';

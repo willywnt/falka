@@ -86,7 +86,11 @@ export const MARKETPLACE_RATE_LIMITS: Record<
   { perShopQps: number; perAppQps: number; burst: number }
 > = {
   LAZADA: { perShopQps: 8, perAppQps: 30, burst: 16 },
-  SHOPEE: { perShopQps: 8, perAppQps: 30, burst: 16 },
+  // Shopee throttles in tiers (per-shop / per-app / per-API QPS + a per-APP DAILY quota). The
+  // binding constraint for many shops under one partner app is the shared per-APP ceiling, so keep
+  // perAppQps conservative (30 risks `exceed_partner_api`, esp. on a lower app tier). Read the real
+  // per-app quota from the Shopee console for this partner_id and re-tune.
+  SHOPEE: { perShopQps: 6, perAppQps: 18, burst: 10 },
   TOKOPEDIA: { perShopQps: 8, perAppQps: 30, burst: 16 },
 };
 

@@ -1,6 +1,13 @@
 # Shopee + Tokopedia integration — design & sandbox-first onboarding
 
-> Status: **Scaffolded / env-gated — awaiting sandbox verification** (SHIPPED 2026-06-17 on branch
+> **UPDATE 2026-07-01 — SHOPEE is now LIVE-VALIDATED + wired** against a real sandbox shop (connect →
+> import → stock sync → drift → order pull), with the API host + many ⚠ VERIFY items confirmed/corrected
+> and substantial hardening shipped. The current source of truth for Shopee is
+> **`docs/roadmap/shopee-api-research-2026-06-30.md`** (sandbox host `openplatform.sandbox.test-stable.shopee.sg`,
+> in-house-vs-ISV, the implementation status checklist). **TOKOPEDIA / TikTok remains scaffold-only,
+> env-gated, NOT live-verified** — the design below still applies to it.
+>
+> Original status (2026-06-17): **Scaffolded / env-gated — awaiting sandbox verification** (SHIPPED 2026-06-17 on branch
 > session/2026-06-17-shopee-integration). Both SHOPEE and TOKOPEDIA (= TikTok Shop Open API v202309)
 > adapters now exist behind env gates and fall back to the Dev/stub when creds are unset; **NOT
 > live-verified** (endpoint paths + signatures flagged ⚠ VERIFY until sandbox creds confirm them). The

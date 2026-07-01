@@ -12,6 +12,7 @@ export type DriftConnection = {
   externalShopCipher: string | null;
   shopName: string;
   encryptedAccessToken: string;
+  encryptedRefreshToken: string | null;
   tokenExpiresAt: Date | null;
   syncWarehouseCode: string | null;
 };
@@ -40,6 +41,7 @@ export async function findActiveConnectionsForDrift(limit: number): Promise<Drif
       externalShopCipher: true,
       shopName: true,
       encryptedAccessToken: true,
+      encryptedRefreshToken: true,
       tokenExpiresAt: true,
       syncWarehouseCode: true,
     },

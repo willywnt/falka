@@ -1,15 +1,17 @@
 import { getServerEnv } from '@palka/config/env.server';
-import { decrypt } from '@palka/utils/crypto';
 import { logger } from '@palka/utils/logger';
 
 import {
   acquireProviderToken,
   computeStockDrift,
   countConnectionListings,
+  decryptAccessToken,
   findActiveConnectionsForDrift,
   findDriftMappedListings,
   getMarketplaceStockProvider,
   isAccessTokenExpired,
+  isTokenExpiringSoon,
+  refreshAndPersistConnectionToken,
   resolveSyncWarehouseStock,
 } from '../marketplace-sync/index.js';
 import {
@@ -46,27 +48,37 @@ export async function processReconcileMarketplaceDriftJob(
   const connections = await findActiveConnectionsForDrift(payload.batchSize);
   let totalDrifted = 0;
 
+  const secret = getServerEnv().MARKETPLACE_ENCRYPTION_SECRET;
+
   for (const connection of connections) {
     stats.processed += 1;
 
-    if (isAccessTokenExpired(connection.tokenExpiresAt)) {
-      stats.skipped += 1;
-      logger.warn('marketplace.drift.skipped_token_expired', {
-        connectionId: connection.id,
-        provider: connection.provider,
-      });
-      continue;
-    }
-
-    let accessToken = '';
-    try {
-      accessToken = decrypt(
-        connection.encryptedAccessToken,
-        getServerEnv().MARKETPLACE_ENCRYPTION_SECRET,
+    let accessToken = decryptAccessToken(connection.encryptedAccessToken, secret, {
+      connectionId: connection.id,
+      provider: connection.provider,
+    });
+    // PROACTIVE refresh — this daily backstop renews an expiring/expired token instead of skipping.
+    if (isTokenExpiringSoon(connection.tokenExpiresAt)) {
+      const fresh = await refreshAndPersistConnectionToken(
+        {
+          provider: connection.provider,
+          connectionId: connection.id,
+          encryptedRefreshToken: connection.encryptedRefreshToken,
+          shopId: connection.shopId,
+        },
+        secret,
       );
-    } catch {
-      // Stub/seed connections store a non-cipher placeholder; a real adapter will
-      // surface its own auth error below rather than failing here.
+      if (fresh) {
+        accessToken = fresh.accessToken;
+      } else if (isAccessTokenExpired(connection.tokenExpiresAt)) {
+        // Refresh failed + already expired → skip (next run / a manual re-auth recovers it).
+        stats.skipped += 1;
+        logger.warn('marketplace.drift.skipped_token_expired', {
+          connectionId: connection.id,
+          provider: connection.provider,
+        });
+        continue;
+      }
     }
 
     try {

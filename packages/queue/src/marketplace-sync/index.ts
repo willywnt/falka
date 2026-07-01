@@ -8,6 +8,7 @@ export * from './providers/shopee-stock-provider.js';
 export * from './providers/tokopedia-stock-provider.js';
 export * from './register-providers.js';
 export * from './token-refresh.js';
+export * from './token-access.js';
 export * from './sync-repository.js';
 export * from './sync-engine.js';
 export * from './drift.js';

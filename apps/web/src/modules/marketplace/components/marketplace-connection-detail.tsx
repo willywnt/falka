@@ -18,8 +18,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,6 +100,25 @@ function listingSubtitle(listing: MarketplaceListingItem): string {
   const parts = [listing.externalVariantName, listing.externalSku].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : '—';
 }
+
+/**
+ * A listing whose sync was AUTO-PAUSED because its marketplace listing/model is gone or no longer
+ * matches (the stock push was rejected — e.g. deleted, or it became a variation). Distinct from an
+ * auto-map "needs confirm" (NEEDS_REVIEW with no sync error). It gets a danger badge + an explicit
+ * "putuskan kaitan" action instead of the misleading "confirm the mapping" hint.
+ */
+function isListingProblem(mapping: MarketplaceListingMapping): boolean {
+  return (
+    mapping.mappingStatus === 'NEEDS_REVIEW' &&
+    mapping.lastSyncStatus === 'FAILED' &&
+    Boolean(mapping.lastSyncError)
+  );
+}
+
+/** General, user-facing hint for a problem listing — kept generic so raw provider error text is NOT
+ *  exposed in the UI (the exact reason still lives in the mapping's lastSyncError for logs/support). */
+const LISTING_PROBLEM_HINT =
+  'Listing ini ditolak atau tidak ada lagi di marketplace, jadi sinkronisasi dimatikan otomatis. Putuskan kaitan, lalu impor ulang & kaitkan ke listing yang benar.';
 
 function SyncStatusBadge({ mapping }: { mapping: MarketplaceListingMapping }) {
   if (!mapping.syncEnabled) return null;
@@ -323,7 +353,19 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             className="text-sm font-medium"
             contentClassName="max-w-xs"
           />
-          {mapping.mappingStatus === 'NEEDS_REVIEW' ? (
+          {isListingProblem(mapping) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  className="focus-visible:ring-ring/50 inline-flex cursor-default rounded-md focus-visible:ring-[3px] focus-visible:outline-none"
+                >
+                  <StatusBadge tone="danger">Listing bermasalah</StatusBadge>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs">{LISTING_PROBLEM_HINT}</TooltipContent>
+            </Tooltip>
+          ) : mapping.mappingStatus === 'NEEDS_REVIEW' ? (
             <StatusBadge tone="warn">Tinjau</StatusBadge>
           ) : null}
         </div>
@@ -354,12 +396,14 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
             />
           </span>
         </TooltipTrigger>
-        <TooltipContent>
-          {mapping.mappingStatus === 'NEEDS_REVIEW'
-            ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
-            : mapping.syncEnabled
-              ? 'Matikan sinkronisasi'
-              : 'Aktifkan sinkronisasi'}
+        <TooltipContent className="max-w-xs">
+          {isListingProblem(mapping)
+            ? LISTING_PROBLEM_HINT
+            : mapping.mappingStatus === 'NEEDS_REVIEW'
+              ? 'Konfirmasi kaitannya dulu sebelum sinkronisasi diaktifkan.'
+              : mapping.syncEnabled
+                ? 'Matikan sinkronisasi'
+                : 'Aktifkan sinkronisasi'}
         </TooltipContent>
       </Tooltip>
     );
@@ -390,6 +434,48 @@ export function MarketplaceConnectionDetail({ connectionId }: { connectionId: st
     const suggested = listing.suggestedVariant;
 
     if (mapping) {
+      // Listing gone/rejected at the marketplace → one clear, confirmed action to resolve it
+      // (sync-now is moot: it's auto-paused). The dialog explains the fix instead of leaving the
+      // user with a disabled switch + a misleading "confirm the mapping" hint.
+      if (isListingProblem(mapping)) {
+        return (
+          <div className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive h-9 sm:h-8"
+                  disabled={unmapMutation.isPending}
+                >
+                  <Link2Off className="size-4" />
+                  Putuskan kaitan
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Putuskan kaitan listing ini?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Marketplace menolak listing ini (kemungkinan sudah dihapus atau berubah jadi
+                    bervariasi), jadi sinkronisasi stoknya dimatikan otomatis. Memutus kaitan
+                    menghentikan percobaan sinkron — data produk di tokomu tetap aman. Untuk
+                    menyambung lagi: impor ulang listing, lalu kaitkan ke listing yang benar.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    className={buttonVariants({ variant: 'destructive' })}
+                    onClick={() => void handleUnmap(listing.marketplaceProductId)}
+                  >
+                    Putuskan kaitan
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        );
+      }
       return (
         <div className="flex items-center justify-end gap-3">
           {mapping.syncEnabled ? (

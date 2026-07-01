@@ -11,7 +11,7 @@ import type { MarketplaceConnection, MarketplaceProvider, Prisma } from '@prisma
 
 import { appLogger } from '@/lib/logger';
 import { inventoryServerService } from '@/modules/inventory/services/inventory-server.service';
-import { marketplaceEncryptionService } from '@/modules/marketplace/services/encryption.service';
+import { runWithFreshConnectionToken } from '@/modules/marketplace/services/connection-token.service';
 import { marketplaceMappingService } from '@/modules/marketplace/services/marketplace-mapping.service';
 import { notificationServerService } from '@/modules/notifications/services/notification-server.service';
 import { returnsServerService } from '@/modules/returns/services/returns-server.service';
@@ -117,7 +117,7 @@ export class OrdersServerService {
     const order = await prisma.order.findFirst({
       where: { id: orderId, organizationId },
       include: {
-        connection: { select: { shopName: true, lastOrdersPulledAt: true } },
+        connection: { select: { shopName: true, shopId: true, lastOrdersPulledAt: true } },
         items: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -136,26 +136,32 @@ export class OrdersServerService {
     });
     if (!order) throw OrderError.notFound();
 
-    const itemMedia = extractOrderItemMedia(order.rawPayload);
-    const items: OrderItemDetail[] = order.items.map((item) => ({
-      id: item.id,
-      externalName: item.externalName,
-      externalSku: item.externalSku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice?.toString() ?? null,
-      externalImageUrl: itemMedia.get(item.externalVariantId)?.imageUrl ?? null,
-      externalDetailUrl: itemMedia.get(item.externalVariantId)?.detailUrl ?? null,
-      resolved: item.productVariantId !== null,
-      variant: item.productVariant
-        ? {
-            id: item.productVariant.id,
-            sku: item.productVariant.sku,
-            name: item.productVariant.name,
-            productName: item.productVariant.product.name,
-            imageUrl: item.productVariant.imageUrl,
-          }
-        : null,
-    }));
+    const itemMedia = extractOrderItemMedia(order.rawPayload, order.connection.shopId);
+    const items: OrderItemDetail[] = order.items.map((item) => {
+      // Lazada keys media by the external variant id; Shopee by the external product id (its
+      // no-variation model_id "0" isn't unique) — try the variant id first, then the product id.
+      const media =
+        itemMedia.get(item.externalVariantId) ?? itemMedia.get(item.externalProductId) ?? null;
+      return {
+        id: item.id,
+        externalName: item.externalName,
+        externalSku: item.externalSku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice?.toString() ?? null,
+        externalImageUrl: media?.imageUrl ?? null,
+        externalDetailUrl: media?.detailUrl ?? null,
+        resolved: item.productVariantId !== null,
+        variant: item.productVariant
+          ? {
+              id: item.productVariant.id,
+              sku: item.productVariant.sku,
+              name: item.productVariant.name,
+              productName: item.productVariant.product.name,
+              imageUrl: item.productVariant.imageUrl,
+            }
+          : null,
+      };
+    });
 
     return {
       id: order.id,
@@ -696,18 +702,18 @@ export class OrdersServerService {
     complete: boolean;
   }> {
     const adapter = getMarketplaceOrderAdapter(connection.provider);
-    const { orders, complete } = await adapter.fetchOrders({
-      shopId: connection.shopId,
-      shopCipher: connection.externalShopCipher,
-      // Stub adapters ignore these; a real adapter decrypts the connection token and pulls the
-      // window since this store's last pull (idempotent upserts make the overlap safe).
-      accessToken:
-        marketplaceEncryptionService.safeDecryptToken(connection.encryptedAccessToken) ?? '',
-      // The incremental window comes from the dedicated cursor, not the cooldown timestamp.
-      // A full re-pull ignores the cursor and uses the adapter's backfill window instead.
-      since: full ? undefined : (connection.ordersSyncedThrough ?? undefined),
-      full,
-    });
+    // Same proactive + reactive token refresh as sync/import/drift — a near-expiry or already-dead
+    // token self-heals (stub adapters ignore the token). The incremental window comes from the
+    // dedicated cursor (not the cooldown); a full re-pull ignores it and uses the backfill window.
+    const { orders, complete } = await runWithFreshConnectionToken(connection, (accessToken) =>
+      adapter.fetchOrders({
+        shopId: connection.shopId,
+        shopCipher: connection.externalShopCipher,
+        accessToken,
+        since: full ? undefined : (connection.ordersSyncedThrough ?? undefined),
+        full,
+      }),
+    );
 
     let pulled = 0;
     let applied = 0;
