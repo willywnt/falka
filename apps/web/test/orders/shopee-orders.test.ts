@@ -458,14 +458,26 @@ describe('toNormalizedShopeeOrder — record → cross-provider order + mapping 
     expect(order.items[0]!.externalSku).toBe('SKU-A'); // prefers model_sku
   });
 
-  it('aligns a NO-VARIATION line with the import: externalSku falls back to item_sku', () => {
-    // Our listing import stores a no-variation listing as (externalVariantId "0", externalSku=item_sku).
-    // A no-variation ORDER line carries the item's real hidden model_id + an empty model_sku, so:
-    //  - externalVariantId is the real model_id (may NOT equal the import's "0") → the (product,variant)
-    //    match can miss, BUT
-    //  - externalSku falls back to item_sku, which DOES equal the import's externalSku → the pull's
-    //    SKU fallback still resolves the internal variant. This is the load-bearing alignment.
-    const order = toNormalizedShopeeOrder(
+  it('aligns a NO-VARIATION line with the import (model_id "0" primary match + item_sku fallback)', () => {
+    // The listing import stores a no-variation listing as (externalVariantId "0", externalSku=item_sku).
+    // LIVE-VERIFIED (2026-07-01, real sandbox orders): get_order_detail returns model_id 0 for a
+    // no-variation item, so the order's (item_id, "0") matches the import's (item_id, "0") on the
+    // PRIMARY byListing key (the pull's SKU fallback is a bonus, not load-bearing here).
+    const primary = toNormalizedShopeeOrder(
+      record({
+        lines: [
+          line({ itemId: '844150405', modelId: '0', modelSku: null, itemSku: 'PALKAORDTEST0001' }),
+        ],
+      }),
+    );
+    expect(primary.items[0]!.externalProductId).toBe('844150405');
+    expect(primary.items[0]!.externalVariantId).toBe('0'); // == the import's stored "0"
+    expect(primary.items[0]!.externalSku).toBe('PALKAORDTEST0001'); // model_sku empty → item_sku
+
+    // DEFENSE-IN-DEPTH: were an order line ever to carry a non-"0" model_id with an empty model_sku
+    // (so the byListing key would miss), externalSku still falls back to item_sku = the import's
+    // externalSku, so the pull's SKU fallback resolves the internal variant.
+    const fallback = toNormalizedShopeeOrder(
       record({
         lines: [
           line({
@@ -477,9 +489,8 @@ describe('toNormalizedShopeeOrder — record → cross-provider order + mapping 
         ],
       }),
     );
-    expect(order.items[0]!.externalProductId).toBe('844150405');
-    expect(order.items[0]!.externalVariantId).toBe('4257121299');
-    expect(order.items[0]!.externalSku).toBe('PALKAORDTEST0001'); // falls back to item_sku
+    expect(fallback.items[0]!.externalVariantId).toBe('4257121299');
+    expect(fallback.items[0]!.externalSku).toBe('PALKAORDTEST0001');
   });
 
   it('handles missing optional fields (buyer/currency/price/tracking null) + placedAt fallback', () => {
