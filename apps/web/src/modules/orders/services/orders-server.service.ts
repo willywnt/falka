@@ -489,9 +489,9 @@ export class OrdersServerService {
   async pullFromConnections(
     organizationId: string,
     actorUserId: string,
-    options: { connectionIds?: string[]; full?: boolean } = {},
+    options: { connectionIds?: string[]; full?: boolean; force?: boolean } = {},
   ): Promise<MultiPullOrdersResult> {
-    const { connectionIds, full } = options;
+    const { connectionIds, full, force } = options;
     const connections = await prisma.marketplaceConnection.findMany({
       where: {
         organizationId,
@@ -509,7 +509,9 @@ export class OrdersServerService {
     const storesSkipped: string[] = [];
 
     for (const connection of connections) {
-      if (isCoolingDown(connection.provider, connection.lastOrdersPulledAt)) {
+      // `force` bypasses the anti-abuse cooldown — used by the webhook receiver, whose whole point is
+      // an immediate targeted pull that may land right after a scheduled pull's cooldown stamp.
+      if (!force && isCoolingDown(connection.provider, connection.lastOrdersPulledAt)) {
         storesSkipped.push(connection.shopName);
         continue;
       }

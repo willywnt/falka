@@ -93,6 +93,32 @@ export class MarketplaceServerService {
     return mapConnection(connection);
   }
 
+  /**
+   * Resolve an ACTIVE connection by its external (provider, shopId) — WITHOUT an org context, for the
+   * public webhook receiver (a provider push carries no Palka session). A Shopee shop authorizes one
+   * partner app once, so (provider, shopId) is effectively unique; `findFirst` returns the org +
+   * actor the webhook needs. Returns null when there is no live connection for that shop.
+   */
+  async findConnectionByShop(
+    provider: MarketplaceProvider,
+    shopId: string,
+  ): Promise<{ id: string; organizationId: string; userId: string } | null> {
+    const connection = await prisma.marketplaceConnection.findFirst({
+      where: { provider, shopId, deletedAt: null, isActive: true },
+      select: { id: true, organizationId: true, userId: true },
+    });
+    return connection;
+  }
+
+  /** Mark a connection inactive (a provider deauthorization push — the app can no longer sync it). */
+  async deactivateConnectionByShop(provider: MarketplaceProvider, shopId: string): Promise<number> {
+    const result = await prisma.marketplaceConnection.updateMany({
+      where: { provider, shopId, deletedAt: null, isActive: true },
+      data: { isActive: false },
+    });
+    return result.count;
+  }
+
   async createConnection(
     organizationId: string,
     actorUserId: string,

@@ -37,6 +37,10 @@ const serverEnvSchema = z
     SHOPEE_API_BASE_URL: optionalUrl,
     // OAuth redirect/callback URL registered in the Shopee app (must match exactly).
     SHOPEE_OAUTH_REDIRECT_URI: optionalUrl,
+    // Push/webhook callback URL registered via set_app_push_config. MUST equal the URL Shopee calls
+    // (it is part of the push signature base). Defaults to `${NEXT_PUBLIC_APP_URL}/api/v1/webhooks/shopee`
+    // when unset; override only if the public host differs.
+    SHOPEE_PUSH_CALLBACK_URL: optionalUrl,
     // TikTok Shop Open API (Tokopedia channel) app credentials + onboarding config.
     TOKOPEDIA_APP_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
     TOKOPEDIA_APP_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),

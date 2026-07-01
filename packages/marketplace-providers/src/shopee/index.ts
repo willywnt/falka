@@ -22,6 +22,15 @@ export {
 } from './throttle.js';
 export { fetchShopeeOrders } from './orders.js';
 export type { ShopeeOrderLine, ShopeeOrderRecord, ShopeeOrdersResult } from './orders.js';
+export {
+  getShopeePushConfig,
+  parseShopeePush,
+  setShopeePushConfig,
+  SHOPEE_ORDER_PUSH_CODES,
+  SHOPEE_PUSH_CODE,
+  verifyShopeePush,
+} from './push.js';
+export type { ShopeePushEnvelope } from './push.js';
 export type {
   ShopeeCallOptions,
   ShopeeClient,
