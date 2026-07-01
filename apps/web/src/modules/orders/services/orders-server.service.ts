@@ -117,7 +117,7 @@ export class OrdersServerService {
     const order = await prisma.order.findFirst({
       where: { id: orderId, organizationId },
       include: {
-        connection: { select: { shopName: true, lastOrdersPulledAt: true } },
+        connection: { select: { shopName: true, shopId: true, lastOrdersPulledAt: true } },
         items: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -136,26 +136,32 @@ export class OrdersServerService {
     });
     if (!order) throw OrderError.notFound();
 
-    const itemMedia = extractOrderItemMedia(order.rawPayload);
-    const items: OrderItemDetail[] = order.items.map((item) => ({
-      id: item.id,
-      externalName: item.externalName,
-      externalSku: item.externalSku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice?.toString() ?? null,
-      externalImageUrl: itemMedia.get(item.externalVariantId)?.imageUrl ?? null,
-      externalDetailUrl: itemMedia.get(item.externalVariantId)?.detailUrl ?? null,
-      resolved: item.productVariantId !== null,
-      variant: item.productVariant
-        ? {
-            id: item.productVariant.id,
-            sku: item.productVariant.sku,
-            name: item.productVariant.name,
-            productName: item.productVariant.product.name,
-            imageUrl: item.productVariant.imageUrl,
-          }
-        : null,
-    }));
+    const itemMedia = extractOrderItemMedia(order.rawPayload, order.connection.shopId);
+    const items: OrderItemDetail[] = order.items.map((item) => {
+      // Lazada keys media by the external variant id; Shopee by the external product id (its
+      // no-variation model_id "0" isn't unique) — try the variant id first, then the product id.
+      const media =
+        itemMedia.get(item.externalVariantId) ?? itemMedia.get(item.externalProductId) ?? null;
+      return {
+        id: item.id,
+        externalName: item.externalName,
+        externalSku: item.externalSku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice?.toString() ?? null,
+        externalImageUrl: media?.imageUrl ?? null,
+        externalDetailUrl: media?.detailUrl ?? null,
+        resolved: item.productVariantId !== null,
+        variant: item.productVariant
+          ? {
+              id: item.productVariant.id,
+              sku: item.productVariant.sku,
+              name: item.productVariant.name,
+              productName: item.productVariant.product.name,
+              imageUrl: item.productVariant.imageUrl,
+            }
+          : null,
+      };
+    });
 
     return {
       id: order.id,

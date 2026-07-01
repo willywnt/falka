@@ -90,25 +90,45 @@ export function extractOrderMarketplaceMeta(rawPayload: unknown): OrderMarketpla
 }
 
 /**
- * Per-SKU media (marketplace product photo + storefront URL) keyed by the external variant id
- * (Lazada sku_id), so the order detail can show each line's photo and link out. Best-effort:
- * empty for the stub/demo payload or any provider that doesn't carry these keys.
+ * Per-line media (marketplace product photo + storefront URL) so the order detail can show each
+ * line's photo and link out. Keyed by whatever id the caller looks up with — the external variant
+ * id (Lazada) OR the external product id (Shopee, whose no-variation model_id is a non-unique "0").
+ * `shopId` builds the Shopee storefront URL (its payload carries the image but not the link).
+ * Best-effort: empty for the stub/demo payload or any provider that doesn't carry these keys.
  */
 export function extractOrderItemMedia(
   rawPayload: unknown,
+  shopId?: string | null,
 ): Map<string, { imageUrl: string | null; detailUrl: string | null }> {
   const media = new Map<string, { imageUrl: string | null; detailUrl: string | null }>();
   if (!rawPayload || typeof rawPayload !== 'object') return media;
   const raw = rawPayload as Record<string, unknown>;
-  const items = Array.isArray(raw.items) ? (raw.items as Record<string, unknown>[]) : [];
 
-  for (const item of items) {
+  // Shopee get_order_detail: `item_list[].image_info.image_url`; the storefront URL isn't in the
+  // payload, so build it from the connection's shop_id + item_id. Keyed by item_id (the order's
+  // externalProductId) — model_id is "0" for a no-variation item, NOT unique across lines.
+  const shopeeItems = Array.isArray(raw.item_list)
+    ? (raw.item_list as Record<string, unknown>[])
+    : [];
+  for (const item of shopeeItems) {
+    const itemId = readString(item.item_id);
+    if (!itemId) continue;
+    const imageInfo = (item.image_info ?? {}) as Record<string, unknown>;
+    const entry = {
+      imageUrl: readString(imageInfo.image_url),
+      detailUrl: shopId ? `https://shopee.co.id/product/${shopId}/${itemId}` : null,
+    };
+    if (!media.has(itemId)) media.set(itemId, entry);
+  }
+
+  // Lazada: `items[].product_main_image` + `product_detail_url`, keyed by every id the adapter might
+  // have chosen as externalVariantId (sku_id → shop_sku → sku) so the lookup hits even when omitted.
+  const lazadaItems = Array.isArray(raw.items) ? (raw.items as Record<string, unknown>[]) : [];
+  for (const item of lazadaItems) {
     const entry = {
       imageUrl: readString(item.product_main_image),
       detailUrl: readString(item.product_detail_url),
     };
-    // Key under every id the adapter might have chosen as externalVariantId (sku_id → shop_sku →
-    // sku) so the detail-page lookup hits even when Lazada omits sku_id.
     for (const key of [readString(item.sku_id), readString(item.shop_sku), readString(item.sku)]) {
       if (key && !media.has(key)) media.set(key, entry);
     }

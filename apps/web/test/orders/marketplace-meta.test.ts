@@ -63,6 +63,36 @@ describe('extractOrderMarketplaceMeta', () => {
     });
   });
 
+  it('extracts Shopee per-item media (image_info) keyed by item_id + builds the storefront link', () => {
+    // Shopee get_order_detail: image at item_list[].image_info.image_url; NO detail url in the
+    // payload → built from shop_id + item_id. Keyed by item_id (model_id "0" isn't unique).
+    const raw = {
+      item_list: [
+        {
+          item_id: 844151377,
+          model_id: 0,
+          item_sku: 'PALKAORDTEST0001',
+          image_info: { image_url: 'https://cf.shopee.co.id/file/id-11134207-81z1k-x_tn' },
+        },
+      ],
+    };
+
+    const media = extractOrderItemMedia(raw, '227701833');
+    // Looked up by the order line's externalProductId (item_id) — the getOrder fallback for Shopee.
+    expect(media.get('844151377')).toEqual({
+      imageUrl: 'https://cf.shopee.co.id/file/id-11134207-81z1k-x_tn',
+      detailUrl: 'https://shopee.co.id/product/227701833/844151377',
+    });
+  });
+
+  it('omits the Shopee storefront link when no shop_id is available', () => {
+    const media = extractOrderItemMedia(
+      { item_list: [{ item_id: 999, image_info: { image_url: 'https://x/y_tn' } }] },
+      null,
+    );
+    expect(media.get('999')).toEqual({ imageUrl: 'https://x/y_tn', detailUrl: null });
+  });
+
   it('flags a pending cancellation and surfaces a real return status', () => {
     const meta = extractOrderMarketplaceMeta({
       order: { is_cancel_pending: true },
